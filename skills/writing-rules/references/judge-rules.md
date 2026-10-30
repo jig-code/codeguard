@@ -57,7 +57,9 @@ how triggers select what the judge sees.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
 - Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`. A wider gate costs judge calls and tokens;
+  rather than the whole `try`. A gate that also matches nodes where the violation never
+  appears, such as every type annotation for a violation that appears only in return
+  types, is too wide. A wider gate costs judge calls and tokens;
   `codeguard review --dry-run` counts the calls.
 
 ## Write eval cases at the boundary
@@ -72,9 +74,10 @@ how triggers select what the judge sees.
   - parses text and fails on text that isn't in the expected form, such as an unchecked
     `split` or index of its parts;
   - does something its name doesn't say: a function named for reading, such as `get_`,
-    `find_`, `load_` or `is_`, that creates or writes; a function whose name says it
-    creates, such as `ensure_`, that never creates; or a retry that can repeat a side
-    effect such as a charge;
+    `find_`, `load_` or `is_`, that creates or writes, including one whose `after` code
+    starts creating without a new name; a function whose name says it creates, such as
+    `ensure_`, that never creates; or a retry that can repeat a side effect such as a
+    charge;
   - returns a value its return annotation contradicts.
 
   Code that is none of these isn't a second defect, and neither is a name the case uses
