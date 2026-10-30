@@ -4,4 +4,10 @@ focus: {source: file, path: .codeguard/rule-evals/created-flag-results.yaml}
 weight: 1
 ---
 
-Every case in this rule eval holds its one point and no other code a reviewer could question. Any other code that might be a defect is a second defect, such as a parse that raises on input it should handle or a function named as a check that writes. If any line besides a case's point might be a defect, even arguably, the eval fails: when unsure, fail. A helper a case calls without defining it is not a second defect.
+No case in this rule eval has a second defect besides its one point. A second defect is code that:
+
+- fails on input it's meant to handle, such as an unchecked split or index, or a parse that raises;
+- does something its name doesn't say, such as a get_, find_, load_ or is_ function that creates or writes, an ensure_ function that never creates, or a retry that can repeat a side effect;
+- returns a value its name or annotation contradicts.
+
+Nothing else is a second defect: not a missing annotation, an unused helper, a comment's wording, a lookup that raises when the row is missing, or a race between a lookup and a create. A helper a case calls without defining it is not a second defect.

@@ -66,13 +66,18 @@ how triggers select what the judge sees.
 - A case shows what's at stake. A reader of the case alone sees why the code is a
   problem or why it's fine, and its name says that, not only what the code does:
   "a getter that saves surprises a caller who only reads", not "calls save".
-- A case tests one thing. Besides its one point, it holds no code a reviewer could
-  question, so the judge can't flag the case for the wrong reason. Any other code that
-  might be a defect is a second defect: a CSV split on `","`, a parse that raises on
-  input it should handle, a function named as a check that writes. If you're unsure
-  whether a line could be questioned, rewrite it so it can't be. A helper the case
-  calls without defining it isn't a second defect: the judge treats code it can't see as
-  ordinary.
+- A case tests one thing. Besides its one point, its code has no second defect, so the
+  judge can't flag the case for the wrong reason. A second defect is code that:
+  - fails on input it's meant to handle, such as an unchecked `split` or index, or a
+    parse that raises;
+  - does something its name doesn't say, such as a `get_`, `find_`, `load_` or `is_`
+    function that creates or writes, an `ensure_` function that never creates, or a
+    retry that can repeat a side effect such as a charge;
+  - returns a value its name or annotation contradicts.
+
+  Read each line of a case and check that it does what its name says on every input it
+  takes. A helper the case calls without defining it isn't a second defect: the judge
+  treats code it can't see as ordinary.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
   `invalid` case of the same shape that breaks the rule.
 - Add `invalid` cases in forms the skill doesn't name, so the eval shows the judge
