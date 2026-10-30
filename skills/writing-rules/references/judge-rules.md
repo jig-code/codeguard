@@ -68,16 +68,16 @@ how triggers select what the judge sees.
   "a getter that saves surprises a caller who only reads", not "calls save".
 - A case tests one thing. Besides its one point, its code has no second defect, so the
   judge can't flag the case for the wrong reason. A second defect is code that:
-  - fails on input it's meant to handle, such as an unchecked `split` or index, or a
-    parse that raises;
+  - parses text and fails on text that isn't in the expected form, such as an unchecked
+    `split` or index of its parts;
   - does something its name doesn't say, such as a `get_`, `find_`, `load_` or `is_`
     function that creates or writes, an `ensure_` function that never creates, or a
     retry that can repeat a side effect such as a charge;
   - returns a value its name or annotation contradicts.
 
-  Read each line of a case and check that it does what its name says on every input it
-  takes. A helper the case calls without defining it isn't a second defect: the judge
-  treats code it can't see as ordinary.
+  Read each function in a case and check it against these three before you finish. Code
+  that is none of them isn't a second defect, and neither is a name the case uses
+  without importing or defining it: the judge treats code it can't see as ordinary.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
   `invalid` case of the same shape that breaks the rule.
 - Add `invalid` cases in forms the skill doesn't name, so the eval shows the judge

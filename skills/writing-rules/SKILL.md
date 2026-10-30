@@ -131,9 +131,11 @@ has the rest.
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
 - Name every case for why its code breaks or keeps the convention, not only for what
-  the code does: "a getter that saves surprises a caller who only reads", not "calls save in
-  get_order"; and for another form of the same violation, "an is_ check that sends an
-  email has a side effect its name hides", not "sends an email in is_overdue".
+  the code does: an `invalid` case's name says what goes wrong because of its code, and
+  a `valid` or `skipped` case's name says why its code is fine or never judged. "a
+  getter that saves surprises a caller who only reads", not "calls save in get_order";
+  and for another form of the same violation, "an is_ check that sends an email has a
+  side effect its name hides", not "sends an email in is_overdue".
 - Give the idiomatic form a `valid` case beside the `invalid` one. A judge rule's `valid`
   case is an edit its triggers reach, so the judge sees it and passes it; an edit
   outside the triggers is a `skipped` case, which never reaches the judge.
