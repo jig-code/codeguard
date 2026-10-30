@@ -64,9 +64,8 @@ how triggers select what the judge sees.
 
 - Every judge rule's eval has an `invalid` case.
 - A case shows what's at stake. A reader of the case alone sees why the code is a
-  problem or why it's fine, and its name says that, not only what the code does: an
-  `invalid` case's name says what goes wrong because of its code, as "a getter that
-  saves surprises a caller who only reads" does, not "calls save".
+  problem or why it's fine, and its name gives that reason, not only what the code
+  does: "a getter that saves surprises a caller who only reads", not "calls save".
 - A case tests one thing. Besides its one point, its code, `before` and `after`, has no
   second defect, so the judge can't flag the case for the wrong reason. A second defect
   is code that:
@@ -80,8 +79,8 @@ how triggers select what the judge sees.
 
   Code that is none of these isn't a second defect, and neither is a name the case uses
   without importing or defining it: the judge treats code it can't see as ordinary.
-- Before you finish, read every case again: its name says what goes wrong, or why its
-  code is fine or never judged, and no function in its `before` or `after` code has a
+- Before you finish, read every case again: its name gives the reason its code breaks
+  or keeps the convention, and no function in its `before` or `after` code has a
   second defect. Rewrite each case that fails either check.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
   `invalid` case that makes the same call or uses the same construct in a way that
