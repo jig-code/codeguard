@@ -16,7 +16,7 @@ does against what the skill says. A case is one of two kinds:
 | The agent is asked for | It should | Graders check | Example |
 |---|---|---|---|
 | A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | Asked for a rule that a function named as a query changes no state, the agent writes the rule's three files; a grader reads the rule eval for a `valid` case of a getter that only reads beside an `invalid` getter that saves |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say why | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | Asked for a rule that every call passes the arguments its function requires, the agent writes no files and replies that the type checker decides it |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say why | That no rule file was written, and that the agent's reply names the kind of check that decides the convention instead | Asked for a rule that every call passes the arguments its function requires, the agent writes no files and replies that the type checker decides it |
 
 The evals test only the skill. They never check whether a rule the agent writes works,
 or whether its rule tests or rule evals pass: that is tested wherever the rule lives.
