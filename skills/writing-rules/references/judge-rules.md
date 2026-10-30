@@ -66,20 +66,22 @@ how triggers select what the judge sees.
 - A case shows what's at stake. A reader of the case alone sees why the code is a
   problem or why it's fine, and its name says that, not only what the code does:
   "a getter that saves surprises a caller who only reads", not "calls save".
-- A case tests one thing. Besides its one point, its code has no second defect, so the
-  judge can't flag the case for the wrong reason. A second defect is code that:
+- A case tests one thing. Besides its one point, its code, `before` and `after`, has no
+  second defect, so the judge can't flag the case for the wrong reason. A second defect is code that:
   - parses text and fails on text that isn't in the expected form, such as an unchecked
     `split` or index of its parts;
-  - does something its name doesn't say, such as a `get_`, `find_`, `load_` or `is_`
-    function that creates or writes, an `ensure_` function that never creates, or a
-    retry that can repeat a side effect such as a charge;
+  - does something its name doesn't say: a function named for reading, such as `get_`,
+    `find_`, `load_` or `is_`, that creates or writes; a function whose name says it
+    creates, such as `ensure_`, that never creates; or a retry that can repeat a side
+    effect such as a charge;
   - returns a value its name or annotation contradicts.
 
   Read each function in a case and check it against these three before you finish. Code
   that is none of them isn't a second defect, and neither is a name the case uses
   without importing or defining it: the judge treats code it can't see as ordinary.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
-  `invalid` case of the same shape that breaks the rule.
+  `invalid` case that makes the same call or uses the same construct in a way that
+  breaks the rule.
 - Add `invalid` cases in forms the skill doesn't name, so the eval shows the judge
   applies the convention rather than matching its examples.
 - A rule in several languages has cases in each, each case's `file` in its language.
