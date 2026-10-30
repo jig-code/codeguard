@@ -72,19 +72,21 @@ how triggers select what the judge sees.
   second defect, so the judge can't flag the case for the wrong reason. A second defect
   is code that:
   - parses text and fails on text that isn't in the expected form, such as an unchecked
-    `split` or index of its parts;
+    `split`, index of its parts, or `int` or `float` of it;
   - does something its name doesn't say: a function named for reading, such as `get_`,
     `find_`, `load_` or `is_`, that creates or writes, including one whose `after` code
     starts creating without a new name; a function whose name says it creates, such as
-    `ensure_`, that never creates; or a retry that can repeat a side effect such as a
-    charge;
+    `ensure_` or one named "or create", that never creates, including a `before` that
+    only reads when its `after` adds the create; or a retry that can repeat a side
+    effect such as a charge;
   - returns a value its return annotation contradicts.
 
   Code that is none of these isn't a second defect, and neither is a name the case uses
   without importing or defining it: the judge treats code it can't see as ordinary.
 - Before you finish, read every case again: its name gives the reason its code breaks
   or keeps the convention, and no function in its `before` or `after` code has a
-  second defect. Rewrite each case that fails either check.
+  second defect. Read each `before` on its own, as code that was committed: a function
+  named for creating already creates there. Rewrite each case that fails either check.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
   `invalid` case that makes the same call or uses the same construct in a way that
   breaks the rule.

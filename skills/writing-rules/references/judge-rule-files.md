@@ -25,6 +25,8 @@ triggers: [return-yield, my-gate]  # the code a change must touch to be judged
   `control-flow`, `return-yield`, `collection-literal`, `string-literal`,
   `number-literal`, `attribute-access`, `subscript`, `conditional-expression`,
   `membership-test`, `assert`, `raise`, `definition-added-or-removed`, `code` and `any`.
+  `function-signature` is a function's name, parameters, return annotation and
+  decorators; `annotation` is every type annotation, a parameter's or a variable's too.
 - Leave out `provider` and `model` unless the rule must be judged by another model.
 
 ## The rule eval: `rule-evals/<id>.yaml`

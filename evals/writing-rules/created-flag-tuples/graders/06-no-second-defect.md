@@ -6,7 +6,7 @@ weight: 1
 
 No case in this rule eval has a second defect, in its `before` or its `after` code, besides its one point. A second defect is code that:
 
-- parses text and fails on text that isn't in the expected form, such as an unchecked split or index of its parts;
+- parses text and fails on text that isn't in the expected form, such as an unchecked split, index of its parts, or int or float of it;
 - does something its name doesn't say: a function named for reading, such as get_, find_, load_ or is_, that creates or writes; a function whose name says it creates, such as ensure_ or one named "or create" or "or add", that never creates; or a retry that can repeat a side effect;
 - returns a value its return annotation contradicts.
 
