@@ -50,13 +50,14 @@ class JudgeRequest:
         )
 
 
-# The judge's confidence scale. The schema gives the model only these values, so a confidence
-# between two of them can't reach the threshold check.
+# The likelihood levels the judge rates a violation with: how likely it is that the code breaks
+# the convention. The schema gives the model only these values, so a confidence between two of
+# them can't reach the threshold check.
 class Confidence(float, ReprEnum):
-    DESCRIBED_CASE = 1.0
-    BREAKS_AS_WRITTEN = 0.9
-    POSSIBLE_EXCEPTION = 0.7
-    EVEN_ODDS = 0.5
+    CERTAIN = 1.0
+    HIGHLY_PROBABLE = 0.9
+    PROBABLE = 0.7
+    POSSIBLE = 0.5
 
 
 class Violation(BaseModel):
