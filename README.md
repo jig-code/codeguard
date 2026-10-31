@@ -820,6 +820,11 @@ codeguard eval                # judge rule evals; calls the configured judge
 
 ## Working on codeguard
 
+[docs/architecture.md](docs/architecture.md) is codeguard's design contract: how it
+works, the invariants every change must keep, and what the judge is given. Before
+changing the judge (its template, its prompt, its tools or what it's given), the review
+pipeline, or anything an invariant covers, read it and check the change against it.
+
 [docs/testing.md](docs/testing.md) says how to test a change to codeguard, a rule
 package or an app.
 
