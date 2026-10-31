@@ -41,13 +41,13 @@ class _SearchResult(BaseModel):
 
 
 class _ReadInput(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(extra="allow", frozen=True)
 
     file_path: str
 
 
 class _SearchInput(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(extra="allow", frozen=True)
 
     path: str | None = None
 
@@ -61,11 +61,21 @@ class _ToolUse(BaseModel):
     def loaded_files(self, root: Path, result: JsonValue) -> list[str]:
         return []
 
+    @property
+    def call(self) -> dict[str, JsonValue]:
+        """The tool's name and the arguments it was called with."""
+        raise NotImplementedError
+
 
 class _OtherToolUse(_ToolUse):
     """A call to a tool that loads no files the judge reports."""
 
     name: str
+    input: dict[str, JsonValue] = Field(default_factory=dict)
+
+    @property
+    def call(self) -> dict[str, JsonValue]:
+        return {"tool": self.name, **self.input}
 
 
 class _ReadUse(_ToolUse):
@@ -74,6 +84,10 @@ class _ReadUse(_ToolUse):
 
     def loaded_files(self, root: Path, result: JsonValue) -> list[str]:
         return [_relative(root, self.input.file_path)]
+
+    @property
+    def call(self) -> dict[str, JsonValue]:
+        return {"tool": self.name, **self.input.model_dump(exclude_none=True)}
 
 
 class _SearchUse(_ToolUse):
@@ -94,6 +108,10 @@ class _SearchUse(_ToolUse):
         ]
         return [_relative(root, file) for file in files]
 
+    @property
+    def call(self) -> dict[str, JsonValue]:
+        return {"tool": self.name, **self.input.model_dump(exclude_none=True)}
+
 
 class _ToolResult(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -111,6 +129,7 @@ class _OtherPart(BaseModel):
     type: str
 
 
+_VERDICT_TOOL = "StructuredOutput"
 _TOOL_KINDS = {"Read": "read", "Grep": "search", "Glob": "search"}
 
 
@@ -195,6 +214,7 @@ class ClaudeResult(BaseModel):
     usage_windows: dict[str, UsageWindow] = {}
     structured_output: Verdict | None = None
     loaded_files: tuple[str, ...] = ()
+    tool_calls: tuple[dict[str, JsonValue], ...] = ()
 
     @classmethod
     def from_stream(cls, stream: str, root: Path) -> Self:
@@ -216,18 +236,24 @@ class ClaudeResult(BaseModel):
             for part in message.message.content
             if isinstance(part, _ToolResult) and not part.is_error
         }
-        loaded_files = (
-            file
+        tool_uses = [
+            part
             for message in messages
             if isinstance(message, _AssistantMessage)
             for part in message.message.content
             if isinstance(part, _ToolUse)
-            for file in part.loaded_files(root, tool_results.get(part.id))
+        ]
+        loaded_files = (
+            file for use in tool_uses for file in use.loaded_files(root, tool_results.get(use.id))
         )
         return results[-1].model_copy(
             update={
                 "usage_windows": windows[-1] if windows else {},
                 "loaded_files": tuple(dict.fromkeys(loaded_files)),
+                # The verdict comes as a call to this tool; it reads nothing.
+                "tool_calls": tuple(
+                    use.call for use in tool_uses if use.call["tool"] != _VERDICT_TOOL
+                ),
             }
         )
 
@@ -249,6 +275,7 @@ class ClaudeResult(BaseModel):
             ),
             "thinking_tokens": sum(usage.thinking_tokens for usage in usages),
             "model_usage": {model: usage.model_dump() for model, usage in self.model_usage.items()},
+            "tool_calls": self.tool_calls,
             **{
                 f"{window}_utilization": usage.utilization
                 for window, usage in self.usage_windows.items()

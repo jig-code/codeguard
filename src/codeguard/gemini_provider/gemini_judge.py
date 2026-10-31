@@ -73,7 +73,7 @@ class GeminiJudge:
             try:
                 verdict = asyncio.run(self._judge(request, tools, usage))
             finally:
-                span.set_attributes(_telemetry(usage))
+                span.set_attributes({**_telemetry(usage), "tool_calls": tuple(tools.calls)})
             return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
 
     async def _judge(self, request: JudgeRequest, tools: FileTools, usage: RunUsage) -> Verdict:

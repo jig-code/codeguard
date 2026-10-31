@@ -374,5 +374,42 @@ class TestGeminiJudge:
                 "output_tokens": 6,
                 "cache_read_input_tokens": 8,
                 "thinking_tokens": 10,
+                "tool_calls": '[{"tool":"glob","pattern":"*.py"}]',
             }
         ]
+
+    def test_call_records_the_tools_gemini_called_with_their_arguments(
+        self, tmp_path, capfire, make_judge_request
+    ):
+        models = ScriptedGemini(
+            [
+                calls(
+                    ("read_file", {"path": "logger.py"}),
+                    ("grep", {"pattern": "def info", "glob": "**/*.py"}),
+                ),
+                calls(("read_file", {"path": "../outside.py", "offset": 3})),
+                verdict(),
+            ]
+        )
+
+        judge_with(tmp_path, models).judge(make_judge_request())
+
+        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        assert attributes["tool_calls"] == (
+            '[{"tool":"read_file","path":"logger.py","offset":1},'
+            '{"tool":"grep","pattern":"def info","glob":"**/*.py"},'
+            '{"tool":"read_file","path":"../outside.py","offset":3}]'
+        )
+
+    def test_call_without_a_verdict_records_the_tools_gemini_called(
+        self, tmp_path, capfire, make_judge_request
+    ):
+        models = ScriptedGemini([calls(("glob", {"pattern": "*.py"})) for _ in range(2)])
+
+        with pytest.raises(JudgeNoVerdict):
+            judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
+
+        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        assert attributes["tool_calls"] == (
+            '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
+        )

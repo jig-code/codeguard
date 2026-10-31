@@ -160,10 +160,38 @@ class TestClaudeJudge:
                     },
                     separators=(",", ":"),
                 ),
+                "tool_calls": "[]",
                 "five_hour_utilization": 0.16,
                 "seven_day_utilization": 0.11,
             }
         ]
+
+    def test_call_records_the_tools_claude_called_with_their_arguments(
+        self, tmp_path, processes, capfire, make_judge_request
+    ):
+        judge = judge_answering(
+            tmp_path,
+            processes,
+            tool_use("Read", file_path=str(tmp_path / "orders/pricing.py"), offset=10),
+            tool_use("Grep", "toolu_grep", pattern="DISCOUNT", glob="**/*.py"),
+            tool_result("toolu_grep", mode="files_with_matches", filenames=["orders/receipt.py"]),
+            tool_use("StructuredOutput", violations=[]),
+        )
+
+        judge.judge(make_judge_request())
+
+        [attributes] = finished_span_attributes(capfire, "claude judges {rule} on {file}")
+        assert attributes["tool_calls"] == json.dumps(
+            [
+                {
+                    "tool": "Read",
+                    "file_path": str(tmp_path / "orders/pricing.py"),
+                    "offset": 10,
+                },
+                {"tool": "Grep", "pattern": "DISCOUNT", "glob": "**/*.py"},
+            ],
+            separators=(",", ":"),
+        )
 
     def test_failed_call_is_a_process_error_with_claude_output(
         self, tmp_path, processes, failing_claude_executable, make_judge_request

@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pydantic import JsonValue
 from pydantic_ai import Tool
 
 _MAX_LINES = 2000
@@ -34,6 +35,7 @@ def _tool(function: Callable[..., str]) -> Tool[object]:
 class FileTools:
     root: Path
     loaded_files: list[str] = field(default_factory=list)
+    calls: list[dict[str, JsonValue]] = field(default_factory=list)
 
     @property
     def tools(self) -> list[Tool[object]]:
@@ -54,6 +56,7 @@ class FileTools:
         Returns:
             Up to 2000 lines from `offset`, each starting with its line number and a tab.
         """
+        self.calls.append({"tool": "read_file", "path": path, "offset": offset})
         file = self._inside(path)
         self.loaded_files.append(path)
         lines = file.read_text(errors="replace").splitlines()
@@ -79,6 +82,7 @@ class FileTools:
         Returns:
             Up to 200 matching lines, each as `path:line:text`, or `No matches.`.
         """
+        self.calls.append({"tool": "grep", "pattern": pattern, "glob": glob})
         expression = re.compile(pattern)
         matches = (
             (relative, f"{relative}:{number}:{line}")
@@ -103,6 +107,7 @@ class FileTools:
         Returns:
             Up to 200 paths, one per line, or `No files.`.
         """
+        self.calls.append({"tool": "glob", "pattern": pattern})
         return (
             self._shown((relative, relative) for relative, _ in self._files(pattern)) or "No files."
         )
