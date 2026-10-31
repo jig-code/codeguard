@@ -36,7 +36,7 @@ VIOLATION = {
     "file": "a.py",
     "line": 1,
     "message": "Move it.",
-    "confidence": 0.4,
+    "confidence": 0.5,
 }
 
 
@@ -52,6 +52,14 @@ def calls(*tools: tuple[str, dict[str, object]], input_tokens: int = 10) -> Mode
         parts=[ToolCallPart(name, args, tool_call_id=f"{name}-id") for name, args in tools],
         usage=_usage(input_tokens),
     )
+
+
+def confidence_scale(schema: dict[str, object]) -> object:
+    definitions = schema["$defs"]
+    assert isinstance(definitions, dict)
+    violation = definitions["Violation"]["properties"]["confidence"]
+    assert violation["$ref"] == "#/$defs/Confidence"
+    return definitions["Confidence"]["enum"]
 
 
 def _usage(input_tokens: int) -> RequestUsage:
@@ -151,6 +159,23 @@ class TestGeminiJudge:
         assert parameters.output_object.name == "Verdict"
         assert parameters.output_object.description == Verdict.__doc__
         assert parameters.output_tools == []
+
+    def test_gemini_is_given_only_the_confidence_scale(self, tmp_path, make_judge_request):
+        models = ScriptedGemini([verdict()])
+
+        judge_with(tmp_path, models).judge(make_judge_request())
+
+        output_object = models.info().model_request_parameters.output_object
+        assert output_object
+        assert confidence_scale(output_object.json_schema) == [1.0, 0.9, 0.7, 0.5]
+
+    def test_bedrock_is_given_only_the_confidence_scale(self, tmp_path, make_judge_request):
+        models = ScriptedGemini([calls(("final_result", {"violations": []}))])
+
+        judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
+
+        [output_tool] = models.info().output_tools
+        assert confidence_scale(output_tool.parameters_json_schema) == [1.0, 0.9, 0.7, 0.5]
 
     def test_offers_the_file_tools(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])

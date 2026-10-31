@@ -36,7 +36,7 @@ def fake_claude_executable(tmp_path, arguments) -> str:
                 "file": "a.py",
                 "line": 1,
                 "message": "Move it.",
-                "confidence": 0.4,
+                "confidence": 0.5,
             }
         ],
         before=f'echo "$@" > {arguments}\n',
@@ -264,7 +264,7 @@ class TestClaudeJudge:
         judgement = judge.judge(make_judge_request())
 
         assert judgement == Judgement(
-            Verdict(violations=(make_violation(message="Move it.", confidence=0.4),))
+            Verdict(violations=(make_violation(message="Move it.", confidence=0.5),))
         )
 
     def test_loaded_files_are_the_files_claude_read(self, tmp_path, processes, make_judge_request):
@@ -385,6 +385,28 @@ class TestClaudeJudge:
         judge.judge(make_judge_request())
 
         assert "--model claude-opus-5-5" in arguments.read_text()
+
+    def test_claude_is_given_only_the_confidence_scale(
+        self, tmp_path, processes, arguments, make_judge_request
+    ):
+        executable = tmp_path / "claude"
+        executable.write_text(
+            fake_claude_script([], before=f"printf '%s\\0' \"$@\" > {arguments}\n")
+        )
+        executable.chmod(0o755)
+        judge = ClaudeJudge(tmp_path, MODEL, processes, str(executable))
+
+        judge.judge(make_judge_request())
+
+        argv = arguments.read_text().split("\0")
+        schema = json.loads(argv[argv.index("--json-schema") + 1])
+        confidence = schema["$defs"]["Violation"]["properties"]["confidence"]
+        assert confidence["$ref"] == "#/$defs/Confidence"
+        assert schema["$defs"]["Confidence"] == {
+            "enum": [1.0, 0.9, 0.7, 0.5],
+            "title": "Confidence",
+            "type": "number",
+        }
 
     def test_claude_has_only_read_only_tools(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request

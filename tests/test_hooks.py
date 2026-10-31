@@ -252,14 +252,14 @@ class TestStopHook:
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        put_claude(claude_bin, fake_claude_script([{**violation, "confidence": 0.4}]))
+        put_claude(claude_bin, fake_claude_script([{**violation, "confidence": 0.5}]))
         finding = make_diagnostic(
             judged=True,
             rule="placement",
             message="Move it.",
             note=None,
             warning=False,
-            confidence=0.4,
+            confidence=0.5,
         ).as_warning()
 
         response = run_stop_hook(repo, stop(), path=path_with(claude_bin))

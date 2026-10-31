@@ -624,7 +624,17 @@ rest of the file, the rule, the model, or a file the judge loaded changes. A loa
 is one the judge read, or one its searches returned: a file a grep matched or a glob
 listed. A file a search would only start returning later doesn't count.
 
-The judge rates its confidence in each violation from 0 to 1. An error below the
+The judge rates its confidence in each violation on a fixed scale, and the model can
+answer with no other value:
+
+| Confidence | The judge's reason |
+|---|---|
+| 1.0 | The code matches a case, sign or example the convention describes. |
+| 0.9 | The code breaks the convention as written. |
+| 0.7 | The code probably breaks the convention, but something in the working directory points to an exception it allows. |
+| 0.5 | The code is as likely to follow the convention as to break it. |
+
+An error below the
 threshold is reported as a warning, with its confidence, and doesn't block. The
 threshold defaults to 0.9; set it in `.codeguard/config.yaml`:
 
