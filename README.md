@@ -638,8 +638,8 @@ answer with no other value:
 
 | Confidence | What it says |
 |---|---|
-| 1.0 | The rule's statement decides the changed code on its face, with no reading of intent, of what a name means, or of code the judge can't see. |
-| 0.9 | The code breaks the rule as written, but the verdict rests on a reading a reviewer could contest. |
+| 1.0 | The judge is certain: what the code does is what the rule forbids, and nothing in the working directory points to an exception the rule allows. |
+| 0.9 | The code breaks the rule as written, but the verdict rests on a reading of the rule's terms a reviewer could contest. |
 | 0.7 | The code probably breaks the rule, but something in the working directory points to an exception it allows. |
 | 0.5 | The code is as likely to follow the rule as to break it. |
 

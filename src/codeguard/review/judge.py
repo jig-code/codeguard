@@ -73,15 +73,14 @@ class Violation(BaseModel):
     confidence: Confidence = Field(
         description=(
             "How certain you are that the code breaks the rule. Use one of these values, not "
-            "one between them. 1.0: the rule's statement decides the changed code on its face: "
-            "what the changed lines do is what the rule forbids, with no reading of intent, of "
-            "what a name means, or of code you can't see. 0.9: the code breaks the rule as "
-            "written, but the verdict rests on a reading a reviewer could contest: what a name "
-            "or call means, what the code around the change does, or how the rule's terms apply "
-            "to this shape. You would still block the change. 0.7: the code probably breaks the "
-            "rule, but something in the working directory points to an exception the rule "
-            "allows. 0.5: the code is as likely to follow the rule as to break it. Below 0.5 the "
-            "code probably follows the rule: don't report it."
+            "one between them. 1.0: you are certain: what the code does is what the rule "
+            "forbids, and nothing in the working directory points to an exception the rule "
+            "allows. 0.9: the code breaks the rule as written, but the verdict rests on a "
+            "reading of the rule's terms a reviewer could contest. You would still block the "
+            "change. 0.7: the code probably breaks the rule, but something in the working "
+            "directory points to an exception the rule allows. 0.5: the code is as likely to "
+            "follow the rule as to break it. Below 0.5 the code probably follows the rule: "
+            "don't report it."
         ),
     )
 

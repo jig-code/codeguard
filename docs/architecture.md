@@ -229,11 +229,12 @@ onto its API.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache.
 - **Output.** Validated against the verdict schema; output that fails validation fails
   the run loudly.
-- **Confidence scale**, stated in the verdict schema: 1.0 when the rule's statement
-  decides the changed code on its face, with no reading of intent, names or unseen code;
-  0.9 when the code breaks the rule as written but the verdict rests on a reading a
-  reviewer could contest; 0.7 when something points to an allowed exception; 0.5 when a
-  violation is as likely as not; below 0.5, not reported. The scale never rewards
-  resemblance to an example: rules hold none.
+- **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
+  code breaks the rule and nothing in the working directory points to an allowed
+  exception; 0.9 when the code breaks the rule as written but the verdict rests on a
+  reading of the rule's terms a reviewer could contest; 0.7 when something in the working
+  directory points to an allowed exception; 0.5 when a violation is as likely as not;
+  below 0.5, not reported. The scale never rewards resemblance to an example: rules hold
+  none.
 - **Determinism (#5).** Claude Code adds the date, the account and the working directory
   to the message. Those are the only inputs codeguard doesn't control.
