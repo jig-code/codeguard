@@ -29,11 +29,14 @@ whether it sets that tool up. So:
 
 ## Running them
 
-CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes. Each case
-runs 3 times, and passes when at least 80% of its graders pass, averaged over the runs.
+CI runs them when `skills/writing-rules/`, `evals/writing-rules/` or their workflow
+changes, on Claude Haiku 5.5 through Bedrock. Each case runs 10 times, and passes only
+when every grader passes in all 10 runs. The agent and the graders both use the model
+in `BEDROCK_MODEL`.
 
 ```sh
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 3 --threshold 0.8 \
+CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Edit \
+  --runs 10 --threshold 1.0 --model "$BEDROCK_MODEL" --judge-model "$BEDROCK_MODEL" \
   --trust-plugin --no-publish
 ```
 

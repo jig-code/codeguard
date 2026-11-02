@@ -1,16 +1,30 @@
 name: writing-rules skill evals
 on:
   pull_request:
-    paths: [skills/writing-rules/**, evals/writing-rules/**]
+    paths: [skills/writing-rules/**, evals/writing-rules/**, .github/workflows/skill-evals.yaml]
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   skill-evals:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - run: npm install --global @anthropic-ai/claude-code
-      - run: claude plugin eval . --scaffold --allow-tools Write Edit --runs 3 --threshold 0.8 --trust-plugin --no-publish
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
+          aws-region: us-west-2
+      # A case's score is the mean over its runs of the fraction of its graders that
+      # pass, so --threshold 1.0 passes a case only when every grader passes in every
+      # run. The agent and the graders both run on the pinned Haiku profile.
+      - run: >-
+          claude plugin eval . --scaffold --allow-tools Write Edit --runs 10 --threshold 1.0
+          --model "$BEDROCK_MODEL" --judge-model "$BEDROCK_MODEL" --trust-plugin --no-publish
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CLAUDE_CODE_USE_BEDROCK: 1
+          AWS_REGION: us-west-2
+          BEDROCK_MODEL: ${{ vars.BEDROCK_MODEL }}
