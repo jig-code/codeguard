@@ -9,7 +9,7 @@ from general_rule import (
     case,
     write_general_rule,
 )
-from recording_judge import RecordingGraders, RecordingJudge, RecordingJudges
+from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, JudgeEvalRunner
@@ -57,9 +57,7 @@ class TestGeneralRuleSkill:
 class TestGeneralRuleEvals:
     def run(self, repo, judge):
         loader = RulesetLoader.local(repo.root)
-        return JudgeEvalRunner(
-            repo.root, loader, RecordingJudges(judge), RecordingGraders(), 0.9
-        ).run()
+        return JudgeEvalRunner(repo.root, loader, RecordingJudges(judge), 0.9).run()
 
     def test_each_language_is_reported_on_its_own(self, repo):
         write_general_rule(repo)

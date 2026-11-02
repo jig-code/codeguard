@@ -9,7 +9,6 @@ from threading import Semaphore
 import pytest
 from claude_output import (
     MODEL_USAGE,
-    claude_agreement,
     claude_result,
     fake_claude_script,
     tool_result,
@@ -19,9 +18,7 @@ from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.review import (
-    Agreement,
     Deadline,
-    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -471,44 +468,3 @@ def judge_answering(tmp_path, processes, *messages: dict) -> ClaudeJudge:
     executable.write_text(fake_claude_script([], messages=messages))
     executable.chmod(0o755)
     return ClaudeJudge(tmp_path, MODEL, processes, str(executable))
-
-
-class TestClaudeGrader:
-    def test_agreement_comes_from_claude_structured_output(
-        self, tmp_path, processes, fake_claude_executable
-    ):
-        judge = ClaudeJudge(tmp_path, MODEL, processes, fake_claude_executable)
-
-        graded = judge.grade(GradeRequest("The handler.", "The call."))
-
-        assert graded == Agreement(agrees=True, why="Both rest on the same code.")
-
-    def test_claude_grades_with_no_tools_and_the_agreement_schema(
-        self, tmp_path, processes, arguments
-    ):
-        executable = tmp_path / "claude"
-        executable.write_text(
-            "#!/bin/sh\n"
-            f"printf '%s\\0' \"$@\" > {arguments}\ncat > /dev/null\n"
-            f"echo '{json.dumps(claude_agreement({'agrees': True, 'why': 'Same.'}))}'\n"
-        )
-        executable.chmod(0o755)
-        judge = ClaudeJudge(tmp_path, MODEL, processes, str(executable))
-
-        judge.grade(GradeRequest("The handler.", "The call."))
-
-        recorded = arguments.read_text().split("\0")[:-1]
-        options = dict(zip(recorded, recorded[1:], strict=False))
-        assert options["--tools"] == ""
-        assert json.loads(options["--json-schema"]) == Agreement.model_json_schema()
-        assert options["--system-prompt"] == GradeRequest("", "").instructions
-
-    def test_result_without_structured_output_is_no_agreement(self, tmp_path, processes):
-        result = {
-            key: value for key, value in claude_result([]).items() if key != "structured_output"
-        }
-        executable = claude_printing(tmp_path, json.dumps(result))
-        judge = ClaudeJudge(tmp_path, MODEL, processes, executable)
-
-        with pytest.raises(JudgeNoVerdict, match="returned no verdict"):
-            judge.grade(GradeRequest("The handler.", "The call."))

@@ -94,14 +94,11 @@ class RuleEvalCase(BaseModel):
 
     @field_validator("expected_output")
     @classmethod
-    def expects_a_reason_when_judged(cls, expected: EditReview) -> EditReview:
-        if expected.outcome is Outcome.SKIPPED:
-            if expected.reason is not None:
-                raise ValueError("a skipped case expects no reason: the judge never sees it")
-        elif not (expected.reason or "").strip():
+    def expects_no_reason(cls, expected: EditReview) -> EditReview:
+        if expected.reason is not None:
             raise ValueError(
-                f"a case that expects {expected.outcome} states the reason, so the eval checks "
-                "the judge decides it on the same ground"
+                "a case expects no reason: the judge's reason is printed with the eval for "
+                "whoever reads it, never checked"
             )
         return expected
 

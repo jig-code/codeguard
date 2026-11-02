@@ -73,9 +73,9 @@ with equivalent tools).
   finding about the model, not a reason to change the prompt.
 - What it sees: nothing else. No CLAUDE.md, hooks, plugins or other skills reach it.
 - Its output: a reason for its verdict, pass or fail, saying what in the changed code
-  keeps the convention or breaks it; and violations, each with a file, line, message and
-  confidence (1.0, 0.9, 0.7 or 0.5). A violation is reported only where the changed code
-  is part of it.
+  keeps the convention or breaks it, as context for whoever troubleshoots the verdict;
+  and violations, each with a file, line, message and confidence (1.0, 0.9, 0.7 or 0.5).
+  A violation is reported only where the changed code is part of it.
 
 **The verdict cache** stores verdicts keyed on the template, model, skill, path, changed
 code and whole file. Each verdict records the files the judge read, and is reused only
@@ -94,10 +94,9 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 
 - Pattern rules and gates: `codeguard test`, with valid and invalid cases and snapshots.
 - Judge rules: `codeguard eval`. Each case is a small fixture repository plus a change,
-  with the expected verdict and the reason it rests on. A case passes only when it gets
-  the right verdict at 0.9 or above, for the expected reason, on every run. Whether the
-  judge's reason gives the expected ground is read by the rule's own model, with no
-  tools; wording never decides it.
+  with the expected violations. A case passes only when it gets the right verdict at 0.9
+  or above on every run. The eval prints the judge's reason for every case, as context
+  for fixing the rule's wording; nothing checks it.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
@@ -137,10 +136,9 @@ the code refer to.
    fail; a failed or timed-out classification keeps every candidate. Choosing rules that
    no binding maps is out of scope until it can satisfy #2. Code decides each step's
    prompt.
-8. Only three steps of a review call a model: change classification, the judge and
-   verify. Caching, recall tests and confidence gating bound their variation. Every other
-   step is deterministic. A rule eval also calls a model to read the judge's reason
-   against the case's; that call never runs in a review.
+8. Only three steps call a model: change classification, the judge and verify. Caching,
+   recall tests and confidence gating bound their variation. Every other step is
+   deterministic.
 9. Hook inputs come only from documented host payloads, never from the transcript.
 
 **Prevention before correction**

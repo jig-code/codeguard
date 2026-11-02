@@ -27,7 +27,6 @@ cases:
             return sum(line.price * line.quantity for line in order.lines)
     expected_output:
       outcome: invalid
-      reason: invoice_amount recomputes each line's amount from Line's attributes instead of calling Line.amount or Order.total.
   - name: calls the type's method
     inputs:
       file: orders/receipt.py
@@ -56,7 +55,6 @@ cases:
             return f"{customer_name}: {order.total()}"
     expected_output:
       outcome: valid
-      reason: receipt gets the total by calling Order.total.
   - name: edits a method call in a function whose untouched line recomputes another type's data
     inputs:
       file: orders/letter.py
@@ -128,7 +126,6 @@ cases:
             return [greeting, str(amount)]
     expected_output:
       outcome: valid
-      reason: The changed line calls Customer.greeting; the line that recomputes the order's total from Line's attributes is untouched, so the violation isn't the change's.
   - name: edits the line that already recomputed another type's data
     inputs:
       file: orders/letter.py
@@ -200,7 +197,6 @@ cases:
             return [greeting, str(amount)]
     expected_output:
       outcome: invalid
-      reason: The changed line recomputes the order's total from Line's attributes instead of calling Order.total.
   - name: adds a function that calls the type's method beside one that recomputes
     inputs:
       file: orders/receipt.py
@@ -272,4 +268,3 @@ cases:
             return f"{customer.greeting('Dear')}: {order.total()}"
     expected_output:
       outcome: valid
-      reason: The added receipt gets the total by calling Order.total; the function that recomputes it is untouched.

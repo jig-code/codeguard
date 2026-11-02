@@ -6,7 +6,6 @@ cases:
         ship(status='returned')
     expected_output:
       outcome: invalid
-      reason: The call passes a string.
       violations:
         - line: 1
           confidence: 0.9

@@ -1,4 +1,4 @@
 cases:
   - inputs:
       after: x
-    expected_output: {outcome: valid, reason: The call passes the member.}
+    expected_output: {outcome: valid}

@@ -702,8 +702,7 @@ class TestEvalCommand:
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n"
-            "      reason: The module assigns a value.\n",
+            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
         bin_dir = tmp_path / "bin"
@@ -733,8 +732,7 @@ class TestEvalCommand:
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n"
-            "      reason: The module assigns a value.\n",
+            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
@@ -903,15 +901,21 @@ class TestEvalMatchesReview:
     @pytest.mark.parametrize(
         ("violations", "failure", "returncode"),
         [
-            ([{"confidence": 1.0}], "", 0),
+            (
+                [{"confidence": 1.0}],
+                "responsibility-placement totals the order lines: Judged.\n",
+                0,
+            ),
             (
                 [{"confidence": 0.5}],
+                "responsibility-placement totals the order lines: Judged.\n"
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
                 "outcome uncertain\n  reason: Judged.\n  line 3 (0.50): Move it.\n",
                 1,
             ),
             (
                 [],
+                "responsibility-placement totals the order lines: Judged.\n"
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
                 "outcome valid\n  reason: Judged.\n",
                 1,
@@ -948,7 +952,7 @@ def invoice_package(tmp_path_factory) -> GitRepo:
     case = {
         "name": "totals the order lines",
         "inputs": {"file": "invoice.py", "before": INVOICE_BEFORE, "after": INVOICE_AFTER},
-        "expected_output": {"outcome": "invalid", "reason": "The invoice totals the lines."},
+        "expected_output": {"outcome": "invalid"},
     }
     package.write(
         "python/rule-evals/responsibility-placement.yaml", yaml.safe_dump({"cases": [case]})
@@ -1170,8 +1174,7 @@ class TestTestCommand:
         repo.write(
             ".codeguard/rule-evals/placement.yaml",
             "cases:\n  - name: assigns a count\n    inputs:\n      after: |\n        count = 1\n"
-            "    expected_output:\n      outcome: invalid\n"
-            "      reason: The module assigns a count.\n",
+            "    expected_output:\n      outcome: invalid\n",
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)

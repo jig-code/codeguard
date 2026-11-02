@@ -16,7 +16,6 @@ def case(name: str, file: str, after: str, outcome: str = "invalid") -> str:
     return (
         f"  - name: {name}\n    inputs:\n      file: {file}\n      after: |\n        {after}\n"
         f"    expected_output:\n      outcome: {outcome}\n"
-        + ("" if outcome == "skipped" else "      reason: The literal is repeated.\n")
     )
 
 
