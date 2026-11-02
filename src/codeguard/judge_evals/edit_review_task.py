@@ -36,7 +36,9 @@ class EditReviewTask:
             for violation in verdict.violations
             if changed.covers(violation.file, violation.line) and violation.file == inputs.file
         )
-        return EditReview(outcome=self._outcome(violations), violations=violations)
+        return EditReview(
+            outcome=self._outcome(violations), reason=verdict.reason, violations=violations
+        )
 
     def _outcome(self, violations: tuple[JudgedViolation, ...]) -> Outcome:
         if any(violation.confidence >= self.confidence_threshold for violation in violations):

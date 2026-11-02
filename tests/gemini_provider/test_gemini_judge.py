@@ -23,7 +23,9 @@ from spans import finished_span_attributes
 
 from codeguard.gemini_provider import GeminiJudge, gemini_judge
 from codeguard.review import (
+    Agreement,
     Deadline,
+    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -42,7 +44,13 @@ VIOLATION = {
 
 def verdict(*violations: dict[str, object], input_tokens: int = 10) -> ModelResponse:
     return ModelResponse(
-        parts=[TextPart(Verdict.model_validate({"violations": violations}).model_dump_json())],
+        parts=[
+            TextPart(
+                Verdict.model_validate(
+                    {"reason": "Judged.", "violations": violations}
+                ).model_dump_json()
+            )
+        ],
         usage=_usage(input_tokens),
     )
 
@@ -146,7 +154,9 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict.model_validate({"violations": [VIOLATION]}))
+        assert judgement == Judgement(
+            Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
+        )
 
     def test_asks_for_the_verdict_as_native_structured_output(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
@@ -170,7 +180,7 @@ class TestGeminiJudge:
         assert confidence_scale(output_object.json_schema) == [1.0, 0.9, 0.7, 0.5]
 
     def test_bedrock_is_given_only_the_confidence_scale(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("final_result", {"violations": []}))])
+        models = ScriptedGemini([calls(("final_result", {"reason": "Judged.", "violations": []}))])
 
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
@@ -260,7 +270,7 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(violations=()))
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert any(isinstance(part, RetryPromptPart) for part in models.sent(1))
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
@@ -296,7 +306,7 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(violations=()))
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
         assert 1 <= waits[0] < 2
 
@@ -453,3 +463,68 @@ class TestGeminiJudge:
         assert attributes["tool_calls"] == (
             '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
         )
+
+
+def agreement(agrees: bool = True) -> ModelResponse:
+    text = Agreement(agrees=agrees, why="Both rest on the handler.").model_dump_json()
+    return ModelResponse(parts=[TextPart(text)], usage=_usage(10))
+
+
+class TestGeminiGrader:
+    def test_agreement_is_the_structured_output(self, tmp_path):
+        models = ScriptedGemini([agreement(agrees=False)])
+
+        graded = judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
+
+        assert graded == Agreement(agrees=False, why="Both rest on the handler.")
+
+    def test_asks_for_the_agreement_with_no_tools(self, tmp_path):
+        models = ScriptedGemini([agreement()])
+
+        judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
+
+        parameters = models.info().model_request_parameters
+        assert parameters.output_mode == "native"
+        assert parameters.output_object
+        assert parameters.output_object.name == "Agreement"
+        assert models.info().function_tools == []
+
+    def test_bedrock_gets_the_agreement_as_a_tool(self, tmp_path):
+        answer = calls(("final_result", {"agrees": True, "why": "Both rest on the handler."}))
+        models = ScriptedGemini([answer])
+
+        graded = judge_with(tmp_path, models, provider="bedrock").grade(
+            GradeRequest("The handler.", "The call.")
+        )
+
+        [output_tool] = models.info().output_tools
+        assert (output_tool.name, graded.agrees) == ("final_result", True)
+
+    def test_sends_the_grading_instructions_and_both_reasons(self, tmp_path):
+        models = ScriptedGemini([agreement()])
+        request = GradeRequest("The handler discards it.", "The handler drops the exception.")
+
+        judge_with(tmp_path, models).grade(request)
+
+        assert models.connected == [MODEL]
+        assert models.info().instructions == request.instructions.strip()
+        assert [part.content for part in models.sent(0) if isinstance(part, UserPromptPart)] == [
+            "<expected>\nThe handler discards it.\n</expected>\n\n"
+            "<given>\nThe handler drops the exception.\n</given>\n"
+        ]
+
+    def test_records_its_usage(self, tmp_path, capfire):
+        models = ScriptedGemini([agreement()])
+
+        judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
+
+        assert finished_span_attributes(capfire, "gemini grades a reason") == [
+            {
+                "model": MODEL,
+                "num_turns": 1,
+                "input_tokens": 10,
+                "output_tokens": 3,
+                "cache_read_input_tokens": 4,
+                "thinking_tokens": 5,
+            }
+        ]

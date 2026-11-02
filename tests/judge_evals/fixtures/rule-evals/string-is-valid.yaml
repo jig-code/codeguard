@@ -3,4 +3,4 @@ cases:
     inputs:
       after: |
         ship(status='shipped')
-    expected_output: {outcome: valid}
+    expected_output: {outcome: valid, reason: The call passes the member.}

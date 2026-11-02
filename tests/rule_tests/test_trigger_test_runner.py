@@ -32,6 +32,7 @@ def case(name: str, outcome: str, after: str, before: str | None = None, file: s
         f"  - name: {name}\n    inputs:\n{inputs}"
         f"      after: |\n{textwrap.indent(after, ' ' * 8)}"
         f"    expected_output:\n      outcome: {outcome}\n"
+        + ("" if outcome == "skipped" else "      reason: The code reads the value.\n")
     )
 
 
@@ -209,7 +210,7 @@ class TestInvalidEvalFiles:
             "      after: label = status.value\n"
             "      unchanged:\n"
             "        module.py: label = status.name\n"
-            "    expected_output: {outcome: valid}\n",
+            "    expected_output: {outcome: valid, reason: The code reads the value.}\n",
         )
 
         with pytest.raises(ConfigError) as error:
@@ -232,7 +233,7 @@ class TestInvalidEvalFiles:
             "      after: label = status.value\n"
             "      unchanged:\n"
             f"        {path}: label = status.name\n"
-            "    expected_output: {outcome: valid}\n",
+            "    expected_output: {outcome: valid, reason: The code reads the value.}\n",
         )
 
         with pytest.raises(ConfigError) as error:
@@ -251,7 +252,7 @@ class TestInvalidEvalFiles:
             "    inputs:\n"
             "      file: ../module.py\n"
             "      after: label = status.value\n"
-            "    expected_output: {outcome: valid}\n",
+            "    expected_output: {outcome: valid, reason: The code reads the value.}\n",
         )
 
         with pytest.raises(ConfigError) as error:
@@ -271,7 +272,7 @@ class TestInvalidEvalFiles:
             "      after: label = status.value\n"
             "      unchanged:\n"
             "        .git/config: '[core]'\n"
-            "    expected_output: {outcome: valid}\n",
+            "    expected_output: {outcome: valid, reason: The code reads the value.}\n",
         )
 
         with pytest.raises(ConfigError) as error:

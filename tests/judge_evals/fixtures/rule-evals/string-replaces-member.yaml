@@ -6,10 +6,10 @@ cases:
         ship(status=Status.SHIPPED)
       after: |
         ship(status='shipped')
-    expected_output: {outcome: invalid}
+    expected_output: {outcome: invalid, reason: The call passes a string.}
   - name: passes the member
     inputs:
       file: status.py
       after: |
         ship(status=Status.SHIPPED)
-    expected_output: {outcome: valid}
+    expected_output: {outcome: valid, reason: The call passes the member.}

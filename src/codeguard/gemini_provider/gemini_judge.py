@@ -8,11 +8,12 @@ from pathlib import Path
 import httpx2
 import logfire
 from google.genai.types import ThinkingLevel
-from pydantic import JsonValue
+from pydantic import BaseModel, JsonValue
 from pydantic_ai import (
     Agent,
     NativeOutput,
     RunContext,
+    Tool,
     ToolOutput,
     UsageLimits,
     capture_run_messages,
@@ -32,7 +33,9 @@ from pydantic_ai.usage import RunUsage
 
 from codeguard.gemini_provider.file_tools import FileTools
 from codeguard.review import (
+    Agreement,
     Deadline,
+    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -80,28 +83,51 @@ class GeminiJudge:
             usage = RunUsage()
             with capture_run_messages() as messages:
                 try:
-                    verdict = asyncio.run(self._judge(request, tools, usage))
+                    verdict = asyncio.run(
+                        self._run(
+                            request.instructions, request.prompt, Verdict, tools.tools, usage
+                        )
+                    )
                 finally:
                     span.set_attributes(
                         {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
                     )
             return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
 
-    async def _judge(self, request: JudgeRequest, tools: FileTools, usage: RunUsage) -> Verdict:
-        agent = Agent[object, Verdict](
+    def grade(self, request: GradeRequest) -> Agreement:
+        """Compares two reasons with the judge's model and no tools."""
+        with (
+            self.processes,
+            logfire.span("gemini grades a reason", model=self.model) as span,
+        ):
+            usage = RunUsage()
+            try:
+                return asyncio.run(
+                    self._run(request.instructions, request.prompt, Agreement, [], usage)
+                )
+            finally:
+                span.set_attributes(_telemetry(usage))
+
+    async def _run[Output: BaseModel](
+        self,
+        instructions: str,
+        prompt: str,
+        output: type[Output],
+        tools: Sequence[Tool[object]],
+        usage: RunUsage,
+    ) -> Output:
+        agent = Agent[object, Output](
             deps_type=object,
-            instructions=request.instructions,
+            instructions=instructions,
             # Bedrock's Converse API has no structured output, so Claude there calls a tool.
-            output_type=ToolOutput(Verdict)
-            if self.provider == "bedrock"
-            else NativeOutput(Verdict),
-            tools=tools.tools,
+            output_type=ToolOutput(output) if self.provider == "bedrock" else NativeOutput(output),
+            tools=tools,
             model_settings=self._settings,
         )
         try:
             async with self.models(self.model) as model:
                 result = await agent.run(
-                    request.prompt,
+                    prompt,
                     model=_Retrying(model, self.deadline),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),

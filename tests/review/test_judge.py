@@ -173,7 +173,9 @@ class TestVerdict:
     def test_unconfident_violation_shows_why_it_is_only_a_warning(
         self, make_violation, make_binding
     ):
-        verdict = Verdict(violations=(make_violation(confidence=0.7),))
+        verdict = Verdict(
+            reason="The code breaks the convention.", violations=(make_violation(confidence=0.7),)
+        )
 
         [diagnostic] = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
 
@@ -182,7 +184,7 @@ class TestVerdict:
         )
 
     def test_judged_diagnostic_prints_only_its_summary(self, make_violation, make_binding):
-        verdict = Verdict(violations=(make_violation(),))
+        verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
 
         [diagnostic] = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
 
@@ -194,7 +196,7 @@ class TestVerdict:
     def test_diagnostic_has_the_binding_skill_and_severity(
         self, make_violation, make_binding, make_diagnostic
     ):
-        verdict = Verdict(violations=(make_violation(),))
+        verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
 
         diagnostics = verdict.diagnostics_for(
             make_binding(severity=Severity.WARNING), "a.py", THRESHOLD
@@ -203,14 +205,19 @@ class TestVerdict:
         assert diagnostics == (make_diagnostic(judged=True, severity=Severity.WARNING),)
 
     def test_violations_in_other_files_are_left_out(self, make_violation, make_binding):
-        verdict = Verdict(violations=(make_violation(file="b.py"),))
+        verdict = Verdict(
+            reason="The code breaks the convention.", violations=(make_violation(file="b.py"),)
+        )
 
         assert verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD) == ()
 
     def test_error_at_the_threshold_stays_an_error(
         self, make_violation, make_binding, make_diagnostic
     ):
-        verdict = Verdict(violations=(make_violation(confidence=THRESHOLD),))
+        verdict = Verdict(
+            reason="The code breaks the convention.",
+            violations=(make_violation(confidence=THRESHOLD),),
+        )
 
         diagnostics = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
 
@@ -219,7 +226,9 @@ class TestVerdict:
     def test_error_below_the_threshold_is_a_warning(
         self, make_violation, make_binding, make_diagnostic
     ):
-        verdict = Verdict(violations=(make_violation(confidence=0.5),))
+        verdict = Verdict(
+            reason="The code breaks the convention.", violations=(make_violation(confidence=0.5),)
+        )
 
         diagnostics = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
 
@@ -230,7 +239,9 @@ class TestVerdict:
     def test_info_below_the_threshold_stays_info(
         self, make_violation, make_binding, make_diagnostic
     ):
-        verdict = Verdict(violations=(make_violation(confidence=0.5),))
+        verdict = Verdict(
+            reason="The code breaks the convention.", violations=(make_violation(confidence=0.5),)
+        )
 
         diagnostics = verdict.diagnostics_for(
             make_binding(severity=Severity.INFO), "a.py", THRESHOLD

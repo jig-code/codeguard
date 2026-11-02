@@ -15,12 +15,13 @@ from codeguard.review.judge import (
 )
 from codeguard.review.judge_check import JudgeCheck
 from codeguard.review.judge_plan import JudgePlan, PlannedCall
+from codeguard.review.reason_grader import Agreement, Grader, GradeRequest
 from codeguard.review.review import Review
 from codeguard.review.reviewer import Reviewer, Step
 from codeguard.review.skill import Skill
 
 __all__ = [
-    "Judgement",
+    "Agreement",
     "Binding",
     "Bindings",
     "CachedJudge",
@@ -30,8 +31,11 @@ __all__ = [
     "Deadline",
     "Diagnostic",
     "ErrorType",
+    "GradeRequest",
+    "Grader",
     "Judge",
     "JudgeCheck",
+    "Judgement",
     "JudgeError",
     "JudgeNoVerdict",
     "JudgePlan",
