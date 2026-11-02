@@ -1,7 +1,8 @@
 ---
-type: llm
-focus: trace
+type: regex
+target: { source: file, path: .codeguard/bindings/no-swallowed-exceptions.yaml }
+pattern: '(^|[\s\[,])(any|code|function-body|function-signature)([\s\],]|$)'
+flags: m
+match: not_contains
 weight: 1
 ---
-
-The binding's triggers no longer use any; they gate on the except clause or a gate matching it.

@@ -81,6 +81,7 @@ class JudgeEvalRunner:
     async def _evaluate(
         self, rule_eval: RuleEval, binding: Binding, language: str | None, scanner: SyntaxScanner
     ) -> RuleEvalReport:
+        model = self.model or binding.model
         dataset = Dataset[EditCase, EditReview, None](
             name=rule_eval.name,
             cases=[
@@ -92,7 +93,6 @@ class JudgeEvalRunner:
                 ViolationsOnTriggers(tuple(sorted(binding.triggers)), self.confidence_threshold),
             ],
         )
-        model = self.model or binding.model
         task = EditReviewTask(
             replace(binding, model=model), self.judges, self.confidence_threshold, scanner
         )

@@ -20,7 +20,6 @@ from codeguard.review.reviewer import Reviewer, Step
 from codeguard.review.skill import Skill
 
 __all__ = [
-    "Judgement",
     "Binding",
     "Bindings",
     "CachedJudge",
@@ -32,6 +31,7 @@ __all__ = [
     "ErrorType",
     "Judge",
     "JudgeCheck",
+    "Judgement",
     "JudgeError",
     "JudgeNoVerdict",
     "JudgePlan",

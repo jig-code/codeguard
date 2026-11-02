@@ -7,7 +7,13 @@ from pathlib import Path
 from threading import Semaphore
 
 import pytest
-from claude_output import MODEL_USAGE, claude_result, fake_claude_script, tool_result, tool_use
+from claude_output import (
+    MODEL_USAGE,
+    claude_result,
+    fake_claude_script,
+    tool_result,
+    tool_use,
+)
 from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
@@ -175,7 +181,7 @@ class TestClaudeJudge:
             tool_use("Read", file_path=str(tmp_path / "orders/pricing.py"), offset=10),
             tool_use("Grep", "toolu_grep", pattern="DISCOUNT", glob="**/*.py"),
             tool_result("toolu_grep", mode="files_with_matches", filenames=["orders/receipt.py"]),
-            tool_use("StructuredOutput", violations=[]),
+            tool_use("StructuredOutput", reason="Judged.", violations=[]),
         )
 
         judge.judge(make_judge_request())
@@ -264,7 +270,9 @@ class TestClaudeJudge:
         judgement = judge.judge(make_judge_request())
 
         assert judgement == Judgement(
-            Verdict(violations=(make_violation(message="Move it.", confidence=0.5),))
+            Verdict(
+                reason="Judged.", violations=(make_violation(message="Move it.", confidence=0.5),)
+            )
         )
 
     def test_loaded_files_are_the_files_claude_read(self, tmp_path, processes, make_judge_request):
@@ -273,7 +281,7 @@ class TestClaudeJudge:
             processes,
             tool_use("Read", file_path=str(tmp_path / "orders/pricing.py")),
             tool_use("Read", file_path="/etc/hostname"),
-            tool_use("StructuredOutput", violations=[]),
+            tool_use("StructuredOutput", reason="Judged.", violations=[]),
         )
 
         judgement = judge.judge(make_judge_request())

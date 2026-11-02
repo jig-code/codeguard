@@ -7,7 +7,7 @@ from codeguard.review import JudgeError, Judgement, JudgeRequest, Verdict
 
 @dataclass(frozen=True)
 class RecordingJudge:
-    verdict: Verdict = Verdict(violations=())
+    verdict: Verdict = Verdict(reason="The code keeps the convention.", violations=())
     identity: str = "recording"
     loaded_files: tuple[str, ...] = ()
     received: list[JudgeRequest] = field(default_factory=list)

@@ -30,7 +30,7 @@ def claude_result(violations: list[dict]) -> dict:
         "duration_api_ms": 1901,
         "total_cost_usd": 0.0022,
         "modelUsage": {"claude-sonnet-5-5": MODEL_USAGE},
-        "structured_output": {"violations": violations},
+        "structured_output": {"reason": "Judged.", "violations": violations},
     }
 
 

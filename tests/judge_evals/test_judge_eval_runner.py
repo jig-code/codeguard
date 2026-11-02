@@ -1,3 +1,4 @@
+import io
 import re
 import subprocess
 from dataclasses import dataclass
@@ -188,7 +189,9 @@ class TestJudgeEvalRunner:
         enum_rule.bind("haiku-model.yaml")
         enum_rule.evaluate("string-is-valid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert [(report.dataset_name, report.name) for report in result.reports] == [
             ("enum-usage", "enum-usage on claude-haiku-5-5")
@@ -198,7 +201,9 @@ class TestJudgeEvalRunner:
         enum_rule.bind("haiku-model.yaml")
         enum_rule.evaluate("string-is-valid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         metadata = result.reports[0].experiment_metadata
         assert metadata is not None
@@ -211,13 +216,21 @@ class TestJudgeEvalRunner:
 
     def test_rule_version_changes_with_the_skill(self, enum_rule, repo):
         enum_rule.evaluate("string-is-valid.yaml")
-        before = enum_rule.judged_with(Verdict(violations=())).reports[0].experiment_metadata
+        before = (
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
+            .reports[0]
+            .experiment_metadata
+        )
         repo.write(
             ".codeguard/skills/enum-usage/SKILL.md",
             f"---\nname: enum-usage\n---\n{ENUM_SKILL}Also pass members to compare.\n",
         )
 
-        after = enum_rule.judged_with(Verdict(violations=())).reports[0].experiment_metadata
+        after = (
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
+            .reports[0]
+            .experiment_metadata
+        )
 
         assert before is not None and after is not None
         assert before["rule_version"] != after["rule_version"]
@@ -226,7 +239,10 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-is-invalid.yaml")
 
         result = enum_rule.judged_with(
-            Verdict(violations=(make_violation(file="module.py", confidence=0.9),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="module.py", confidence=0.9),),
+            )
         )
 
         assert result.passed
@@ -238,7 +254,10 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-then-number-is-invalid.yaml")
 
         result = enum_rule.judged_with(
-            Verdict(violations=(make_violation(file="module.py", line=2, confidence=0.9),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="module.py", line=2, confidence=0.9),),
+            )
         )
 
         assert result.failures == (
@@ -255,7 +274,10 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-then-number-is-valid.yaml")
 
         result = enum_rule.judged_with(
-            Verdict(violations=(make_violation(file="module.py", line=2, confidence=0.9),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="module.py", line=2, confidence=0.9),),
+            )
         )
 
         assert [failure.split("\n")[0] for failure in result.failures] == [
@@ -265,7 +287,9 @@ class TestJudgeEvalRunner:
     def test_dataset_without_cases_fails_with_its_name(self, enum_rule):
         enum_rule.evaluate("without-cases.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert not result.passed
         assert result.failures == ("enum-usage: no case was evaluated",)
@@ -275,7 +299,10 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-is-invalid.yaml")
 
         result = enum_rule.judged_with(
-            Verdict(violations=(make_violation(file="module.py", confidence=0.9),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="module.py", confidence=0.9),),
+            )
         )
 
         assert result.passed
@@ -284,20 +311,25 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-is-invalid.yaml")
         violation = make_violation(file="module.py", message="Pass the member.", confidence=0.7)
 
-        result = enum_rule.judged_with(Verdict(violations=(violation,)))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code breaks the convention.", violations=(violation,))
+        )
 
         assert result.failures == (
             "enum-usage passes a string: expected outcome invalid, got outcome uncertain\n"
-            "  line 1 (0.70): Pass the member.",
+            "  reason: The code breaks the convention.\n  line 1 (0.70): Pass the member.",
         )
 
     def test_no_violation_fails_an_invalid_case(self, enum_rule):
         enum_rule.evaluate("string-is-invalid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid",
+            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "  reason: The code keeps the convention.",
         )
 
     def test_violation_on_an_unchanged_line_is_dropped_as_a_review_drops_it(
@@ -306,11 +338,15 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("edit-in-the-second-function.yaml")
 
         result = enum_rule.judged_with(
-            Verdict(violations=(make_violation(file="status.py", line=2, confidence=0.9),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="status.py", line=2, confidence=0.9),),
+            )
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid",
+            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "  reason: The code breaks the convention.",
         )
 
     def test_violation_in_another_file_does_not_pass_an_invalid_case(
@@ -318,16 +354,24 @@ class TestJudgeEvalRunner:
     ):
         enum_rule.evaluate("string-is-invalid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=(make_violation(file="other.py"),)))
+        result = enum_rule.judged_with(
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(file="other.py"),),
+            )
+        )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid",
+            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "  reason: The code breaks the convention.",
         )
 
     def test_no_violation_passes_a_valid_case(self, enum_rule):
         enum_rule.evaluate("string-is-valid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert result.passed
 
@@ -335,11 +379,13 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-is-valid.yaml")
         violation = make_violation(file="module.py", message="Pass the member.", confidence=0.5)
 
-        result = enum_rule.judged_with(Verdict(violations=(violation,)))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code breaks the convention.", violations=(violation,))
+        )
 
         assert result.failures == (
             "enum-usage passes a string: expected outcome valid, got outcome uncertain\n"
-            "  line 1 (0.50): Pass the member.",
+            "  reason: The code breaks the convention.\n  line 1 (0.50): Pass the member.",
         )
 
     def test_case_outside_the_triggers_is_skipped_without_judging(self, enum_rule):
@@ -366,7 +412,9 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("violation-without-kinds.yaml")
         violation = make_violation(file="module.py", message="Pass the member.", confidence=0.9)
 
-        result = enum_rule.judged_with(Verdict(violations=(violation,)))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code breaks the convention.", violations=(violation,))
+        )
 
         assert result.passed
 
@@ -377,7 +425,9 @@ class TestJudgeEvalRunner:
             file="module.py", line=2, message="Pass the member.", confidence=0.9
         )
 
-        result = enum_rule.judged_with(Verdict(violations=(first, second)))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code breaks the convention.", violations=(first, second))
+        )
 
         assert result.passed
 
@@ -385,7 +435,9 @@ class TestJudgeEvalRunner:
         enum_rule.bind("string-literal-trigger.yaml")
         enum_rule.evaluate("number-only-is-invalid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert result.failures == (
             "enum-usage counts: expected outcome invalid, got outcome skipped",
@@ -405,7 +457,9 @@ class TestJudgeEvalRunner:
     def test_eval_for_an_unknown_rule_fails(self, enum_rule):
         enum_rule.evaluate("named-for-a-misspelled-rule.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert result == JudgeEvalResult(
             checks=RuleTestResult(problems=(f"{EVAL_FILE}: no judge rule enum-usge",))
@@ -414,14 +468,18 @@ class TestJudgeEvalRunner:
     def test_dataset_name_defaults_to_the_file_name(self, enum_rule):
         enum_rule.evaluate("string-is-valid.yaml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert [report.dataset_name for report in result.reports] == ["enum-usage"]
 
     def test_eval_file_may_end_in_yml(self, enum_rule):
         enum_rule.evaluate("string-is-valid.yaml", as_file="enum-usage.yml")
 
-        result = enum_rule.judged_with(Verdict(violations=()))
+        result = enum_rule.judged_with(
+            Verdict(reason="The code keeps the convention.", violations=())
+        )
 
         assert [report.dataset_name for report in result.reports] == ["enum-usage"]
 
@@ -430,7 +488,7 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("named-enum-usage.yaml", as_file="more.yaml")
 
         with pytest.raises(ConfigError) as error:
-            enum_rule.judged_with(Verdict(violations=()))
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
 
         assert str(error.value) == (
             "a rule has one eval file; remove one of:\n"
@@ -442,7 +500,7 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("codeguard-0.4-format.yml", as_file="enum-usage-eval.yml")
 
         with pytest.raises(ConfigError) as error:
-            enum_rule.judged_with(Verdict(violations=()))
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard/rule-evals/enum-usage-eval.yml is a codeguard 0.4 rule "
@@ -454,7 +512,7 @@ class TestJudgeEvalRunner:
         enum_rule.evaluate("string-is-valid.yaml", as_file="enum-usage.yml")
 
         with pytest.raises(ConfigError) as error:
-            enum_rule.judged_with(Verdict(violations=()))
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
 
         assert str(error.value) == (
             "a rule has one eval file; remove one of:\n"
@@ -477,13 +535,18 @@ class TestJudgeEvalRunner:
                 "cases.0.expected_output: Value error, a case expects invalid, valid or "
                 "skipped; one the judge can't decide isn't clear enough for a rule eval",
             ),
+            (
+                "case-with-an-expected-reason.yaml",
+                "cases.0.expected_output: Value error, a case expects no reason: the judge's "
+                "reason is printed with the eval for whoever reads it, never checked",
+            ),
         ],
     )
     def test_invalid_eval_file_is_an_error(self, enum_rule, repo, rule_eval, error):
         enum_rule.evaluate(rule_eval)
 
         with pytest.raises(ConfigError) as raised:
-            enum_rule.judged_with(Verdict(violations=()))
+            enum_rule.judged_with(Verdict(reason="The code keeps the convention.", violations=()))
 
         assert str(raised.value) == f"{repo.root / EVAL_FILE} is invalid:\n  {error}"
 
@@ -496,13 +559,32 @@ class FlagsText:
 
     def judge(self, request: JudgeRequest) -> Judgement:
         if self.text not in request.changes:
-            return Judgement(Verdict(violations=()))
+            return Judgement(Verdict(reason="The code keeps the convention.", violations=()))
         violation = MakeViolation(file=request.file, message="Rename it.")
-        return Judgement(Verdict(violations=(violation,)))
+        return Judgement(Verdict(reason="The code breaks the convention.", violations=(violation,)))
 
 
 def flagging(text: str) -> JudgeFactory:
     return lambda root, model: FlagsText(text)
+
+
+class TestReasons:
+    def test_writes_the_judge_reason_for_every_case_judged(self, enum_rule):
+        enum_rule.evaluate("string-replaces-member.yaml")
+        out = io.StringIO()
+
+        enum_rule.judged_with(Verdict(reason="The call passes a string.", violations=())).write(out)
+
+        assert "enum-usage passes a string: The call passes a string.\n" in out.getvalue()
+        assert "enum-usage passes the member: The call passes a string.\n" in out.getvalue()
+
+    def test_a_skipped_case_has_no_reason_to_write(self, enum_rule):
+        enum_rule.bind("string-literal-trigger.yaml")
+        enum_rule.evaluate("number-only-is-skipped.yaml")
+
+        result = enum_rule.run(RecordingJudges(RecordingJudge()))
+
+        assert result.reasons == ()
 
 
 class TestRepeats:
@@ -521,7 +603,7 @@ class TestRepeats:
 
         assert sorted(result.failures) == [
             f"enum-usage passes a string [{run}/2]: expected outcome valid, got outcome "
-            "invalid\n  line 1 (1.00): Rename it."
+            "invalid\n  reason: The code breaks the convention.\n  line 1 (1.00): Rename it."
             for run in (1, 2)
         ]
 
@@ -582,6 +664,8 @@ class TestWithoutJudgeEvals:
         copy_fixture(repo, "bindings/misspelled-paths-key.yaml", "bindings/broken.yaml")
         judges = RecordingJudges(RecordingJudge())
 
-        result = JudgeEvalRunner(repo.root, RulesetLoader.local(repo.root), judges, 0.9).run()
+        loader = RulesetLoader.local(repo.root)
+
+        result = JudgeEvalRunner(repo.root, loader, judges, 0.9).run()
 
         assert result == JudgeEvalResult()

@@ -1,6 +1,6 @@
 import asyncio
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,14 +8,23 @@ from pathlib import Path
 import httpx2
 import logfire
 from google.genai.types import ThinkingLevel
-from pydantic_ai import Agent, NativeOutput, RunContext, ToolOutput, UsageLimits
+from pydantic import BaseModel, JsonValue
+from pydantic_ai import (
+    Agent,
+    NativeOutput,
+    RunContext,
+    Tool,
+    ToolOutput,
+    UsageLimits,
+    capture_run_messages,
+)
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
@@ -70,27 +79,37 @@ class GeminiJudge:
         ):
             tools = FileTools(self.root)
             usage = RunUsage()
-            try:
-                verdict = asyncio.run(self._judge(request, tools, usage))
-            finally:
-                span.set_attributes({**_telemetry(usage), "tool_calls": tuple(tools.calls)})
+            with capture_run_messages() as messages:
+                try:
+                    verdict = asyncio.run(
+                        self._run(request.instructions, request.prompt, Verdict, tools.tools, usage)
+                    )
+                finally:
+                    span.set_attributes(
+                        {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
+                    )
             return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
 
-    async def _judge(self, request: JudgeRequest, tools: FileTools, usage: RunUsage) -> Verdict:
-        agent = Agent[object, Verdict](
+    async def _run[Output: BaseModel](
+        self,
+        instructions: str,
+        prompt: str,
+        output: type[Output],
+        tools: Sequence[Tool[object]],
+        usage: RunUsage,
+    ) -> Output:
+        agent = Agent[object, Output](
             deps_type=object,
-            instructions=request.instructions,
+            instructions=instructions,
             # Bedrock's Converse API has no structured output, so Claude there calls a tool.
-            output_type=ToolOutput(Verdict)
-            if self.provider == "bedrock"
-            else NativeOutput(Verdict),
-            tools=tools.tools,
+            output_type=ToolOutput(output) if self.provider == "bedrock" else NativeOutput(output),
+            tools=tools,
             model_settings=self._settings,
         )
         try:
             async with self.models(self.model) as model:
                 result = await agent.run(
-                    request.prompt,
+                    prompt,
                     model=_Retrying(model, self.deadline),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
@@ -182,6 +201,21 @@ def _message(error: ModelHTTPError) -> str:
         if isinstance(details, dict) and isinstance(message := details.get("message"), str):
             return message
     return str(body)
+
+
+def _tool_calls(
+    messages: Sequence[ModelMessage], tools: FileTools
+) -> tuple[dict[str, JsonValue], ...]:
+    """The file tools the model called, with the arguments it sent, in the order it called
+    them. The tools run concurrently, so the order they ran in says nothing."""
+    names = {tool.name for tool in tools.tools}
+    return tuple(
+        {"tool": part.tool_name, **part.args_as_dict()}
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for part in message.parts
+        if isinstance(part, ToolCallPart) and part.tool_name in names
+    )
 
 
 def _telemetry(usage: RunUsage) -> dict[str, object]:

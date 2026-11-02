@@ -722,7 +722,7 @@ class TestEvalCommand:
         assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
         assert result.stdout.endswith(
             "responsibility-placement assigns in the invoice: expected outcome invalid, got "
-            "outcome uncertain\n  line 1 (0.50): Move it.\n"
+            "outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
         )
         assert result.returncode == 1
 
@@ -901,17 +901,23 @@ class TestEvalMatchesReview:
     @pytest.mark.parametrize(
         ("violations", "failure", "returncode"),
         [
-            ([{"confidence": 1.0}], "", 0),
+            (
+                [{"confidence": 1.0}],
+                "responsibility-placement totals the order lines: Judged.\n",
+                0,
+            ),
             (
                 [{"confidence": 0.5}],
+                "responsibility-placement totals the order lines: Judged.\n"
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome uncertain\n  line 3 (0.50): Move it.\n",
+                "outcome uncertain\n  reason: Judged.\n  line 3 (0.50): Move it.\n",
                 1,
             ),
             (
                 [],
+                "responsibility-placement totals the order lines: Judged.\n"
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome valid\n",
+                "outcome valid\n  reason: Judged.\n",
                 1,
             ),
         ],

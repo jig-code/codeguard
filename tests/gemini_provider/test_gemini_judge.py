@@ -42,7 +42,13 @@ VIOLATION = {
 
 def verdict(*violations: dict[str, object], input_tokens: int = 10) -> ModelResponse:
     return ModelResponse(
-        parts=[TextPart(Verdict.model_validate({"violations": violations}).model_dump_json())],
+        parts=[
+            TextPart(
+                Verdict.model_validate(
+                    {"reason": "Judged.", "violations": violations}
+                ).model_dump_json()
+            )
+        ],
         usage=_usage(input_tokens),
     )
 
@@ -146,7 +152,9 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict.model_validate({"violations": [VIOLATION]}))
+        assert judgement == Judgement(
+            Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
+        )
 
     def test_asks_for_the_verdict_as_native_structured_output(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
@@ -170,7 +178,7 @@ class TestGeminiJudge:
         assert confidence_scale(output_object.json_schema) == [1.0, 0.9, 0.7, 0.5]
 
     def test_bedrock_is_given_only_the_confidence_scale(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("final_result", {"violations": []}))])
+        models = ScriptedGemini([calls(("final_result", {"reason": "Judged.", "violations": []}))])
 
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
@@ -260,7 +268,7 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(violations=()))
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert any(isinstance(part, RetryPromptPart) for part in models.sent(1))
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
@@ -296,7 +304,7 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(violations=()))
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
         assert 1 <= waits[0] < 2
 
@@ -421,10 +429,25 @@ class TestGeminiJudge:
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
         assert attributes["tool_calls"] == (
-            '[{"tool":"read_file","path":"logger.py","offset":1},'
+            '[{"tool":"read_file","path":"logger.py"},'
             '{"tool":"grep","pattern":"def info","glob":"**/*.py"},'
             '{"tool":"read_file","path":"../outside.py","offset":3}]'
         )
+
+    def test_call_does_not_record_the_verdict_tool_bedrock_calls(
+        self, tmp_path, capfire, make_judge_request
+    ):
+        models = ScriptedGemini(
+            [
+                calls(("glob", {"pattern": "*.py"})),
+                calls(("final_result", {"reason": "Judged.", "violations": []})),
+            ]
+        )
+
+        judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
+
+        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        assert attributes["tool_calls"] == '[{"tool":"glob","pattern":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
         self, tmp_path, capfire, make_judge_request

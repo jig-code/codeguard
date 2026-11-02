@@ -375,6 +375,10 @@ the review it should get:
   A review whose only violations are below the confidence threshold has the outcome
   `uncertain`. No case can expect it: a case fails when the judge is uncertain about it.
 
+  A case states no reason. The judge gives one with every verdict, and `codeguard eval`
+  prints it for every case it judged, so whoever reads the eval sees on what ground the
+  rule was decided; a wrong or vague reason shows where the rule's wording is unclear.
+
 ```yaml
 cases:
   - name: adds a second class
@@ -468,7 +472,7 @@ codeguard version, so runs of the same rule compare.
 `codeguard eval` fails a case when:
 
 - the review's outcome, or its violations when the case lists them, differ from
-  `expected_output`. The message shows what the judge reported;
+  `expected_output`. The message shows what the judge reported, its reason first;
 - it expects `invalid` and the judge flags only lines outside the triggers. Reviews
   would miss that violation, so the message lists the kinds on those lines to add to
   `triggers`;
@@ -479,8 +483,8 @@ A case counts only the violations a review would report: those on a changed or r
 line of the case's file.
 
 `codeguard eval` also fails a judge rule with no `invalid` case, and a rule eval whose
-id matches no judge rule. `codeguard eval` prints a table per rule, then one line per
-failure.
+id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
+reason for each case it judged, then one line per failure.
 
 #### Where an eval's inputs come from
 
@@ -624,10 +628,15 @@ rest of the file, the rule, the model, or a file the judge loaded changes. A loa
 is one the judge read, or one its searches returned: a file a grep matched or a glob
 listed. A file a search would only start returning later doesn't count.
 
+The judge gives a reason with every verdict, pass or fail: one sentence saying what in
+the changed code keeps the convention or breaks it. It is context for whoever reads a
+rule eval, which prints it for every case (The rule eval, above); a review prints each
+violation's message.
+
 The judge rates its confidence in each violation on a fixed scale, and the model can
 answer with no other value:
 
-| Confidence | The judge's reason |
+| Confidence | What it says |
 |---|---|
 | 1.0 | The code matches a case, sign or example the convention describes. |
 | 0.9 | The code breaks the convention as written. |
@@ -833,6 +842,11 @@ codeguard eval                # judge rule evals; calls the configured judge
 ```
 
 ## Working on codeguard
+
+[docs/architecture.md](docs/architecture.md) describes codeguard's architecture: how it
+works, the invariants every change must keep, and what the judge is given. Before
+changing the judge (its template, its prompt, its tools or what it's given), the review
+pipeline, or anything an invariant covers, read it and check the change against it.
 
 [docs/testing.md](docs/testing.md) says how to test a change to codeguard, a rule
 package or an app.
