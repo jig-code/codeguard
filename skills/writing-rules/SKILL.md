@@ -21,18 +21,19 @@ rule that misjudged code.
 5. **Verify** (Verify, below).
 
 For a judge rule, also read `references/judge-rules.md` before writing or changing it,
-and whenever its eval fails, flips between runs or reports a warning. For examples in the
-project's language, read `references/python.md`, `references/typescript.md` or
-`references/ruby.md`.
+and whenever its eval fails, flips between runs or reports a warning. For the project's
+language's tools and pattern rule examples, read `references/python.md`,
+`references/typescript.md` or `references/ruby.md`.
 
 ## The convention
 
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
-the statement or breaks it: that is the rule's one yes/no test. The rule's forms (the
-shapes the violation takes in the language and its libraries) illustrate the statement
-on both sides: the statement alone decides each form, and no form defines its own
-violation.
+the statement or breaks it: that is the rule's one yes/no test. The rule is that
+statement and why it exists, and nothing else: no examples, no list of the shapes a
+violation takes, no list of what isn't one, and no supplement per language. The
+statement alone decides each piece of code; the judge reads it as a reviewer would, and
+says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
@@ -40,10 +41,8 @@ violation.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
-- **One convention.** A rule stating several conventions under one intent, or whose
-  statement only points at its forms ("code breaks this when it takes a form below"), is
-  several rules. Split it into one rule per convention, or find the one statement the
-  forms share and drop the forms it doesn't decide.
+- **One convention.** A rule stating several conventions under one intent is several
+  rules. Split it into one rule per convention, or find the one statement they share.
 - **Plain language.** Write it the way a reviewer would say it in a code review. No
   invented terms: if the rule needs a word nobody uses, it isn't clear yet. A judge
   reads an unfamiliar term as loosely as a person does.
@@ -56,7 +55,12 @@ violation.
 - **Idiomatic code never breaks it.** Code written the way the language and its
   libraries intend is never a violation. A bad pattern isn't idiomatic just because a
   framework uses it, though: calling the framework's API is fine, while copying its
-  shape into the project's own code may not be.
+  shape into the project's own code may not be. A statement that flags idiomatic code
+  is restated so it doesn't; it isn't given an exception for that code.
+- **Decided by its wording, never by examples.** When the judge decides a case wrongly,
+  or on the wrong ground, the statement is unclear: reword it so the statement decides
+  the case. An example would only make the judge match code to it, and the next case
+  fails the same way.
 - **Each code shape breaks at most one rule.** When two rules contradict each other (one
   flags what the other requires) or overlap (both flag the same code), settle it before
   either ships: move the shape to one rule, or merge them.
@@ -91,9 +95,10 @@ a rule without one.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
   each ruleset's directory instead of `.codeguard/`.
 - A judge rule whose convention holds in several languages is one rule: its binding's
-  paths name each language, and each language's forms go in a supplement beside the
-  skill (codeguard's README, A rule in several languages). Never copy a convention into
-  a rule per language. A pattern rule matches one language.
+  paths name each language, and its eval has cases in each (codeguard's README, A rule
+  in several languages). The skill is written in no language's names, syntax or
+  libraries, and gets no supplement per language. Never copy a convention into a rule
+  per language. A pattern rule matches one language.
 - Before writing a rule, check the rulesets the project opts into in
   `.codeguard/config.yaml`. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.
@@ -127,8 +132,8 @@ codeguard's README has the binding and rule eval formats.
   case, with a comment above each case naming its branch. Give each matched construct a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
-- A judge rule: `invalid`, `valid` and `skipped` cases at the boundary of its convention
-  (`references/judge-rules.md`).
+- A judge rule: a few clear `invalid` and `valid` cases, each stating the reason its
+  verdict rests on, and a `skipped` case outside the gate (`references/judge-rules.md`).
 
 ## Every rule
 
@@ -145,7 +150,7 @@ other code finds code to fix, not evidence that the rule is right.
 
 ```sh
 codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20; calls the model
+codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20, verdict and reason; calls the model
 codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
 ```
 
