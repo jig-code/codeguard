@@ -442,7 +442,7 @@ class TestGeminiJudge:
         models = ScriptedGemini(
             [
                 calls(("glob", {"pattern": "*.py"})),
-                calls(("final_result", {"violations": []})),
+                calls(("final_result", {"reason": "Judged.", "violations": []})),
             ]
         )
 
