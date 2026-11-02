@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import ClassVar, Protocol, Self
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_ai import UseEnumMemberDocstrings
+from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
@@ -50,14 +53,30 @@ class JudgeRequest:
         )
 
 
-# The likelihood levels the judge rates a violation with: how likely it is that the code breaks
-# the rule. The schema gives the model only these values, so a confidence between two of them
-# can't reach the threshold check.
-class Confidence(float, ReprEnum):
+# The likelihood levels the judge rates a violation with. The schema gives the model only these
+# values, so a confidence between two of them can't reach the threshold check, and describes each
+# value by the docstring under it. pydantic-ai reads the docstrings from the source, as one string
+# literal under each member, and only `output_schema` includes them.
+class Confidence(UseEnumMemberDocstrings, float, ReprEnum):
+    """How certain you are that the code breaks the rule."""
+
     CERTAIN = 1.0
+    (
+        "You are certain: what the code does is what the rule forbids, and nothing in the "
+        "working directory points to an exception the rule allows."
+    )
     HIGHLY_PROBABLE = 0.9
+    (
+        "The code breaks the rule as written, but the verdict rests on a reading of the rule's "
+        "terms a reviewer could contest. You would still block the change."
+    )
     PROBABLE = 0.7
+    (
+        "The code probably breaks the rule, but something in the working directory points to an "
+        "exception the rule allows."
+    )
     POSSIBLE = 0.5
+    "The code is as likely to follow the rule as to break it."
 
 
 class Violation(BaseModel):
@@ -73,14 +92,7 @@ class Violation(BaseModel):
     confidence: Confidence = Field(
         description=(
             "How certain you are that the code breaks the rule. Use one of these values, not "
-            "one between them. 1.0: you are certain: what the code does is what the rule "
-            "forbids, and nothing in the working directory points to an exception the rule "
-            "allows. 0.9: the code breaks the rule as written, but the verdict rests on a "
-            "reading of the rule's terms a reviewer could contest. You would still block the "
-            "change. 0.7: the code probably breaks the rule, but something in the working "
-            "directory points to an exception the rule allows. 0.5: the code is as likely to "
-            "follow the rule as to break it. Below 0.5 the code probably follows the rule: "
-            "don't report it."
+            "one between them. Below 0.5 the code probably follows the rule: don't report it."
         ),
     )
 
@@ -122,6 +134,16 @@ class Verdict(BaseModel):
             for violation in self.violations
             if violation.file == file
         )
+
+
+def output_schema(output: type[BaseModel]) -> JsonSchemaValue:
+    """The schema of what the model answers with, as a provider sends it to the model.
+
+    pydantic-ai's generator describes each `Confidence` value by its docstring; Pydantic's own
+    `model_json_schema` leaves the docstrings out. The Gemini provider gets this schema from
+    pydantic-ai itself, which uses the same generator.
+    """
+    return output.model_json_schema(schema_generator=GenerateToolJsonSchema)
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,7 @@ from codeguard.review.judge import (
     JudgeRequest,
     JudgeTimeout,
     Verdict,
+    output_schema,
 )
 from codeguard.review.judge_check import JudgeCheck
 from codeguard.review.judge_plan import JudgePlan, PlannedCall
@@ -45,4 +46,5 @@ __all__ = [
     "Skill",
     "Step",
     "Verdict",
+    "output_schema",
 ]

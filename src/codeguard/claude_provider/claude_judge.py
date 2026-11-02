@@ -17,6 +17,7 @@ from codeguard.review import (
     JudgeProcessError,
     JudgeRequest,
     Verdict,
+    output_schema,
 )
 
 _EXECUTABLE = "claude"
@@ -57,7 +58,7 @@ class ClaudeJudge:
         output: type[BaseModel],
         tools: str,
     ) -> ClaudeResult:
-        schema = json.dumps(output.model_json_schema())
+        schema = json.dumps(output_schema(output))
         with self.warmup.after_first_call((self.model, instructions)), self.processes:
             process = self._run(instructions, prompt, schema, tools)
         span.set_attribute("returncode", process.returncode)
