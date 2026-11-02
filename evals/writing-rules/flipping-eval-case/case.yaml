@@ -1,6 +1,0 @@
-schema_version: "1.1"
-name: flipping-eval-case
-expected_outcome: |
-  The rule is restated as one plain declarative convention, not a question, that no longer points at its forms, the broad-catch form that contradicts it is dropped or split into another rule, the flipping case is made clear or removed rather than the wording bent to pass it, and the binding gets a narrow trigger. codeguard test passes.
-context:
-  scaffold_script: place-files.sh

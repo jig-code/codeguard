@@ -6,7 +6,6 @@ back as a warning. That is a defect in the rule or in the case:
 
 - Don't re-run until it passes.
 - Don't loosen a gate to get past it.
-- Don't change the rule's wording to get a weak case to pass. Fix the case, or drop it.
 - Don't add a failing case's code to the skill as an example. The case would then pass
   by memory; restate the convention instead.
 
@@ -18,8 +17,8 @@ to code that matches a case, sign or example the skill describes. Write the skil
 this order:
 
 1. A title.
-2. The convention, as `SKILL.md` says to state it: "A function's result says what
-   happened without the caller unpacking it", not "is this clean?".
+2. The convention, as `SKILL.md` says to state it: "A function named as a query
+   changes no state", not "is this clean?".
 3. Definitions of the convention's terms.
 4. `## Violation`: statements of what breaks the convention, and the line a violation is
    reported on: the line a fix would change. The judge reports a violation only where a
@@ -28,9 +27,11 @@ this order:
    illustrations of it. A judge wavers on code in a form the skill doesn't place, such
    as a framework's validated data or an ORM's rows.
 6. `## Not a violation`: code near the boundary that keeps the convention.
-7. `## Why`: the harm the rule prevents. It is part of the judge's prompt, so it helps
-   the judge apply the convention to code the examples don't name, but it never widens
-   the convention: the convention alone decides each case.
+7. `## Why`: the harm the rule prevents, in one or two sentences. It is part of the
+   judge's prompt, so it helps the judge apply the convention to code the examples don't
+   name, but it never widens the convention: the convention alone decides each case.
+   Leave out the fix and the alternative to the flagged code: the judge reads them as
+   more conventions to apply.
 
 For a rule in several languages, `SKILL.md` holds every item but the forms (5), in no
 language's names, syntax, libraries or frameworks. Each language's supplement, which the
@@ -44,8 +45,6 @@ through a hard case ("follow the value: does it go into building a declared valu
 the convention itself is never a question.
 
 When a judge can't decide a case, restate the convention so the case is decided by it.
-Don't add a carve-out for the code that was just flagged. A rule that needs a new
-example each time it meets new code has a bad convention.
 
 ## Gate every form of the violation
 
@@ -64,15 +63,16 @@ how triggers select what the judge sees.
 ## Write eval cases at the boundary
 
 - Every judge rule's eval has an `invalid` case.
-- Each case is clear. An `invalid` case breaks the rule beyond argument, a `valid` case
-  obviously keeps it, and a `skipped` case is outside the gate. If a reasonable reviewer
-  could argue a case either way, make it clear or remove it.
 - A case shows what's at stake. A reader of the case alone sees why the code is a
   problem or why it's fine, and its name says that, not only what the code does:
-  "caller can't tell a new customer from an existing one", not "returns a tuple".
-- A case tests one thing. It doesn't mix in a second defect, such as a CSV split on
-  `","`, which is a bug whatever the rule says, so the judge can't flag the case for the
-  wrong reason.
+  "a getter that saves surprises a caller who only reads", not "calls save".
+- A case tests one thing. Besides its one point, it holds no code a reviewer could
+  question, so the judge can't flag the case for the wrong reason. Any other code that
+  might be a defect is a second defect: a CSV split on `","`, a parse that raises on
+  input it should handle, a function named as a check that writes. If you're unsure
+  whether a line could be questioned, rewrite it so it can't be. A helper the case
+  calls without defining it isn't a second defect: the judge treats code it can't see as
+  ordinary.
 - Pair the cases: for each form the convention allows, a `valid` case, and beside it an
   `invalid` case of the same shape that breaks the rule.
 - Add `invalid` cases in forms the skill doesn't name, so the eval shows the judge

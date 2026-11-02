@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: declines-a-whole-repository-rule
+expected_outcome: |
+  No codeguard rule is written, and the reply says a deterministic check, such as a project script run in CI, decides whether every module has a test file.
+context:
+  scaffold_script: place-files.sh

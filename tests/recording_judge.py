@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from codeguard.config import JudgeModel
-from codeguard.review import JudgeError, Judgement, JudgeRequest, Verdict
+from codeguard.review import Judgement, JudgeProcessError, JudgeRequest, Verdict
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ class FailingJudge:
     identity: str = "failing"
 
     def judge(self, request: JudgeRequest) -> Judgement:
-        raise JudgeError(self.error)
+        raise JudgeProcessError(self.error)
 
 
 @dataclass(frozen=True)

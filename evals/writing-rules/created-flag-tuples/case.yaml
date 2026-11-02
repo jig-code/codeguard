@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: created-flag-tuples
 expected_outcome: |
-  A judge rule whose skill states one convention as a plain declarative sentence, not a question, gated narrowly, whose eval has a valid case calling a framework's get_or_create, case names that say why the code is or isn't a problem, and no case mixing in a second defect. Its SKILL.md says why the rule exists in a ## Why section. codeguard test passes.
+  A judge rule whose skill states one convention as a plain declarative sentence, not a question, and says why the rule exists in a ## Why section; a binding gated narrowly; and an eval with a valid case in an idiomatic form beside an invalid case of the same shape, case names that say why the code is or isn't a problem, and no case mixing in a second defect.
 context:
   scaffold_script: place-files.sh

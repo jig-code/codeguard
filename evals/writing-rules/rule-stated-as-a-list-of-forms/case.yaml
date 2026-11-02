@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: rule-stated-as-a-list-of-forms
+expected_outcome: |
+  The broad-catch form that contradicts the convention is dropped from the rule or split into another one.
+context:
+  scaffold_script: place-files.sh

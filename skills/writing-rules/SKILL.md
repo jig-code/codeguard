@@ -12,7 +12,12 @@ rule that misjudged code.
 
 ## Workflow
 
-1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
+1. **Decide whether it's a codeguard rule**, and which kind. Read
+   `references/choosing-a-tool.md` before writing any rule. Write no rule, even when
+   asked for one, for a convention a deterministic check can decide exactly: a linter,
+   a type checker, an import linter, a language server or, when no tool has the check,
+   a project script run in CI. That check is the right one whether or not the project
+   runs it or has it turned on. Tell the user which kind of check can decide it instead.
 2. **State the convention and why it exists**, as the two sections below say. Reread
    them when two rules, or a rule and its cases, disagree about the same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
@@ -20,8 +25,10 @@ rule that misjudged code.
 4. **Write the cases** (Cases, below).
 5. **Verify** (Verify, below).
 
-For a judge rule, also read `references/judge-rules.md` before writing or changing it,
-and whenever its eval fails, flips between runs or reports a warning. For examples in the
+For a judge rule, also read `references/judge-rules.md` and
+`references/judge-rule-files.md` before writing or changing it, and read
+`references/judge-rules.md` whenever its eval fails, flips between runs or reports a
+warning. For examples in the
 project's language, read `references/python.md`, `references/typescript.md` or
 `references/ruby.md`.
 
@@ -98,7 +105,8 @@ a rule without one.
   `.codeguard/config.yaml`. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.
 
-codeguard's README has the binding and rule eval formats.
+`references/judge-rule-files.md` has the judge rule's file formats; codeguard's README
+has the rest.
 
 ## Pattern rules
 
@@ -122,7 +130,13 @@ codeguard's README has the binding and rule eval formats.
 - Use made-up code and names (`ExampleModel`), so a case shows the pattern rather than
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
-- Give the idiomatic form a `valid` case beside the `invalid` one.
+- Name every case for why its code breaks or keeps the convention, not only for what
+  the code does: "a getter that saves surprises a caller who only reads", not "calls save in
+  get_order"; and for another form of the same violation, "an is_ check that sends an
+  email has a side effect its name hides", not "sends an email in is_overdue".
+- Give the idiomatic form a `valid` case beside the `invalid` one. A judge rule's `valid`
+  case is an edit its triggers reach, so the judge sees it and passes it; an edit
+  outside the triggers is a `skipped` case, which never reaches the judge.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
   case, with a comment above each case naming its branch. Give each matched construct a
   `valid` case where the convention allows it, if it has such a position, so a rule that
@@ -145,10 +159,9 @@ other code finds code to fix, not evidence that the rule is right.
 
 ```sh
 codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20; calls the model
+codeguard eval --rule <id> --repeat <n>  # a judge rule's cases, each judged n times; calls the model
 codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
 ```
 
-In CI, run the evals of the rules a change touches. Never run `codeguard review --all`
-without `--dry-run`: it judges every file against every judge rule. codeguard's README
-has every command's options.
+Never run `codeguard review --all` without `--dry-run`: it judges every file against
+every judge rule. codeguard's README has every command's options.

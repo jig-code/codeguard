@@ -399,7 +399,7 @@ class TestJudgeEvalRunner:
         assert not result.passed
         assert result.failures == (
             "enum-usage passes a string: not judged: "
-            "JudgeError: gemini failed with 502: upstream request failed",
+            "JudgeProcessError: gemini failed with 502: upstream request failed",
         )
 
     def test_eval_for_an_unknown_rule_fails(self, enum_rule):

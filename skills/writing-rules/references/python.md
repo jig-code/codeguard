@@ -1,25 +1,11 @@
 # Python
 
-## Type checker settings
-
-basedpyright's `reportAny = "error"` reports every value typed `Any`: an untyped
-`json.loads`, `yaml.safe_load` or `response.json()` read used without validation. Text
-typed `str` isn't reported, and neither is a value validated into a typed model
-(`ExampleConfig.model_validate(json.loads(text))`), so the setting is the whole
-convention. mypy's `disallow_any_expr` is the nearest equivalent.
-
-```toml
-[tool.basedpyright]
-reportAny = "error"
-reportExplicitAny = "error"
-```
-
 ## Idiomatic code and the project's own code
 
-Calling Django's `User.objects.get_or_create(...)` and unpacking `(user, created)` is
-idiomatic; a rule against returning a created flag doesn't flag the call. Writing a
-project function that returns `(user, created)` copies the framework's shape and is what
-such a rule judges.
+A Django model declares its fields as class attributes, which Django's metaclass turns
+into instance fields. That is idiomatic: a rule that a class sets up its instance state in
+`__init__` doesn't flag the model. A project class that builds its instance state through
+its own metaclass copies the framework's machinery and is what such a rule judges.
 
 ## A pattern rule
 

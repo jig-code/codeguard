@@ -80,6 +80,9 @@ class Binding:
     def files(self, changed: Sequence[str]) -> list[str]:
         return [file for file in changed if self._matches(file)]
 
+    def triggered_files(self, scope: ChangedLines | AllLines, files: Sequence[str]) -> list[str]:
+        return [file for file in self.files(files) if self.is_triggered(scope, file)]
+
     def is_triggered(self, scope: ChangedLines | AllLines, file: str) -> bool:
         kinds = scope.kinds_of(file)
         return (
