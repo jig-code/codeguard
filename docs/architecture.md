@@ -8,27 +8,30 @@ maintainers' approval before it is made.
 
 ### Purpose
 
-codeguard makes coding agents (Claude Code and Codex) follow a project's coding
-conventions. Each convention is written once and applies wherever code is written or
-reviewed: while the agent works, and in CI.
+codeguard raises the floor of the quality of code that a coding agent (Claude Code or
+Codex) writes on its own. It does that by defining rules the agent follows in its
+development loop, and by reviewing every change against those rules when the agent stops
+and in CI. Rules cover architecture and design as well as code-level practice. Each rule
+is defined once and applies wherever code is written or reviewed.
 
 - Prevention: the agent loads the skill for a file before it edits that file.
 - Correction: every change is reviewed by deterministic checks and an LLM judge. The
   review runs when the agent stops and in CI, and errors block.
 
-codeguard has no conventions and no languages built in. Projects and rule packages supply
-all of them.
+codeguard has no rules and no languages built in. Projects and rule packages supply all
+of them.
 
 ### Rules
 
-Each convention is checked by exactly one rule, of one of two kinds:
+A rule states one requirement on code and why it matters. Each requirement is checked
+by exactly one rule, of one of two kinds:
 
-- A pattern rule is an ast-grep rule, for a convention that can be checked mechanically.
-  Only code checks it, never a model. Its note explains why the convention exists and
+- A pattern rule is an ast-grep rule, for a requirement that can be checked mechanically.
+  Only code checks it, never a model. Its note explains why the requirement exists and
   how to fix a violation.
-- A judge rule is a skill (`SKILL.md`), for a convention that needs judgment. The skill
-  body is the convention. The writing agent loads that text and the judge grades against
-  the same text. There is no separate rubric.
+- A judge rule is a skill (`SKILL.md`), for a requirement that needs judgment. The skill
+  states the requirement and why it matters. The writing agent loads that text and the
+  judge grades against the same text. There is no separate rubric.
 
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
 git and pinned to a tag. Every surface reviews with the same rules.
@@ -101,8 +104,8 @@ the code refer to.
 
 **Single source**
 
-1. Each convention is written in exactly one place: a pattern rule when it can be checked
-   mechanically, otherwise skill prose. Never both, never copied. A pattern rule is
+1. Each requirement is written in exactly one place: a pattern rule when it can be
+   checked mechanically, otherwise skill prose. Never both, never copied. A pattern rule is
    checked only by code, never by an LLM.
 2. Everything the judge enforces is in the skill the writing agent loads. The writing
    agent may get extra guidance the judge doesn't enforce. There is no separate review
@@ -169,7 +172,7 @@ the code refer to.
       context.
 21. The judge reports violations, never fixes. At Stop, the agent's session, which has the
     skill loaded, decides the fix; CI only reports. Skill text states what breaks the
-    convention, not how to change the code.
+    rule, not how to change the code.
 
 **Scale and cost**
 
@@ -182,7 +185,7 @@ the code refer to.
 
 **Portability**
 
-17. The framework has no conventions built in and depends on no language. Content is
+17. The framework has no rules built in and depends on no language. Content is
     discovered at runtime.
 18. Claude Code and Codex are supported equally, each through its own adapter.
 19. An existing tool or host feature is used whenever it satisfies the other invariants.
