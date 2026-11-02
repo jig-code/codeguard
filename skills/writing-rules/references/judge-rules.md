@@ -92,8 +92,10 @@ either way proves nothing about the rule, and a judge that flips on it is right 
   what the code does, so a name that describes the code's action or shape is renamed.
   This holds for every case, the `skipped` one included.
 - Two cases whose reasons say the same thing about the code are one case, however their
-  syntax, names or annotations differ: keep the clearer one. Write the reason before the
-  code; a reason another case already has means the case isn't written.
+  syntax, names or annotations differ: keep the clearer one. Two `valid` cases differ
+  when their code keeps the convention in different situations, not merely by both
+  lacking the violation. Write the reason before the code; a reason another case
+  already has means the case isn't written.
 - A case tests one thing. Every line of it but the one under test is plainly correct
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before

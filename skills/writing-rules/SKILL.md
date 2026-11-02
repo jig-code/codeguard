@@ -150,8 +150,10 @@ codeguard's README has the binding and rule eval formats.
   action or shape repeats the reason and is renamed. This holds for the `skipped` case
   too, whose stake is what the edit leaves untouched.
 - Two cases whose reasons say the same thing about the code are one case, however their
-  syntax or names differ: keep the clearer one. Write a case's reason before its code;
-  if another case already has that reason, don't write the case.
+  syntax or names differ: keep the clearer one. Two `valid` cases differ when their code
+  keeps the convention in different situations, not merely by both lacking the
+  violation. Write a case's reason before its code; if another case already has that
+  reason, don't write the case.
 - A case holds one defect at most, the one it tests. Read every other line of it as a
   reviewer would, and rewrite any line that is wrong for another reason, so nothing
   else in the case can be the ground of a verdict.
