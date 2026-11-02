@@ -451,7 +451,7 @@ class TestReviewJsonFormat:
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        (bin_dir / "claude").write_text(fake_claude_script([{**violation, "confidence": 0.4}]))
+        (bin_dir / "claude").write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -461,7 +461,7 @@ class TestReviewJsonFormat:
             message="Move it.",
             note="Move it.",
             severity=Severity.WARNING,
-            confidence=0.4,
+            confidence=0.5,
         )
         assert json.loads(result.stdout) == {"diagnostics": [finding.as_json()]}
         assert result.returncode == 0
@@ -708,7 +708,7 @@ class TestEvalCommand:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         claude = bin_dir / "claude"
-        claude.write_text(fake_claude_script([{**violation, "confidence": 0.4}]))
+        claude.write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
         claude.chmod(0o755)
 
         result = subprocess.run(
@@ -722,7 +722,7 @@ class TestEvalCommand:
         assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
         assert result.stdout.endswith(
             "responsibility-placement assigns in the invoice: expected outcome invalid, got "
-            "outcome uncertain\n  line 1 (0.40): Move it.\n"
+            "outcome uncertain\n  line 1 (0.50): Move it.\n"
         )
         assert result.returncode == 1
 
@@ -738,7 +738,7 @@ class TestEvalCommand:
         bin_dir.mkdir()
         calls = tmp_path / "calls"
         claude = bin_dir / "claude"
-        violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 0.95}
+        violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
         claude.write_text(fake_claude_script([violation], before=f"echo called >> {calls}\n"))
         claude.chmod(0o755)
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
@@ -903,9 +903,9 @@ class TestEvalMatchesReview:
         [
             ([{"confidence": 1.0}], "", 0),
             (
-                [{"confidence": 0.4}],
+                [{"confidence": 0.5}],
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome uncertain\n  line 3 (0.40): Move it.\n",
+                "outcome uncertain\n  line 3 (0.50): Move it.\n",
                 1,
             ),
             (

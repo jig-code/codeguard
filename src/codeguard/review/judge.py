@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import ReprEnum
 from pathlib import Path
 from typing import ClassVar, Protocol, Self
 
@@ -49,6 +50,16 @@ class JudgeRequest:
         )
 
 
+# The likelihood levels the judge rates a violation with: how likely it is that the code breaks
+# the convention. The schema gives the model only these values, so a confidence between two of
+# them can't reach the threshold check.
+class Confidence(float, ReprEnum):
+    CERTAIN = 1.0
+    HIGHLY_PROBABLE = 0.9
+    PROBABLE = 0.7
+    POSSIBLE = 0.5
+
+
 class Violation(BaseModel):
     """A violation of the convention that a `+` or `-` line of the change is part of."""
 
@@ -59,9 +70,7 @@ class Violation(BaseModel):
     )
     line: int = Field(description="The number of a `+` or `-` line that is part of the violation.")
     message: str = Field(description="What breaks the convention, in one plain sentence.")
-    confidence: float = Field(
-        ge=0,
-        le=1,
+    confidence: Confidence = Field(
         description=(
             "How certain you are that the code breaks the convention. Use one of these values, "
             "not one between them. 1.0: the code matches a case, sign, or example the "

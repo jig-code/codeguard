@@ -146,9 +146,15 @@ class TestJudgeRequest:
 
 
 class TestViolation:
-    def test_confidence_above_one_is_invalid(self, make_violation):
+    @pytest.mark.parametrize("confidence", [0.85, 0.95, 1.1, 0.4])
+    def test_confidence_off_the_scale_is_invalid(self, make_violation, confidence):
         with pytest.raises(ValidationError):
-            make_violation(confidence=1.1)
+            make_violation(confidence=confidence)
+
+    def test_schema_allows_only_the_scale(self):
+        schema = Violation.model_json_schema()
+
+        assert schema["$defs"]["Confidence"]["enum"] == [1.0, 0.9, 0.7, 0.5]
 
     def test_note_is_invalid(self):
         with pytest.raises(ValidationError):

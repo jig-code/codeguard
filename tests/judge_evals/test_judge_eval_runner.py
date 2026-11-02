@@ -282,13 +282,13 @@ class TestJudgeEvalRunner:
 
     def test_unconfident_violation_fails_an_invalid_case(self, enum_rule, make_violation):
         enum_rule.evaluate("string-is-invalid.yaml")
-        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.6)
+        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.7)
 
         result = enum_rule.judged_with(Verdict(violations=(violation,)))
 
         assert result.failures == (
             "enum-usage passes a string: expected outcome invalid, got outcome uncertain\n"
-            "  line 1 (0.60): Pass the member.",
+            "  line 1 (0.70): Pass the member.",
         )
 
     def test_no_violation_fails_an_invalid_case(self, enum_rule):
@@ -333,13 +333,13 @@ class TestJudgeEvalRunner:
 
     def test_any_violation_fails_a_valid_case(self, enum_rule, make_violation):
         enum_rule.evaluate("string-is-valid.yaml")
-        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.3)
+        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.5)
 
         result = enum_rule.judged_with(Verdict(violations=(violation,)))
 
         assert result.failures == (
             "enum-usage passes a string: expected outcome valid, got outcome uncertain\n"
-            "  line 1 (0.30): Pass the member.",
+            "  line 1 (0.50): Pass the member.",
         )
 
     def test_case_outside_the_triggers_is_skipped_without_judging(self, enum_rule):

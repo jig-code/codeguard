@@ -624,7 +624,17 @@ rest of the file, the rule, the model, or a file the judge loaded changes. A loa
 is one the judge read, or one its searches returned: a file a grep matched or a glob
 listed. A file a search would only start returning later doesn't count.
 
-The judge rates its confidence in each violation from 0 to 1. An error below the
+The judge rates its confidence in each violation on a fixed scale, and the model can
+answer with no other value:
+
+| Confidence | The judge's reason |
+|---|---|
+| 1.0 | The code matches a case, sign or example the convention describes. |
+| 0.9 | The code breaks the convention as written. |
+| 0.7 | The code probably breaks the convention, but something in the working directory points to an exception it allows. |
+| 0.5 | The code is as likely to follow the convention as to break it. |
+
+An error below the
 threshold is reported as a warning, with its confidence, and doesn't block. The
 threshold defaults to 0.9; set it in `.codeguard/config.yaml`:
 
@@ -728,13 +738,17 @@ Without it, codeguard sends nothing. Set it where the agent runs: your shell pro
 
 - `claude judges {rule} on {file}`: one span per Claude call, with `model`, `num_turns`,
   `duration_ms`, `cost_usd`, `input_tokens`, `output_tokens`, `cache_read_input_tokens`,
-  `cache_creation_input_tokens` and `thinking_tokens`.
+  `cache_creation_input_tokens`, `thinking_tokens` and `tool_calls`.
 - `gemini judges {rule} on {file}`: one span per Gemini judgement, with `model`,
   `num_turns`, `input_tokens`, `output_tokens`, `cache_read_input_tokens` and
-  `thinking_tokens`, summed over its requests. Its time starts once the call has a slot,
+  `thinking_tokens`, summed over its requests, and `tool_calls`. Its time starts once the call has a slot,
   not while it waits for one. Inside it, Pydantic AI's spans record each request and
   tool call with its content: the prompt, which holds the convention and the changed
   code, Gemini's thought summaries, the files it read and its verdict.
+- `tool_calls` on a Claude or Gemini span is each call the judge made to its read-only
+  tools, in order: the tool's name and the arguments it gave, such as the path it read or
+  the pattern it searched for. It records a call that failed, and on Gemini, the calls of
+  a judgement that returned no verdict. Claude's call that returns the verdict isn't one.
 - `judge {rule} on {file}`: one span per rule and file, with `cache_hit`, `violations`,
   `loaded_files` (the files the verdict depends on) and `changed_files` (the loaded files
   that changed since the cached verdict, which is why it was judged again). The Claude or
