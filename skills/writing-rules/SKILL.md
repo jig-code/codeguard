@@ -43,6 +43,8 @@ says on what ground the code keeps or breaks it.
   shape contradict each other and fail idiomatic code.
 - **One convention.** A rule stating several conventions under one intent is several
   rules. Split it into one rule per convention, or find the one statement they share.
+  A shape the statement doesn't decide is dropped from the rule, or moved to a rule of
+  its own; it is never kept as an extra violation beside the statement.
 - **Plain language.** Write it the way a reviewer would say it in a code review. No
   invented terms: if the rule needs a word nobody uses, it isn't clear yet. A judge
   reads an unfamiliar term as loosely as a person does.
@@ -88,8 +90,16 @@ a rule without one.
   `.codeguard/rule-tests/<id>-test.yml`, never under the rules directory (every YAML file
   there loads as a rule).
 - Judge rule: the skill `.codeguard/skills/<id>/SKILL.md`, the binding
-  `.codeguard/bindings/<id>.yaml` (`skill`, `paths`, `triggers`), and the rule eval
-  `.codeguard/rule-evals/<id>.yaml`.
+  `.codeguard/bindings/<id>.yaml` and the rule eval `.codeguard/rule-evals/<id>.yaml`.
+  A judge rule isn't written until all three exist; write the binding and the rule eval
+  in the same pass as the skill, never leave them for later.
+  - The binding sets `skill` (the skill's directory), `paths` (globs of the files the
+    rule reviews) and `triggers` (the change kinds or gates that call the judge, never
+    `any`, `code`, `function-body` or `function-signature`).
+  - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
+    path; `before`, the file before the edit, left out for a new file; `after`, the
+    file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`;
+    and `reason`, the ground the verdict rests on, for every case but a `skipped` one).
 - Gate: `.codeguard/gates/<id>.yml`, an ast-grep rule tested by
   `.codeguard/rule-tests/<id>-test.yml`.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
@@ -134,6 +144,11 @@ codeguard's README has the binding and rule eval formats.
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases, each stating the reason its
   verdict rests on, and a `skipped` case outside the gate (`references/judge-rules.md`).
+- Name each case by what is at stake: why its code is a problem, or why it is fine. A
+  name that only says what the code does isn't a case name, for a `skipped` case too.
+- A case holds one defect at most, the one it tests. Read every other line of it as a
+  reviewer would, and rewrite any line that is wrong for another reason, so nothing
+  else in the case can be the ground of a verdict.
 
 ## Every rule
 

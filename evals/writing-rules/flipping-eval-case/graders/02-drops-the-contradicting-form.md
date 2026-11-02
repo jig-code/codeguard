@@ -4,4 +4,4 @@ focus: { source: file, path: .codeguard/skills/no-swallowed-exceptions/SKILL.md 
 weight: 1
 ---
 
-Under this SKILL.md's wording, catching Exception or using a bare except is not a violation by itself: a handler that catches broadly and re-raises keeps the convention. The convention no longer lists the broad catch as a form that breaks it (the text may still say the type caught doesn't matter).
+This SKILL.md no longer makes the exception type caught part of the convention: it does not list catching Exception or a bare except as a form that breaks the rule, and it does not carve such a catch out as an allowed exception either. The rule is one convention about not losing the failure; the broad catch is dropped from it or moved to a rule of its own.
