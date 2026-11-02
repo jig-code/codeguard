@@ -394,7 +394,7 @@ class TestClaudeJudge:
 
         assert "--model claude-opus-5-5" in arguments.read_text()
 
-    def test_claude_is_given_only_the_confidence_scale(
+    def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):
         executable = tmp_path / "claude"
@@ -410,11 +410,9 @@ class TestClaudeJudge:
         schema = json.loads(argv[argv.index("--json-schema") + 1])
         confidence = schema["$defs"]["Violation"]["properties"]["confidence"]
         assert confidence["$ref"] == "#/$defs/Confidence"
-        assert schema["$defs"]["Confidence"] == {
-            "enum": [1.0, 0.9, 0.7, 0.5],
-            "title": "Confidence",
-            "type": "number",
-        }
+        options = schema["$defs"]["Confidence"]["anyOf"]
+        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
+        assert all(option["description"] for option in options)
 
     def test_claude_has_only_read_only_tools(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request

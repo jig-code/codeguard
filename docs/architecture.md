@@ -73,7 +73,7 @@ with equivalent tools).
   finding about the model, not a reason to change the prompt.
 - What it sees: nothing else. No CLAUDE.md, hooks, plugins or other skills reach it.
 - Its output: a reason for its verdict, pass or fail, saying what in the changed code
-  keeps the convention or breaks it, as context for whoever troubleshoots the verdict;
+  keeps the rule or breaks it, as context for whoever troubleshoots the verdict;
   and violations, each with a file, line, message and confidence (1.0, 0.9, 0.7 or 0.5).
   A violation is reported only where the changed code is part of it.
 
@@ -221,7 +221,7 @@ onto its API.
   removed lines are marked `-`. For a language without a syntax table, the changed lines
   are sent; for a new file, or with `--all`, the whole file is sent. The template tells
   the judge that the whole file is at its path, and to read it, or any other file, when
-  the convention needs more.
+  the rule needs more.
 - **Isolation (#6).** The Claude provider runs `claude --safe-mode`, which loads no
   CLAUDE.md, skills, plugins, hooks, MCP servers or memory. Its tools are read-only and
   rooted at the repository. It runs no subagents. The Gemini provider has equivalent
@@ -229,9 +229,12 @@ onto its API.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache.
 - **Output.** Validated against the verdict schema; output that fails validation fails
   the run loudly.
-- **Confidence scale**, stated in the template: 1.0 when the code matches a case or
-  example the convention describes; 0.9 when it breaks the convention as written; 0.7
-  when something points to an allowed exception; 0.5 when a violation is as likely as
-  not; below 0.5, not reported.
+- **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
+  code breaks the rule and nothing in the working directory points to an allowed
+  exception; 0.9 when the code breaks the rule as written but the verdict rests on a
+  reading of the rule's terms a reviewer could contest; 0.7 when something in the working
+  directory points to an allowed exception; 0.5 when a violation is as likely as not;
+  below 0.5, not reported. The scale never rewards resemblance to an example: rules hold
+  none.
 - **Determinism (#5).** Claude Code adds the date, the account and the working directory
   to the message. Those are the only inputs codeguard doesn't control.

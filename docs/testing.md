@@ -17,9 +17,9 @@ that directory, and the layout is fixed.
 - A pattern rule is an ast-grep rule that matches code exactly, in
   `rules/pattern/<id>.yml`. Its rule tests, `rule-tests/<id>-test.yml`, list code it
   must and must not match.
-- A judge rule is a convention a model checks. Its skill, `skills/<id>/SKILL.md`, is the
-  convention's text, which codeguard puts in the judge's prompt; it isn't a Claude Code
-  skill. A supplement beside it gives one language's forms of the convention.
+- A judge rule is a requirement a model checks. Its skill, `skills/<id>/SKILL.md`, is the
+  requirement's text, which codeguard puts in the judge's prompt; it isn't a Claude Code
+  skill. A supplement beside it gives one language's forms of the requirement.
   Its rule eval, `rule-evals/<id>.yaml`, lists cases: each is an edit and the review it
   should get.
 - A rule's binding, `bindings/<id>.yaml`, sets the paths it reviews. A judge rule's

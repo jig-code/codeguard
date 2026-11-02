@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from codeguard.review import JudgeRequest, Severity, Verdict
-from codeguard.review.judge import INSTRUCTIONS, Violation
+from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
 from codeguard.working_tree import AllLines, ChangedLines, Removal
 
 THRESHOLD = 0.9
@@ -16,7 +16,7 @@ class TestJudgeRequest:
         request = make_judge_request(skill=skill, file="pricing.py", changes="+     1\tA = 1\n")
 
         assert request.prompt == (
-            '<convention name="pricing">\nPrices are integers.\n</convention>\n\n'
+            '<rule name="pricing">\nPrices are integers.\n</rule>\n\n'
             '<changes path="pricing.py">\n+     1\tA = 1\n</changes>\n'
         )
 
@@ -152,9 +152,17 @@ class TestViolation:
             make_violation(confidence=confidence)
 
     def test_schema_allows_only_the_scale(self):
-        schema = Violation.model_json_schema()
+        schema = output_schema(Violation)
 
-        assert schema["$defs"]["Confidence"]["enum"] == [1.0, 0.9, 0.7, 0.5]
+        options = schema["$defs"]["Confidence"]["anyOf"]
+        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
+
+    def test_schema_describes_each_value_of_the_scale(self):
+        schema = output_schema(Violation)
+
+        options = schema["$defs"]["Confidence"]["anyOf"]
+        described = [option["const"] for option in options if option.get("description")]
+        assert described == [member.value for member in Confidence]
 
     def test_note_is_invalid(self):
         with pytest.raises(ValidationError):
