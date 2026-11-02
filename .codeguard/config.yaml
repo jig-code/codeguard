@@ -1,7 +1,7 @@
 packages:
   - kind: git
     git: https://github.com/betterwithranch/codeguard-rules.git
-    ref: v0.6.1
+    ref: d0ad2dc1d013a206436eb7076382473d5480cb10
     rulesets:
       python:
         rules:
