@@ -252,7 +252,7 @@ A judge rule is three files, all named by its id:
 
 ```
 python/
-  skills/<id>/SKILL.md       # the convention the judge checks
+  skills/<id>/SKILL.md       # the rule the judge checks
   bindings/<id>.yaml         # where it runs, when it runs, and the model that judges it
   rule-evals/<id>.yaml       # the rule eval: edits and the review each should get
 ```
@@ -629,7 +629,7 @@ is one the judge read, or one its searches returned: a file a grep matched or a 
 listed. A file a search would only start returning later doesn't count.
 
 The judge gives a reason with every verdict, pass or fail: one sentence saying what in
-the changed code keeps the convention or breaks it. It is context for whoever reads a
+the changed code keeps the rule or breaks it. It is context for whoever reads a
 rule eval, which prints it for every case (The rule eval, above); a review prints each
 violation's message.
 
@@ -638,10 +638,10 @@ answer with no other value:
 
 | Confidence | What it says |
 |---|---|
-| 1.0 | The code matches a case, sign or example the convention describes. |
-| 0.9 | The code breaks the convention as written. |
-| 0.7 | The code probably breaks the convention, but something in the working directory points to an exception it allows. |
-| 0.5 | The code is as likely to follow the convention as to break it. |
+| 1.0 | The rule's statement decides the changed code on its face, with no reading of intent, of what a name means, or of code the judge can't see. |
+| 0.9 | The code breaks the rule as written, but the verdict rests on a reading a reviewer could contest. |
+| 0.7 | The code probably breaks the rule, but something in the working directory points to an exception it allows. |
+| 0.5 | The code is as likely to follow the rule as to break it. |
 
 An error below the
 threshold is reported as a warning, with its confidence, and doesn't block. The
@@ -752,7 +752,7 @@ Without it, codeguard sends nothing. Set it where the agent runs: your shell pro
   `num_turns`, `input_tokens`, `output_tokens`, `cache_read_input_tokens` and
   `thinking_tokens`, summed over its requests, and `tool_calls`. Its time starts once the call has a slot,
   not while it waits for one. Inside it, Pydantic AI's spans record each request and
-  tool call with its content: the prompt, which holds the convention and the changed
+  tool call with its content: the prompt, which holds the rule and the changed
   code, Gemini's thought summaries, the files it read and its verdict.
 - `tool_calls` on a Claude or Gemini span is each call the judge made to its read-only
   tools, in order: the tool's name and the arguments it gave, such as the path it read or

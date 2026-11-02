@@ -16,7 +16,7 @@ class TestJudgeRequest:
         request = make_judge_request(skill=skill, file="pricing.py", changes="+     1\tA = 1\n")
 
         assert request.prompt == (
-            '<convention name="pricing">\nPrices are integers.\n</convention>\n\n'
+            '<rule name="pricing">\nPrices are integers.\n</rule>\n\n'
             '<changes path="pricing.py">\n+     1\tA = 1\n</changes>\n'
         )
 
