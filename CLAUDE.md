@@ -7,7 +7,7 @@
 Before changing the judge (its template, its prompt, its tools or what it's given), the
 review pipeline, or anything an invariant covers, read
 [docs/architecture.md](docs/architecture.md) and check the change against it. A change
-that conflicts with it needs Craig's decision first.
+that conflicts with it needs the maintainers' approval before it's made.
 
 ## Testing
 
