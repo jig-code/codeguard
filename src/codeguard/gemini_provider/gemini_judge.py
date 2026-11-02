@@ -1,6 +1,6 @@
 import asyncio
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,14 +8,22 @@ from pathlib import Path
 import httpx2
 import logfire
 from google.genai.types import ThinkingLevel
-from pydantic_ai import Agent, NativeOutput, RunContext, ToolOutput, UsageLimits
+from pydantic import JsonValue
+from pydantic_ai import (
+    Agent,
+    NativeOutput,
+    RunContext,
+    ToolOutput,
+    UsageLimits,
+    capture_run_messages,
+)
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
@@ -70,10 +78,13 @@ class GeminiJudge:
         ):
             tools = FileTools(self.root)
             usage = RunUsage()
-            try:
-                verdict = asyncio.run(self._judge(request, tools, usage))
-            finally:
-                span.set_attributes({**_telemetry(usage), "tool_calls": tuple(tools.calls)})
+            with capture_run_messages() as messages:
+                try:
+                    verdict = asyncio.run(self._judge(request, tools, usage))
+                finally:
+                    span.set_attributes(
+                        {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
+                    )
             return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
 
     async def _judge(self, request: JudgeRequest, tools: FileTools, usage: RunUsage) -> Verdict:
@@ -182,6 +193,21 @@ def _message(error: ModelHTTPError) -> str:
         if isinstance(details, dict) and isinstance(message := details.get("message"), str):
             return message
     return str(body)
+
+
+def _tool_calls(
+    messages: Sequence[ModelMessage], tools: FileTools
+) -> tuple[dict[str, JsonValue], ...]:
+    """The file tools the model called, with the arguments it sent, in the order it called
+    them. The tools run concurrently, so the order they ran in says nothing."""
+    names = {tool.name for tool in tools.tools}
+    return tuple(
+        {"tool": part.tool_name, **part.args_as_dict()}
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for part in message.parts
+        if isinstance(part, ToolCallPart) and part.tool_name in names
+    )
 
 
 def _telemetry(usage: RunUsage) -> dict[str, object]:
