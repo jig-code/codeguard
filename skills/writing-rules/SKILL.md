@@ -144,8 +144,13 @@ codeguard's README has the binding and rule eval formats.
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases, each stating the reason its
   verdict rests on, and a `skipped` case outside the gate (`references/judge-rules.md`).
-- Name each case by what is at stake: why its code is a problem, or why it is fine. A
-  name that only says what the code does isn't a case name, for a `skipped` case too.
+- A case's name is its reason in short: what is at stake, why the code is a problem or
+  why it is fine. Read the name as the ground of the verdict; a name that instead
+  describes the code or the edit (what it returns, calls, adds or changes) is renamed.
+  This holds for the `skipped` case too, whose ground is what the edit leaves untouched.
+- Two cases whose reasons say the same thing about the code are one case, however their
+  syntax or names differ: keep the clearer one. Write a case's reason before its code;
+  if another case already has that reason, don't write the case.
 - A case holds one defect at most, the one it tests. Read every other line of it as a
   reviewer would, and rewrite any line that is wrong for another reason, so nothing
   else in the case can be the ground of a verdict.

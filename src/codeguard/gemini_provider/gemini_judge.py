@@ -84,9 +84,7 @@ class GeminiJudge:
             with capture_run_messages() as messages:
                 try:
                     verdict = asyncio.run(
-                        self._run(
-                            request.instructions, request.prompt, Verdict, tools.tools, usage
-                        )
+                        self._run(request.instructions, request.prompt, Verdict, tools.tools, usage)
                     )
                 finally:
                     span.set_attributes(

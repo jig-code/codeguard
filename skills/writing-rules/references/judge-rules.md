@@ -8,10 +8,11 @@ another ground than the case states, is judged with low confidence, or comes bac
 warning. That is a defect in the rule's wording or in the case:
 
 - Don't re-run until it passes.
-- Check the gate. A binding whose `triggers` is `any`, `code`, `function-body` or
-  `function-signature` sends the judge code the convention can't decide, and the judge
-  wavers on it. Narrow the triggers to the node that holds the violation (Gate every
-  form, below) as part of the fix. Never loosen a gate to get past a failure.
+- Open the binding and check its `triggers` before anything else. `any`, `code`,
+  `function-body` or `function-signature` sends the judge code the convention can't
+  decide, and the judge wavers on it. Narrowing the triggers to the node that holds the
+  violation (Gate every form, below) is part of every fix to an unreliable rule. Never
+  loosen a gate to get past a failure.
 - Don't add the failing case's code to the skill as an example, and don't add a
   carve-out for it. The judge would then pass the case by matching it, and the next
   piece of code fails the same way. Restate the convention so its statement decides the
@@ -60,6 +61,15 @@ how triggers select what the judge sees.
 - Gate on the narrowest node that holds the violation, such as the `except` clause
   rather than the whole `try`. A wider gate costs judge calls and tokens;
   `codeguard review --dry-run` counts the calls.
+- A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
+  `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
+  `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
+  `annotation`, `call`, `control-flow`, `return-yield`, `collection-literal`,
+  `string-literal`, `number-literal`, `attribute-access`, `subscript`,
+  `conditional-expression`, `membership-test`, `assert`, `raise`,
+  `definition-added-or-removed`, `code` and `any`. When no kind fits the node, write a
+  gate: an ast-grep rule in `gates/<id>.yml` that matches the node, named in `triggers`
+  and tested like a pattern rule.
 
 ## Write a few clear eval cases
 
@@ -75,8 +85,12 @@ nothing about the rule, and a judge that flips on it is right to.
   states no reason.
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
   it. A reader of the case alone sees why the code is a problem or why it's fine, and
-  its name says that: what is at stake, never only what the code does. This holds for
-  every case, the `skipped` one included.
+  the case's name is that reason in short. Read the name as the ground of the verdict:
+  a name that describes the code or the edit instead is renamed. This holds for every
+  case, the `skipped` one included.
+- Two cases whose reasons say the same thing about the code are one case, however their
+  syntax, names or annotations differ: keep the clearer one. Write the reason before the
+  code; a reason another case already has means the case isn't written.
 - A case tests one thing. Every line of it but the one under test is plainly correct
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before

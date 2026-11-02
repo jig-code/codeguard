@@ -4,4 +4,4 @@ focus: { source: file, path: .codeguard/rule-evals/no-created-flag-results.yaml 
 weight: 1
 ---
 
-The rule eval has at most four invalid and at most four valid cases, and each case tests something no other case does: a different thing the code does or fails to do, not another syntax for the same thing.
+This rule eval has at most four invalid cases and at most four valid cases, and no two cases rest on the same ground: no two `reason` values say the same thing about the code, whatever the differences in syntax, names or annotations between their cases.
