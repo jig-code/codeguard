@@ -421,10 +421,25 @@ class TestGeminiJudge:
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
         assert attributes["tool_calls"] == (
-            '[{"tool":"read_file","path":"logger.py","offset":1},'
+            '[{"tool":"read_file","path":"logger.py"},'
             '{"tool":"grep","pattern":"def info","glob":"**/*.py"},'
             '{"tool":"read_file","path":"../outside.py","offset":3}]'
         )
+
+    def test_call_does_not_record_the_verdict_tool_bedrock_calls(
+        self, tmp_path, capfire, make_judge_request
+    ):
+        models = ScriptedGemini(
+            [
+                calls(("glob", {"pattern": "*.py"})),
+                calls(("final_result", {"violations": []})),
+            ]
+        )
+
+        judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
+
+        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        assert attributes["tool_calls"] == '[{"tool":"glob","pattern":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
         self, tmp_path, capfire, make_judge_request
