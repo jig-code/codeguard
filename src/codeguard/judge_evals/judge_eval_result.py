@@ -31,10 +31,23 @@ class JudgeEvalResult:
     def failures(self) -> tuple[str, ...]:
         return tuple(failure for report in self.reports for failure in _failures(report))
 
+    @property
+    def reasons(self) -> tuple[str, ...]:
+        """The judge's reason for each case it judged, passing or failing, so whoever reads the
+        eval can see on what ground the rule was decided and fix its wording."""
+        return tuple(
+            f"{report.dataset_name} {case.name}: {case.output.reason}"
+            for report in self.reports
+            for case in report.cases
+            if case.output.reason is not None
+        )
+
     def write(self, out: TextIO) -> None:
         console = Console(file=out)
         for report in self.reports:
             report.print(console=console, include_reasons=True)
+        for reason in self.reasons:
+            print(reason, file=out)
         for failure in self.failures:
             print(failure, file=out)
         self.checks.write(out)

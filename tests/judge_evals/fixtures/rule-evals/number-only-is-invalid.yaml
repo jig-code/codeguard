@@ -3,4 +3,4 @@ cases:
     inputs:
       after: |
         count = 1
-    expected_output: {outcome: invalid, reason: The call passes a string.}
+    expected_output: {outcome: invalid}

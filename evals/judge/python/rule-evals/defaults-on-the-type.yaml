@@ -64,7 +64,6 @@ cases:
                 self.queue.put(job)
     expected_output:
       outcome: invalid
-      reason: The call passes file_format the value ExportJob already declares as its default.
   - name: method passes on a value the type requires, earlier in its file
     inputs:
       file: jobs/scheduler.py
@@ -130,7 +129,6 @@ cases:
                 self.queue.put(job)
     expected_output:
       outcome: valid
-      reason: The call passes on a file_format its caller supplied, and ReportJob declares no default for it.
   - name: changes a constant, with no call
     inputs:
       file: exports/limits.py

@@ -13,7 +13,6 @@ cases:
         ship('shipped')
     expected_output:
       outcome: invalid
-      reason: The call passes a literal.
 """
 
 

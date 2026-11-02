@@ -375,11 +375,9 @@ the review it should get:
   A review whose only violations are below the confidence threshold has the outcome
   `uncertain`. No case can expect it: a case fails when the judge is uncertain about it.
 
-  An `invalid` or `valid` case also states its `reason`: the ground the verdict rests
-  on, in one sentence, such as "the handler logs the exception with its traceback and
-  re-raises it". The judge gives a reason with every verdict, and the case passes only
-  when the judge's reason gives the same ground: the same code, doing or failing to do
-  the same thing. A `skipped` case states no reason, since the judge never sees it.
+  A case states no reason. The judge gives one with every verdict, and `codeguard eval`
+  prints it for every case it judged, so whoever reads the eval sees on what ground the
+  rule was decided; a wrong or vague reason shows where the rule's wording is unclear.
 
 ```yaml
 cases:
@@ -397,7 +395,6 @@ cases:
             pass
     expected_output:
       outcome: invalid
-      reason: The module gains a second class, Invoice, beside Order.
   - name: defines one class
     inputs:
       after: |
@@ -405,7 +402,6 @@ cases:
             pass
     expected_output:
       outcome: valid
-      reason: The module defines one class, Order.
   - name: changes an attribute
     inputs:
       before: |
@@ -421,10 +417,10 @@ cases:
 `expected_output` can also list the `violations`, each with a `line`, `confidence` and
 `message`, and optionally the `kinds` on its line; a violation without `kinds` isn't
 checked on them.
-A case that leaves them out checks only the outcome and the reason. Besides `cases`, the
-file may set `name`, the rule id, which defaults to the file name; a rule has one eval
-file. The file holds nothing else: codeguard decides how a case is judged and checked, so
-every rule is held to the same bar.
+A case that leaves them out checks only the outcome. Besides `cases`, the file may set
+`name`, the rule id, which defaults to the file name; a rule has one eval file. The file
+holds nothing else: codeguard decides how a case is judged and checked, so every rule is
+held to the same bar.
 
 #### Test a judge rule
 
@@ -477,11 +473,6 @@ codeguard version, so runs of the same rule compare.
 
 - the review's outcome, or its violations when the case lists them, differ from
   `expected_output`. The message shows what the judge reported, its reason first;
-- the judge's reason gives another ground than the case's `reason`. The rule's own
-  model reads the two reasons, with no tools, and says whether they rest the verdict on
-  the same code doing or failing to do the same thing; wording doesn't matter. The
-  message shows both reasons and where they part. A case whose outcome is already
-  wrong isn't checked on its reason;
 - it expects `invalid` and the judge flags only lines outside the triggers. Reviews
   would miss that violation, so the message lists the kinds on those lines to add to
   `triggers`;
@@ -492,14 +483,14 @@ A case counts only the violations a review would report: those on a changed or r
 line of the case's file.
 
 `codeguard eval` also fails a judge rule with no `invalid` case, and a rule eval whose
-id matches no judge rule. `codeguard eval` prints a table per rule, then one line per
-failure.
+id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
+reason for each case it judged, then one line per failure.
 
 #### Where an eval's inputs come from
 
 | Input | From |
 |---|---|
-| The edits, the files around them and their expected reviews, each with the reason the verdict should rest on | the rule eval, `rule-evals/<id>.yaml` |
+| The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
 | Provider and model | the binding, or `--provider` and `--model` |
@@ -638,8 +629,9 @@ is one the judge read, or one its searches returned: a file a grep matched or a 
 listed. A file a search would only start returning later doesn't count.
 
 The judge gives a reason with every verdict, pass or fail: one sentence saying what in
-the changed code keeps the convention or breaks it. A review prints each violation's
-message; the reason is what a rule eval checks a case on (The rule eval, above).
+the changed code keeps the convention or breaks it. It is context for whoever reads a
+rule eval, which prints it for every case (The rule eval, above); a review prints each
+violation's message.
 
 The judge rates its confidence in each violation on a fixed scale, and the model can
 answer with no other value:

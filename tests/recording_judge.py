@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from codeguard.config import JudgeModel
-from codeguard.review import Agreement, GradeRequest, JudgeError, Judgement, JudgeRequest, Verdict
+from codeguard.review import JudgeError, Judgement, JudgeRequest, Verdict
 
 
 @dataclass(frozen=True)
@@ -40,27 +40,3 @@ class RecordingJudges:
     def __call__(self, root: Path, model: JudgeModel) -> RecordingJudge | FailingJudge:
         self.created.append(JudgeCreation(root, model))
         return self.judge
-
-
-@dataclass(frozen=True)
-class RecordingGrader:
-    agreement: Agreement = Agreement(agrees=True, why="Both rest on the same code.")
-    received: list[GradeRequest] = field(default_factory=list)
-
-    def grade(self, request: GradeRequest) -> Agreement:
-        self.received.append(request)
-        return self.agreement
-
-
-@dataclass(frozen=True)
-class RecordingGraders:
-    grader: RecordingGrader = field(default_factory=RecordingGrader)
-    created: list[JudgeCreation] = field(default_factory=list)
-
-    def __call__(self, root: Path, model: JudgeModel) -> RecordingGrader:
-        self.created.append(JudgeCreation(root, model))
-        return self.grader
-
-
-def disagreeing(why: str) -> RecordingGraders:
-    return RecordingGraders(RecordingGrader(Agreement(agrees=False, why=why)))

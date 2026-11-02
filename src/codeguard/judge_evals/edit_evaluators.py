@@ -1,10 +1,8 @@
-import asyncio
 from dataclasses import dataclass
 
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from codeguard.config import ChangeKind
-from codeguard.review import Grader, GradeRequest
 from codeguard.rule_tests import EditCase, EditReview, Outcome
 
 
@@ -22,35 +20,6 @@ class PartialEqualsExpected(Evaluator[EditCase, EditReview, None]):
         return EvaluationReason(
             value=False,
             reason=f"expected {_described(expected)}, got {_described(actual)}{ctx.output.listing}",
-        )
-
-
-@dataclass
-class ReasonAgrees(Evaluator[EditCase, EditReview, None]):
-    """The judge's reason gives the ground the case expects, as a model reads the two. It is
-    checked once the outcome matches: a wrong outcome already fails the case."""
-
-    grader: Grader
-
-    async def evaluate(
-        self, ctx: EvaluatorContext[EditCase, EditReview, None]
-    ) -> EvaluationReason | dict[str, bool]:
-        expected = ctx.expected_output
-        if (
-            expected is None
-            or expected.reason is None
-            or ctx.output.reason is None
-            or ctx.output.outcome is not expected.outcome
-        ):
-            return {}
-        request = GradeRequest(expected.reason, ctx.output.reason)
-        agreement = await asyncio.to_thread(self.grader.grade, request)
-        if agreement.agrees:
-            return EvaluationReason(value=True, reason=agreement.why)
-        return EvaluationReason(
-            value=False,
-            reason=f"the judge's reason doesn't give the expected reason: {agreement.why}\n"
-            f"  expected: {expected.reason}\n  judge: {ctx.output.reason}",
         )
 
 
@@ -90,7 +59,7 @@ def _described(fields: dict[str, object]) -> str:
 
 
 def _listed(review: EditReview, expected: EditReview) -> dict[str, object]:
-    # The reason is checked by ReasonAgrees, as a model reads it, never word for word.
+    # The judge's reason is context for whoever reads the eval, printed with it, never compared.
     listed = expected.model_fields_set - {"reason"}
     fields: dict[str, object] = review.model_dump(mode="json", include=listed - {"violations"})
     if "violations" in listed:

@@ -33,9 +33,7 @@ from pydantic_ai.usage import RunUsage
 
 from codeguard.gemini_provider.file_tools import FileTools
 from codeguard.review import (
-    Agreement,
     Deadline,
-    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -91,20 +89,6 @@ class GeminiJudge:
                         {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
                     )
             return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
-
-    def grade(self, request: GradeRequest) -> Agreement:
-        """Compares two reasons with the judge's model and no tools."""
-        with (
-            self.processes,
-            logfire.span("gemini grades a reason", model=self.model) as span,
-        ):
-            usage = RunUsage()
-            try:
-                return asyncio.run(
-                    self._run(request.instructions, request.prompt, Agreement, [], usage)
-                )
-            finally:
-                span.set_attributes(_telemetry(usage))
 
     async def _run[Output: BaseModel](
         self,

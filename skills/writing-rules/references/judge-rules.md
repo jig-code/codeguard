@@ -1,11 +1,12 @@
 # Writing a judge rule that judges reliably
 
-A judge rule is ready when every eval case comes out the same way, for the same reason,
-on every run. The judge gives a reason with every verdict, pass or fail, and each case
-states the reason it expects; `codeguard eval` fails a case when the verdict or the
-reason doesn't match. A result is unreliable when it flips between runs, rests on
-another ground than the case states, is judged with low confidence, or comes back as a
-warning. That is a defect in the rule's wording or in the case:
+A judge rule is ready when every eval case comes out the same way on every run. A
+result is unreliable when it flips between runs, is judged with low confidence, or
+comes back as a warning. That is a defect in the rule's wording or in the case. The
+judge gives a reason with every verdict, pass or fail, and `codeguard eval` prints it
+for every case: read it first. A reason that rests the verdict on the wrong code, or on
+something the convention doesn't say, or that is vague, means the rule's wording is
+unclear; reword the convention so it decides the case on the ground you meant.
 
 - Don't re-run until it passes.
 - Open the binding and check its `triggers` before anything else. `any`, `code`,
@@ -16,11 +17,11 @@ warning. That is a defect in the rule's wording or in the case:
 - Don't add the failing case's code to the skill as an example, and don't add a
   carve-out for it. The judge would then pass the case by matching it, and the next
   piece of code fails the same way. Restate the convention so its statement decides the
-  case, on the ground the case states.
+  case.
 - Don't change the rule's wording to get a weak case to pass. Fix the case, or drop it.
 
 A fix touches whichever of the three files is at fault, and often more than one: the
-skill's wording, the binding's triggers, and the case's code, name or reason.
+skill's wording, the binding's triggers, and the case's code or name.
 
 ## Write the skill
 
@@ -81,21 +82,17 @@ none of the others does: a different thing the code does or fails to do, not ano
 syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
 either way proves nothing about the rule, and a judge that flips on it is right to.
 
-- Each `invalid` and `valid` case states its `reason`: the ground the verdict rests on,
-  in one sentence naming the code and what it does or fails to do. The case passes only
-  when the judge's reason gives the same ground, in whatever words. A `skipped` case
-  states no reason.
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
   it. A reader of the case alone sees why the code is a problem or why it's fine, and
   the case's name says that stake: for an `invalid` case the harm, in the terms of the
-  rule's Why; for a `valid` case what the code keeps safe. The `reason` already says
-  what the code does, so a name that describes the code's action or shape is renamed.
-  This holds for every case, the `skipped` one included.
-- Two cases whose reasons say the same thing about the code are one case, however their
-  syntax, names or annotations differ: keep the clearer one. Two `valid` cases differ
-  when their code keeps the convention in different situations, not merely by both
-  lacking the violation. Write the reason before the code; a reason another case
-  already has means the case isn't written.
+  rule's Why; for a `valid` case what the code keeps safe. The code already shows what
+  it does, so a name that describes the code's action or shape is renamed. This holds
+  for every case, the `skipped` one included.
+- Two cases that break or keep the convention on the same ground are one case, however
+  their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
+  differ when their code keeps the convention in different situations, not merely by
+  both lacking the violation. Before writing a case, say in one sentence what its code
+  does or fails to do; a sentence another case already has means the case isn't written.
 - A case tests one thing. Every line of it but the one under test is plainly correct
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before
@@ -107,5 +104,5 @@ either way proves nothing about the rule, and a judge that flips on it is right 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss, state its reason, then reword the convention until the case passes on that reason;
-never add the code to the skill. The bar stays 20 runs of 20, verdict and reason.
+miss, then reword the convention until the case passes, reading the judge's reason on
+each run; never add the code to the skill. The bar stays 20 runs of 20.

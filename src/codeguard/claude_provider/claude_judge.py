@@ -11,9 +11,7 @@ from pydantic import BaseModel
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
 from codeguard.review import (
-    Agreement,
     Deadline,
-    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -23,7 +21,6 @@ from codeguard.review import (
 
 _EXECUTABLE = "claude"
 _READ_ONLY_TOOLS = "Read,Grep,Glob"
-_NO_TOOLS = ""
 
 
 @dataclass(frozen=True)
@@ -51,13 +48,6 @@ class ClaudeJudge:
             )
             span.set_attributes(result.telemetry)
             return Judgement(Verdict.model_validate(result.structured_output), result.loaded_files)
-
-    def grade(self, request: GradeRequest) -> Agreement:
-        """Compares two reasons with the judge's model and no tools."""
-        with logfire.span("claude grades a reason", model=self.model) as span:
-            result = self._result(span, request.instructions, request.prompt, Agreement, _NO_TOOLS)
-            span.set_attributes(result.telemetry)
-            return Agreement.model_validate(result.structured_output)
 
     def _result(
         self,

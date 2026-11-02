@@ -7,7 +7,7 @@ from diskcache import Cache
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
-from codeguard.review import CachedJudge, Deadline, Grader, Judge
+from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
 
@@ -32,15 +32,6 @@ class Judges:
         return CachedJudge(self.uncached(root, model, deadline), self.store, root)
 
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
-        return self._provider(root, model, deadline)
-
-    def grader(self, root: Path, model: JudgeModel) -> Grader:
-        """Grades a rule eval's reasons with the model the rule is judged with."""
-        return self._provider(root, model, None)
-
-    def _provider(
-        self, root: Path, model: JudgeModel, deadline: Deadline | None
-    ) -> ClaudeJudge | GeminiJudge:
         processes = self.processes[model.provider]
         if model.provider is JudgeProvider.GEMINI:
             models = VertexGemini(self.config.project, self.config.location)

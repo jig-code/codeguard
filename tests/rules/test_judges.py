@@ -43,13 +43,3 @@ class TestJudges:
         assert isinstance(judge, GeminiJudge)
         assert judge.identity == "bedrock\0us.anthropic.claude-haiku-5-5"
         assert judge.processes is judges.processes[JudgeProvider.BEDROCK]
-
-    def test_grader_is_the_rule_s_provider_with_its_model(self, tmp_path):
-        judges = Judges(JudgeConfig(project="sanctum"), store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
-
-        grader = judges.grader(tmp_path, model)
-
-        assert isinstance(grader, GeminiJudge)
-        assert grader.model == "gemini-3.1-pro-preview"
-        assert grader.processes is judges.processes[JudgeProvider.GEMINI]

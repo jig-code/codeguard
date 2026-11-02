@@ -1,3 +1,4 @@
+import io
 import re
 import subprocess
 from dataclasses import dataclass
@@ -7,23 +8,11 @@ from pathlib import Path
 import pytest
 from factories.diagnostic import MakeViolation
 from git_repo import GitRepo
-from recording_judge import (
-    FailingJudge,
-    RecordingGraders,
-    RecordingJudge,
-    RecordingJudges,
-    disagreeing,
-)
+from recording_judge import FailingJudge, RecordingJudge, RecordingJudges
 
 from codeguard.config import ConfigError, JudgeModel, JudgeProvider, RulesetLoader
-from codeguard.judge_evals import (
-    EvalSelection,
-    GraderFactory,
-    JudgeEvalResult,
-    JudgeEvalRunner,
-    JudgeFactory,
-)
-from codeguard.review import GradeRequest, Judge, Judgement, JudgeRequest, Skill, Verdict
+from codeguard.judge_evals import EvalSelection, JudgeEvalResult, JudgeEvalRunner, JudgeFactory
+from codeguard.review import Judge, Judgement, JudgeRequest, Skill, Verdict
 from codeguard.rule_tests import RuleTestResult
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -51,9 +40,8 @@ class EnumRule:
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
         model: JudgeModel | None = None,
-        graders: GraderFactory | None = None,
     ) -> JudgeEvalResult:
-        return self.runner(judges, repeat, selection, model, graders).run()
+        return self.runner(judges, repeat, selection, model).run()
 
     def runner(
         self,
@@ -61,24 +49,14 @@ class EnumRule:
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
         model: JudgeModel | None = None,
-        graders: GraderFactory | None = None,
     ) -> JudgeEvalRunner:
         loader = RulesetLoader.local(self.repo.root)
         return JudgeEvalRunner(
-            self.repo.root,
-            loader,
-            judges,
-            graders or RecordingGraders(),
-            0.9,
-            repeat=repeat,
-            selection=selection,
-            model=model,
+            self.repo.root, loader, judges, 0.9, repeat=repeat, selection=selection, model=model
         )
 
-    def judged_with(
-        self, verdict: Verdict, graders: GraderFactory | None = None
-    ) -> JudgeEvalResult:
-        return self.run(RecordingJudges(RecordingJudge(verdict)), graders=graders)
+    def judged_with(self, verdict: Verdict) -> JudgeEvalResult:
+        return self.run(RecordingJudges(RecordingJudge(verdict)))
 
 
 @pytest.fixture
@@ -558,14 +536,9 @@ class TestJudgeEvalRunner:
                 "skipped; one the judge can't decide isn't clear enough for a rule eval",
             ),
             (
-                "case-without-a-reason.yaml",
-                "cases.0.expected_output: Value error, a case that expects invalid states the "
-                "reason, so the eval checks the judge decides it on the same ground",
-            ),
-            (
-                "skipped-case-with-a-reason.yaml",
-                "cases.0.expected_output: Value error, a skipped case expects no reason: the "
-                "judge never sees it",
+                "case-with-an-expected-reason.yaml",
+                "cases.0.expected_output: Value error, a case expects no reason: the judge's "
+                "reason is printed with the eval for whoever reads it, never checked",
             ),
         ],
     )
@@ -595,72 +568,23 @@ def flagging(text: str) -> JudgeFactory:
     return lambda root, model: FlagsText(text)
 
 
-class TestReason:
-    def test_judge_reason_is_graded_against_the_expected_reason(self, enum_rule):
-        enum_rule.evaluate("string-is-valid.yaml")
-        graders = RecordingGraders()
+class TestReasons:
+    def test_writes_the_judge_reason_for_every_case_judged(self, enum_rule):
+        enum_rule.evaluate("string-replaces-member.yaml")
+        out = io.StringIO()
 
-        result = enum_rule.judged_with(
-            Verdict(reason="The call passes the member Status.SHIPPED.", violations=()), graders
-        )
+        enum_rule.judged_with(Verdict(reason="The call passes a string.", violations=())).write(out)
 
-        assert result.passed
-        assert graders.grader.received == [
-            GradeRequest(
-                expected="The call passes the member.",
-                given="The call passes the member Status.SHIPPED.",
-            )
-        ]
+        assert "enum-usage passes a string: The call passes a string.\n" in out.getvalue()
+        assert "enum-usage passes the member: The call passes a string.\n" in out.getvalue()
 
-    def test_reason_on_another_ground_fails_the_case(self, enum_rule):
-        enum_rule.evaluate("string-is-valid.yaml")
-        graders = disagreeing("The judge rests on the import, the expected reason on the call.")
-
-        result = enum_rule.judged_with(
-            Verdict(reason="The import is from the package root.", violations=()), graders
-        )
-
-        assert result.failures == (
-            "enum-usage passes a string: the judge's reason doesn't give the expected reason: "
-            "The judge rests on the import, the expected reason on the call.\n"
-            "  expected: The call passes the member.\n"
-            "  judge: The import is from the package root.",
-        )
-
-    def test_reason_is_not_graded_when_the_outcome_is_wrong(self, enum_rule, make_violation):
-        enum_rule.evaluate("string-is-valid.yaml")
-        graders = disagreeing("Different code.")
-        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.9)
-
-        result = enum_rule.judged_with(
-            Verdict(reason="The call passes a string.", violations=(violation,)), graders
-        )
-
-        assert graders.grader.received == []
-        assert result.failures == (
-            "enum-usage passes a string: expected outcome valid, got outcome invalid\n"
-            "  reason: The call passes a string.\n  line 1 (0.90): Pass the member.",
-        )
-
-    def test_skipped_case_is_not_graded(self, enum_rule):
+    def test_a_skipped_case_has_no_reason_to_write(self, enum_rule):
         enum_rule.bind("string-literal-trigger.yaml")
         enum_rule.evaluate("number-only-is-skipped.yaml")
-        graders = disagreeing("Nothing to compare.")
 
-        result = enum_rule.run(RecordingJudges(RecordingJudge()), graders=graders)
+        result = enum_rule.run(RecordingJudges(RecordingJudge()))
 
-        assert (result.passed, graders.grader.received) == (True, [])
-
-    def test_grades_with_the_model_the_rule_is_judged_with(self, enum_rule):
-        enum_rule.bind("gemini-model.yaml")
-        enum_rule.evaluate("string-is-valid.yaml")
-        graders = RecordingGraders()
-
-        enum_rule.run(RecordingJudges(RecordingJudge()), graders=graders)
-
-        assert [creation.model for creation in graders.created] == [
-            JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
-        ]
+        assert result.reasons == ()
 
 
 class TestRepeats:
@@ -742,6 +666,6 @@ class TestWithoutJudgeEvals:
 
         loader = RulesetLoader.local(repo.root)
 
-        result = JudgeEvalRunner(repo.root, loader, judges, RecordingGraders(), 0.9).run()
+        result = JudgeEvalRunner(repo.root, loader, judges, 0.9).run()
 
         assert result == JudgeEvalResult()

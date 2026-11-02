@@ -98,8 +98,7 @@ a rule without one.
     `any`, `code`, `function-body` or `function-signature`).
   - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
     path; `before`, the file before the edit, left out for a new file; `after`, the
-    file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`;
-    and `reason`, the ground the verdict rests on, for every case but a `skipped` one).
+    file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`).
 - Gate: `.codeguard/gates/<id>.yml`, an ast-grep rule tested by
   `.codeguard/rule-tests/<id>-test.yml`.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
@@ -142,18 +141,17 @@ codeguard's README has the binding and rule eval formats.
   case, with a comment above each case naming its branch. Give each matched construct a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
-- A judge rule: a few clear `invalid` and `valid` cases, each stating the reason its
-  verdict rests on, and a `skipped` case outside the gate (`references/judge-rules.md`).
-- A case's `reason` says what its code does or fails to do; its name says what is at
-  stake because of that: for an `invalid` case the harm, in the terms of the rule's Why,
-  and for a `valid` case what the code keeps safe. A name that describes the code's
-  action or shape repeats the reason and is renamed. This holds for the `skipped` case
-  too, whose stake is what the edit leaves untouched.
-- Two cases whose reasons say the same thing about the code are one case, however their
-  syntax or names differ: keep the clearer one. Two `valid` cases differ when their code
-  keeps the convention in different situations, not merely by both lacking the
-  violation. Write a case's reason before its code; if another case already has that
-  reason, don't write the case.
+- A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
+  the gate (`references/judge-rules.md`).
+- A case's name says what is at stake: for an `invalid` case the harm, in the terms of
+  the rule's Why, and for a `valid` case what the code keeps safe. A name that describes
+  the code's action or shape repeats the code and is renamed. This holds for the
+  `skipped` case too, whose stake is what the edit leaves untouched.
+- Two cases that break or keep the convention on the same ground are one case, however
+  their syntax or names differ: keep the clearer one. Two `valid` cases differ when
+  their code keeps the convention in different situations, not merely by both lacking
+  the violation. Before writing a case, say in one sentence what its code does or fails
+  to do; if another case already has that sentence, don't write the case.
 - A case holds one defect at most, the one it tests. Read every other line of it as a
   reviewer would, and rewrite any line that is wrong for another reason, so nothing
   else in the case can be the ground of a verdict.
@@ -173,7 +171,7 @@ other code finds code to fix, not evidence that the rule is right.
 
 ```sh
 codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20, verdict and reason; calls the model
+codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20; calls the model
 codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
 ```
 

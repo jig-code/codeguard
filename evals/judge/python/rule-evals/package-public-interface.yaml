@@ -23,7 +23,6 @@ cases:
         reports/__init__.py: ''
     expected_output:
       outcome: invalid
-      reason: summary.py imports Entry from ledger.entry although ledger's root exports it.
   - name: imports a module because the package root imports this one
     inputs:
       file: statements/summary.py
@@ -49,7 +48,6 @@ cases:
         statements/__init__.py: ''
     expected_output:
       outcome: valid
-      reason: billing's root imports statements.summary, so importing InvoiceTotal through the root would create a cycle.
   - name: changes a function body, with no import
     inputs:
       file: reports/totals.py

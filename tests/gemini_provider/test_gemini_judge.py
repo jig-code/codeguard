@@ -23,9 +23,7 @@ from spans import finished_span_attributes
 
 from codeguard.gemini_provider import GeminiJudge, gemini_judge
 from codeguard.review import (
-    Agreement,
     Deadline,
-    GradeRequest,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
@@ -463,68 +461,3 @@ class TestGeminiJudge:
         assert attributes["tool_calls"] == (
             '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
         )
-
-
-def agreement(agrees: bool = True) -> ModelResponse:
-    text = Agreement(agrees=agrees, why="Both rest on the handler.").model_dump_json()
-    return ModelResponse(parts=[TextPart(text)], usage=_usage(10))
-
-
-class TestGeminiGrader:
-    def test_agreement_is_the_structured_output(self, tmp_path):
-        models = ScriptedGemini([agreement(agrees=False)])
-
-        graded = judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
-
-        assert graded == Agreement(agrees=False, why="Both rest on the handler.")
-
-    def test_asks_for_the_agreement_with_no_tools(self, tmp_path):
-        models = ScriptedGemini([agreement()])
-
-        judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
-
-        parameters = models.info().model_request_parameters
-        assert parameters.output_mode == "native"
-        assert parameters.output_object
-        assert parameters.output_object.name == "Agreement"
-        assert models.info().function_tools == []
-
-    def test_bedrock_gets_the_agreement_as_a_tool(self, tmp_path):
-        answer = calls(("final_result", {"agrees": True, "why": "Both rest on the handler."}))
-        models = ScriptedGemini([answer])
-
-        graded = judge_with(tmp_path, models, provider="bedrock").grade(
-            GradeRequest("The handler.", "The call.")
-        )
-
-        [output_tool] = models.info().output_tools
-        assert (output_tool.name, graded.agrees) == ("final_result", True)
-
-    def test_sends_the_grading_instructions_and_both_reasons(self, tmp_path):
-        models = ScriptedGemini([agreement()])
-        request = GradeRequest("The handler discards it.", "The handler drops the exception.")
-
-        judge_with(tmp_path, models).grade(request)
-
-        assert models.connected == [MODEL]
-        assert models.info().instructions == request.instructions.strip()
-        assert [part.content for part in models.sent(0) if isinstance(part, UserPromptPart)] == [
-            "<expected>\nThe handler discards it.\n</expected>\n\n"
-            "<given>\nThe handler drops the exception.\n</given>\n"
-        ]
-
-    def test_records_its_usage(self, tmp_path, capfire):
-        models = ScriptedGemini([agreement()])
-
-        judge_with(tmp_path, models).grade(GradeRequest("The handler.", "The call."))
-
-        assert finished_span_attributes(capfire, "gemini grades a reason") == [
-            {
-                "model": MODEL,
-                "num_turns": 1,
-                "input_tokens": 10,
-                "output_tokens": 3,
-                "cache_read_input_tokens": 4,
-                "thinking_tokens": 5,
-            }
-        ]
