@@ -30,7 +30,7 @@ def claude_result(violations: list[dict]) -> dict:
         "duration_api_ms": 1901,
         "total_cost_usd": 0.0022,
         "modelUsage": {"claude-sonnet-5-5": MODEL_USAGE},
-        "structured_output": {"violations": violations},
+        "structured_output": {"reason": "Judged.", "violations": violations},
     }
 
 
@@ -51,10 +51,28 @@ def tool_result(use_id: str, **result: object) -> dict:
     }
 
 
+AGREEMENT = {"agrees": True, "why": "Both rest on the same code."}
+
+
+def claude_agreement(agreement: dict) -> dict:
+    return {**claude_result([]), "structured_output": agreement}
+
+
 def fake_claude_script(
-    violations: list[dict], before: str = "", messages: tuple[dict, ...] = ()
+    violations: list[dict],
+    before: str = "",
+    messages: tuple[dict, ...] = (),
+    agreement: dict = AGREEMENT,
 ) -> str:
+    """A claude that answers a judge call with the verdict, and a grading call (asked for the
+    agreement schema) with the agreement, without running `before`."""
     stream = "\n".join(
         json.dumps(message) for message in (RATE_LIMIT_EVENT, *messages, claude_result(violations))
     )
-    return f"#!/bin/sh\n{before}cat > /dev/null\ncat <<'EOF'\n{stream}\nEOF\n"
+    graded = json.dumps(claude_agreement(agreement))
+    return (
+        "#!/bin/sh\n"
+        "case \"$*\" in *agrees*) cat > /dev/null; cat <<'EOF'\n"
+        f"{graded}\nEOF\nexit 0;; esac\n"
+        f"{before}cat > /dev/null\ncat <<'EOF'\n{stream}\nEOF\n"
+    )

@@ -1,7 +1,8 @@
 ---
-type: llm
-focus: trace
+type: regex
+target: { source: file, path: .codeguard/bindings/no-created-flag-results.yaml }
+pattern: '(^|[\s\[,])(any|code|function-body|function-signature)([\s\],]|$)'
+flags: m
+match: not_contains
 weight: 1
 ---
-
-The binding's triggers are narrower than any, code, function-body or function-signature alone (for example a gate on return statements of tuples).

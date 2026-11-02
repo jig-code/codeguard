@@ -89,10 +89,16 @@ class Violation(BaseModel):
 
 
 class Verdict(BaseModel):
-    """The violations of the convention the change is part of."""
+    """Why the change passes or fails the convention, and the violations it is part of."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    reason: str = Field(
+        description=(
+            "Why the change passes or fails, in one plain sentence: what in the changed code "
+            "keeps the convention, or what in it breaks the convention."
+        )
+    )
     violations: tuple[Violation, ...] = Field(
         description="Each violation of the convention; none when the code follows it."
     )

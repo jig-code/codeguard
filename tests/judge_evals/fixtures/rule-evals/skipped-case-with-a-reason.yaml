@@ -1,0 +1,6 @@
+cases:
+  - name: counts
+    inputs:
+      after: |
+        count = 1
+    expected_output: {outcome: skipped, reason: The judge never sees it.}

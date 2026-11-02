@@ -702,7 +702,8 @@ class TestEvalCommand:
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
+            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n"
+            "      reason: The module assigns a value.\n",
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
         bin_dir = tmp_path / "bin"
@@ -722,7 +723,7 @@ class TestEvalCommand:
         assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
         assert result.stdout.endswith(
             "responsibility-placement assigns in the invoice: expected outcome invalid, got "
-            "outcome uncertain\n  line 1 (0.50): Move it.\n"
+            "outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
         )
         assert result.returncode == 1
 
@@ -732,7 +733,8 @@ class TestEvalCommand:
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
+            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n"
+            "      reason: The module assigns a value.\n",
         )
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
@@ -905,13 +907,13 @@ class TestEvalMatchesReview:
             (
                 [{"confidence": 0.5}],
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome uncertain\n  line 3 (0.50): Move it.\n",
+                "outcome uncertain\n  reason: Judged.\n  line 3 (0.50): Move it.\n",
                 1,
             ),
             (
                 [],
                 "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome valid\n",
+                "outcome valid\n  reason: Judged.\n",
                 1,
             ),
         ],
@@ -946,7 +948,7 @@ def invoice_package(tmp_path_factory) -> GitRepo:
     case = {
         "name": "totals the order lines",
         "inputs": {"file": "invoice.py", "before": INVOICE_BEFORE, "after": INVOICE_AFTER},
-        "expected_output": {"outcome": "invalid"},
+        "expected_output": {"outcome": "invalid", "reason": "The invoice totals the lines."},
     }
     package.write(
         "python/rule-evals/responsibility-placement.yaml", yaml.safe_dump({"cases": [case]})
@@ -1168,7 +1170,8 @@ class TestTestCommand:
         repo.write(
             ".codeguard/rule-evals/placement.yaml",
             "cases:\n  - name: assigns a count\n    inputs:\n      after: |\n        count = 1\n"
-            "    expected_output:\n      outcome: invalid\n",
+            "    expected_output:\n      outcome: invalid\n"
+            "      reason: The module assigns a count.\n",
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)

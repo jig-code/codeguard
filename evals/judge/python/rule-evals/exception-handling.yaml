@@ -10,6 +10,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
+      reason: The handler catches the exception and does nothing with it.
   - name: logs and re-raises an exception
     inputs:
       file: payments/refund.py
@@ -27,6 +28,7 @@ cases:
                 raise
     expected_output:
       outcome: valid
+      reason: The handler logs the exception with its traceback and re-raises it.
   - name: changes no control flow
     inputs:
       file: payments/charge.py
@@ -53,6 +55,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
+      reason: The handler catches the exception and does nothing with it.
   - name: edits a call in a try block whose untouched handler discards its exception
     inputs:
       file: payments/charge.py
@@ -70,6 +73,7 @@ cases:
                 pass
     expected_output:
       outcome: valid
+      reason: The changed line is the guarded call; the handler that discards the exception is untouched, so the violation isn't the change's.
   - name: edits a condition in a function whose untouched handler discards its exception
     inputs:
       file: payments/charge.py
@@ -91,6 +95,7 @@ cases:
                 pass
     expected_output:
       outcome: valid
+      reason: The changed line is a condition outside the try; the handler that discards the exception is untouched, so the violation isn't the change's.
   - name: adds a re-raising handler beside a function that discards its exception
     inputs:
       file: payments/gateway.py
@@ -130,6 +135,7 @@ cases:
                 raise
     expected_output:
       outcome: valid
+      reason: The added handler logs the exception with its traceback and re-raises it; the handler that discards its exception is in an untouched function.
   - name: adds a discarding handler beside a function that re-raises
     inputs:
       file: payments/gateway.py
@@ -170,6 +176,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
+      reason: The added handler catches the exception and does nothing with it.
   - name: removes the logging that kept a handler from discarding its exception
     inputs:
       file: payments/refund.py
@@ -198,6 +205,7 @@ cases:
                 metrics.increment("refund.failed")
     expected_output:
       outcome: invalid
+      reason: Without the removed logging, the handler only increments a metric and discards the exception.
   - name: removes a metric from a handler that still logs its exception
     inputs:
       file: payments/refund.py
@@ -226,3 +234,4 @@ cases:
                 logger.exception("Refund failed")
     expected_output:
       outcome: valid
+      reason: The handler still logs the exception with its traceback.

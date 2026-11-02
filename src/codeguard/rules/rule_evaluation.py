@@ -21,14 +21,15 @@ class RuleEvaluation:
         config = rules.config
         # An eval tests the rule, not the code, so each run calls the model: a cached
         # verdict says nothing about the rule as it is now.
-        judge = rules.judges.uncached
+        judges = rules.judges
         runners = [
             (
                 loader,
                 JudgeEvalRunner(
                     root,
                     loader,
-                    judge,
+                    judges.uncached,
+                    judges.grader,
                     config.confidence_threshold,
                     repeat,
                     config.judge,

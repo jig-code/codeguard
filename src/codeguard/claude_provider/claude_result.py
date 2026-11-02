@@ -13,7 +13,7 @@ from pydantic import (
     field_validator,
 )
 
-from codeguard.review import JudgeNoVerdict, Verdict
+from codeguard.review import JudgeNoVerdict
 
 
 class ModelUsage(BaseModel):
@@ -212,7 +212,7 @@ class ClaudeResult(BaseModel):
     total_cost_usd: float
     model_usage: dict[str, ModelUsage] = Field(alias="modelUsage")
     usage_windows: dict[str, UsageWindow] = {}
-    structured_output: Verdict | None = None
+    structured_output: dict[str, JsonValue] | None = None
     loaded_files: tuple[str, ...] = ()
     tool_calls: tuple[dict[str, JsonValue], ...] = ()
 

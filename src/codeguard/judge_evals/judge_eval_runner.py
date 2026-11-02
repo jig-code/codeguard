@@ -7,9 +7,14 @@ from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import JudgeConfig, JudgeModel, RulesetLoader
-from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
+from codeguard.judge_evals.edit_evaluators import (
+    PartialEqualsExpected,
+    ReasonAgrees,
+    ViolationsOnTriggers,
+)
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
+from codeguard.judge_evals.grader_factory import GraderFactory
 from codeguard.judge_evals.judge_eval_result import JudgeEvalResult, RuleEvalReport
 from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.review import Binding, Bindings
@@ -22,6 +27,7 @@ class JudgeEvalRunner:
     root: Path
     ruleset: RulesetLoader
     judges: JudgeFactory
+    graders: GraderFactory
     confidence_threshold: float
     repeat: int = 1
     judge_config: JudgeConfig = JudgeConfig()
@@ -81,6 +87,7 @@ class JudgeEvalRunner:
     async def _evaluate(
         self, rule_eval: RuleEval, binding: Binding, language: str | None, scanner: SyntaxScanner
     ) -> RuleEvalReport:
+        model = self.model or binding.model
         dataset = Dataset[EditCase, EditReview, None](
             name=rule_eval.name,
             cases=[
@@ -89,10 +96,10 @@ class JudgeEvalRunner:
             ],
             evaluators=[
                 PartialEqualsExpected(),
+                ReasonAgrees(self.graders(self.root, model)),
                 ViolationsOnTriggers(tuple(sorted(binding.triggers)), self.confidence_threshold),
             ],
         )
-        model = self.model or binding.model
         task = EditReviewTask(
             replace(binding, model=model), self.judges, self.confidence_threshold, scanner
         )

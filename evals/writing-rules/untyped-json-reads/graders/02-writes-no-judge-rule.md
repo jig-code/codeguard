@@ -1,7 +1,6 @@
 ---
-type: llm
-focus: trace
+type: file_exists
+path: ".codeguard/skills/**"
+exists: false
 weight: 1
 ---
-
-No codeguard judge rule (a skills/<id>/SKILL.md under .codeguard) is written for this convention.

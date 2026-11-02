@@ -32,7 +32,7 @@ class WaitingJudge:
 
     def judge(self, request):
         self.barrier.wait()
-        return Judgement(Verdict(violations=()))
+        return Judgement(Verdict(reason="The code keeps the convention.", violations=()))
 
 
 @dataclass(frozen=True)
@@ -191,7 +191,9 @@ class TestJudgeCheck:
     def test_diagnostics_have_the_binding_severity(
         self, tmp_path, make_binding, make_violation, make_diagnostic
     ):
-        judge = RecordingJudge(Verdict(violations=(make_violation(),)))
+        judge = RecordingJudge(
+            Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
+        )
         check = JudgeCheck(
             tmp_path, make_binding(severity=Severity.WARNING), judge, THRESHOLD, AllLines(())
         )
@@ -201,7 +203,12 @@ class TestJudgeCheck:
     def test_error_below_the_threshold_is_a_warning(
         self, tmp_path, make_binding, make_violation, make_diagnostic
     ):
-        judge = RecordingJudge(Verdict(violations=(make_violation(confidence=0.5),)))
+        judge = RecordingJudge(
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(confidence=0.5),),
+            )
+        )
         check = JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, AllLines(()))
 
         assert check.check(["a.py"]) == [

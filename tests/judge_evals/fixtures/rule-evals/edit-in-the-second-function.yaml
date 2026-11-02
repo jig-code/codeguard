@@ -16,4 +16,4 @@ cases:
 
         def cancel_order():
             cancel(status='cancelled')
-    expected_output: {outcome: invalid}
+    expected_output: {outcome: invalid, reason: The call passes a string.}

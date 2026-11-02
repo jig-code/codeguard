@@ -1,0 +1,3 @@
+You compare two reasons given for one verdict on a code change.
+
+The `expected` element holds the reason the rule's author expects the verdict to rest on. The `given` element holds the reason a judge gave for the same verdict. Decide whether the given reason gives the same ground as the expected one: it points to the same code and says the same thing about what that code does, or fails to do. Wording, length and detail don't matter, and the given reason may say more, as long as its ground is the expected one. It gives a different ground when it rests the verdict on other code, or on something else the code does or fails to do, or when it contradicts the expected reason.
