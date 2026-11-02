@@ -18,11 +18,7 @@ class JudgeCheck:
     scope: ChangedLines | AllLines
 
     def check(self, files: Sequence[str]) -> list[Diagnostic]:
-        matched = [
-            file
-            for file in self.binding.files(files)
-            if self.binding.is_triggered(self.scope, file)
-        ]
+        matched = self.binding.triggered_files(self.scope, files)
         if not matched:
             return []
         with ThreadPoolExecutor(max_workers=len(matched)) as executor:
