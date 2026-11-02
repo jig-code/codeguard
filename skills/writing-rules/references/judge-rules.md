@@ -73,11 +73,13 @@ how triggers select what the judge sees.
 
 ## Write a few clear eval cases
 
-A rule eval has about three `invalid` and three `valid` cases per rule and language,
-and a `skipped` case outside the gate. Each case tests one thing none of the others
-does: a different thing the code does or fails to do, not another syntax for the same
-thing. No edge cases: a case a reasonable reviewer could argue either way proves
-nothing about the rule, and a judge that flips on it is right to.
+A rule eval has a few cases per rule and language: one `invalid` case for each distinct
+way code breaks the convention and one `valid` case for each distinct way code keeps it
+near the boundary, up to about three of each, and a `skipped` case outside the gate. A
+convention with one way to break it has one `invalid` case. Each case tests one thing
+none of the others does: a different thing the code does or fails to do, not another
+syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
+either way proves nothing about the rule, and a judge that flips on it is right to.
 
 - Each `invalid` and `valid` case states its `reason`: the ground the verdict rests on,
   in one sentence naming the code and what it does or fails to do. The case passes only
@@ -85,9 +87,10 @@ nothing about the rule, and a judge that flips on it is right to.
   states no reason.
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
   it. A reader of the case alone sees why the code is a problem or why it's fine, and
-  the case's name is that reason in short. Read the name as the ground of the verdict:
-  a name that describes the code or the edit instead is renamed. This holds for every
-  case, the `skipped` one included.
+  the case's name says that stake: for an `invalid` case the harm, in the terms of the
+  rule's Why; for a `valid` case what the code keeps safe. The `reason` already says
+  what the code does, so a name that describes the code's action or shape is renamed.
+  This holds for every case, the `skipped` one included.
 - Two cases whose reasons say the same thing about the code are one case, however their
   syntax, names or annotations differ: keep the clearer one. Write the reason before the
   code; a reason another case already has means the case isn't written.
