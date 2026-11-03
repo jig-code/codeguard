@@ -3,8 +3,8 @@
 A judge rule is ready when every eval case comes out the same way on every run. A
 result is unreliable when it flips between runs, is judged with low confidence, or
 comes back as a warning. That is a defect in the rule's wording or in the case. The
-judge gives a reason with every verdict, pass or fail, and `codeguard eval` prints it
-for every case: read it first. A reason that rests the verdict on the wrong code, or on
+judge gives a reason with every verdict, pass or fail, and the rule eval reports it for
+every case: read it first. A reason that rests the verdict on the wrong code, or on
 something the convention doesn't say, or that is vague, means the rule's wording is
 unclear; reword the convention so it decides the case on the ground you meant.
 
@@ -56,12 +56,11 @@ A violation outside the binding's `triggers` is never reported; codeguard's READ
 how triggers select what the judge sees.
 
 - List the syntactic forms the violation takes, and give each one an `invalid` gate
-  test, so a gate that stops matching a form fails `codeguard test`.
+  test, so a gate that stops matching a form fails a test.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
 - Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`. A wider gate costs judge calls and tokens;
-  `codeguard review --dry-run` counts the calls.
+  rather than the whole `try`. A wider gate costs judge calls and tokens.
 - A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
   `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
   `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
