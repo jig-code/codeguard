@@ -146,7 +146,7 @@ class TestHookConfig:
             "reason": f"{make_diagnostic()}\n{REQUIRED_FIXES}",
         }
 
-    def test_a_session_installs_the_development_version_before_any_review(self, tmp_path):
+    def test_a_session_installs_the_development_version_before_any_review(self, tmp_path, bundled):
         project = tmp_path / "project"
         project.mkdir()
         (project / "pyproject.toml").write_text(
@@ -161,7 +161,7 @@ class TestHookConfig:
         )
         (project / "src" / "tool").mkdir(parents=True)
         (project / "src" / "tool" / "__init__.py").write_text("def main() -> None: ...\n")
-        offline = {**os.environ, "UV_OFFLINE": "1"}
+        offline = {**os.environ, **bundled, "UV_OFFLINE": "1"}
         subprocess.run([UV, "lock", "--quiet"], cwd=project, env=offline, check=True)
         [command] = commands(PROJECT / ".claude" / "settings.json", "SessionStart")
 

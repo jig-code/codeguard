@@ -1,8 +1,11 @@
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
+from spans import finished_span_attributes
 
 from codeguard.config import JudgeProvider
 from codeguard.review import Category, Review
@@ -46,6 +49,26 @@ def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 
 class TestJudgePrompt:
+    def test_public_interface_valid_fixture_loads_from_its_consumer(self):
+        case = next(
+            parameter.values[1]
+            for parameter in CASES
+            if parameter.values[0] == "package-public-interface"
+            and parameter.values[1].expected_output.outcome is Outcome.VALID
+        )
+        module = case.inputs.file.removesuffix(".py").replace("/", ".")
+
+        with EditRepo.of(case.inputs.edits()) as repo:
+            result = subprocess.run(
+                [sys.executable, "-c", f"__import__({module!r})"],
+                cwd=repo.root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        assert result.returncode == 0, result.stderr
+
     @pytest.mark.parametrize(("rule", "case"), CASES)
     def test_triggers_fire_on_each_case_the_judge_sees(self, rule: str, case: RuleEvalCase):
         with EditRepo.of(_edits(EVALS, rule, case.inputs)) as repo:
@@ -59,13 +82,16 @@ class TestJudgePrompt:
     @pytest.mark.llm
     @pytest.mark.parametrize(("rule", "case"), JUDGED_CASES)
     def test_review_reaches_each_case_verdict(
-        self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path
+        self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path, capfire
     ):
         with EditRepo.of(_edits(judged_evals, rule, case.inputs)) as repo:
             working_tree = WorkingTree(repo.root)
             review = Rules(working_tree).review(working_tree.changed_lines("HEAD"))
 
         listing = "\n".join(map(str, review.diagnostics))
+        telemetry = finished_span_attributes(capfire, "codex judges {rule} on {file}")
+        if telemetry:
+            listing += f"\nJudge telemetry: {telemetry!r}"
         errors = [
             diagnostic
             for diagnostic in review.diagnostics

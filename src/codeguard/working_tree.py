@@ -163,7 +163,11 @@ class WorkingTree:
             "--diff-filter=d",
             merge_base,
         )
-        untracked = self._git_paths("ls-files", "--others", "--exclude-standard")
+        untracked = {
+            file
+            for file in self._git_paths("ls-files", "--others", "--exclude-standard")
+            if (self.root / file).is_file()
+        }
         hunks = _hunks(diff)
         added, deletions = _changed_points(hunks)
         lines = {**added, **{file: self._code_lines(file) for file in untracked}}

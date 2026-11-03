@@ -82,7 +82,7 @@ exhaustive = true
 layers = [
     "cli",
     "rules",
-    "claude_provider | gemini_provider | judge_evals",
+    "claude_provider | codex_provider | gemini_provider | judge_evals",
     "pattern_rules",
     "rule_tests",
     "review | packages",
@@ -98,6 +98,7 @@ source_modules = [
     "codeguard.cli",
     "codeguard.rules",
     "codeguard.claude_provider",
+    "codeguard.codex_provider",
     "codeguard.gemini_provider",
     "codeguard.pattern_rules",
     "codeguard.rule_tests",

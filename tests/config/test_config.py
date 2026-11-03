@@ -298,7 +298,7 @@ class TestRulesetConfig:
             "Value error, model: a rule is judged with the model its binding names"
         ]
 
-    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
+    @pytest.mark.parametrize("provider", ["gemini", "bedrock", "codex-cli"])
     def test_api_binding_without_a_model_is_an_error(self, tmp_path, provider):
         skill = write_skill(tmp_path)
 
@@ -317,3 +317,11 @@ class TestJudgeConfig:
 
     def test_calls_at_once_sets_the_concurrency(self):
         assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI) == 1
+
+
+def test_codex_concurrency_uses_the_cli_limit():
+    assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI) == os.process_cpu_count()
+
+
+def test_codex_default_remains_luna():
+    assert JudgeProvider.CODEX_CLI.default_model == "gpt-6-luna"

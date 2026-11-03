@@ -36,6 +36,21 @@ by exactly one rule, of one of two kinds:
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
 git and pinned to a tag. Every surface reviews with the same rules.
 
+### Dependencies and tool responsibilities
+
+Codeguard complements the project's deterministic checks. A requirement that an existing
+linter, type checker or dependency analyzer can establish exactly belongs to that tool;
+the judge does not duplicate it. Follow the
+[tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md).
+Repository-wide dependency constraints, including import cycles, require dependency-graph
+analysis rather than a single-file pattern or a model's judgment. The project's import
+or dependency checker owns those checks.
+
+Passing one judge rule does not excuse a violation of another requirement. Judge rules
+and their evals assume the prerequisites owned by other checks are satisfied; they do
+not add exceptions to accommodate code that those checks should reject. Those checks
+remain independently required in the project's validation pipeline.
+
 ### Components
 
 **Bindings** map files to a rule by path globs. A binding sets the rule's severity, its
@@ -100,6 +115,14 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
+- Each case isolates the behavior it tests and must otherwise be sound, satisfying
+  prerequisites owned by other rules and tools. Deliberate violations are appropriate
+  when necessary to test that behavior, including a pre-existing violation that a
+  change does not participate in and must therefore leave unreported. Keep those
+  violations minimal; fundamental defects such as forbidden dependency cycles must
+  not obscure the behavior under test. Follow the
+  [fixture validity guidance](testing.md#fixture-validity-and-pre-existing-violations).
+  Diagnose an invalid fixture before changing the judge or weakening an expected verdict.
 
 ## Invariants
 

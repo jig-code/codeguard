@@ -315,7 +315,7 @@ triggers: [mock-use]
 something else:
 
 ```yaml
-provider: gemini                  # default: claude-cli; or gemini, bedrock
+provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
 model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
 ```
 
@@ -438,9 +438,9 @@ held to the same bar.
   eval with an `invalid` case covers only the rules selected.
 - `--case <text>` judges only the cases whose name contains the text; repeat it to
   judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider gemini` or `--provider bedrock` judges every
+- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or `--provider bedrock` judges every
   selected rule with that provider instead of its binding's. `--model` names the model;
-  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gemini-3.1-pro-preview` for
+  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gpt-6-luna` for `codex-cli`, `gemini-3.1-pro-preview` for
   `gemini` and `us.anthropic.claude-haiku-5-5` for `bedrock`.
 
 A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
@@ -671,6 +671,53 @@ In a review, each judge rule is judged with its binding's provider and model, th
 ones its rule eval passed on; see [Judge rules](#judge-rules). A binding that sets neither is judged
 with `claude-sonnet-5-5` through the `claude` CLI.
 
+### Judge with Codex locally
+
+Set a judge rule's binding to `codex-cli` and name its model:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: codex-cli
+model: gpt-6-luna
+```
+
+Install the Codex CLI separately and sign in with `codex login` using your ChatGPT
+subscription. CodeGuard invokes `codex exec` with ephemeral sessions, read-only
+permissions and the shared verdict schema. This provider requires ChatGPT authentication;
+it does not fall back to API billing. Other providers do not require Codex to be installed.
+Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
+
+The judge runs outside the project directory with project instructions, hooks, plugins,
+memories and shell tools disabled. It accesses the repository through CodeGuard's
+read-only `read_file`, `grep` and `glob` tools over a private MCP server. Those tools
+record additional files in `loaded_files`, so edits to context files invalidate cached
+verdicts. Cache identity includes the provider, model, reasoning effort (`high`) and tool
+adapter version. Each call has a 120-second limit, capped by the review deadline.
+An explicit model-capacity error is retried up to twice within that same time limit.
+Authentication failures and other process errors fail immediately.
+Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+
+The existing evaluation override also accepts Codex:
+
+```sh
+codeguard eval --provider codex-cli --model gpt-6-luna
+```
+
+For GPT models in CI, use the existing `bedrock` provider with a supported Converse
+model ID, inference profile ID or ARN. AWS credentials and region resolve as before;
+this path uses metered AWS billing and does not invoke the Codex CLI:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: bedrock
+model: us.openai.gpt-6-luna
+```
+
+The AWS account must have access to the chosen model. Existing Claude, Gemini and
+Bedrock defaults and rule bindings are unchanged.
+
 ### Judge with Gemini on Google Cloud
 
 By default the judge runs `claude -p`. A judge rule whose binding sets
@@ -870,8 +917,12 @@ them on Haiku on Bedrock. CI runs them; run them after changing the judge's inst
 tools:
 
 ```sh
-uv run pytest -m llm -n 4    # each case 3 times, as CI does
+uv run pytest -m llm -n 4 --llm-runs 20    # each case 20 times, as CI does
 ```
+
+CI also runs the same cases with `claude-haiku-5-5` through `claude-cli`, using the
+existing `CLAUDE_CODE_OAUTH_TOKEN` secret. Local Codex reliability checks use the same
+fixtures with `--judge-provider codex-cli --judge-model gpt-6-luna --llm-runs 20`.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute
