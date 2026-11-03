@@ -36,20 +36,10 @@ by exactly one rule, of one of two kinds:
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
 git and pinned to a tag. Every surface reviews with the same rules.
 
-### Dependencies and tool responsibilities
-
-Codeguard complements the project's deterministic checks. A requirement that an existing
-linter, type checker or dependency analyzer can establish exactly belongs to that tool;
-the judge does not duplicate it. Follow the
-[tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md).
-Repository-wide dependency constraints, including import cycles, require dependency-graph
-analysis rather than a single-file pattern or a model's judgment. The project's import
-or dependency checker owns those checks.
-
-Passing one judge rule does not excuse a violation of another requirement. Judge rules
-and their evals assume the prerequisites owned by other checks are satisfied; they do
-not add exceptions to accommodate code that those checks should reject. Those checks
-remain independently required in the project's validation pipeline.
+Use the writing-rules skill's
+[tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md)
+to decide whether a requirement belongs to an existing checker, a pattern rule or a
+judge rule. Passing one rule does not excuse violations owned by other checks.
 
 ### Components
 
