@@ -1,12 +1,7 @@
 # Writing a judge rule
 
-- Open the binding and check its `triggers` before anything else. `any`, `code`,
-  `function-body` or `function-signature` sends the judge code the convention can't
-  decide, and the judge wavers on it. Narrowing the triggers to the node that holds the
-  violation (Gate every form, below) is part of every fix to an unreliable rule. Never
-  loosen a gate to get past a failure.
-- Don't add a case's code to the skill as an example, and don't add a carve-out for it.
-  Restate the convention so its statement decides the case.
+Don't add a case's code to the skill as an example, and don't add a carve-out for it.
+Restate the convention so its statement decides the case.
 
 ## Write the skill
 
@@ -31,24 +26,15 @@ or libraries. Leave out the fix, and anything telling the judge how to answer.
 
 ## Gate every form of the violation
 
-A violation outside the binding's `triggers` is never reported; codeguard's README says
-how triggers select what the judge sees.
-
 - List the syntactic forms the violation takes, and give each one an `invalid` gate
   test, so a gate that stops matching a form fails a test.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
 - Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`. A wider gate costs judge calls and tokens.
-- A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
-  `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
-  `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
-  `annotation`, `call`, `control-flow`, `return-yield`, `collection-literal`,
-  `string-literal`, `number-literal`, `attribute-access`, `subscript`,
-  `conditional-expression`, `membership-test`, `assert`, `raise`,
-  `definition-added-or-removed`, `code` and `any`. When no kind fits the node, write a
-  gate: an ast-grep rule in `gates/<id>.yml` that matches the node, named in `triggers`
-  and tested like a pattern rule.
+  rather than the whole `try`.
+- A trigger is a built-in change kind (codeguard's README, The binding, lists them) or
+  a gate. When no kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
+  that matches the node, named in `triggers` and tested like a pattern rule.
 
 ## Write a few clear eval cases
 

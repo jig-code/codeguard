@@ -68,8 +68,7 @@ when the code or the design around it changes.
   `metadata.source`. A link to public documentation, or the bug, PR comment or team
   decision behind it.
 
-A gate is a judge rule's trigger, not a rule, and needs no why. A rule without one is
-reported by the rule tests.
+A gate is a judge rule's trigger, not a rule, and needs no why.
 
 ## Layout
 
