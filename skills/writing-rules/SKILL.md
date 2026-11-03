@@ -10,6 +10,10 @@ pattern rules (ast-grep) and judge rules (a skill a model judges the change agai
 `error` diagnostic blocks the agent's Stop and fails CI. Each principle here corrected a
 rule that misjudged code.
 
+This skill covers writing the rule: choosing its kind, stating the convention and why
+it exists, gating it and writing its cases. Running the rule's tests and evals is not
+its concern; the project's testing guide says how a rule is tested.
+
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
@@ -18,7 +22,6 @@ rule that misjudged code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
-5. **Verify** (Verify, below).
 
 For a judge rule, also read `references/judge-rules.md` before writing or changing it,
 and whenever its eval fails, flips between runs or reports a warning. For the project's
@@ -81,8 +84,8 @@ only be kept or dropped blind.
   `metadata.source`. A link to public documentation, or the bug, PR comment or team
   decision behind it.
 
-A gate is a judge rule's trigger, not a rule, and needs no why. `codeguard test` reports
-a rule without one.
+A gate is a judge rule's trigger, not a rule, and needs no why. A rule without one is
+reported by the rule tests.
 
 ## Layout
 
@@ -163,18 +166,3 @@ codeguard's README has the binding and rule eval formats.
   reviewed code to get past it.
 - Leave the codebase clean for a new rule: fix each existing violation, or put an
   `ast-grep-ignore: <id>` comment on the line above it.
-
-## Verify
-
-A rule is proven accurate only by its own cases, run through codeguard. Running it over
-other code finds code to fix, not evidence that the rule is right.
-
-```sh
-codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id> --repeat 20  # a judge rule: every case passes 20 runs of 20; calls the model
-codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
-```
-
-In CI, run the evals of the rules a change touches. Never run `codeguard review --all`
-without `--dry-run`: it judges every file against every judge rule. codeguard's README
-has every command's options.
