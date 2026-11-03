@@ -16,11 +16,10 @@ from codeguard.review import (
     Deadline,
     Judgement,
     JudgeNoVerdict,
-    JudgeProcessError,
     JudgeRequest,
-    JudgeTimeout,
     Verdict,
 )
+from codeguard.review.judge_process import ProcessBudget, check_judge_process, run_judge_process
 
 _DISABLED = (
     "hooks",
@@ -71,11 +70,7 @@ class CodexJudge:
             process, attempts = self._run(command, request.prompt, work)
             span.set_attribute("attempts", attempts)
             span.set_attribute("returncode", process.returncode)
-            if process.returncode:
-                raise JudgeProcessError(
-                    f"{self.executable} exited with {process.returncode}: {process.stderr}\n"
-                    f"{process.stdout}"
-                )
+            check_judge_process(process, self.executable)
             judgement = _judgement(answer, journal)
             span.set_attribute("loaded_files", judgement.loaded_files)
             span.set_attributes(_usage(process.stdout))
@@ -84,47 +79,25 @@ class CodexJudge:
     def _run(
         self, command: list[str], prompt: str, work: Path
     ) -> tuple[subprocess.CompletedProcess[str], int]:
-        expires = time.monotonic() + self.request_limit_seconds
+        budget = ProcessBudget(
+            self.deadline,
+            time.monotonic() + self.request_limit_seconds,
+            f"{self.model} took over {self.request_limit_seconds:g}s to answer.",
+        )
         environment = dict(os.environ)
         for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL"):
             environment.pop(key, None)
         for attempt in range(1, 4):
-            timeout = expires - time.monotonic()
-            if self.deadline is not None:
-                timeout = min(timeout, self.deadline.remaining_seconds())
-            if timeout <= 0:
-                raise self._timed_out()
             (work / "verdict.json").unlink(missing_ok=True)
-            try:
-                process = subprocess.run(
-                    command,
-                    input=prompt,
-                    cwd=work,
-                    env=environment,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    check=False,
-                )
-            except subprocess.TimeoutExpired as error:
-                raise self._timed_out() from error
-            except OSError as error:
-                raise JudgeProcessError(f"Could not start {self.executable}: {error}") from error
+            process = run_judge_process(command, prompt, work, budget, environment)
             if process.returncode == 0 or attempt == 3 or not _at_capacity(process.stdout):
                 return process, attempt
             wait = float(attempt)
-            remaining = expires - time.monotonic()
-            if self.deadline is not None:
-                remaining = min(remaining, self.deadline.remaining_seconds())
-            if wait >= remaining:
-                raise self._timed_out()
+            remaining = budget.remaining_seconds()
+            if remaining is not None and wait >= remaining:
+                raise budget.reached()
             time.sleep(wait)
         raise AssertionError("unreachable")
-
-    def _timed_out(self) -> JudgeTimeout:
-        if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
-            return self.deadline.reached()
-        return JudgeTimeout(f"{self.model} took over {self.request_limit_seconds:g}s to answer.")
 
     def _command(
         self, work: Path, schema: Path, instructions: Path, journal: Path, answer: Path

@@ -16,6 +16,7 @@ from codeguard.review import (
     JudgeProcessError,
     JudgeTimeout,
     Verdict,
+    judge_process,
 )
 from codeguard.review.file_tools import FileTools
 
@@ -43,7 +44,7 @@ def test_structured_verdict_isolated_process_and_file_dependencies(
         return subprocess.CompletedProcess(command, 0, "", "")
 
     process = Mock(side_effect=run)
-    monkeypatch.setattr(codex_judge.subprocess, "run", process)
+    monkeypatch.setattr(judge_process.subprocess, "run", process)
 
     judgement = codex.judge(request)
 
@@ -72,7 +73,7 @@ def test_structured_verdict_isolated_process_and_file_dependencies(
 @pytest.mark.parametrize("stderr", ["Authentication required", "process failed"])
 def test_process_errors(codex, monkeypatch, make_judge_request, stderr):
     monkeypatch.setattr(
-        codex_judge.subprocess,
+        judge_process.subprocess,
         "run",
         lambda *args, **kwargs: subprocess.CompletedProcess(args, 1, "", stderr),
     )
@@ -87,7 +88,7 @@ def test_invalid_or_missing_verdict(codex, monkeypatch, make_judge_request, answ
             (kwargs["cwd"] / "verdict.json").write_text(answer)
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr(codex_judge.subprocess, "run", run)
+    monkeypatch.setattr(judge_process.subprocess, "run", run)
     with pytest.raises(JudgeNoVerdict):
         codex.judge(make_judge_request())
 
@@ -96,7 +97,7 @@ def test_timeout(codex, monkeypatch, make_judge_request):
     def run(*args, **kwargs):
         raise subprocess.TimeoutExpired("codex", kwargs["timeout"])
 
-    monkeypatch.setattr(codex_judge.subprocess, "run", run)
+    monkeypatch.setattr(judge_process.subprocess, "run", run)
     with pytest.raises(JudgeTimeout):
         codex.judge(make_judge_request())
 
@@ -178,7 +179,7 @@ def test_capacity_error_retries_same_model_then_returns_verdict(
         (kwargs["cwd"] / "verdict.json").write_text('{"reason":"Judged.","violations":[]}')
         return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr(codex_judge.subprocess, "run", run)
+    monkeypatch.setattr(judge_process.subprocess, "run", run)
     monkeypatch.setattr(codex_judge.time, "sleep", waits.append)
 
     result = codex.judge(make_judge_request())
@@ -191,7 +192,7 @@ def test_capacity_error_retries_same_model_then_returns_verdict(
 def test_capacity_retries_are_bounded(codex, monkeypatch, make_judge_request):
     process = Mock(return_value=subprocess.CompletedProcess("codex", 1, CAPACITY, ""))
     waits = []
-    monkeypatch.setattr(codex_judge.subprocess, "run", process)
+    monkeypatch.setattr(judge_process.subprocess, "run", process)
     monkeypatch.setattr(codex_judge.time, "sleep", waits.append)
 
     with pytest.raises(JudgeProcessError, match="at capacity"):
@@ -203,7 +204,7 @@ def test_capacity_retries_are_bounded(codex, monkeypatch, make_judge_request):
 
 def test_authentication_failure_is_not_retried(codex, monkeypatch, make_judge_request):
     process = Mock(return_value=subprocess.CompletedProcess("codex", 1, "", "Log in with ChatGPT"))
-    monkeypatch.setattr(codex_judge.subprocess, "run", process)
+    monkeypatch.setattr(judge_process.subprocess, "run", process)
 
     with pytest.raises(JudgeProcessError, match="Log in with ChatGPT"):
         codex.judge(make_judge_request())
@@ -214,7 +215,7 @@ def test_authentication_failure_is_not_retried(codex, monkeypatch, make_judge_re
 def test_retry_backoff_must_fit_within_the_call_limit(tmp_path, monkeypatch, make_judge_request):
     judge = CodexJudge(tmp_path, "gpt-6-luna", Semaphore(1), request_limit_seconds=0.5)
     process = Mock(return_value=subprocess.CompletedProcess("codex", 1, CAPACITY, ""))
-    monkeypatch.setattr(codex_judge.subprocess, "run", process)
+    monkeypatch.setattr(judge_process.subprocess, "run", process)
 
     with pytest.raises(JudgeTimeout):
         judge.judge(make_judge_request())

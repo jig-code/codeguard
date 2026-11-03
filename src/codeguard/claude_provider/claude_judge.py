@@ -14,11 +14,11 @@ from codeguard.review import (
     Deadline,
     Judgement,
     JudgeNoVerdict,
-    JudgeProcessError,
     JudgeRequest,
     Verdict,
     output_schema,
 )
+from codeguard.review.judge_process import ProcessBudget, check_judge_process, run_judge_process
 
 _EXECUTABLE = "claude"
 _READ_ONLY_TOOLS = "Read,Grep,Glob"
@@ -62,11 +62,7 @@ class ClaudeJudge:
         with self.warmup.after_first_call((self.model, instructions)), self.processes:
             process = self._run(instructions, prompt, schema, tools)
         span.set_attribute("returncode", process.returncode)
-        if process.returncode != 0:
-            raise JudgeProcessError(
-                f"{self.executable} exited with {process.returncode}.\n"
-                f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
-            )
+        check_judge_process(process, self.executable)
         result = ClaudeResult.from_stream(process.stdout, self.root)
         if result.structured_output is None:
             raise JudgeNoVerdict(f"{self.executable} returned no verdict:\n{process.stdout}")
@@ -75,20 +71,7 @@ class ClaudeJudge:
     def _run(
         self, instructions: str, prompt: str, schema: str, tools: str
     ) -> subprocess.CompletedProcess[str]:
-        if self.deadline is None:
-            return self._run_until(instructions, prompt, schema, tools, None)
-        remaining = self.deadline.remaining_seconds()
-        if remaining <= 0:
-            raise self.deadline.reached()
-        try:
-            return self._run_until(instructions, prompt, schema, tools, remaining)
-        except subprocess.TimeoutExpired as error:
-            raise self.deadline.reached() from error
-
-    def _run_until(
-        self, instructions: str, prompt: str, schema: str, tools: str, timeout: float | None
-    ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+        return run_judge_process(
             [
                 self.executable,
                 "--safe-mode",
@@ -108,10 +91,7 @@ class ClaudeJudge:
                 instructions,
                 "--no-session-persistence",
             ],
-            input=prompt,
-            cwd=self.root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
+            prompt,
+            self.root,
+            ProcessBudget(self.deadline),
         )
