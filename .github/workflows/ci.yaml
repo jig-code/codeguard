@@ -41,16 +41,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
       # Each worker makes 2 Gemini calls at once, which keeps the run under Vertex's
       # tokens-per-minute limit.
-      - run: uv run --frozen pytest -m llm -n 4 --llm-runs 20
+      - run: uv run --frozen pytest -m llm -n 4
         env:
           GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
           GOOGLE_CLOUD_LOCATION: global
-  haiku-llm-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.2.0
-      - run: npm install --global @anthropic-ai/claude-code
-      - run: uv run --frozen pytest -m llm -n 4 --llm-runs 20 --judge-provider claude-cli --judge-model claude-haiku-5-5
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

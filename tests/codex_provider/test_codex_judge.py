@@ -57,6 +57,7 @@ def test_structured_verdict_isolated_process_and_file_dependencies(
     assert "features.skip_host_skill_discovery=true" in command
     assert 'model_reasoning_effort="high"' in command
     assert "shell_tool" in command
+    assert command[command.index("view_image") - 1] == "--disable"
     assert kwargs["input"] == request.prompt
     assert "OPENAI_API_KEY" not in kwargs["env"]
     assert "CODEX_API_KEY" not in kwargs["env"]

@@ -29,6 +29,7 @@ _DISABLED = (
     "memories",
     "multi_agent",
     "shell_tool",
+    "view_image",
     "js_repl",
     "code_mode",
     "skill_search",
@@ -46,7 +47,7 @@ class CodexJudge:
 
     @property
     def identity(self) -> str:
-        return "\0".join(("codex-cli", self.model, "reasoning=high", "mcp-files-schema-v2"))
+        return "\0".join(("codex-cli", self.model, "reasoning=high", "mcp-files-schema-v3"))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (

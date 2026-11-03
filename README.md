@@ -917,12 +917,12 @@ them on Haiku on Bedrock. CI runs them; run them after changing the judge's inst
 tools:
 
 ```sh
-uv run pytest -m llm -n 4 --llm-runs 20    # each case 20 times, as CI does
+uv run pytest -m llm -n 4    # each case 3 times, as CI does
 ```
 
-CI also runs the same cases with `claude-haiku-5-5` through `claude-cli`, using the
-existing `CLAUDE_CODE_OAUTH_TOKEN` secret. Local Codex reliability checks use the same
-fixtures with `--judge-provider codex-cli --judge-model gpt-6-luna --llm-runs 20`.
+Local Codex checks use the same fixtures with
+`--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
+add `--llm-runs 20`.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute
