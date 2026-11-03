@@ -1,27 +1,12 @@
-# Writing a judge rule that judges reliably
+# Writing a judge rule
 
-A judge rule is ready when every eval case comes out the same way on every run. A
-result is unreliable when it flips between runs, is judged with low confidence, or
-comes back as a warning. That is a defect in the rule's wording or in the case. The
-judge gives a reason with every verdict, pass or fail, and the rule eval reports it for
-every case: read it first. A reason that rests the verdict on the wrong code, or on
-something the convention doesn't say, or that is vague, means the rule's wording is
-unclear; reword the convention so it decides the case on the ground you meant.
-
-- Don't re-run until it passes.
 - Open the binding and check its `triggers` before anything else. `any`, `code`,
   `function-body` or `function-signature` sends the judge code the convention can't
   decide, and the judge wavers on it. Narrowing the triggers to the node that holds the
   violation (Gate every form, below) is part of every fix to an unreliable rule. Never
   loosen a gate to get past a failure.
-- Don't add the failing case's code to the skill as an example, and don't add a
-  carve-out for it. The judge would then pass the case by matching it, and the next
-  piece of code fails the same way. Restate the convention so its statement decides the
-  case.
-- Don't change the rule's wording to get a weak case to pass. Fix the case, or drop it.
-
-A fix touches whichever of the three files is at fault, and often more than one: the
-skill's wording, the binding's triggers, and the case's code or name.
+- Don't add a case's code to the skill as an example, and don't add a carve-out for it.
+  Restate the convention so its statement decides the case.
 
 ## Write the skill
 
@@ -32,9 +17,8 @@ agent loads before it edits. It holds, in this order, and nothing else:
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
    words a reviewer would use, never a question. Where the sentence uses a term a reader
    could take two ways, a sentence that fixes its meaning.
-3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
-   prompt, so it helps the judge apply the convention to code the statement doesn't
-   name, but it never widens the convention: the statement alone decides each case.
+3. `## Why`: the harm the rule prevents, in a sentence or two. It never widens the
+   convention: the statement alone decides each case.
 
 No examples. No `## Violation` list of the shapes a violation takes, no `## Not a
 violation` list of code near the boundary, and no other section: each shape is decided
@@ -43,12 +27,7 @@ by the statement, or the statement is unclear. A shape that contradicts the stat
 to a rule of its own; its mention in the skill, even as a non-violation, is a second
 convention. No forms of the convention in any language or library, and no supplement
 per language: a rule in several languages is one skill, in no language's names, syntax
-or libraries. Leave out the fix, and anything telling the judge how to answer: the
-judge's own prompt sets its output and its confidence scale.
-
-A judge that can't decide a piece of code from the statement, or decides it on the
-wrong ground, has found an unclear statement. Reword the statement so it decides that
-code. A rule that needs a new example each time it meets new code has a bad convention.
+or libraries. Leave out the fix, and anything telling the judge how to answer.
 
 ## Gate every form of the violation
 
@@ -79,7 +58,7 @@ near the boundary, up to about three of each, and a `skipped` case outside the g
 convention with one way to break it has one `invalid` case. Each case tests one thing
 none of the others does: a different thing the code does or fails to do, not another
 syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
-either way proves nothing about the rule, and a judge that flips on it is right to.
+either way proves nothing about the rule.
 
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
   it. A reader of the case alone sees why the code is a problem or why it's fine, and
@@ -103,5 +82,4 @@ either way proves nothing about the rule, and a judge that flips on it is right 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss, then reword the convention until the case passes, reading the judge's reason on
-each run; never add the code to the skill. The bar stays 20 runs of 20.
+miss; never add the code to the skill.
