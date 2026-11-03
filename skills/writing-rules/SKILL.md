@@ -81,9 +81,7 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
   in the same pass as the skill, never leave them for later.
   - The binding sets `skill` (the skill's directory), `paths` (globs of the files the
     rule reviews) and `triggers` (the change kinds or gates that call the judge, never
-    `any`, `code`, `function-body` or `function-signature`). Fixing an existing rule
-    includes its binding: `triggers` on one of those kinds is narrowed to the node that
-    holds the violation.
+    `any`, `code`, `function-body` or `function-signature`).
   - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
     path; `before`, the file before the edit, left out for a new file; `after`, the
     file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`).
