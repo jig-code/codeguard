@@ -5,14 +5,8 @@ description: Use when adding or changing a codeguard rule, its tests, or its sna
 
 # Writing codeguard rules
 
-codeguard checks the changed lines of each changed file against the project's rules:
-pattern rules (ast-grep) and judge rules (a skill a model judges the change against). An
-`error` diagnostic blocks the agent's Stop and fails CI. Each principle here corrected a
-rule that misjudged code.
-
-This skill covers writing the rule: choosing its kind, stating the convention and why
-it exists, gating it and writing its cases. Running the rule's tests and evals is not
-its concern; the project's testing guide says how a rule is tested.
+A rule is a pattern rule, an ast-grep rule that matches code by its syntax, or a judge
+rule, a convention a model judges each change against.
 
 ## Workflow
 
@@ -23,10 +17,9 @@ its concern; the project's testing guide says how a rule is tested.
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
 
-For a judge rule, also read `references/judge-rules.md` before writing or changing it,
-and whenever its eval fails, flips between runs or reports a warning. For the project's
-language's tools and pattern rule examples, read `references/python.md`,
-`references/typescript.md` or `references/ruby.md`.
+For a judge rule, also read `references/judge-rules.md` before writing or changing it.
+For the project's language's tools and pattern rule examples, read
+`references/python.md`, `references/typescript.md` or `references/ruby.md`.
 
 ## The convention
 
@@ -35,37 +28,30 @@ words that don't depend on the language. Each piece of code the rule reads eithe
 the statement or breaks it: that is the rule's one yes/no test. The rule is that
 statement and why it exists, and nothing else: no examples, no list of the shapes a
 violation takes, no list of what isn't one, and no supplement per language. The
-statement alone decides each piece of code; the judge reads it as a reviewer would, and
-says on what ground the code keeps or breaks it.
+statement alone decides each piece of code.
 
-- **A statement, never a question.** The judge decides whether code breaks the
-  convention it is given; a question in its place leaves the judge to infer which
-  answer is the violation.
+- **A statement, never a question.**
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
-  shape nobody listed is still decided by its statement. Rules that each police one code
-  shape contradict each other and fail idiomatic code.
+  shape nobody listed is still decided by its statement.
 - **One convention.** A rule stating several conventions under one intent is several
   rules. Split it into one rule per convention, or find the one statement they share.
   A shape the statement doesn't decide is dropped from the rule, or moved to a rule of
   its own; it is never kept as an extra violation beside the statement.
 - **Plain language.** Write it the way a reviewer would say it in a code review. No
-  invented terms: if the rule needs a word nobody uses, it isn't clear yet. A judge
-  reads an unfamiliar term as loosely as a person does.
+  invented terms: if the rule needs a word nobody uses, it isn't clear yet.
 - **Scoped to the change.** A rule and its cases ask for only as much as decides pass or
-  fail: the code the change adds or edits, and the definitions of the names it uses. A
-  judge that has to read the rest of the repository to decide is slower, costs more, and
-  wavers. Only a rule that keeps something unique or consistent across the repository
-  (one home for a job, one word for one operation) searches beyond that, and it names
-  the one search it needs.
+  fail: the code the change adds or edits, and the definitions of the names it uses.
+  Only a rule that keeps something unique or consistent across the repository (one home
+  for a job, one word for one operation) searches beyond that, and it names the one
+  search it needs.
 - **Idiomatic code never breaks it.** Code written the way the language and its
   libraries intend is never a violation. A bad pattern isn't idiomatic just because a
   framework uses it, though: calling the framework's API is fine, while copying its
   shape into the project's own code may not be. A statement that flags idiomatic code
   is restated so it doesn't; it isn't given an exception for that code.
-- **Decided by its wording, never by examples.** When the judge decides a case wrongly,
-  or on the wrong ground, the statement is unclear: reword it so the statement decides
-  the case. An example would only make the judge match code to it, and the next case
-  fails the same way.
+- **Decided by its wording, never by examples.** A case the statement decides wrongly,
+  or on the wrong ground, shows the statement is unclear: reword it so the statement
+  decides the case.
 - **Each code shape breaks at most one rule.** When two rules contradict each other (one
   flags what the other requires) or overlap (both flag the same code), settle it before
   either ships: move the shape to one rule, or merge them.
@@ -74,12 +60,10 @@ says on what ground the code keeps or breaks it.
 ## Why it exists
 
 Every rule states the harm it prevents, in one or two sentences, so it can be reviewed
-when the code or the design around it changes. A rule nobody can trace to a reason can
-only be kept or dropped blind.
+when the code or the design around it changes.
 
 - A judge rule: a `## Why` section in its skill (`references/judge-rules.md`).
-- A pattern rule: `metadata.why` in its rule file. codeguard doesn't print it; `note`
-  stays what the blocked agent reads.
+- A pattern rule: `metadata.why` in its rule file.
 - Optionally, where the rule comes from: a `Source:` line in the Why section, or
   `metadata.source`. A link to public documentation, or the bug, PR comment or team
   decision behind it.
