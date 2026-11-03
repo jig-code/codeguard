@@ -105,14 +105,9 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
-- Each case isolates the behavior it tests and must otherwise be sound, satisfying
-  prerequisites owned by other rules and tools. Deliberate violations are appropriate
-  when necessary to test that behavior, including a pre-existing violation that a
-  change does not participate in and must therefore leave unreported. Keep those
-  violations minimal; fundamental defects such as forbidden dependency cycles must
-  not obscure the behavior under test. Follow the
-  [fixture validity guidance](testing.md#fixture-validity-and-pre-existing-violations).
-  Diagnose an invalid fixture before changing the judge or weakening an expected verdict.
+- Follow the writing-rules reference's
+  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
+  including its treatment of deliberate pre-existing violations in scope cases.
 
 ## Invariants
 

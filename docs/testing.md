@@ -71,20 +71,10 @@ judge change.
 
 Re-running until a case passes doesn't meet the bar.
 
-### Fixture validity and pre-existing violations
-
-Eval fixtures must otherwise be valid code: include the target violation in an
-`invalid` case, and satisfy the target rule in a `valid` case. Avoid unrelated defects
-or violations owned by other checks.
-
-A case may deliberately include invalid code when that is necessary to test its
-stated behavior. For example, a scope case can include a pre-existing violation and
-expect no finding when the change does not participate in it, according to the
-[review scope architecture](architecture.md). Name the behavior being tested and
-keep the deliberate violation small and unambiguous. Do not introduce fundamental
-defects, such as an import cycle, that obscure the scope question. A pre-existing
-violation is not automatically out of scope: the change may participate in the
-violating construct or behavior.
+For case construction, follow the writing-rules reference's
+[eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+It applies to rule evals in packages and apps and to CodeGuard's pytest judge fixtures,
+including cases that deliberately contain pre-existing violations to test review scope.
 
 Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
 
