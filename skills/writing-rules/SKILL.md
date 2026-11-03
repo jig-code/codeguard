@@ -80,8 +80,8 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
   A judge rule isn't written until all three exist; write the binding and the rule eval
   in the same pass as the skill, never leave them for later.
   - The binding sets `skill` (the skill's directory), `paths` (globs of the files the
-    rule reviews) and `triggers` (the change kinds or gates that call the judge, never
-    `any`, `code`, `function-body` or `function-signature`).
+    rule reviews) and `triggers` (the change kinds or gates a change must touch for the
+    judge to check it; a rule that needs every change says `any`).
   - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
     path; `before`, the file before the edit, left out for a new file; `after`, the
     file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`).
