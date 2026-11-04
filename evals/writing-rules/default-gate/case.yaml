@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: default-gate
+expected_outcome: |
+  A judge rule, import-time-defaults, with a gate import-time-defaults-gate whose matched node is a single parameter with a default (or its default value), not the parameter list, the function or anything larger, and a binding whose triggers name that gate and no built-in change kind: the judge is called for every change inside a trigger's node, and no built-in kind's node is one parameter, so any kind named there is around the parameter or unrelated to it.
+context:
+  scaffold_script: place-files.sh

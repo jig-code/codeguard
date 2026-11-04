@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: handler-gate
+expected_outcome: |
+  A judge rule, handler-says-why, with a gate handler-says-why-gate whose matched node is the exception handler clause itself, not the try statement, block or function around it, and a binding whose triggers name that gate and no built-in change kind: the judge is called for every change inside a trigger's node, and no built-in kind's node is the handler clause, so any kind named there is around the handler or unrelated to it.
+context:
+  scaffold_script: place-files.sh
