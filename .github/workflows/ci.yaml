@@ -31,7 +31,8 @@ jobs:
         with:
           logfire-token: ${{ secrets.LOGFIRE_TOKEN }}
           dry-run: true
-  llm-tests:
+  # One run of each fixture case verifies the change, stopping at the first failure.
+  llm-tests-validity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,7 +42,21 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
       # Each worker makes 2 Gemini calls at once, which keeps the run under Vertex's
       # tokens-per-minute limit.
-      - run: uv run --frozen pytest -m llm -n 4
+      - run: uv run --frozen pytest -m llm -n 4 --llm-runs 1 -x
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: global
+  # Two more runs of each case, for 3 of 3; every run completes.
+  llm-tests-reliability:
+    needs: llm-tests-validity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: uv run --frozen pytest -m llm -n 4 --llm-runs 2
         env:
           GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
           GOOGLE_CLOUD_LOCATION: global
