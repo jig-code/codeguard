@@ -5,10 +5,13 @@ convention: take the first row that can express it. A judge rule is for judgment
 for something syntax, types or a symbol lookup decide, because an exact tool gives the
 same answer every run, costs nothing, and already runs in the editor.
 
-| The convention | Use |
+When a convention isn't codeguard's to check, write no rule and say it isn't codeguard's
+responsibility. Don't name or set up the tool that checks it.
+
+| The convention | Checked by |
 |---|---|
-| A linter or type checker the project runs already has the check | Enable or configure it (Ruff, ESLint, RuboCop; basedpyright, mypy, `tsc`) |
-| A linter can express it through configuration | Configure it: ESLint `no-restricted-syntax` (AST selectors) or `no-restricted-imports`, Ruff `banned-api`, a configurable RuboCop cop |
+| A linter or type checker the project runs already has the check | That linter or type checker (Ruff, ESLint, RuboCop; basedpyright, mypy, `tsc`) |
+| A linter can express it through configuration | The linter's configuration: ESLint `no-restricted-syntax` (AST selectors) or `no-restricted-imports`, Ruff `banned-api`, a configurable RuboCop cop |
 | Which modules may import which | The project's import linter (import-linter, `import/no-restricted-paths`) |
 | A code shape in one file | A codeguard pattern rule |
 | Logic across nodes (counting, state, types), or an autocorrect | The linter's custom rule: a Pylint checker, an ESLint plugin rule, a RuboCop custom cop |
