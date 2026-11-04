@@ -40,6 +40,7 @@ class CachedJudge:
     store: Cache
     root: Path
     version: str = _CACHE_VERSION
+    enabled: bool = True
 
     @property
     def identity(self) -> str:
@@ -49,6 +50,9 @@ class CachedJudge:
         with logfire.span(
             "judge {rule} on {file}", rule=request.skill.name, file=request.file
         ) as span:
+            if not self.enabled:
+                span.set_attribute("cache_hit", False)
+                return self.wrapped.judge(request)
             key = self._key(request)
             stored = self._entry(key)
             changed = stored.changed_files(self._digest_of) if stored else ()
@@ -66,6 +70,8 @@ class CachedJudge:
             return Judgement(stored.verdict, tuple(stored.loaded_digests))
 
     def has(self, request: JudgeRequest) -> bool:
+        if not self.enabled:
+            return False
         stored = self._entry(self._key(request))
         return stored is not None and not stored.changed_files(self._digest_of)
 

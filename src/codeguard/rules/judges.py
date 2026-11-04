@@ -30,7 +30,12 @@ class Judges:
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> CachedJudge:
-        return CachedJudge(self.uncached(root, model, deadline), self.store, root)
+        return CachedJudge(
+            self.uncached(root, model, deadline),
+            self.store,
+            root,
+            enabled=model.provider is not JudgeProvider.CODEX_CLI,
+        )
 
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]

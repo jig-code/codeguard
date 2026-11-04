@@ -18,7 +18,7 @@ from codeguard.review import (
     Verdict,
     output_schema,
 )
-from codeguard.review.judge_process import ProcessBudget, check_judge_process, run_judge_process
+from codeguard.review.judge_process import check_judge_process, run_judge_process
 
 _EXECUTABLE = "claude"
 _READ_ONLY_TOOLS = "Read,Grep,Glob"
@@ -93,5 +93,5 @@ class ClaudeJudge:
             ],
             prompt,
             self.root,
-            ProcessBudget(self.deadline),
+            self.deadline,
         )

@@ -1,8 +1,6 @@
 import json
 import os
 import subprocess
-import sys
-import time
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +17,7 @@ from codeguard.review import (
     JudgeRequest,
     Verdict,
 )
-from codeguard.review.judge_process import ProcessBudget, check_judge_process, run_judge_process
+from codeguard.review.judge_process import check_judge_process, run_judge_process
 
 _DISABLED = (
     "hooks",
@@ -27,7 +25,6 @@ _DISABLED = (
     "apps",
     "memories",
     "multi_agent",
-    "shell_tool",
     "view_image",
     "js_repl",
     "code_mode",
@@ -42,11 +39,10 @@ class CodexJudge:
     processes: AbstractContextManager[object]
     executable: str = "codex"
     deadline: Deadline | None = None
-    request_limit_seconds: float = 120
 
     @property
     def identity(self) -> str:
-        return "\0".join(("codex-cli", self.model, "reasoning=high", "mcp-files-schema-v3"))
+        return "\0".join(("codex-cli", self.model, "reasoning=high", "native-tools-schema-v4"))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (
@@ -64,44 +60,24 @@ class CodexJudge:
             schema.write_text(json.dumps(verdict_schema()))
             instructions = work / "instructions.md"
             instructions.write_text(request.instructions)
-            journal = work / "loaded.jsonl"
             answer = work / "verdict.json"
-            command = self._command(work, schema, instructions, journal, answer)
-            process, attempts = self._run(command, request.prompt, work)
-            span.set_attribute("attempts", attempts)
+            command = self._command(schema, instructions, answer)
+            process = self._run(command, request.prompt, work)
             span.set_attribute("returncode", process.returncode)
             check_judge_process(process, self.executable)
-            judgement = _judgement(answer, journal)
+            judgement = _judgement(answer)
             span.set_attribute("loaded_files", judgement.loaded_files)
+            span.set_attribute("loaded_files_tracked", False)
             span.set_attributes(_usage(process.stdout))
             return judgement
 
-    def _run(
-        self, command: list[str], prompt: str, work: Path
-    ) -> tuple[subprocess.CompletedProcess[str], int]:
-        budget = ProcessBudget(
-            self.deadline,
-            time.monotonic() + self.request_limit_seconds,
-            f"{self.model} took over {self.request_limit_seconds:g}s to answer.",
-        )
+    def _run(self, command: list[str], prompt: str, work: Path) -> subprocess.CompletedProcess[str]:
         environment = dict(os.environ)
         for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL"):
             environment.pop(key, None)
-        for attempt in range(1, 4):
-            (work / "verdict.json").unlink(missing_ok=True)
-            process = run_judge_process(command, prompt, work, budget, environment)
-            if process.returncode == 0 or attempt == 3 or not _at_capacity(process.stdout):
-                return process, attempt
-            wait = float(attempt)
-            remaining = budget.remaining_seconds()
-            if remaining is not None and wait >= remaining:
-                raise budget.reached()
-            time.sleep(wait)
-        raise AssertionError("unreachable")
+        return run_judge_process(command, prompt, work, self.deadline, environment)
 
-    def _command(
-        self, work: Path, schema: Path, instructions: Path, journal: Path, answer: Path
-    ) -> list[str]:
+    def _command(self, schema: Path, instructions: Path, answer: Path) -> list[str]:
         settings = {
             "approval_policy": "never",
             "forced_login_method": "chatgpt",
@@ -112,14 +88,6 @@ class CodexJudge:
             "web_search": "disabled",
             "features.skip_host_skill_discovery": True,
             "features.omit_skill_descriptions": True,
-            "mcp_servers.codeguard.command": sys.executable,
-            "mcp_servers.codeguard.args": [
-                "-m",
-                "codeguard.codex_provider.file_server",
-                str(self.root.resolve()),
-                str(journal),
-            ],
-            "mcp_servers.codeguard.required": True,
         }
         return [
             self.executable,
@@ -131,7 +99,7 @@ class CodexJudge:
             "read-only",
             "--skip-git-repo-check",
             "--cd",
-            str(work),
+            str(self.root.resolve()),
             "--model",
             self.model,
             "--json",
@@ -149,17 +117,9 @@ class CodexJudge:
         ]
 
 
-def _judgement(answer: Path, journal: Path) -> Judgement:
+def _judgement(answer: Path) -> Judgement:
     try:
-        verdict = Verdict.model_validate_json(answer.read_text())
-        loaded: list[str] = []
-        if journal.exists():
-            for line in journal.read_text().splitlines():
-                files = json.loads(line)
-                if not isinstance(files, list) or not all(isinstance(file, str) for file in files):
-                    raise ValueError("Invalid file journal")
-                loaded.extend(files)
-        return Judgement(verdict, tuple(dict.fromkeys(loaded)))
+        return Judgement(Verdict.model_validate_json(answer.read_text()))
     except (OSError, ValueError, ValidationError) as error:
         raise JudgeNoVerdict(f"Codex returned no valid verdict: {error}") from error
 
@@ -173,19 +133,3 @@ def _usage(stream: str) -> dict[str, object]:
         if isinstance(event, dict) and event.get("type") == "turn.completed":
             return {"usage": event.get("usage", {})}
     return {}
-
-
-def _at_capacity(stream: str) -> bool:
-    for line in stream.splitlines():
-        try:
-            event = json.loads(line)
-        except ValueError:
-            continue
-        if (
-            isinstance(event, dict)
-            and event.get("type") == "error"
-            and event.get("message")
-            == "Selected model is at capacity. Please try a different model."
-        ):
-            return True
-    return False

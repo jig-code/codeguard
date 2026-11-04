@@ -29,7 +29,7 @@ build-backend = "uv_build"
 testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = ["--import-mode=importlib", "-m", "not llm"]
-markers = ["llm: calls the real Gemini judge on Vertex AI; run with pytest -m llm"]
+markers = ["llm: exercises the review pipeline with a real judge using the fixture bindings or provider/model overrides; run with pytest -m llm"]
 
 [tool.ruff]
 line-length = 100

@@ -688,14 +688,17 @@ permissions and the shared verdict schema. This provider requires ChatGPT authen
 it does not fall back to API billing. Other providers do not require Codex to be installed.
 Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
 
-The judge runs outside the project directory with project instructions, hooks, plugins,
-memories and shell tools disabled. It accesses the repository through CodeGuard's
-read-only `read_file`, `grep` and `glob` tools over a private MCP server. Those tools
-record additional files in `loaded_files`, so edits to context files invalidate cached
-verdicts. Cache identity includes the provider, model, reasoning effort (`high`) and tool
-adapter version. Each call has a 120-second limit, capped by the review deadline.
-An explicit model-capacity error is retried up to twice within that same time limit.
-Authentication failures and other process errors fail immediately.
+The judge uses Codex's native repository tools in the read-only sandbox, with project
+instructions, hooks, plugins, memories and web search disabled. Temporary files hold
+the shared judge instructions, verdict schema and final response; they are removed
+after each call. The provider uses `high` reasoning effort and the existing review
+deadline. Authentication failures, capacity errors and other process errors fail
+immediately, without retries or a separate per-call time limit.
+
+Codex's native tool events do not provide complete file-read tracking. Its
+`loaded_files` is therefore unavailable (returned as an empty tuple), and CodeGuard
+does not cache Codex verdicts. Additional repository context remains available through
+native tools; Claude and Gemini dependency tracking and caching are unchanged.
 Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
 
 The existing evaluation override also accepts Codex:
