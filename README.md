@@ -430,9 +430,9 @@ held to the same bar.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
 3. Once `codeguard eval` passes with nothing changed since, `codeguard eval --repeat 19`
-   reviews each case nineteen more times, 20 in all, so an unstable verdict shows up as
-   a failing run, named like `adds a second class [2/19]`. Any change starts again at
-   step 2.
+   reviews each case nineteen more times, 20 in all, to the end, so an unstable verdict
+   shows up as a failing run, named like `adds a second class [2/19]`. Any change starts
+   again at step 2.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -869,7 +869,8 @@ them on Haiku on Bedrock. CI runs them; run them after changing the judge's inst
 tools:
 
 ```sh
-uv run pytest -m llm -n 4    # each case 3 times, as CI does
+uv run pytest -m llm -n 4 --llm-runs 1 -x    # each case once, stopping at the first failure
+uv run pytest -m llm -n 4 --llm-runs 2       # then twice more, for 3 of 3, as CI does
 ```
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
