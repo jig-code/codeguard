@@ -14,7 +14,7 @@ from claude_output import (
     tool_result,
     tool_use,
 )
-from fake_cli import configure_fake_cli
+from fake_cli import configure_fake_cli_response
 from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
@@ -39,7 +39,7 @@ def arguments(tmp_path) -> Path:
 
 @pytest.fixture
 def fake_claude_executable(tmp_path, arguments) -> str:
-    return configure_fake_cli(
+    return configure_fake_cli_response(
         {
             "stdout": claude_stream(
                 [
@@ -68,7 +68,7 @@ def processes() -> Semaphore:
 
 @pytest.fixture
 def failing_claude_executable(tmp_path) -> str:
-    return configure_fake_cli(
+    return configure_fake_cli_response(
         {
             "stdout": "rate limited\n",
             "stderr": "try later\n",
@@ -79,11 +79,11 @@ def failing_claude_executable(tmp_path) -> str:
 
 @pytest.fixture
 def hanging_claude_executable(tmp_path) -> str:
-    return configure_fake_cli({"delay": 10})
+    return configure_fake_cli_response({"delay": 10})
 
 
 def claude_printing(tmp_path: Path, stream: str) -> str:
-    return configure_fake_cli({"stdout": stream})
+    return configure_fake_cli_response({"stdout": stream})
 
 
 def deadline_in(seconds: float) -> Deadline:
@@ -383,7 +383,7 @@ class TestClaudeJudge:
     def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):
-        executable = configure_fake_cli(
+        executable = configure_fake_cli_response(
             {
                 "stdout": claude_stream([]),
                 "record": str(arguments),
@@ -451,5 +451,5 @@ class TestClaudeJudge:
 
 
 def judge_answering(tmp_path, processes, *messages: dict) -> ClaudeJudge:
-    executable = configure_fake_cli({"stdout": claude_stream([], messages=messages)})
+    executable = configure_fake_cli_response({"stdout": claude_stream([], messages=messages)})
     return ClaudeJudge(tmp_path, MODEL, processes, executable)

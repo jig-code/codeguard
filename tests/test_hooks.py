@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from claude_output import claude_stream
-from fake_cli import FAKE_CLI, configure_fake_cli
+from fake_cli import FAKE_CLI, configure_fake_cli_response
 from rules_package import write_package
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
@@ -249,7 +249,7 @@ class TestStopHook:
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        configure_fake_cli({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
         finding = make_diagnostic(
             judged=True,
             rule="placement",
@@ -266,7 +266,7 @@ class TestStopHook:
     def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, claude_bin, make_skill):
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
-        configure_fake_cli({"stdout": "rate limited\n", "exit_code": 1})
+        configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
 
         response = run_stop_hook(repo, stop(), path=path_with(claude_bin))
 

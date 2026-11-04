@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 from claude_output import claude_stream, tool_result, tool_use
-from fake_cli import FAKE_CLI, configure_fake_cli
+from fake_cli import FAKE_CLI, configure_fake_cli_response
 from git_repo import GitRepo
 from rules_package import write_package
 from spans import finished_span_attributes
@@ -348,7 +348,7 @@ class TestReviewOfDeletedCode:
         )
         violation = {"file": "service.py", "confidence": 1.0}
         bin_dir = FAKE_CLI.parent
-        configure_fake_cli(
+        configure_fake_cli_response(
             {
                 "stdout": claude_stream(
                     [
@@ -388,7 +388,7 @@ class TestReviewDryRun:
         repo.write("a.py", "x = 1\n")
         repo.write("b.rb", "x = 1\n")
         bin_dir = FAKE_CLI.parent
-        configure_fake_cli({"exit_code": 1})
+        configure_fake_cli_response({"exit_code": 1})
 
         result = subprocess.run(
             [CODEGUARD, "review", "--dry-run"],
@@ -450,7 +450,7 @@ class TestReviewJsonFormat:
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        configure_fake_cli({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -496,7 +496,7 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        configure_fake_cli(
+        configure_fake_cli_response(
             {
                 "stdout": claude_stream(
                     [], messages=(tool_use("Read", file_path="orders/pricing.toml"),)
@@ -519,7 +519,7 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        configure_fake_cli(
+        configure_fake_cli_response(
             {
                 "stdout": claude_stream(
                     [],
@@ -605,7 +605,7 @@ def judged_repo(repo: GitRepo, tmp_path: Path, make_skill) -> Path:
     repo.commit("Bind the skill")
     repo.write("a.py", "x = 1\n")
     bin_dir = FAKE_CLI.parent
-    configure_fake_cli({"stdout": "rate limited\n", "exit_code": 1})
+    configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
     return bin_dir
 
 
@@ -705,7 +705,7 @@ class TestEvalCommand:
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
         bin_dir = FAKE_CLI.parent
-        configure_fake_cli({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = subprocess.run(
             [CODEGUARD, "eval"] if from_package else [CODEGUARD, "eval", str(package.root)],
@@ -733,7 +733,7 @@ class TestEvalCommand:
         bin_dir = FAKE_CLI.parent
         calls = tmp_path / "calls"
         violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
-        configure_fake_cli({"stdout": claude_stream([violation]), "calls": str(calls)})
+        configure_fake_cli_response({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
         for _ in range(2):
@@ -963,7 +963,9 @@ def path_package_config(package: GitRepo) -> str:
 def recording_claude(tmp_path: Path, violations: list[dict]) -> Path:
     """Put a claude on PATH that saves its arguments and stdin to $CLAUDE_RECORD."""
     bin_dir = FAKE_CLI.parent
-    configure_fake_cli({"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"})
+    configure_fake_cli_response(
+        {"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"}
+    )
     return bin_dir
 
 
