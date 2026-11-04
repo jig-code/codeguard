@@ -32,13 +32,19 @@ don't check what it says about the other tool or whether it sets that tool up. S
 
 ## Running them
 
-CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes. Each case
-runs 3 times, and passes when at least 80% of its graders pass, averaged over the runs.
+CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes. One run of
+every case verifies the change. Once that run passes with nothing changed since, the
+stability check runs every case 9 more times. A case passes when every grader passes in
+all 10 runs. Any change starts again at one run.
 
 ```sh
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 3 --threshold 0.8 \
+claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
+  --trust-plugin --no-publish
+claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 \
   --trust-plugin --no-publish
 ```
+
+CI runs the two as steps of one job, so the second runs only when the first passes.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
