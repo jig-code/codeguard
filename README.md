@@ -429,8 +429,10 @@ held to the same bar.
    classifies the diff the way a review does.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
-3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
-   shows up as a failing run, named like `adds a second class [2/20]`.
+3. Once `codeguard eval` passes with nothing changed since, `codeguard eval --repeat 19`
+   reviews each case nineteen more times, 20 in all, so an unstable verdict shows up as
+   a failing run, named like `adds a second class [2/19]`. Any change starts again at
+   step 2.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -505,7 +507,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 |---|---|---|---|---|
 | A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
 | A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review, 20 runs of 20 | `codeguard eval --repeat 20` | yes |
+| | | each edit gets its expected review: 1 run to verify the change, then 19 more, 20 of 20 | `codeguard eval`, then `codeguard eval --repeat 19` | yes |
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
