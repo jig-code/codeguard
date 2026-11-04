@@ -26,7 +26,8 @@ For the project's language's tools and pattern rule examples, read
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
 the statement or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else: no examples, no list of the shapes a
+statement, a sentence fixing the meaning of a term in it a reader could take two ways,
+and why it exists, and nothing else: no examples, no list of the shapes a
 violation takes, no list of what isn't one, and no supplement per language. The
 statement alone decides each piece of code.
 
