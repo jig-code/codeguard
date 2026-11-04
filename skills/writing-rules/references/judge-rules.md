@@ -30,8 +30,9 @@ or libraries. Leave out the fix, and anything telling the judge how to answer.
   test, so a gate that stops matching a form fails a test.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
-- Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`.
+- A gate matches the code a violation needs and nothing around it: not the statement,
+  block or function that holds that code. The judge is sent the whole of each node a
+  gate matches, and is called for every change inside one.
 - A trigger is a built-in change kind (codeguard's README, The binding, lists them) or
   a gate. When no kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
   that matches the node, named in `triggers` and tested like a pattern rule.
