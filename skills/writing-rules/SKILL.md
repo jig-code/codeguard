@@ -25,10 +25,10 @@ For the project's language's tools and pattern rule examples, read
 
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
-the statement or breaks it: that is the rule's one yes/no test. The rule is that
+the convention or breaks it: that is the rule's one yes/no test. The rule is that
 statement, a sentence fixing the meaning of a term in it a reader could take two ways,
-and why it exists, and nothing else: no examples, no list of the shapes a
-violation takes, no list of what isn't one, and no supplement per language. The
+and why it exists, and nothing else: no examples, no list in its text of the shapes
+a violation takes, no list of what isn't one, and no supplement per language. The
 statement alone decides each piece of code.
 
 - **A statement, never a question.**
@@ -103,9 +103,9 @@ codeguard's README has the binding and rule eval formats.
 
 ## Pattern rules
 
-- Match the construct only where it breaks the convention: a `len()` compared with a
+- Match the shape only where it breaks the convention: a `len()` compared with a
   literal, not a `len()` inside a slice. `stopBy: end` on `has` or `inside` searches every
-  descendant or ancestor; in a positive match, use it only when the construct breaks the
+  descendant or ancestor; in a positive match, use it only when the shape breaks the
   convention in every position.
 - Put the reason and the fix in the rule's `note`. codeguard prints it under the
   diagnostic, so it is what the blocked agent reads (no comments in the rule's own file).
@@ -113,8 +113,8 @@ codeguard's README has the binding and rule eval formats.
   `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
   the scope. The exception is a file name that is the convention itself (`__all__` only
   in `__init__.py`).
-- When syntax decides only some forms of a convention, write a pattern rule for those
-  forms and a judge rule gated on every form. No judge rule runs on a file with an
+- When syntax decides only some shapes a violation takes, write a pattern rule for those
+  shapes and a judge rule gated on every shape. No judge rule runs on a file with an
   `error` diagnostic, so the two report the same code only if the pattern rule is a
   `warning`.
 
@@ -123,9 +123,9 @@ codeguard's README has the binding and rule eval formats.
 - Use made-up code and names (`ExampleModel`), so a case shows the pattern rather than
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
-- Give the idiomatic form a `valid` case beside the `invalid` one.
+- Give idiomatic code a `valid` case beside the `invalid` one.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case naming its branch. Give each matched construct a
+  case, with a comment above each case naming its branch. Give each matched shape a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside

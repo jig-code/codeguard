@@ -18,16 +18,17 @@ agent loads before it edits. It holds, in this order, and nothing else:
 No examples. No `## Violation` list of the shapes a violation takes, no `## Not a
 violation` list of code near the boundary, and no other section: each shape is decided
 by the statement, or the statement is unclear. A shape that contradicts the statement
-(a form that the statement says keeps the convention) is dropped from the rule or moved
+(a shape that the statement says keeps the convention) is dropped from the rule or moved
 to a rule of its own; its mention in the skill, even as a non-violation, is a second
-convention. No forms of the convention in any language or library, and no supplement
+convention. No shapes of the convention in any language or library, and no supplement
 per language: a rule in several languages is one skill, in no language's names, syntax
 or libraries. Leave out the fix, and anything telling the judge how to answer.
 
-## Gate every form of the violation
+## Gate every shape of the violation
 
-- List the syntactic forms the violation takes, and give each one an `invalid` gate
-  test, so a gate that stops matching a form fails a test.
+- List the syntactic shapes the violation takes in the gate's tests, not in the rule's
+  text: give each one an `invalid` gate test, so a gate that stops matching a shape
+  fails a test.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
 - A gate matches the code a violation needs and nothing around it: not the statement,
@@ -47,8 +48,8 @@ none of the others does: a different thing the code does or fails to do, not ano
 syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
 either way proves nothing about the rule.
 
-- An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
-  it. A reader of the case alone sees why the code is a problem or why it's fine, and
+- An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
+  keeps it. A reader of the case alone sees why the code is a problem or why it's fine, and
   the case's name says that stake: for an `invalid` case the harm, in the terms of the
   rule's Why; for a `valid` case what the code keeps safe. The code already shows what
   it does, so a name that describes the code's action or shape is renamed. This holds
