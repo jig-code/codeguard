@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+
+def main() -> None:
+    arguments = sys.argv[1:]
+    response = json.loads(Path(os.environ["CODEGUARD_TEST_CLI_CONFIG"]).read_text())
+    request = {
+        "arguments": arguments,
+        "prompt": sys.stdin.read(),
+        "cwd": os.getcwd(),
+        "environment": {
+            key: os.environ[key]
+            for key in ("OPENAI_API_KEY", "CODEX_API_KEY", "OPENAI_BASE_URL", "PATH")
+            if key in os.environ
+        },
+    }
+    if "--output-schema" in arguments:
+        schema = Path(arguments[arguments.index("--output-schema") + 1])
+        request["schema"] = json.loads(schema.read_text())
+        settings = dict(
+            arguments[index + 1].split("=", 1)
+            for index, argument in enumerate(arguments)
+            if argument == "-c"
+        )
+        request["instructions"] = Path(json.loads(settings["model_instructions_file"])).read_text()
+    record = response.get("record")
+    if record_env := response.get("record_env"):
+        directory = Path(os.environ[record_env])
+        directory.mkdir(parents=True, exist_ok=True)
+        record = directory / "request.json"
+    if record:
+        Path(record).write_text(json.dumps(request))
+    if calls := response.get("calls"):
+        with Path(calls).open("a") as stream:
+            stream.write("called\n")
+    time.sleep(response.get("delay", 0))
+    if response.get("answer") is not None:
+        Path(arguments[arguments.index("--output-last-message") + 1]).write_text(response["answer"])
+    sys.stdout.write(response.get("stdout", ""))
+    sys.stderr.write(response.get("stderr", ""))
+    sys.exit(response.get("exit_code", 0))
+
+
+if __name__ == "__main__":
+    main()

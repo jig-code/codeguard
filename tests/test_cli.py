@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 from claude_output import claude_stream, tool_result, tool_use
-from fake_cli import install_fake_cli
+from fake_cli import FAKE_CLI, configure_fake_cli
 from git_repo import GitRepo
 from rules_package import write_package
 from spans import finished_span_attributes
@@ -17,6 +17,8 @@ from spans import finished_span_attributes
 from codeguard import cli
 from codeguard.file_lock import exclusive_lock
 from codeguard.review import Severity
+
+pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
 CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 BUNDLED_AST_GREP = metadata.version("ast-grep-cli")
@@ -345,11 +347,8 @@ class TestReviewOfDeletedCode:
             "class ExampleService:\n    def describe(self):\n        return 'service'\n",
         )
         violation = {"file": "service.py", "confidence": 1.0}
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        install_fake_cli(
-            claude,
+        bin_dir = FAKE_CLI.parent
+        configure_fake_cli(
             {
                 "stdout": claude_stream(
                     [
@@ -357,7 +356,7 @@ class TestReviewOfDeletedCode:
                         {**violation, "line": 2, "message": "Untouched method."},
                     ]
                 )
-            },
+            }
         )
 
         result = subprocess.run(
@@ -388,10 +387,8 @@ class TestReviewDryRun:
         )
         repo.write("a.py", "x = 1\n")
         repo.write("b.rb", "x = 1\n")
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        install_fake_cli(claude, {"exit_code": 1})
+        bin_dir = FAKE_CLI.parent
+        configure_fake_cli({"exit_code": 1})
 
         result = subprocess.run(
             [CODEGUARD, "review", "--dry-run"],
@@ -453,9 +450,7 @@ class TestReviewJsonFormat:
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        install_fake_cli(
-            bin_dir / "claude", {"stdout": claude_stream([{**violation, "confidence": 0.5}])}
-        )
+        configure_fake_cli({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -501,14 +496,13 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        install_fake_cli(
-            bin_dir / "claude",
+        configure_fake_cli(
             {
                 "stdout": claude_stream(
                     [], messages=(tool_use("Read", file_path="orders/pricing.toml"),)
                 ),
                 "calls": str(calls),
-            },
+            }
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -525,8 +519,7 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        install_fake_cli(
-            bin_dir / "claude",
+        configure_fake_cli(
             {
                 "stdout": claude_stream(
                     [],
@@ -536,7 +529,7 @@ class TestReviewJudgeCache:
                     ),
                 ),
                 "calls": str(calls),
-            },
+            }
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -611,10 +604,8 @@ def judged_repo(repo: GitRepo, tmp_path: Path, make_skill) -> Path:
     )
     repo.commit("Bind the skill")
     repo.write("a.py", "x = 1\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    claude = bin_dir / "claude"
-    install_fake_cli(claude, {"stdout": "rate limited\n", "exit_code": 1})
+    bin_dir = FAKE_CLI.parent
+    configure_fake_cli({"stdout": "rate limited\n", "exit_code": 1})
     return bin_dir
 
 
@@ -713,10 +704,8 @@ class TestEvalCommand:
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        install_fake_cli(claude, {"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        bin_dir = FAKE_CLI.parent
+        configure_fake_cli({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = subprocess.run(
             [CODEGUARD, "eval"] if from_package else [CODEGUARD, "eval", str(package.root)],
@@ -741,12 +730,10 @@ class TestEvalCommand:
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
+        bin_dir = FAKE_CLI.parent
         calls = tmp_path / "calls"
-        claude = bin_dir / "claude"
         violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
-        install_fake_cli(claude, {"stdout": claude_stream([violation]), "calls": str(calls)})
+        configure_fake_cli({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
         for _ in range(2):
@@ -975,10 +962,8 @@ def path_package_config(package: GitRepo) -> str:
 
 def recording_claude(tmp_path: Path, violations: list[dict]) -> Path:
     """Put a claude on PATH that saves its arguments and stdin to $CLAUDE_RECORD."""
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    claude = bin_dir / "claude"
-    install_fake_cli(claude, {"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"})
+    bin_dir = FAKE_CLI.parent
+    configure_fake_cli({"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"})
     return bin_dir
 
 

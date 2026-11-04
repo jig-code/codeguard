@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Semaphore
 
 import pytest
-from fake_cli import install_fake_cli
+from fake_cli import configure_fake_cli
 from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
@@ -17,6 +17,8 @@ from codeguard.review import (
     Verdict,
 )
 
+pytestmark = pytest.mark.usefixtures("fake_cli_config")
+
 MODEL = "gpt-6-luna"
 
 
@@ -27,13 +29,12 @@ def record(tmp_path) -> Path:
 
 @pytest.fixture
 def fake_codex_executable(tmp_path, record) -> str:
-    return install_fake_cli(
-        tmp_path / "codex",
+    return configure_fake_cli(
         {
             "record": str(record),
             "answer": '{"reason":"Follows the rule.","violations":[]}',
             "stdout": '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":5}}\n',
-        },
+        }
     )
 
 
@@ -130,14 +131,13 @@ class TestCodexJudge:
 
     def test_process_failure_is_not_retried(self, tmp_path, processes, record, make_judge_request):
         attempts = tmp_path / "attempts"
-        executable = install_fake_cli(
-            tmp_path / "codex",
+        executable = configure_fake_cli(
             {
                 "record": str(record),
                 "calls": str(attempts),
                 "stderr": "process failed",
                 "exit_code": 1,
-            },
+            }
         )
         judge = CodexJudge(tmp_path, MODEL, processes, str(executable))
 
@@ -150,7 +150,7 @@ class TestCodexJudge:
     def test_invalid_or_missing_verdict(
         self, tmp_path, processes, record, make_judge_request, answer
     ):
-        executable = install_fake_cli(tmp_path / "codex", {"record": str(record), "answer": answer})
+        executable = configure_fake_cli({"record": str(record), "answer": answer})
         judge = CodexJudge(tmp_path, MODEL, processes, str(executable))
 
         with pytest.raises(JudgeNoVerdict):
@@ -175,7 +175,7 @@ class TestCodexJudge:
     def test_running_past_the_deadline_is_a_timeout(
         self, tmp_path, processes, record, make_judge_request
     ):
-        executable = install_fake_cli(tmp_path / "codex", {"record": str(record), "delay": 10})
+        executable = configure_fake_cli({"record": str(record), "delay": 10})
         judge = CodexJudge(
             tmp_path,
             MODEL,
