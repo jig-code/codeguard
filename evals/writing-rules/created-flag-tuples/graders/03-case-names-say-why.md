@@ -1,8 +1,8 @@
 ---
-type: regex
-target: { source: file, path: .codeguard/rule-evals/no-created-flag-results.yaml }
-pattern: '^\s*-\s*name:\s*["'']?(?:[Rr]eturn(?:s|ing)?|[Cc]all(?:s|ing)?|[Bb]uild(?:s|ing)?|[Aa]dd(?:s|ing)?|[Ee]dit(?:s|ing)?|[Ww]rap(?:s|ping)?|[Uu]npack(?:s|ing)?|[Dd]eclar(?:es|ing)|[Pp]ass(?:es|ing)?|[Uu]s(?:es|ing)|[Dd]efin(?:es|ing)|[Cc]hang(?:es|ing)|[Rr]emov(?:es|ing)|[Cc]reat(?:es|ing)|[Hh]and(?:s|ing)|[Ff]unction|[Mm]ethod|[Ss]ignature|[Aa]nnotated|[Uu]nannotated)\b'
-flags: m
-match: not_contains
+type: llm
+focus: { source: file, path: .codeguard/rule-evals/no-created-flag-results.yaml }
 weight: 1
 ---
+
+PASS if every case's name in this rule eval says what is at stake: for an `invalid` case the harm, for a `valid` case what the code keeps safe, and for a `skipped` case what the edit leaves untouched.
+FAIL if any case's name describes what the code does or its shape, such as the call it makes or the type it returns, instead of what is at stake.
