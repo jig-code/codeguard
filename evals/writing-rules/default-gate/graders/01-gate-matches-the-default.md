@@ -4,5 +4,7 @@ focus: { source: file, path: .codeguard/gates/import-time-defaults-gate.yml }
 weight: 1
 ---
 
-PASS if the node this ast-grep gate's top-level rule selects (its own kind or pattern, or each branch of a top-level any/all; not an inside, has or not constraint) is one parameter with a default, `default_parameter` or `typed_default_parameter`, or the default value inside one.
-FAIL if it selects the parameter list, the function, class or decorated definition, a block, the module, or any other node that contains the parameter.
+The node this ast-grep gate matches is the one its top-level rule selects: its own `kind` or `pattern`, or each branch of a top-level `any` or `all`. An `inside`, `has` or `not` constraint narrows where it matches but doesn't change the node.
+
+PASS if that node holds the code a violation of this rule needs, a parameter's default value, and nothing around it. A `default_parameter`, a `typed_default_parameter`, or the default value inside either passes.
+FAIL if that node holds code around the parameter, such as the parameter list, the function, class or decorated definition, a block or the module, or if it doesn't hold a parameter's default value.

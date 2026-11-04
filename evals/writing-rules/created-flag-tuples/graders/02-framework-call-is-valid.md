@@ -4,4 +4,5 @@ focus: { source: file, path: .codeguard/rule-evals/no-created-flag-results.yaml 
 weight: 1
 ---
 
-This rule eval has a valid case in which code calls a framework's own get_or_create (or a similar idiomatic API that returns a created flag) and is expected to pass.
+PASS if this rule eval has a case expected `valid` whose code calls a framework's own API that returns a created flag, such as Django's get_or_create, and uses its result.
+FAIL if no case calls such an API, or every case that calls one is expected `invalid` or `skipped`.
