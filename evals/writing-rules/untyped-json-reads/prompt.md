@@ -2,7 +2,7 @@
 tags: [skill-creator]
 max_turns: 40
 timeout_seconds: 900
-allowed_tools: [Read, Glob, Grep, Skill, Write, Edit, Bash]
+allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
 ---
 
 Add a codeguard rule to this project so code never uses the result of json.loads (or yaml.safe_load, or a response's .json()) without validating it first.

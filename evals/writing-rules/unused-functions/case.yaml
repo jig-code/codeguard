@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: unused-functions
 expected_outcome: |
-  No judge rule: the answer says finding functions nobody calls is an exact symbol lookup, for a language server's references or a dead-code linter, and recommends that tool.
+  No rule: the answer says finding functions nobody calls isn't something a codeguard rule should check.
 context:
   scaffold_script: place-files.sh
