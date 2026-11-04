@@ -18,7 +18,6 @@ rule, a convention a model judges each change against.
 4. **Write the cases** (Cases, below).
 
 For a judge rule, also read `references/judge-rules.md` before writing or changing it.
-For a Python project, also read `references/python.md`.
 
 ## The convention
 
@@ -103,16 +102,15 @@ codeguard's README has the binding and rule eval formats.
 
 ## Pattern rules
 
-- Match the shape only where it breaks the convention: a `len()` compared with a
-  literal, not a `len()` inside a slice. `stopBy: end` on `has` or `inside` searches every
+- Match the shape only where it breaks the convention, not everywhere it appears.
+  `stopBy: end` on `has` or `inside` searches every
   descendant or ancestor; in a positive match, use it only when the shape breaks the
   convention in every position.
 - Put the reason and the fix in the rule's `note`. codeguard prints it under the
   diagnostic, so it is what the blocked agent reads (no comments in the rule's own file).
 - Scope a rule with a binding, `bindings/<id>.yaml` with `rule`, `paths` and
   `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
-  the scope. The exception is a file name that is the convention itself (`__all__` only
-  in `__init__.py`).
+  the scope. The exception is a file name that is the convention itself.
 - When syntax decides only some shapes a violation takes, write a pattern rule for those
   shapes and a judge rule gated on every shape. No judge rule runs on a file with an
   `error` diagnostic, so the two report the same code only if the pattern rule is a
@@ -120,7 +118,7 @@ codeguard's README has the binding and rule eval formats.
 
 ## Cases
 
-- Use made-up code and names (`ExampleModel`), so a case shows the pattern rather than
+- Use made-up code and names, so a case shows the pattern rather than
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
 - Give idiomatic code a `valid` case beside the `invalid` one.
