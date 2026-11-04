@@ -22,16 +22,13 @@ responsibility. Don't name or set up the tool that checks it.
 
 A convention about where untyped values flow is a type checker's job. A setting that
 reports values typed `Any` catches every read of untyped data at once, with no rule to
-maintain, and leaves values with a real type alone. `references/python.md` has the
-Python settings.
+maintain, and leaves values with a real type alone.
 
 ## Language-server lookups
 
 Implementers, callers and references are exact lookups across the repository. A judge
 rule sees one changed file and guesses at the rest, so it can't decide them: a function
-nobody calls, an interface without implementers, or a symbol used from one module only
-belongs to a language server's find-references, or a dead-code tool such as vulture or
-`ts-prune`, run in CI.
+nobody calls, an interface without implementers, or a symbol used from one module only.
 
 ## Pattern rules and custom linter rules
 
