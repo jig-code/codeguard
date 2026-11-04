@@ -695,10 +695,10 @@ after each call. The provider uses `high` reasoning effort and the existing revi
 deadline. Authentication failures, capacity errors and other process errors fail
 immediately, without retries or a separate per-call time limit.
 
-Codex's native tool events do not provide complete file-read tracking. Its
-`loaded_files` is therefore unavailable (returned as an empty tuple), and CodeGuard
-does not cache Codex verdicts. Additional repository context remains available through
-native tools; Claude and Gemini dependency tracking and caching are unchanged.
+Codex uses the existing verdict cache keyed on the judge inputs and reviewed source.
+Its native tools discover related repository code as the rule requires. Native events
+do not provide complete file-read tracking, so Codex does not populate `loaded_files`
+for additional context-file invalidation. Claude and Gemini tracking are unchanged.
 Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
 
 The existing evaluation override also accepts Codex:

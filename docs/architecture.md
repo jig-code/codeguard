@@ -83,10 +83,8 @@ CLI in a read-only sandbox) and Gemini (pydantic-ai, with equivalent tools).
   A violation is reported only where the changed code is part of it.
 
 **The verdict cache** stores verdicts keyed on the template, model, skill, path, changed
-code and whole file. Each verdict records the files the judge read, and is reused only
-while all of them are unchanged. Evals and CI never use the cache.
-Codex's native tools do not expose complete file-read tracking, so Codex verdicts are
-not cached and do not report context-file dependencies.
+code and whole file. When a provider exposes file-read tracking, recorded context-file
+changes also invalidate the verdict. Evals and CI never use the cache.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
 or a pass. The only adapter is for the Stop hook. It blocks once on the same errors, then
@@ -132,8 +130,8 @@ the code refer to.
    diagnostic schema.
 5. Every judge input is deterministic: the same files and skill version give the same
    prompt on every surface and machine. What the judge reads with its tools comes from the
-   same files on every surface. Providers with file-read tracking record those dependencies;
-   providers without it cannot reuse cached verdicts. The verdict itself may vary,
+   same files on every surface. Providers with file-read tracking record those dependencies.
+   The verdict itself may vary,
    within the bounds #8 sets.
 6. The judge sees only what the harness passes it and what it reads with read-only tools
    from the review's files. No user or project config, CLAUDE.md, hooks, plugins or other

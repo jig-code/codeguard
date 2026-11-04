@@ -67,7 +67,6 @@ class CodexJudge:
             check_judge_process(process, self.executable)
             judgement = _judgement(answer)
             span.set_attribute("loaded_files", judgement.loaded_files)
-            span.set_attribute("loaded_files_tracked", False)
             span.set_attributes(_usage(process.stdout))
             return judgement
 

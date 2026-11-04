@@ -55,7 +55,6 @@ def test_codex_binding_builds_a_separate_subscription_judge(tmp_path):
     assert isinstance(judge, CodexJudge)
     assert judge.model == model.name
     assert judge.processes is judges.processes[JudgeProvider.CODEX_CLI]
-    assert judges.cached(tmp_path, model).enabled is False
     assert (
         judge.identity
         != judges.uncached(

@@ -40,22 +40,6 @@ def total_change(make_skill) -> JudgeRequest:
 
 
 class TestCachedJudge:
-    def test_disabled_cache_ignores_existing_entries_and_never_stores_new_verdicts(
-        self, orders, store, total_change
-    ):
-        cached(orders, store, RecordingJudge()).judge(total_change)
-        existing = [(key, store[key]) for key in store]
-        wrapped = RecordingJudge()
-        judge = cached(orders, store, wrapped, enabled=False)
-
-        judge.judge(total_change)
-        orders.write("orders/pricing.py", "DISCOUNT = 9\n")
-        judge.judge(total_change)
-
-        assert wrapped.received == [total_change, total_change]
-        assert judge.has(total_change) is False
-        assert [(key, store[key]) for key in store] == existing
-
     def test_uncached_request_goes_to_the_wrapped_judge(self, orders, store, total_change):
         wrapped = RecordingJudge()
         request = total_change
