@@ -27,8 +27,9 @@ maintain, and leaves values with a real type alone.
 ## Language-server lookups
 
 Implementers, callers and references are exact lookups across the repository. A judge
-rule sees one changed file and guesses at the rest, so it can't decide them: a function
-nobody calls, an interface without implementers, or a symbol used from one module only.
+rule can't decide them: the violation spans files, and a review drops a violation whose
+lines the change didn't touch. That holds for a function nobody calls, an interface
+without implementers, and a symbol used from one module only.
 
 ## Pattern rules and custom linter rules
 
