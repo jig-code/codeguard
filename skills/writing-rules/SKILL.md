@@ -55,7 +55,9 @@ statement alone decides each piece of code.
   decides the case.
 - **Never contradicts another rule.** A new rule never flags what another rule in the
   project or package requires.
-- **Match a code pattern, never a named class, function or file.**
+- **A rule names a specific class, function or file only when its convention is about
+  that one.** A rule meant for many classes or functions matches what they share, never
+  one of them standing in for the rest.
 
 ## Why it exists
 
