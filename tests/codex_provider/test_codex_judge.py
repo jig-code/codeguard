@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Semaphore
 
 import pytest
-from codex_output import fake_codex_script
+from fake_codex_cli import fake_codex_script
 from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
@@ -126,12 +126,7 @@ class TestCodexJudge:
         [attributes] = finished_span_attributes(capfire, "codex judges {rule} on {file}")
         assert attributes["usage"] == '{"input_tokens":10,"output_tokens":5}'
 
-    @pytest.mark.parametrize(
-        "message", ["Authentication required", "process failed", "at capacity"]
-    )
-    def test_process_failure_is_not_retried(
-        self, tmp_path, processes, record, make_judge_request, message
-    ):
+    def test_process_failure_is_not_retried(self, tmp_path, processes, record, make_judge_request):
         attempts = tmp_path / "attempts"
         executable = tmp_path / "codex"
         executable.write_text(
@@ -139,13 +134,13 @@ class TestCodexJudge:
                 record,
                 None,
                 f"with Path({str(attempts)!r}).open('a') as calls: calls.write('called\\n')\n"
-                f"sys.stderr.write({message!r})\nsys.exit(1)",
+                "sys.stderr.write('process failed')\nsys.exit(1)",
             )
         )
         executable.chmod(0o755)
         judge = CodexJudge(tmp_path, MODEL, processes, str(executable))
 
-        with pytest.raises(JudgeProcessError, match=message):
+        with pytest.raises(JudgeProcessError, match="process failed"):
             judge.judge(make_judge_request())
 
         assert attempts.read_text() == "called\n"

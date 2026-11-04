@@ -10,6 +10,7 @@ from codeguard.config import (
     Config,
     GitPackageConfig,
     JudgeConfig,
+    JudgeModel,
     JudgeProvider,
     PathPackageConfig,
     RuleOverride,
@@ -298,7 +299,7 @@ class TestRulesetConfig:
             "Value error, model: a rule is judged with the model its binding names"
         ]
 
-    @pytest.mark.parametrize("provider", ["gemini", "bedrock", "codex-cli"])
+    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
     def test_api_binding_without_a_model_is_an_error(self, tmp_path, provider):
         skill = write_skill(tmp_path)
 
@@ -306,6 +307,22 @@ class TestRulesetConfig:
             BindingConfig.model_validate({"skill": skill, "paths": ["**"], "provider": provider})
 
         assert messages(error) == [f"Value error, provider {provider} needs a model"]
+
+    def test_codex_binding_uses_its_selected_model(self, tmp_path):
+        skill = write_skill(tmp_path)
+
+        binding = BindingConfig.model_validate(
+            {
+                "skill": skill,
+                "paths": ["**/*.py"],
+                "provider": "codex-cli",
+                "model": "a-bound-model",
+            }
+        )
+
+        assert binding.judge_model == JudgeModel(
+            provider=JudgeProvider.CODEX_CLI, name="a-bound-model"
+        )
 
 
 class TestJudgeConfig:
