@@ -29,8 +29,8 @@ or libraries. Leave out the fix, and anything telling the judge how to answer.
 - List the syntactic shapes the violation takes in the gate's tests, not in the rule's
   text: give each one an `invalid` gate test, so a gate that stops matching a shape
   fails a test.
-- Gate on where a violation appears, not on the rule's topic: a rule about passing enum
-  members needs a gate on literals, because the enum is defined elsewhere.
+- Gate on where a violation appears in the changed code, not on where the rule's topic
+  is defined.
 - A gate matches the code a violation needs and nothing around it: not the statement,
   block or function that holds that code. The judge is sent the whole of each node a
   gate matches, and is called for every change inside one.
