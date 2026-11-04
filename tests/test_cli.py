@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from claude_output import fake_claude_script, tool_result, tool_use
+from claude_output import claude_stream, tool_result, tool_use
+from fake_cli import install_fake_cli
 from git_repo import GitRepo
 from rules_package import write_package
 from spans import finished_span_attributes
@@ -347,15 +348,17 @@ class TestReviewOfDeletedCode:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         claude = bin_dir / "claude"
-        claude.write_text(
-            fake_claude_script(
-                [
-                    {**violation, "line": 1, "message": "The class lost its entry point."},
-                    {**violation, "line": 2, "message": "Untouched method."},
-                ]
-            )
+        install_fake_cli(
+            claude,
+            {
+                "stdout": claude_stream(
+                    [
+                        {**violation, "line": 1, "message": "The class lost its entry point."},
+                        {**violation, "line": 2, "message": "Untouched method."},
+                    ]
+                )
+            },
         )
-        claude.chmod(0o755)
 
         result = subprocess.run(
             [CODEGUARD, "review"],
@@ -388,8 +391,7 @@ class TestReviewDryRun:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         claude = bin_dir / "claude"
-        claude.write_text("#!/bin/sh\nexit 1\n")
-        claude.chmod(0o755)
+        install_fake_cli(claude, {"exit_code": 1})
 
         result = subprocess.run(
             [CODEGUARD, "review", "--dry-run"],
@@ -451,7 +453,9 @@ class TestReviewJsonFormat:
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        (bin_dir / "claude").write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
+        install_fake_cli(
+            bin_dir / "claude", {"stdout": claude_stream([{**violation, "confidence": 0.5}])}
+        )
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -497,12 +501,14 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        (bin_dir / "claude").write_text(
-            fake_claude_script(
-                [],
-                before=f"echo called >> {calls}\n",
-                messages=(tool_use("Read", file_path="orders/pricing.toml"),),
-            )
+        install_fake_cli(
+            bin_dir / "claude",
+            {
+                "stdout": claude_stream(
+                    [], messages=(tool_use("Read", file_path="orders/pricing.toml"),)
+                ),
+                "calls": str(calls),
+            },
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -519,15 +525,18 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        (bin_dir / "claude").write_text(
-            fake_claude_script(
-                [],
-                before=f"echo called >> {calls}\n",
-                messages=(
-                    tool_use(search, "toolu_search", pattern="discount"),
-                    tool_result("toolu_search", filenames=["orders/pricing.toml"]),
+        install_fake_cli(
+            bin_dir / "claude",
+            {
+                "stdout": claude_stream(
+                    [],
+                    messages=(
+                        tool_use(search, "toolu_search", pattern="discount"),
+                        tool_result("toolu_search", filenames=["orders/pricing.toml"]),
+                    ),
                 ),
-            )
+                "calls": str(calls),
+            },
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -605,8 +614,7 @@ def judged_repo(repo: GitRepo, tmp_path: Path, make_skill) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     claude = bin_dir / "claude"
-    claude.write_text("#!/bin/sh\ncat > /dev/null\necho 'rate limited'\nexit 1\n")
-    claude.chmod(0o755)
+    install_fake_cli(claude, {"stdout": "rate limited\n", "exit_code": 1})
     return bin_dir
 
 
@@ -708,8 +716,7 @@ class TestEvalCommand:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         claude = bin_dir / "claude"
-        claude.write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
-        claude.chmod(0o755)
+        install_fake_cli(claude, {"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = subprocess.run(
             [CODEGUARD, "eval"] if from_package else [CODEGUARD, "eval", str(package.root)],
@@ -739,8 +746,7 @@ class TestEvalCommand:
         calls = tmp_path / "calls"
         claude = bin_dir / "claude"
         violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
-        claude.write_text(fake_claude_script([violation], before=f"echo called >> {calls}\n"))
-        claude.chmod(0o755)
+        install_fake_cli(claude, {"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
         for _ in range(2):
@@ -972,15 +978,7 @@ def recording_claude(tmp_path: Path, violations: list[dict]) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     claude = bin_dir / "claude"
-    claude.write_text(
-        fake_claude_script(
-            violations,
-            before='mkdir -p "$CLAUDE_RECORD"\n'
-            'printf \'%s\\0\' "$@" > "$CLAUDE_RECORD/args"\n'
-            'cat > "$CLAUDE_RECORD/stdin"\n',
-        )
-    )
-    claude.chmod(0o755)
+    install_fake_cli(claude, {"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"})
     return bin_dir
 
 
@@ -994,10 +992,11 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
 
 
 def recorded_call(record: Path) -> dict[str, str]:
-    arguments = (record / "args").read_text().split("\0")[:-1]
+    captured = json.loads((record / "request.json").read_text())
+    arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
-        "prompt": (record / "stdin").read_text(),
+        "prompt": captured["prompt"],
         **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
     }
 

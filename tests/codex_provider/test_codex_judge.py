@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Semaphore
 
 import pytest
-from fake_codex_cli import fake_codex_script
+from fake_cli import install_fake_cli
 from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
@@ -27,12 +27,14 @@ def record(tmp_path) -> Path:
 
 @pytest.fixture
 def fake_codex_executable(tmp_path, record) -> str:
-    executable = tmp_path / "codex"
-    executable.write_text(
-        fake_codex_script(record, '{"reason":"Follows the rule.","violations":[]}')
+    return install_fake_cli(
+        tmp_path / "codex",
+        {
+            "record": str(record),
+            "answer": '{"reason":"Follows the rule.","violations":[]}',
+            "stdout": '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":5}}\n',
+        },
     )
-    executable.chmod(0o755)
-    return str(executable)
 
 
 @pytest.fixture
@@ -128,16 +130,15 @@ class TestCodexJudge:
 
     def test_process_failure_is_not_retried(self, tmp_path, processes, record, make_judge_request):
         attempts = tmp_path / "attempts"
-        executable = tmp_path / "codex"
-        executable.write_text(
-            fake_codex_script(
-                record,
-                None,
-                f"with Path({str(attempts)!r}).open('a') as calls: calls.write('called\\n')\n"
-                "sys.stderr.write('process failed')\nsys.exit(1)",
-            )
+        executable = install_fake_cli(
+            tmp_path / "codex",
+            {
+                "record": str(record),
+                "calls": str(attempts),
+                "stderr": "process failed",
+                "exit_code": 1,
+            },
         )
-        executable.chmod(0o755)
         judge = CodexJudge(tmp_path, MODEL, processes, str(executable))
 
         with pytest.raises(JudgeProcessError, match="process failed"):
@@ -149,9 +150,7 @@ class TestCodexJudge:
     def test_invalid_or_missing_verdict(
         self, tmp_path, processes, record, make_judge_request, answer
     ):
-        executable = tmp_path / "codex"
-        executable.write_text(fake_codex_script(record, answer))
-        executable.chmod(0o755)
+        executable = install_fake_cli(tmp_path / "codex", {"record": str(record), "answer": answer})
         judge = CodexJudge(tmp_path, MODEL, processes, str(executable))
 
         with pytest.raises(JudgeNoVerdict):
@@ -176,9 +175,7 @@ class TestCodexJudge:
     def test_running_past_the_deadline_is_a_timeout(
         self, tmp_path, processes, record, make_judge_request
     ):
-        executable = tmp_path / "codex"
-        executable.write_text(fake_codex_script(record, None, "import time\ntime.sleep(10)"))
-        executable.chmod(0o755)
+        executable = install_fake_cli(tmp_path / "codex", {"record": str(record), "delay": 10})
         judge = CodexJudge(
             tmp_path,
             MODEL,

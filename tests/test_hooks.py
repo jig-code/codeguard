@@ -7,7 +7,8 @@ import sysconfig
 from pathlib import Path
 
 import pytest
-from claude_output import fake_claude_script
+from claude_output import claude_stream
+from fake_cli import install_fake_cli
 from rules_package import write_package
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -66,12 +67,6 @@ def bundled(uv_cache: str) -> dict[str, str]:
 @pytest.fixture
 def claude_bin(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return tmp_path_factory.mktemp("claude-bin")
-
-
-def put_claude(bin_dir: Path, script: str) -> None:
-    claude = bin_dir / "claude"
-    claude.write_text(script)
-    claude.chmod(0o755)
 
 
 def bind_skill(repo, make_skill) -> None:
@@ -252,7 +247,9 @@ class TestStopHook:
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        put_claude(claude_bin, fake_claude_script([{**violation, "confidence": 0.5}]))
+        install_fake_cli(
+            claude_bin / "claude", {"stdout": claude_stream([{**violation, "confidence": 0.5}])}
+        )
         finding = make_diagnostic(
             judged=True,
             rule="placement",
@@ -269,7 +266,7 @@ class TestStopHook:
     def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, claude_bin, make_skill):
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
-        put_claude(claude_bin, "#!/bin/sh\ncat > /dev/null\necho 'rate limited'\nexit 1\n")
+        install_fake_cli(claude_bin / "claude", {"stdout": "rate limited\n", "exit_code": 1})
 
         response = run_stop_hook(repo, stop(), path=path_with(claude_bin))
 

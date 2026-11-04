@@ -10,10 +10,11 @@ import pytest
 from claude_output import (
     MODEL_USAGE,
     claude_result,
-    fake_claude_script,
+    claude_stream,
     tool_result,
     tool_use,
 )
+from fake_cli import install_fake_cli
 from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
@@ -36,39 +37,27 @@ def arguments(tmp_path) -> Path:
 
 @pytest.fixture
 def fake_claude_executable(tmp_path, arguments) -> str:
-    script = fake_claude_script(
-        [
-            {
-                "file": "a.py",
-                "line": 1,
-                "message": "Move it.",
-                "confidence": 0.5,
-            }
-        ],
-        before=f'echo "$@" > {arguments}\n',
+    return install_fake_cli(
+        tmp_path / "claude",
+        {
+            "stdout": claude_stream(
+                [
+                    {
+                        "file": "a.py",
+                        "line": 1,
+                        "message": "Move it.",
+                        "confidence": 0.5,
+                    }
+                ]
+            ),
+            "record": str(arguments),
+        },
     )
-    executable = tmp_path / "claude"
-    executable.write_text(script)
-    executable.chmod(0o755)
-    return str(executable)
 
 
 @pytest.fixture(autouse=True)
 def reviewed_file(tmp_path) -> None:
     (tmp_path / "a.py").write_text("print(1)\n")
-
-
-@pytest.fixture
-def prompt(tmp_path) -> Path:
-    return tmp_path / "prompt"
-
-
-@pytest.fixture
-def prompt_recording_claude_executable(tmp_path, prompt) -> str:
-    executable = tmp_path / "claude"
-    executable.write_text(fake_claude_script([], before=f"cat > {prompt}\n"))
-    executable.chmod(0o755)
-    return str(executable)
 
 
 @pytest.fixture
@@ -78,27 +67,23 @@ def processes() -> Semaphore:
 
 @pytest.fixture
 def failing_claude_executable(tmp_path) -> str:
-    executable = tmp_path / "claude"
-    executable.write_text(
-        "#!/bin/sh\ncat > /dev/null\necho 'rate limited'\necho 'try later' >&2\nexit 1\n"
+    return install_fake_cli(
+        tmp_path / "claude",
+        {
+            "stdout": "rate limited\n",
+            "stderr": "try later\n",
+            "exit_code": 1,
+        },
     )
-    executable.chmod(0o755)
-    return str(executable)
 
 
 @pytest.fixture
 def hanging_claude_executable(tmp_path) -> str:
-    executable = tmp_path / "claude"
-    executable.write_text("#!/bin/sh\nsleep 10\n")
-    executable.chmod(0o755)
-    return str(executable)
+    return install_fake_cli(tmp_path / "claude", {"delay": 10})
 
 
 def claude_printing(tmp_path: Path, stream: str) -> str:
-    executable = tmp_path / "claude"
-    executable.write_text(f"#!/bin/sh\ncat > /dev/null\ncat <<'EOF'\n{stream}\nEOF\n")
-    executable.chmod(0o755)
-    return str(executable)
+    return install_fake_cli(tmp_path / "claude", {"stdout": stream})
 
 
 def deadline_in(seconds: float) -> Deadline:
@@ -392,21 +377,24 @@ class TestClaudeJudge:
 
         judge.judge(make_judge_request())
 
-        assert "--model claude-opus-5-5" in arguments.read_text()
+        argv = json.loads(arguments.read_text())["arguments"]
+        assert argv[argv.index("--model") + 1] == "claude-opus-5-5"
 
     def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):
-        executable = tmp_path / "claude"
-        executable.write_text(
-            fake_claude_script([], before=f"printf '%s\\0' \"$@\" > {arguments}\n")
+        executable = install_fake_cli(
+            tmp_path / "claude",
+            {
+                "stdout": claude_stream([]),
+                "record": str(arguments),
+            },
         )
-        executable.chmod(0o755)
         judge = ClaudeJudge(tmp_path, MODEL, processes, str(executable))
 
         judge.judge(make_judge_request())
 
-        argv = arguments.read_text().split("\0")
+        argv = json.loads(arguments.read_text())["arguments"]
         schema = json.loads(argv[argv.index("--json-schema") + 1])
         confidence = schema["$defs"]["Violation"]["properties"]["confidence"]
         assert confidence["$ref"] == "#/$defs/Confidence"
@@ -421,17 +409,18 @@ class TestClaudeJudge:
 
         judge.judge(make_judge_request())
 
-        assert "--tools Read,Grep,Glob" in arguments.read_text()
+        argv = json.loads(arguments.read_text())["arguments"]
+        assert argv[argv.index("--tools") + 1] == "Read,Grep,Glob"
 
     def test_claude_gets_the_skill_as_the_prompt(
-        self, tmp_path, processes, prompt_recording_claude_executable, prompt, make_judge_request
+        self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request
     ):
-        judge = ClaudeJudge(tmp_path, MODEL, processes, prompt_recording_claude_executable)
+        judge = ClaudeJudge(tmp_path, MODEL, processes, fake_claude_executable)
         request = make_judge_request()
 
         judge.judge(request)
 
-        assert prompt.read_text() == request.prompt
+        assert json.loads(arguments.read_text())["prompt"] == request.prompt
 
     def test_claude_gets_the_file_in_the_system_prompt(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request
@@ -441,7 +430,8 @@ class TestClaudeJudge:
 
         judge.judge(request)
 
-        assert f"--system-prompt {request.instructions}" in arguments.read_text()
+        argv = json.loads(arguments.read_text())["arguments"]
+        assert argv[argv.index("--system-prompt") + 1] == request.instructions
 
     def test_calls_wait_for_the_first_call_with_their_prefix(
         self, tmp_path, processes, fake_claude_executable, make_judge_request
@@ -462,7 +452,7 @@ class TestClaudeJudge:
 
 
 def judge_answering(tmp_path, processes, *messages: dict) -> ClaudeJudge:
-    executable = tmp_path / "claude"
-    executable.write_text(fake_claude_script([], messages=messages))
-    executable.chmod(0o755)
-    return ClaudeJudge(tmp_path, MODEL, processes, str(executable))
+    executable = install_fake_cli(
+        tmp_path / "claude", {"stdout": claude_stream([], messages=messages)}
+    )
+    return ClaudeJudge(tmp_path, MODEL, processes, executable)
