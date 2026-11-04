@@ -18,8 +18,7 @@ rule, a convention a model judges each change against.
 4. **Write the cases** (Cases, below).
 
 For a judge rule, also read `references/judge-rules.md` before writing or changing it.
-For the project's language's tools and pattern rule examples, read
-`references/python.md`, `references/typescript.md` or `references/ruby.md`.
+For a Python project, also read `references/python.md`.
 
 ## The convention
 
