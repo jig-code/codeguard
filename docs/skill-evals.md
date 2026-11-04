@@ -32,10 +32,11 @@ don't check what it says about the other tool or whether it sets that tool up. S
 
 ## Running them
 
-CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes. One run of
-every case verifies the change. Once that run passes with nothing changed since, the
-stability check runs every case 9 more times. A case passes when every grader passes in
-all 10 runs. Any change starts again at one run.
+CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes, in two
+passes. The validity pass runs every case once to verify the change. Once it passes with
+nothing changed since, the reliability pass runs every case 9 more times, to the end,
+and reports each case's score. A case passes when every grader passes in all 10 runs.
+Any change starts again at the validity pass.
 
 ```sh
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
@@ -44,7 +45,9 @@ claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 
   --trust-plugin --no-publish
 ```
 
-CI runs the two as steps of one job, so the second runs only when the first passes.
+CI runs the two as separate jobs, the second starting when the first passes.
+`claude plugin eval` has no option to stop at the first failing case, so the validity
+pass runs every case once before it fails.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
