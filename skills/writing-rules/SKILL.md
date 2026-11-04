@@ -53,9 +53,8 @@ statement alone decides each piece of code.
 - **Decided by its wording, never by examples.** A case the statement decides wrongly,
   or on the wrong ground, shows the statement is unclear: reword it so the statement
   decides the case.
-- **Each code shape breaks at most one rule.** When two rules contradict each other (one
-  flags what the other requires) or overlap (both flag the same code), settle it before
-  either ships: move the shape to one rule, or merge them.
+- **Never contradicts another rule.** A new rule never flags what another rule in the
+  project or package requires.
 - **Match a code pattern, never a named class, function or file.**
 
 ## Why it exists
