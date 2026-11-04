@@ -40,9 +40,9 @@ or libraries. Leave out the fix, and anything telling the judge how to answer.
 ## Write a few clear eval cases
 
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
-way code breaks the convention and one `valid` case for each distinct way code keeps it
-near the boundary, up to about three of each, and a `skipped` case outside the gate. A
-convention with one way to break it has one `invalid` case. Each case tests one thing
+way code breaks the convention and one `valid` case for each distinct way code keeps it,
+and a `skipped` case outside the gate. A convention with one way to break it has one
+`invalid` case. Each case tests one thing
 none of the others does: a different thing the code does or fails to do, not another
 syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
 either way proves nothing about the rule.
@@ -62,8 +62,6 @@ either way proves nothing about the rule.
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before
   keeping the case.
-- Pair the cases: for what the convention allows, a `valid` case, and beside it an
-  `invalid` case of the same shape that breaks the rule.
 - A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes
