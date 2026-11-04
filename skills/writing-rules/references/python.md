@@ -1,19 +1,5 @@
 # Python
 
-## Type checker settings
-
-basedpyright's `reportAny = "error"` reports every value typed `Any`: an untyped
-`json.loads`, `yaml.safe_load` or `response.json()` read used without validation. Text
-typed `str` isn't reported, and neither is a value validated into a typed model
-(`ExampleConfig.model_validate(json.loads(text))`), so the setting is the whole
-convention. mypy's `disallow_any_expr` is the nearest equivalent.
-
-```toml
-[tool.basedpyright]
-reportAny = "error"
-reportExplicitAny = "error"
-```
-
 ## Idiomatic code and the project's own code
 
 Calling Django's `User.objects.get_or_create(...)` and unpacking `(user, created)` is
