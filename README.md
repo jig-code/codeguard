@@ -925,7 +925,7 @@ uv run pytest -m llm -n 4 --llm-runs 2       # then twice more, for 3 of 3, as C
 
 Local Codex checks use the same fixtures with
 `--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
-add `--llm-runs 20`.
+run `--llm-runs 1 -x` first, then `--llm-runs 19` once it passes.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute

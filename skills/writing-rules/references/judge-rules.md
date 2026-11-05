@@ -65,11 +65,9 @@ either way proves nothing about the rule.
   keeping the case. Deliberate invalid code is appropriate when necessary to test the
   stated behavior, including a pre-existing violation that the change does not
   participate in and must leave unreported under the review scope architecture.
-  Keep that violation small and unambiguous; fundamental defects such as import cycles
-  must not obscure the behavior under test. A pre-existing violation is not automatically
-  out of scope: the change may participate in the violating construct or behavior.
-  This guidance applies both to rule evals in packages and apps and to CodeGuard's
-  judge fixtures run through pytest.
+  Keep that violation small and unambiguous; no fundamental defect may obscure the
+  behavior under test. A pre-existing violation is not automatically
+  out of scope: the change may participate in the violating shape or behavior.
 - A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes
