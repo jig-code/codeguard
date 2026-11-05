@@ -38,13 +38,27 @@ jobs:
           AWS_REGION: us-west-2
           SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL || 'us.anthropic.claude-opus-5-5' }}
           SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL || 'us.anthropic.claude-haiku-5-5' }}
+      # --json hides the progress lines, so print each run's score and error.
+      - if: always()
+        run: >-
+          jq -r '.cases[] | .name as $case | .arms | to_entries[] | .key as $arm
+          | .value | to_entries[] | "\($case) \($arm) run \(.key + 1):
+          score \(.value.score // "-") \(.value.error // "")"'
+          evals/results/full-result.json
+      # --keep-temp seals what the plugin wrote (mode 000), so copy out only the traces.
+      - if: always()
+        run: >-
+          find "$RUNNER_TEMP/skill-evals" -name sealed -prune -o -name trace.jsonl -print
+          | while read -r trace; do
+          run="${trace#"$RUNNER_TEMP/skill-evals/"}";
+          mkdir -p "evals/results/traces/$(dirname "$run")";
+          cp "$trace" "evals/results/traces/$run";
+          done
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: skill-evals-validity-results
-          path: |
-            evals/results/
-            ${{ runner.temp }}/skill-evals/**/trace.jsonl
+          path: evals/results/
   # Nine more runs of every case, for 10 of 10; every run completes.
   skill-evals-reliability:
     needs: skill-evals-validity
@@ -72,10 +86,24 @@ jobs:
           AWS_REGION: us-west-2
           SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL || 'us.anthropic.claude-opus-5-5' }}
           SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL || 'us.anthropic.claude-haiku-5-5' }}
+      # --json hides the progress lines, so print each run's score and error.
+      - if: always()
+        run: >-
+          jq -r '.cases[] | .name as $case | .arms | to_entries[] | .key as $arm
+          | .value | to_entries[] | "\($case) \($arm) run \(.key + 1):
+          score \(.value.score // "-") \(.value.error // "")"'
+          evals/results/full-result.json
+      # --keep-temp seals what the plugin wrote (mode 000), so copy out only the traces.
+      - if: always()
+        run: >-
+          find "$RUNNER_TEMP/skill-evals" -name sealed -prune -o -name trace.jsonl -print
+          | while read -r trace; do
+          run="${trace#"$RUNNER_TEMP/skill-evals/"}";
+          mkdir -p "evals/results/traces/$(dirname "$run")";
+          cp "$trace" "evals/results/traces/$run";
+          done
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: skill-evals-reliability-results
-          path: |
-            evals/results/
-            ${{ runner.temp }}/skill-evals/**/trace.jsonl
+          path: evals/results/

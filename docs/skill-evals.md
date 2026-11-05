@@ -61,8 +61,10 @@ pass runs every case once before it fails.
 For diagnosis, each CI job also passes `--keep-temp` and `--json`, and uploads a
 `skill-evals-validity-results` or `skill-evals-reliability-results` artifact. It holds
 `aggregate-result.json`, `report.html`, `full-result.json` with each grader's
-explanation, and each run's `trace.jsonl`. The graders still read only the files the
-agent wrote; the traces are only for finding out why a case failed.
+explanation, and each run's `trace.jsonl` under `traces/`. `--json` hides the progress
+lines, so the job prints each run's score and error from `full-result.json`. The graders
+still read only the files the agent wrote; the traces are only for finding out why a
+case failed.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
