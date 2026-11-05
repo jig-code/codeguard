@@ -124,7 +124,8 @@ codeguard's README has the binding and rule eval formats.
   private repository.
 - Give idiomatic code a `valid` case beside the `invalid` one.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case naming its branch. Give each matched shape a
+  case, with a comment above each case: `flags` for an `invalid` case, `allows` for a
+  `valid` one, then the situation. Give each matched shape a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
