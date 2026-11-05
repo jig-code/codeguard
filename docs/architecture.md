@@ -21,6 +21,10 @@ is defined once and applies wherever code is written or reviewed.
 codeguard has no rules and no languages built in. Projects and rule packages supply all
 of them.
 
+Which judge runs is configuration, never code that knows the surface. A rule package or
+a project names a model; switching judge providers costs one or two configuration
+values, and the whole system follows.
+
 ### Rules
 
 A rule states one requirement on code and why it matters. Each requirement is checked
@@ -43,8 +47,9 @@ judge rule. Passing one rule does not excuse violations owned by other checks.
 
 ### Components
 
-**Bindings** map files to a rule by path globs. A binding sets the rule's severity, its
-triggers, and its judge provider and model.
+**Bindings** map files to a rule by path globs. A binding sets the rule's severity and
+its triggers, and may name its judge provider and model over the project's and the
+package's defaults (Judge configuration, below).
 
 **Triggers and gates** decide whether a judge rule runs on a change at all. A judge rule
 is called only when the change touches one of its triggers. A trigger is a change kind
@@ -65,8 +70,11 @@ violation could appear.
 8. The results merge into one.
 
 **The judge** grades one rule against one file's change and returns violations, never
-fixes. The providers include Claude (the `claude` CLI in safe mode), Codex (the `codex`
-CLI in a read-only sandbox) and Gemini (pydantic-ai, with equivalent tools).
+fixes. The providers are the `claude` CLI in safe mode and the `codex` CLI in a
+read-only sandbox (Claude and GPT on the developer's subscription, local only), and
+Amazon Bedrock (Claude and GPT) and Gemini on Vertex AI (both pydantic-ai, with
+equivalent tools). Which provider and model judge a rule is configuration (Judge
+configuration, below), never code that knows the surface.
 
 - Its input: the judge template, which holds the instructions; the skill text; the
   `changes` element, an excerpt of the changed code with `+`, space and `-` marks and the
@@ -93,7 +101,80 @@ skill is loaded.
 
 **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
 and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
-prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
+prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI, where
+it judges only through pydantic-ai with the environment's credentials; the `claude` CLI
+is never run against a model in CI (#16).
+
+### Judge configuration
+
+Which provider and model judge a rule is resolved in this order. The first level that
+names a model wins, and `--provider` and `--model` on `codeguard eval` override every
+level for that run:
+
+1. The rule's binding (`provider`, `model`): a per-rule override, for a rule whose eval
+   passes on one model only.
+2. The project's default, `judge.model` and `judge.provider` in `.codeguard/config.yaml`.
+3. The rule package's default, `judge.model` and `judge.provider` in
+   `codeguard-package.yaml`: what the package's rules were written and evaluated
+   against.
+
+When no level names a model, codeguard runs the provider's CLI (the `claude` CLI unless
+`codex-cli` is configured) with no `--model` flag, so the CLI's own default judges, as it
+does for the user; neither CLI provider has a built-in model of codeguard's. When a level
+names one, codeguard passes it explicitly. A Bedrock or Vertex AI run needs a model
+named by configuration. The configuration drives it; no code
+chooses by surface.
+
+The project config is a pydantic-settings model. Its sources, in priority order: values
+passed in code, then environment variables, then `.codeguard/config.yaml` (a YAML
+source codeguard places below the environment), then field defaults. An environment
+variable named after a key
+overrides the file: with the prefix `CODEGUARD_` and `__` between the parts of a nested
+key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and `CODEGUARD_JUDGE__MODEL` is
+`judge.model`. That is the whole CI mechanism: the CI workflow sets them to `bedrock` or
+`gemini` with the model, and the project config needs no line for it. An unset variable
+means nothing: the file's value stands, or the key is absent and the next level applies.
+No code knows the surface. CI never uses a subscription or a CLI tool: it judges
+through pydantic-ai, Claude on Bedrock or Gemini on Vertex AI, with the environment's
+credentials (#16). This
+configures codeguard reviewing a project in CI, codeguard reviewing itself included;
+codeguard's pytest LLM tests and skill evals are a different configuration, unchanged by
+it.
+
+Global settings stay global, in `.codeguard/config.yaml`: the default model,
+`calls_at_once` (Gemini only), the Vertex AI project and location, and the Bedrock
+inference profile.
+
+A model is named once, by the id its vendor gives it, and each provider maps that id onto
+its own API:
+
+- A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
+  `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
+  takes: `gpt-6-luna`. A CLI sends the id as is. The Bedrock provider names it to
+  pydantic-ai as the cross-region inference profile `<prefix>.<vendor>.<id>`, the vendor
+  `anthropic` for a Claude model and `openai` for a GPT model:
+  `us.anthropic.claude-haiku-5-5`, `us.openai.gpt-6-luna`. The prefix is the project's
+  `judge.bedrock.inference_prefix` (`us` unless set; pydantic-ai also lists `global`,
+  `eu`, `au` and `jp`). A project that must route through an application inference
+  profile sets `judge.bedrock.inference_profile` to its ARN, which pydantic-ai sends as
+  the request's `modelId` in place of the model name (its `bedrock_inference_profile`
+  setting). So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
+  5.5 on the CLI locally and on Bedrock in CI, with no other change, in a project that
+  sets no model of its own.
+- A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs on
+  Vertex AI. It needs no `provider`.
+- `provider` names where a Claude or GPT model runs: `claude-cli` (the default) or
+  `bedrock` for a Claude model, `codex-cli` or `bedrock` for a GPT model. A GPT model
+  needs `provider` set: with none, it is a configuration error that says to set it. A
+  provider the surface can't use, such as a CLI in CI, is an error, never a fallback.
+- The verdict cache keys on the id the provider sends (for Bedrock, the derived profile),
+  so the configured name is never an alias and a model change is visible to the cache.
+
+A rule package's CI runs its rule evals as a matrix over the supported models, today
+Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock, with `codeguard eval --provider`
+and `--model` overriding every rule's binding for that run, so a rule passes whichever
+model a user picks (#22). A project's CI judges with the environment's credentials: AWS
+credentials for Bedrock, a service account for Vertex AI.
 
 ### Testing a rule
 
@@ -108,6 +189,8 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Follow the writing-rules reference's
   [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
   including its treatment of deliberate pre-existing violations in scope cases.
+- In a rule package's CI, every rule eval runs on each supported model (#22). The bar is
+  20 of 20 runs for a new or changed rule and 3 of 3 otherwise.
 
 ## Invariants
 
@@ -193,8 +276,19 @@ the code refer to.
     Their diagnostics merge into one result.
 15. Every stage records its time and cost. Optimizations wait until metrics show where
     time and cost go.
-16. Local judging can use a Claude subscription. CI authentication comes from the
-    environment.
+16. Which judge runs is configuration, never code that knows the surface: a binding's
+    provider and model, else the project's default, else the rule package's default;
+    when none names a model, the provider's CLI with no `--model` flag, so its own
+    default judges: codeguard has no built-in model, and a Bedrock or Vertex AI run
+    needs a model named by configuration. Switching providers costs one or two
+    configuration values, and the whole system follows. Local judging may use a Claude
+    or ChatGPT subscription through the `claude` or `codex` CLI. CI never uses a
+    subscription or a CLI tool:
+    it judges only through pydantic-ai, Claude on Bedrock or Gemini on Vertex AI, with
+    the environment's credentials, and the project's config takes its judge from
+    environment variables through pydantic-settings, which the CI workflow sets. The
+    `claude` CLI is never run against a model in CI; unit tests cover that it is called
+    and its output consumed.
 
 **Portability**
 
@@ -202,6 +296,12 @@ the code refer to.
     discovered at runtime.
 18. Claude Code and Codex are supported equally, each through its own adapter.
 19. An existing tool or host feature is used whenever it satisfies the other invariants.
+
+<!-- A new list, so Markdown keeps the number 22. -->
+
+22. A rule passes whichever model a user picks: a rule package's CI runs every rule eval
+    on each supported model, overriding each rule's binding for that run. The bar is 20
+    of 20 for a new or changed rule and 3 of 3 otherwise, in CI.
 
 ## Judge input
 
@@ -231,11 +331,14 @@ onto its API.
   are sent; for a new file, or with `--all`, the whole file is sent. The template tells
   the judge that the whole file is at its path, and to read it, or any other file, when
   the rule needs more.
-- **Isolation (#6).** The Claude provider runs `claude --safe-mode`, which loads no
+- **Isolation (#6).** The `claude` CLI provider runs `claude --safe-mode`, which loads no
   CLAUDE.md, skills, plugins, hooks, MCP servers or memory. Its tools are read-only and
-  rooted at the repository. It runs no subagents. The Gemini provider has equivalent
-  read-only tools.
-- **Model.** A full model id, never an alias, so a model change is visible to the cache.
+  rooted at the repository. It runs no subagents. The `codex` CLI provider runs `codex
+  exec` in a read-only sandbox with project instructions, hooks, plugins, memories and
+  web search off. The Bedrock and Gemini providers have equivalent read-only tools.
+- **Model.** A full model id, never an alias, so a model change is visible to the cache:
+  the id the provider sends, which for Bedrock is the inference profile derived from the
+  vendor's id (Judge configuration).
 - **Output.** Validated against the verdict schema; output that fails validation fails
   the run loudly.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the

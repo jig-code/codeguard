@@ -58,18 +58,33 @@ on: pull_request
 jobs:
   codeguard:
     runs-on: ubuntu-latest
+    env:
+      CODEGUARD_JUDGE__PROVIDER: bedrock
+      CODEGUARD_JUDGE__MODEL: claude-haiku-5-5
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: jig-code/codeguard@v0.9.1
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          role-to-assume: ${{ vars.CODEGUARD_AWS_ROLE }}
+          aws-region: us-east-1
+      - uses: jig-code/codeguard@v0.9.1
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. The judge needs the token; create it with `claude setup-token`
-and store it as a repository secret.
+then runs the rule tests. In CI the judge runs through pydantic-ai with the
+environment's credentials, never a subscription or the `claude` CLI: Claude on Amazon
+Bedrock, with the job's AWS credentials as above, or Gemini on Vertex AI with
+`google-github-actions/auth` ([Judge with Gemini on Google
+Cloud](#judge-with-gemini-on-google-cloud)). The job's environment names which, as
+above: the project's config takes any `judge` key from an environment variable,
+`CODEGUARD_` plus the key path with `__` between its parts, which overrides the file;
+the project config needs no line for CI, and on your machine the variables are unset,
+so the file's value stands or the default falls through ([Configure the
+judge](#configure-the-judge)). This configures codeguard reviewing a project in CI,
+codeguard reviewing itself included; codeguard's own LLM tests and skill evals are a
+different configuration and don't use it.
 
 A judge call that couldn't complete fails the review, and no setting turns that off
 ([why](#configuration-reference)). To merge the PR anyway, add the
@@ -151,8 +166,10 @@ packages:
 - `include` lists the only rules that run, pattern and judged; rules the package adds
   later stay off. `exclude` turns rules off. Set one or the other.
 - `rules.<id>` overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`.
-  `exclude_paths: []` brings back the files its binding leaves out. A judge rule's
-  model can't be overridden: its evals pass on the model its binding names.
+  `exclude_paths: []` brings back the files its binding leaves out. A project doesn't
+  override the model a binding names: the rule's evals passed on it. The project's own
+  `judge` default applies to every other rule, over a package's default ([Configure the
+  judge](#configure-the-judge)).
 - `severity` on the ruleset sets every rule in it, including rules the package adds
   later; a rule's own `severity` override wins. Only `error` blocks Stop and fails CI,
   so `severity: warning` trials a package: its findings print without blocking. A
@@ -162,7 +179,7 @@ packages:
   wins, as with `severity`. It exists for rules too costly to judge every time an agent
   stops, such as a judge rule that reads widely: each Stop hook review spends the
   developer's own Claude subscription, while CI reviews each push to a PR with the
-  project's token.
+  environment's credentials, on Bedrock or Vertex AI.
   CI still fails the PR on the rule, so the agent meets it there instead of at Stop.
 - An unknown ruleset or rule id is an error.
 - `kind: path` with `path: ../my-rules` in place of `git` uses a local package, for
@@ -195,7 +212,6 @@ For a private package in CI, pass a token that can read it:
 ```yaml
       - uses: jig-code/codeguard@v0.9.1
         with:
-          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
 ```
 
@@ -208,6 +224,8 @@ name: betterwithranch
 rulesets: [python]
 ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
+judge:
+  model: claude-haiku-5-5  # the default for its judge rules; a binding may name another
 ```
 
 Each ruleset is a directory with the same layout as a project's `.codeguard/`:
@@ -258,14 +276,17 @@ python/
 ```
 
 The rule eval is what makes a rule trustworthy. It shows the rule flags the edits it
-should and passes the ones it should, on the model that will judge it in reviews. In
-reviews, that model is the binding's, and nothing overrides it: a project can't switch a
-rule to a model its rule eval never passed on. To move a rule to another model, change
-its binding and pass its rule eval again.
+should and passes the ones it should, on the models that will judge it in reviews: the
+binding's, else the project's default, else the package's ([Configure the
+judge](#configure-the-judge)). A
+binding names a model only for a rule whose eval passes on that model alone, and a
+project can't switch such a rule to another.
 
-`codeguard eval` judges with the binding's model too, unless `--provider` names another.
-That is for a package whose bar is passing on more than one model, such as a CI job per
-provider; it changes nothing a review judges with.
+`codeguard eval` judges with the same model, unless `--provider` and `--model` name
+another. A package's CI runs the evals as a matrix over the supported models, today
+Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock, overriding each binding for the
+run, so a rule passes whichever model a user picks; the bar is 20 of 20 for a new or
+changed rule and 3 of 3 otherwise. The override changes nothing a review judges with.
 
 #### A rule in several languages
 
@@ -310,13 +331,15 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
 
-`provider` and `model` are optional. A binding that leaves them out is judged with
-`claude-sonnet-5-5` through the `claude` CLI. Set them only to judge the rule with
-something else:
+`provider` and `model` are optional. A binding that leaves them out takes the project's
+`judge` default, then the package's, and with neither runs the `claude` CLI with no
+`--model`, so the CLI's own default judges ([Configure the
+judge](#configure-the-judge)). Set them only for a rule whose eval passes on one model
+alone:
 
 ```yaml
-provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
-model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
+provider: gemini                  # claude-cli, codex-cli, bedrock or gemini; a Gemini model needs none
+model: gemini-3.1-pro-preview     # by its vendor's id, such as claude-haiku-5-5 or gpt-6-luna
 ```
 
 A judge rule's id is its skill's directory name.
@@ -438,10 +461,12 @@ held to the same bar.
   eval with an `invalid` case covers only the rules selected.
 - `--case <text>` judges only the cases whose name contains the text; repeat it to
   judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or `--provider bedrock` judges every
-  selected rule with that provider instead of its binding's. `--model` names the model;
-  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gpt-6-luna` for `codex-cli`, `gemini-3.1-pro-preview` for
-  `gemini` and `us.anthropic.claude-haiku-5-5` for `bedrock`.
+- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or
+  `--provider bedrock` judges every selected rule with that provider, over every
+  configured level. `--model` names the model as [Configure the
+  judge](#configure-the-judge) names it. Without it, `claude-cli` and `codex-cli` run
+  their CLI with no `--model`, so the CLI's own default judges; a `gemini` or `bedrock`
+  run needs a model named by configuration.
 
 A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
 contains, fails the eval before any case is judged.
@@ -493,7 +518,7 @@ reason for each case it judged, then one line per failure.
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
-| Provider and model | the binding, or `--provider` and `--model` |
+| Provider and model | `--provider` and `--model`, else the binding, the project's default or the package's default, in that order; with none, the `claude` CLI with no `--model`, so its own default |
 | The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
 | The judge prompt and how each case is checked | codeguard |
 
@@ -667,19 +692,89 @@ limit in `.codeguard/config.yaml`:
 review_time_limit_minutes: 10
 ```
 
-In a review, each judge rule is judged with its binding's provider and model, the same
-ones its rule eval passed on; see [Judge rules](#judge-rules). A binding that sets neither is judged
-with `claude-sonnet-5-5` through the `claude` CLI.
+In a review, each judge rule is judged with its binding's provider and model, else the
+project's default, else the package's, and with none the `claude` CLI with no
+`--model`, so the CLI's own default; see [Configure the judge](#configure-the-judge).
+
+### Configure the judge
+
+Which provider and model judge a rule is configuration, never code that knows where
+the review runs. codeguard resolves it in this order, and the first level that names a
+model wins:
+
+1. The rule's binding, `provider` and `model` ([The binding](#the-binding)): a per-rule
+   override for a rule whose eval passes on one model alone.
+2. The project's default, `judge` in `.codeguard/config.yaml`.
+3. The rule package's default, `judge` in `codeguard-package.yaml`.
+
+When no level names a model, codeguard runs the provider's CLI on your subscription
+(the `claude` CLI unless `codex-cli` is configured) with no `--model` flag, so the CLI's
+own default judges, as it does when you use it; codeguard has no built-in model of its
+own. When a level names one, codeguard passes it
+explicitly. A Bedrock or Vertex AI run needs a model named by configuration. The
+configuration drives it. `codeguard eval --provider` and `--model` override every level
+for that run.
+
+The project config is read with pydantic-settings, so an environment variable named
+after a key overrides the file: `CODEGUARD_` plus the key path with `__` between its
+parts, `CODEGUARD_JUDGE__PROVIDER` for `judge.provider` and `CODEGUARD_JUDGE__MODEL`
+for `judge.model`, and so for any `judge` key. That is the whole CI mechanism: the CI
+workflow sets the two variables, to `bedrock` or `gemini` with the model, and the
+project config needs no line for it. An unset variable means nothing: the file's value
+stands, or the key is absent and the next level applies, a package's default or the
+`claude` CLI with its own default. CI never uses a subscription or the `claude` CLI: it
+judges through pydantic-ai on Bedrock or Vertex AI with the environment's credentials
+([CI](#ci)). This configures codeguard reviewing a
+project in CI, codeguard reviewing itself included; codeguard's own LLM tests and skill
+evals are a different configuration and don't use it.
+
+```yaml
+# codeguard-package.yaml: the package's default for its judge rules
+judge:
+  model: claude-haiku-5-5
+
+# .codeguard/config.yaml: the project's default, and the settings that stay global
+judge:
+  model: claude-sonnet-5-5          # for rules whose binding names none, over a package's default
+  provider: bedrock                 # claude-cli (default) or bedrock for Claude; codex-cli or bedrock for GPT
+  bedrock:
+    inference_prefix: us            # the cross-region inference profile's prefix; default us
+    # inference_profile: arn:aws:bedrock:…:application-inference-profile/…  # routes through this ARN instead
+  project: my-project               # Vertex AI; default GOOGLE_CLOUD_PROJECT
+  location: global                  # default GOOGLE_CLOUD_LOCATION
+  calls_at_once: 2                  # Gemini only
+```
+
+A model is named once, by the id its vendor gives it, and each provider maps it onto
+its API. A Claude model is named by its Anthropic id, the one the `claude` CLI takes
+(`claude-haiku-5-5`), and a GPT model by its OpenAI id, the one the `codex` CLI takes
+(`gpt-6-luna`). A CLI sends the id as is, and the Bedrock provider sends the
+cross-region inference profile `<prefix>.<vendor>.<id>`, `anthropic` for Claude and
+`openai` for GPT (`us.anthropic.claude-haiku-5-5`, `us.openai.gpt-6-luna`), or, when
+`inference_profile` is set, that ARN as the request's model id. A Gemini model is named
+by its Vertex AI id (`gemini-3.1-pro-preview`) and always runs on Vertex AI, so it needs
+no `provider`. A Claude model runs on `claude-cli` (the default) or `bedrock`; a GPT
+model needs `provider` set, `codex-cli` or `bedrock`, and with none it is a
+configuration error that says to set it. A package default of `claude-haiku-5-5`
+therefore judges with Haiku 5.5 through the CLI on your machine and on Bedrock in CI,
+with no other change, in a project that sets no model of its own. Verdicts are cached
+by the id the provider sends, so switching
+providers never reuses another's verdicts.
+
+Switching the judge is one or two values: `judge.model` and, for Bedrock or a GPT
+model, `judge.provider`.
 
 ### Judge with Codex locally
 
-Set a judge rule's binding to `codex-cli` and name its model:
+Set `codex-cli` as the provider, in the project's `judge` default or a rule's binding.
+Name a model to pass it; with none, the `codex` CLI uses its own default
+([Configure the judge](#configure-the-judge)):
 
 ```yaml
-skill: skills/responsibility-placement
-paths: ["app/**/*.py"]
-provider: codex-cli
-model: gpt-6-luna
+# .codeguard/config.yaml
+judge:
+  provider: codex-cli
+  model: gpt-6-luna
 ```
 
 Install the Codex CLI separately and sign in with `codex login` using your ChatGPT
@@ -699,7 +794,7 @@ Codex uses the existing verdict cache keyed on the judge inputs and reviewed sou
 Its native tools discover related repository code as the rule requires. Native events
 do not provide complete file-read tracking, so Codex does not populate `loaded_files`
 for additional context-file invalidation. Claude and Gemini tracking are unchanged.
-Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+Concurrency follows the CLI limit, one call per CPU.
 
 The existing evaluation override also accepts Codex:
 
@@ -707,26 +802,26 @@ The existing evaluation override also accepts Codex:
 codeguard eval --provider codex-cli --model gpt-6-luna
 ```
 
-For GPT models in CI, use the existing `bedrock` provider with a supported Converse
-model ID, inference profile ID or ARN. AWS credentials and region resolve as before;
-this path uses metered AWS billing and does not invoke the Codex CLI:
+For GPT models in CI, the workflow sets the `bedrock` provider, as for Claude
+([CI](#ci)); the model keeps its OpenAI id, and the Bedrock provider sends
+`us.openai.gpt-6-luna`, or the ARN in `judge.bedrock.inference_profile`. AWS
+credentials and region resolve as before; this path uses metered AWS billing and does
+not invoke the Codex CLI:
 
 ```yaml
-skill: skills/responsibility-placement
-paths: ["app/**/*.py"]
-provider: bedrock
-model: us.openai.gpt-6-luna
+env:
+  CODEGUARD_JUDGE__PROVIDER: bedrock
+  CODEGUARD_JUDGE__MODEL: gpt-6-luna
 ```
 
-The AWS account must have access to the chosen model. Existing Claude, Gemini and
-Bedrock defaults and rule bindings are unchanged.
+The AWS account must have access to the chosen model.
 
 ### Judge with Gemini on Google Cloud
 
-By default the judge runs `claude -p`. A judge rule whose binding sets
-`provider: gemini` is judged with Gemini on Google Cloud (Vertex AI) instead, in reviews
-and in its rule eval, so its rule eval has to pass on Gemini. `codeguard eval --provider
-gemini` judges a rule's eval with Gemini whatever its binding names:
+A judge rule whose binding, package or project names a Gemini model is judged with
+Gemini on Google Cloud (Vertex AI), in reviews and in its rule eval, so its rule eval has
+to pass on Gemini. `codeguard eval --provider gemini` judges a rule's eval with Gemini
+whatever is configured:
 
 ```yaml
 skill: .claude/skills/responsibility-placement
@@ -741,7 +836,7 @@ model: gemini-3.1-pro-preview
 judge:
   project: my-project             # default: GOOGLE_CLOUD_PROJECT
   location: global                # default: GOOGLE_CLOUD_LOCATION
-  calls_at_once: 2                # default: 2 for gemini, one per CPU for claude-cli
+  calls_at_once: 2                # Gemini only; default: 2
 ```
 
 Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
@@ -760,10 +855,13 @@ Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash 
 unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15
 to 37 s, where 3.1 Pro's longest of 79 took 13 s (median 6.5 s).
 
-`provider: bedrock` judges with Claude on Amazon Bedrock through the same tools, for a
-run that must be Claude. boto3 finds the credentials and region (`AWS_DEFAULT_REGION`)
-as the AWS CLI does, and the model is a Bedrock inference profile such as
-`us.anthropic.claude-haiku-5-5`.
+`provider: bedrock` judges a Claude model on Amazon Bedrock through the same tools. It
+is CI's judge for Claude models, and a project can set it locally. boto3 finds the
+credentials and region (`AWS_DEFAULT_REGION`) as the AWS CLI does. The model is named by
+its Anthropic id, `claude-haiku-5-5`, and sent as the inference profile
+`judge.bedrock.inference_prefix` builds, `us.anthropic.claude-haiku-5-5` by default;
+`judge.bedrock.inference_profile` routes through an application inference profile's ARN
+instead ([Configure the judge](#configure-the-judge)).
 
 codeguard signs in with Application Default Credentials. Set it up once per project:
 
@@ -833,7 +931,11 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `packages[].rulesets.<name>.severity` | each rule's own | The severity of every rule in the ruleset, including rules the package adds later. A rule's own override wins. | `warning` trials a ruleset: its findings print without blocking. |
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rules](#rules). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
-| `judge.calls_at_once` | one per CPU for `claude-cli`, `2` for `gemini` | How many judge calls run at once. | A `claude` call mostly waits on the network, so the limit follows the machine. Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
+| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, by its vendor's id, over a package's default; see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
+| `judge.provider` | `claude-cli` | Where a Claude or GPT model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, which needs it set. A Gemini model needs none. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
+| `judge.bedrock.inference_prefix` | `us` | The cross-region inference profile prefix Bedrock requests use: `<prefix>.<vendor>.<model>`, `anthropic` or `openai`. | A model is named once, by its vendor's id; where it runs is the environment's. |
+| `judge.bedrock.inference_profile` | none | An application inference profile ARN to send as the model id instead. | Some accounts must route through one. |
+| `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. A `claude` call mostly waits on the network, so it follows the machine. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). | |
 
 Two things have no setting on purpose:
@@ -847,20 +949,25 @@ Two things have no setting on purpose:
   ([CI](#ci)), which shows in the PR's history. The Stop hook always passes
   `--judge-errors-as-warnings`, because the agent can't fix a judge failure. It shows
   the failure to you, and CI still fails on it.
-- **A rule's judge model.** A judge rule is judged with the model its binding names, the
-  one its rule eval passed on. A project can't switch it to a model the eval never ran
-  on.
+- **A bound rule's judge model.** A rule whose binding names a model is judged with it,
+  the one its rule eval passed on alone. A project's `judge.model` applies to every
+  other rule, over a package's default ([Configure the judge](#configure-the-judge)).
 
 Settings that decide what a review reports belong in the committed config, not in the
 environment, so CI and every machine review a commit the same way. Environment variables
-only choose the config file or the codeguard to run, sign the judge in, or turn on
-telemetry:
+only choose the config file or the codeguard to run, sign the judge in, turn on
+telemetry, or name the judge, which CI must do since it has no subscription. The config
+is read with pydantic-settings, so any `judge` key can be set from a variable named
+`CODEGUARD_` plus the key path with `__` between its parts, and the variable overrides
+the file; an unset variable means nothing:
 
 | Variable | Default | What it does |
 |---|---|---|
+| `CODEGUARD_JUDGE__PROVIDER` | unset: the file's `judge.provider`, else `claude-cli` | Where a Claude or GPT model runs: `claude-cli`, `codex-cli` or `bedrock`; CI sets `bedrock`. See [Configure the judge](#configure-the-judge). |
+| `CODEGUARD_JUDGE__MODEL` | unset: the file's `judge.model`, else the package's, else none | The model for judge rules whose binding names none; CI sets the one it judges with. |
 | `CODEGUARD_CONFIG` | `.codeguard/config.yaml` | The config file to load, relative to the repository root, such as a gitignored `codeguard.local.yaml` for working on a local package. |
 | `CODEGUARD` | the codeguard the plugin ships | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
-| `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
+| `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | How Claude on Bedrock signs in, locally and in CI. |
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). |
 | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](#telemetry). |
@@ -907,7 +1014,10 @@ Tests:
 uv run pytest
 ```
 
-`uv run pytest` runs offline: it calls no model. The LLM tests check that the judge's
+`uv run pytest` runs offline: it calls no model. Neither it nor the skill evals use the
+project's `judge` configuration or its `CODEGUARD_JUDGE__*` variables: those configure
+codeguard reviewing a project, this repository included. The LLM tests check that the
+judge's
 instructions, request and tools still get the right verdicts from a real model. Each
 one reviews an edit in a scratch repository the way `codeguard review` does, with the
 fixture bindings' judge, `gemini-3.1-pro-preview` on Vertex AI, so they need Gemini
