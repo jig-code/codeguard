@@ -85,20 +85,11 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 
 ### Judge configuration
 
-Which provider and model judge a rule is resolved in this order. The first level that
-names a model wins, codeguard passes that model explicitly, and `--provider` and
-`--model` on `codeguard eval` override every level for that run:
-
-1. The rule's binding (`provider`, `model`): a per-rule override, for a rule whose eval
-   passes on one model only.
-2. The project's default, `judge.model` and `judge.provider` in `.codeguard/config.yaml`.
-3. The rule package's default, `judge.model` and `judge.provider` in
-   `codeguard-package.yaml`: what the package's rules were written and evaluated
-   against.
-
-When no level names a model, codeguard runs the provider's CLI with no `--model` flag,
-so the CLI's own default judges, as it does for the user. A Bedrock or Vertex AI run
-needs a model named by configuration.
+A rule's provider and its model resolve separately, each from the rule's binding, else
+the project's default, else the rule package's default (what the package's rules were
+written and evaluated against). [Configure the
+judge](configuration.md#configure-the-judge) states the rule, with its defaults and the
+eval overrides. codeguard passes a resolved model explicitly.
 
 The project config is a pydantic-settings model. Its sources, in priority order: values
 passed in code, then environment variables, then `.codeguard/config.yaml` (a YAML

@@ -77,11 +77,23 @@ For a private package in CI, pass a token that can read it:
 
 ## Configure the judge
 
-[Judge configuration](architecture.md#judge-configuration) says how codeguard picks the
-provider and model for each rule: the binding, else the project's default, else the
-package's; how a model is named on each provider; and how the environment variables
-`CODEGUARD_JUDGE__PROVIDER` and `CODEGUARD_JUDGE__MODEL` override the project's config,
-which is how CI names its judge. The keys:
+A rule's provider and its model resolve separately. Each takes the first of these levels
+that names it:
+
+1. The rule's binding (`provider`, `model`): a per-rule override, for a rule whose eval
+   passes on one model only.
+2. The project's default, `judge` in `.codeguard/config.yaml`, or the
+   `CODEGUARD_JUDGE__PROVIDER` and `CODEGUARD_JUDGE__MODEL` variables that override it,
+   which is how CI names its judge.
+3. The rule package's default, `judge` in `codeguard-package.yaml`.
+
+So a binding that names only a model runs on the provider the project, or CI, sets. With
+no provider named, the provider is `claude-cli`. With no model named, the `claude-cli`
+and `codex-cli` providers run their CLI with no `--model`, so its own default judges; a
+`bedrock` or `gemini` run with no model named is an error. `codeguard eval --provider`
+and `--model` override the provider or the model for that run ([CLI](cli.md#eval)).
+[Judge configuration](architecture.md#judge-configuration) says how each provider names
+a model. The keys:
 
 ```yaml
 # codeguard-package.yaml: the package's default for its judge rules
@@ -91,7 +103,7 @@ judge:
 # .codeguard/config.yaml: the project's default, and the settings that stay global
 judge:
   model: claude-sonnet-5-5          # for rules whose binding names none, over a package's default
-  provider: bedrock                 # claude-cli (default) or bedrock for Claude; codex-cli or bedrock for GPT
+  provider: bedrock                 # claude-cli (default), codex-cli, bedrock or gemini
   project: my-project               # Vertex AI; default GOOGLE_CLOUD_PROJECT
   location: global                  # default GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                  # Gemini only
@@ -266,12 +278,13 @@ Two things have no setting on purpose:
   the one its rule eval passed on alone. A project's `judge.model` applies to every
   other rule, over a package's default ([Configure the judge](#configure-the-judge)).
 
-Settings that decide what a review reports belong in the committed config, not in the
-environment, so CI and every machine review a commit the same way. Environment variables
-only choose the config file or the codeguard to run, sign the judge in, turn on
-telemetry, or name the judge, which CI must do since it has no subscription
-([Judge configuration](architecture.md#judge-configuration) says how they override the
-file):
+Settings that decide what a review reports belong in the committed config, so CI and
+every machine review a commit the same way. Any setting can be overridden from the
+environment by `CODEGUARD_` plus its key, with `__` between the parts of a nested key,
+such as `CODEGUARD_JUDGE__PROVIDER` for `judge.provider`; the variable wins over the
+file, and an unset variable changes nothing. CI uses this to name its judge, since it has
+no subscription. Other variables choose the config file or the codeguard to run, sign
+the judge in, or turn on telemetry:
 
 | Variable | Default | What it does |
 |---|---|---|

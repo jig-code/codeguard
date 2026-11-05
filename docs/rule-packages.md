@@ -97,9 +97,8 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
 
-`provider` and `model` are optional. A binding that leaves them out takes the project's
-`judge` default, then the package's, and with neither runs the `claude` CLI with no
-`--model`, so the CLI's own default judges ([Configure the
+`provider` and `model` are optional, each on its own: what a binding leaves out comes
+from the project's or the package's default ([Configure the
 judge](configuration.md#configure-the-judge)). Set them only for a rule whose eval passes on one model
 alone ([a bound rule's judge model](configuration.md#configuration-reference)):
 
@@ -264,7 +263,7 @@ reason for each case it judged, then one line per failure.
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
-| Provider and model | `--provider` and `--model`, else [Judge configuration](architecture.md#judge-configuration) |
+| Provider and model | `--provider` and `--model`, else [Configure the judge](configuration.md#configure-the-judge) |
 | The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
 | The judge prompt and how each case is checked | codeguard |
 
