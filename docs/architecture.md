@@ -124,7 +124,10 @@ application inference profile's ARN, which the provider passes through as is, as
   `judge.bedrock.inference_prefix` (`us` unless set; pydantic-ai also lists `global`,
   `eu`, `au` and `jp`). Any other id, such as an application inference profile's ARN for
   an account that must route through one, is Bedrock's own and is sent as the request's
-  `modelId` as is. So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
+  `modelId` as is. An application inference profile's ARN names no model, so the provider
+  reads the model it routes to from Bedrock (`bedrock:GetInferenceProfile`, which judges
+  nothing) and calls pydantic-ai as that model, so the request is made as for the model
+  named by its id. So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
   5.5 on the CLI locally and on Bedrock in CI, with no other change, in a project that
   sets no model of its own.
 - A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
