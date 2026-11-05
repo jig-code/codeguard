@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from claude_output import claude_stream
-from fake_cli import FAKE_CLI, configure_fake_cli_response
+from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
 from rules_package import write_package
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
@@ -68,7 +68,7 @@ def bundled(uv_cache: str) -> dict[str, str]:
 
 @pytest.fixture
 def claude_bin() -> Path:
-    return FAKE_CLI.parent
+    return FAKE_CLAUDE.parent
 
 
 def bind_skill(repo, make_skill) -> None:

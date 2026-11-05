@@ -14,7 +14,7 @@ from claude_output import (
     tool_result,
     tool_use,
 )
-from fake_cli import configure_fake_cli_response
+from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
 from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
@@ -39,7 +39,7 @@ def arguments(tmp_path) -> Path:
 
 @pytest.fixture
 def fake_claude_executable(tmp_path, arguments) -> str:
-    return configure_fake_cli_response(
+    configure_fake_cli_response(
         {
             "stdout": claude_stream(
                 [
@@ -54,6 +54,7 @@ def fake_claude_executable(tmp_path, arguments) -> str:
             "record": str(arguments),
         }
     )
+    return str(FAKE_CLAUDE)
 
 
 @pytest.fixture(autouse=True)
@@ -68,22 +69,25 @@ def processes() -> Semaphore:
 
 @pytest.fixture
 def failing_claude_executable(tmp_path) -> str:
-    return configure_fake_cli_response(
+    configure_fake_cli_response(
         {
             "stdout": "rate limited\n",
             "stderr": "try later\n",
             "exit_code": 1,
         }
     )
+    return str(FAKE_CLAUDE)
 
 
 @pytest.fixture
 def hanging_claude_executable(tmp_path) -> str:
-    return configure_fake_cli_response({"delay": 10})
+    configure_fake_cli_response({"delay": 10})
+    return str(FAKE_CLAUDE)
 
 
 def claude_printing(tmp_path: Path, stream: str) -> str:
-    return configure_fake_cli_response({"stdout": stream})
+    configure_fake_cli_response({"stdout": stream})
+    return str(FAKE_CLAUDE)
 
 
 def deadline_in(seconds: float) -> Deadline:
@@ -383,12 +387,13 @@ class TestClaudeJudge:
     def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):
-        executable = configure_fake_cli_response(
+        configure_fake_cli_response(
             {
                 "stdout": claude_stream([]),
                 "record": str(arguments),
             }
         )
+        executable = str(FAKE_CLAUDE)
         judge = ClaudeJudge(tmp_path, MODEL, processes, str(executable))
 
         judge.judge(make_judge_request())
@@ -451,5 +456,6 @@ class TestClaudeJudge:
 
 
 def judge_answering(tmp_path, processes, *messages: dict) -> ClaudeJudge:
-    executable = configure_fake_cli_response({"stdout": claude_stream([], messages=messages)})
+    configure_fake_cli_response({"stdout": claude_stream([], messages=messages)})
+    executable = str(FAKE_CLAUDE)
     return ClaudeJudge(tmp_path, MODEL, processes, executable)
