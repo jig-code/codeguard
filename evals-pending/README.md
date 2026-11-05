@@ -5,8 +5,7 @@ skipped case lives here until the change that restores it moves it back to
 `evals/writing-rules/`.
 
 - `writing-rules/created-flag-tuples`: skipped until
-  [PR 55](https://github.com/jig-code/codeguard/pull/55) restores it. On Opus 5.5 it
-  fails `03-case-names-say-the-stake` (a valid case's name that says the code lacks the
-  violation instead of what it keeps safe) and `10-few-distinct-cases` (when two
-  `invalid` cases differ). PR 55 rewrites the skill text and this case's graders, which
-  is where those two sentences belong.
+  [PR 55](https://github.com/jig-code/codeguard/pull/55) restores it. Its grader
+  `03-case-names-say-why` checks case names against a list of verbs, while the skill
+  asks a name to say what is at stake, so the case fails on names the skill allows.
+  PR 55 rewrites the skill's naming text and this case's graders.
