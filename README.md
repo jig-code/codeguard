@@ -73,7 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CODEGUARD_JUDGE__PROVIDER: bedrock
-      CODEGUARD_JUDGE__MODEL: us.anthropic.claude-haiku-5-5
+      CODEGUARD_JUDGE__MODEL: claude-haiku-5-5
+      # a role that allows only application inference profiles routes through one:
+      CODEGUARD_JUDGE__BEDROCK__INFERENCE_PROFILE: ${{ vars.CODEGUARD_INFERENCE_PROFILE }}
     steps:
       - uses: actions/checkout@v7
         with:

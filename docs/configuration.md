@@ -88,12 +88,13 @@ that names it:
 3. The rule package's default, `judge` in `codeguard-package.yaml`.
 
 So a binding that names only a model runs on the provider the project, or CI, sets. With
-no provider named, the provider is `claude-cli`. With no model named, the `claude-cli`
+no provider named, the provider is `claude-cli`, except that a GPT model with no provider
+named is a configuration error. With no model named, the `claude-cli`
 and `codex-cli` providers run their CLI with no `--model`, so its own default judges; a
 `bedrock` or `gemini` run with no model named is an error. `codeguard eval --provider`
 and `--model` override the provider or the model for that run ([CLI](cli.md#eval)).
-[Judge configuration](architecture.md#judge-configuration) says how each provider names
-a model. The keys:
+[Judge configuration](architecture.md#judge-configuration) says how a model is named
+once, by its vendor's id, and how each provider maps it. The keys:
 
 ```yaml
 # codeguard-package.yaml: the package's default for its judge rules
@@ -104,6 +105,9 @@ judge:
 judge:
   model: claude-sonnet-5-5          # for rules whose binding names none, over a package's default
   provider: bedrock                 # claude-cli (default), codex-cli, bedrock or gemini
+  bedrock:
+    inference_prefix: us            # the cross-region inference profile's prefix; default us
+    # inference_profile: arn:aws:bedrock:…:application-inference-profile/…  # routes through this ARN instead
   project: my-project               # Vertex AI; default GOOGLE_CLOUD_PROJECT
   location: global                  # default GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                  # Gemini only
@@ -154,7 +158,7 @@ Codex CLI:
 ```yaml
 env:
   CODEGUARD_JUDGE__PROVIDER: bedrock
-  CODEGUARD_JUDGE__MODEL: us.openai.gpt-6-luna
+  CODEGUARD_JUDGE__MODEL: gpt-6-luna
 ```
 
 The AWS account must have access to the chosen model.
@@ -260,8 +264,10 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `ast-grep` | the version codeguard installs | The ast-grep version every pattern rule and gate runs with, through `uv tool run`. | One version for every rule, so a rule matches the same code on every machine. codeguard fails when it is outside a package's `ast-grep` range. |
 | `packages` | none | The rule packages and rulesets the project uses; see [Rules](#rules). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
 | `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity; see [Rules](#rules). | |
-| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, as its provider names it, over a package's default; see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
-| `judge.provider` | `claude-cli` | Which provider judges: `claude-cli`, `codex-cli`, `bedrock` or `gemini`. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
+| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, by its vendor's id, over a package's default; see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
+| `judge.provider` | `claude-cli` | Where the model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, `gemini` for Gemini. A GPT model needs it set; with none, it is a configuration error. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
+| `judge.bedrock.inference_prefix` | `us` | The cross-region inference profile prefix Bedrock requests use: `<prefix>.<vendor>.<model>`, `anthropic` or `openai`. | A model is named once, by its vendor's id; where it runs is the environment's. |
+| `judge.bedrock.inference_profile` | none | An application inference profile ARN to send as the model id instead. | Some accounts must route through one. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. A `claude` call mostly waits on the network, so it follows the machine. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). | |
 

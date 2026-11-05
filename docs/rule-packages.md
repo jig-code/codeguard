@@ -104,7 +104,7 @@ alone ([a bound rule's judge model](configuration.md#configuration-reference)):
 
 ```yaml
 provider: gemini                  # claude-cli, codex-cli, bedrock or gemini
-model: gemini-3.1-pro-preview     # as the provider names it
+model: gemini-3.1-pro-preview     # by its vendor's id, such as claude-haiku-5-5 or gpt-6-luna
 ```
 
 A judge rule's id is its skill's directory name.

@@ -105,15 +105,31 @@ unchanged by them. In CI, Bedrock signs in with AWS credentials and Vertex AI wi
 service account.
 
 Global settings stay global, in `.codeguard/config.yaml`: the default model,
-`calls_at_once` (Gemini only), and the Vertex AI project and location.
+`calls_at_once` (Gemini only), the Vertex AI project and location, and the Bedrock
+inference profile.
 
-Each provider takes the model as its own API names it: the `claude` CLI an Anthropic id
-(`claude-haiku-5-5`), the `codex` CLI an OpenAI id (`gpt-6-luna`), Bedrock its full model
-id or inference-profile ARN (`us.anthropic.claude-haiku-5-5`), and Vertex AI a Gemini id
-(`gemini-3.1-pro-preview`).
+A model is named once, by the id its vendor gives it, and each provider maps that id onto
+its own API:
 
-- `provider` names which one judges: `claude-cli` (the default), `codex-cli`, `bedrock`
-  or `gemini`. A provider the surface can't use is an error, never a fallback.
+- A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
+  `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
+  takes: `gpt-6-luna`. A CLI sends the id as is. The Bedrock provider names it to
+  pydantic-ai as the cross-region inference profile `<prefix>.<vendor>.<id>`, the vendor
+  `anthropic` for a Claude model and `openai` for a GPT model:
+  `us.anthropic.claude-haiku-5-5`, `us.openai.gpt-6-luna`. The prefix is the project's
+  `judge.bedrock.inference_prefix` (`us` unless set; pydantic-ai also lists `global`,
+  `eu`, `au` and `jp`). A project that must route through an application inference
+  profile sets `judge.bedrock.inference_profile` to its ARN, which pydantic-ai sends as
+  the request's `modelId` in place of the model name (its `bedrock_inference_profile`
+  setting). So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
+  5.5 on the CLI locally and on Bedrock in CI, with no other change, in a project that
+  sets no model of its own.
+- A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
+  `provider: gemini`.
+- `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
+  Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model. A
+  GPT model needs `provider` set: with none, it is a configuration error that says to
+  set it. A provider the surface can't use is an error, never a fallback.
 
 A rule package's CI runs its model matrix with `codeguard eval --provider` and
 `--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
@@ -261,7 +277,8 @@ onto its API.
   off. The Bedrock and Gemini providers have the equivalent tools, rooted at the
   repository.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
-  the cache keys on the id the provider sends (Judge configuration).
+  the cache keys on the id the provider sends, which for Bedrock is the inference profile
+  derived from the vendor's id (Judge configuration).
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
