@@ -1,8 +1,28 @@
-## Judge with Codex locally
+# Choose a judge
+
+A judge rule is judged by a provider and a model. [Which judge
+runs](configuration.md#which-judge-runs) says which level names them; this page says how
+to set each provider up.
+
+## Choose a provider
+
+- `claude-cli`, the default, runs Claude through the `claude` CLI on the developer's own
+  subscription. It suits the agent's Stop hook and needs nothing beyond Claude Code.
+- `codex-cli` runs a GPT model through the `codex` CLI on a ChatGPT subscription
+  ([Codex locally](#codex-locally)).
+- `bedrock` runs Claude or a GPT model on Amazon Bedrock with AWS credentials
+  ([Bedrock](#bedrock)). CI uses it, since CI has no subscription.
+- `gemini` runs Gemini on Vertex AI with Google credentials
+  ([Gemini on Google Cloud](#gemini-on-google-cloud)).
+
+Name the model a rule's eval passed on: a rule passes only on the models its eval has
+judged it with ([Write a rule package](rule-packages.md)).
+
+## Codex locally
 
 Set `codex-cli` as the provider, in the project's `judge` default or a rule's binding.
 Name a model to pass it; with none, the `codex` CLI uses its own default
-([Configure the judge](#configure-the-judge)):
+([Which judge runs](configuration.md#which-judge-runs)):
 
 ```yaml
 # .codeguard/config.yaml
@@ -39,7 +59,7 @@ codeguard eval --provider codex-cli --model gpt-6-luna
 ```
 
 For GPT models in CI, the workflow sets the `bedrock` provider, as for Claude
-([CI](add-codeguard.md#ci)). This path uses metered AWS billing and does not invoke the
+([Bedrock](#bedrock)). This path uses metered AWS billing and does not invoke the
 Codex CLI:
 
 ```yaml
@@ -50,7 +70,7 @@ env:
 
 The AWS account must have access to the chosen model.
 
-## Judge with Gemini on Google Cloud
+## Gemini on Google Cloud
 
 A judge rule whose binding, package or project sets `provider: gemini` is judged with
 Gemini on Google Cloud (Vertex AI), in reviews and in its rule eval, so its rule eval has
@@ -111,3 +131,17 @@ it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 `GOOGLE_API_KEY=proxy-injected` with `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`,
 `project` and `location` unset. The key identifies the project.
 
+## Bedrock
+
+Set `bedrock` as the provider and name the model by its vendor's id, such as
+`claude-haiku-5-5` or `gpt-6-luna`. codeguard sends it as the cross-region inference
+profile `<prefix>.<vendor>.<id>`, with the prefix from `judge.bedrock.inference_prefix`
+(`us` unless set). An account that must route through an application inference profile
+names that profile's ARN as the model instead; the profile needs a `ModelId` tag naming
+the model it routes to ([How a model is named](judge-design.md#how-a-model-is-named)).
+
+codeguard signs in to Bedrock as boto3 does: the AWS CLI's credentials and region on your
+machine, and the job's credentials in CI. In GitHub Actions, use
+`aws-actions/configure-aws-credentials` before the codeguard action, with a role that
+can invoke the model and, for an application inference profile, read its tags
+(`bedrock:ListTagsForResource`). [CI](add-codeguard.md#ci) shows the job.

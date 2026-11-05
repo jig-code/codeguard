@@ -1,13 +1,11 @@
-# Run codeguard in CI and keep it current
-
-## Setup
+# Add codeguard to a project
 
 The plugin is codeguard: it ships the CLI and runs it with
 [uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is all anyone
 working in the project installs. The first review after an install or upgrade takes a
 little longer while uv builds codeguard's environment in the plugin's data directory.
 
-### Claude Code
+## Claude Code
 
 In the project's `.claude/settings.json`:
 
@@ -34,7 +32,7 @@ Then install the plugin. Project settings enable it but don't install it.
 claude plugin install codeguard@codeguard --scope project
 ```
 
-### Codex
+## Codex
 
 List the plugin in the project's `.agents/plugins/marketplace.json`:
 
@@ -56,7 +54,7 @@ List the plugin in the project's `.agents/plugins/marketplace.json`:
 
 Then trust codeguard's hooks in `/hooks`.
 
-### CI
+## CI
 
 ```yaml
 on: pull_request
@@ -78,80 +76,15 @@ jobs:
       - uses: jig-code/codeguard@v0.11.0
 ```
 
-[Run codeguard in CI](docs/add-codeguard.md#ci) explains the action and its judge.
-
-Next, opt into a rule package or write a rule of your own
-([Rules](docs/configuration.md#rules)).
-
-## Rules
-
-A project's own rules live under `.codeguard/`, in the layout
-[Write a rule package](rule-packages.md) describes. To write or change one, use the
-plugin's [writing-rules skill](../skills/writing-rules/SKILL.md). The two kinds of rule
-are in [Rules](architecture.md#rules).
-
-A project can also opt into rulesets from rule packages. List the rulesets to run every
-rule in each:
-
-```yaml
-# .codeguard/config.yaml
-packages:
-  - kind: git
-    git: https://github.com/betterwithranch/codeguard-rules.git
-    ref: v0.6.0
-    rulesets: [general, python]
-```
-
-To choose a ruleset's rules or change how they run, give it settings instead:
-
-```yaml
-    rulesets:
-      python:
-        exclude: [no-del-param]
-        rules:
-          names-match-behavior:
-            paths: ["src/**/*.py"]
-            severity: warning
-```
-
-- `kind: path` with `path: ../my-rules` in place of `git` uses a local package, for
-  working on one. To use it without editing the committed config, put that config in a
-  gitignored file such as `codeguard.local.yaml` and set
-  `CODEGUARD_CONFIG=codeguard.local.yaml`. The path is relative to the repository root.
-
-Diagnostics name a packaged rule by package, ruleset and id:
-`betterwithranch/python/no-del-param`.
-
-A git package's `ref` is a tag or commit. Local and CI reviews use the rules at that
-`ref`, so a commit gets the same rules everywhere, and a package release changes nothing
-until a project moves its `ref`. To try a release, change `ref` locally, or point a
-`kind: path` package at a checkout of it.
-
-codeguard fetches each `ref` once into `~/.cache/codeguard/packages` and reuses it, so a
-`ref` must not be a branch.
-
-For a private package in CI, pass a token that can read it:
-
-```yaml
-      - uses: jig-code/codeguard@v0.11.0
-        with:
-          packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
-```
-
-
-## CI
-
-The README's [CI example](../README.md#ci) adds the action. It reviews the files changed
-since the merge base with the PR's base branch, then runs the rule tests. The job's
-`CODEGUARD_JUDGE__PROVIDER` and `CODEGUARD_JUDGE__MODEL` name its judge: Claude on
-Amazon Bedrock with the job's AWS credentials, as in the example, or Gemini on Vertex AI
-with `google-github-actions/auth` ([Judge with Gemini on Google
-Cloud](configuration.md#judge-with-gemini-on-google-cloud)). [Configure the
-judge](configuration.md#configure-the-judge) says how those variables and the project's
-config combine.
+The action reviews the files changed since the merge base with the PR's base branch,
+then runs the rule tests. The job's `CODEGUARD_JUDGE__PROVIDER` and
+`CODEGUARD_JUDGE__MODEL` name its judge: Claude on Amazon Bedrock with the job's AWS
+credentials, as in the example, or Gemini on Vertex AI with `google-github-actions/auth`
+([Choose a judge](judges.md)). [Which judge runs](configuration.md#which-judge-runs) says
+how those variables and the project's config combine.
 
 A judge call that couldn't complete fails the review, and no setting turns that off
-([why](configuration.md#configuration-reference)). To merge the PR anyway, add the
+([why](configuration.md#no-setting-on-purpose)). To merge the PR anyway, add the
 `codeguard-allow-judge-errors` label to it, so each bypass is chosen for one PR and
 shows in its history. The action then passes
 `--judge-errors-as-warnings` to the review, so those calls print as warnings, and rule
@@ -180,6 +113,62 @@ Pin the action to a release tag, as above, and adopt each codeguard release in i
 PR ([Upgrade](#upgrade)), so a new release never changes a review without a change in
 the project.
 
+## Opt into a rule package
+
+A project's own rules live under `.codeguard/`, in the layout
+[Write a rule package](rule-packages.md) describes. To write or change one, use the
+plugin's [writing-rules skill](../skills/writing-rules/SKILL.md). The two kinds of rule
+are in [Rules](architecture.md#rules).
+
+A project can also opt into rulesets from rule packages. List the rulesets to run every
+rule in each:
+
+```yaml
+# .codeguard/config.yaml
+packages:
+  - kind: git
+    git: https://github.com/betterwithranch/codeguard-rules.git
+    ref: v0.6.0
+    rulesets: [general, python]
+```
+
+To choose a ruleset's rules or change how they run, give it settings instead
+([Rule package keys](configuration.md#rule-package-keys) says what each does):
+
+```yaml
+    rulesets:
+      python:
+        exclude: [no-del-param]
+        rules:
+          names-match-behavior:
+            paths: ["src/**/*.py"]
+            severity: warning
+```
+
+`kind: path` with `path: ../my-rules` in place of `git` uses a local package, for
+working on one. To use it without editing the committed config, put that config in a
+gitignored file such as `codeguard.local.yaml` and set
+`CODEGUARD_CONFIG=codeguard.local.yaml`. The path is relative to the repository root.
+
+Diagnostics name a packaged rule by package, ruleset and id:
+`betterwithranch/python/no-del-param`.
+
+A git package's `ref` is a tag or commit. Local and CI reviews use the rules at that
+`ref`, so a commit gets the same rules everywhere, and a package release changes nothing
+until a project moves its `ref`. To try a release, change `ref` locally, or point a
+`kind: path` package at a checkout of it.
+
+codeguard fetches each `ref` once into `~/.cache/codeguard/packages` and reuses it, so a
+`ref` must not be a branch.
+
+For a private package in CI, pass a token that can read it:
+
+```yaml
+      - uses: jig-code/codeguard@v0.11.0
+        with:
+          packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
+```
+
 ## Run formatters first
 
 Format code before codeguard reviews it. A formatter that runs after the review changes
@@ -199,7 +188,7 @@ leaves it to the formatter.
 
 ## The CLI on its own
 
-The README's [Setup](../README.md#setup) installs the plugin. In Claude Code, the plugin
+[Claude Code](#claude-code) and [Codex](#codex) install the plugin. In Claude Code, the plugin
 also puts `codeguard` on the PATH of the commands Claude runs, for skills such as
 writing a rule. Codex doesn't give plugins a command, so writing rules there needs the
 CLI on its own.

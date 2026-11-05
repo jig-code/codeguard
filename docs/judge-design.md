@@ -1,8 +1,14 @@
-**The judge** grades one rule against one file's change. The providers are the `claude`
-CLI in safe mode and the `codex` CLI in a read-only sandbox (Claude and GPT on the
-developer's subscription), and Amazon Bedrock (Claude and GPT) and Gemini on Vertex AI
-(both pydantic-ai, with equivalent tools). Judge configuration, below, says which one
-judges a rule.
+# The judge
+
+The judge grades one rule against one file's change. [codeguard's
+architecture](architecture.md) has the overview and the invariants it keeps; [Choose a
+judge](judges.md) says how to set each provider up.
+
+## What the judge does
+
+The providers are the `claude` CLI in safe mode and the `codex` CLI in a read-only
+sandbox (Claude and GPT on the developer's subscription), and Amazon Bedrock (Claude and
+GPT) and Gemini on Vertex AI (both pydantic-ai, with equivalent tools).
 
 - Its input: the judge template, which holds the instructions; the skill text; the
   `changes` element, an excerpt of the changed code with `+`, space and `-` marks and the
@@ -16,32 +22,25 @@ judges a rule.
   keeps the rule or breaks it, as context for whoever troubleshoots the verdict;
   and violations, each with a file, line, message and confidence (1.0, 0.9, 0.7 or 0.5).
 
-### Judge configuration
+## How the model resolves
 
-A rule's provider and its model resolve separately, each from the rule's binding, else
-the project's default, else the rule package's default (what the package's rules were
-written and evaluated against). [Configure the
-judge](configuration.md#configure-the-judge) states the rule, with its defaults and the
-eval overrides. codeguard passes a resolved model explicitly.
+A rule's provider and its model resolve separately, each from the first level that names
+it: the rule's binding, the project's default, then the rule package's default, what the
+package's rules were written and evaluated against. [Which judge
+runs](configuration.md#which-judge-runs) states the rule, its defaults and the eval
+overrides. codeguard passes a model a level names explicitly, and is driven by a provider
+and a model alone: nothing else names the model a request runs.
 
-The project config is a pydantic-settings model. Its sources, in priority order:
-environment variables, then `.codeguard/config.yaml`, then field defaults. codeguard
-passes the file's values to the model, which places them below the environment, and
-nothing ranks above the environment. An environment variable named after any key
-overrides the file: with the prefix `CODEGUARD_` and `__`
-between the parts of a nested key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and
-`CODEGUARD_JUDGE__MODEL` is `judge.model`. That is the whole CI mechanism: the CI workflow sets them to `bedrock` or
-`gemini` with the model, and the project config needs no line for it. An unset variable
-means nothing: the file's value stands, or the key is absent and the next level applies.
-The variables configure codeguard reviewing a project in CI, codeguard reviewing itself
-included; codeguard's pytest LLM tests and skill evals are a different configuration,
-unchanged by them. In CI, Bedrock signs in with AWS credentials and Vertex AI with a
-service account.
+When no level names a model, the CLI's own default judges, and the model is still known
+before any judging. At the start of a run, codeguard reads the model the `claude` CLI
+will run from where the CLI reads it (`ANTHROPIC_MODEL`, then the `env` and then the
+`model` of its managed, local, project and user settings, in that order), and when those
+name none, or only an alias such as `opus`, it makes one small CLI call that reports it.
+Every verdict in the run is keyed on that model, so a change of the CLI's default model is
+never served a verdict of the old one. A dry run never makes that call. The `codex` CLI
+doesn't expose its default model, so with no model named its verdicts aren't cached.
 
-Global settings stay global, in `.codeguard/config.yaml`: the default model,
-`calls_at_once` (Gemini only), the Vertex AI project and location, and the Bedrock
-inference prefix. codeguard is driven by a provider and a model, and nothing else names
-the model a request runs.
+## How a model is named
 
 A model is named once, by the id its vendor gives it, and each provider maps that id onto
 its own API. A model may instead be named by the provider's own id, such as a Bedrock
@@ -59,9 +58,10 @@ application inference profile's ARN, which the provider passes through as is, as
   an account that must route through one, is Bedrock's own and is sent as the request's
   `modelId` as is. An application inference profile's ARN names no model, so the provider
   reads the model it routes to from the profile's `ModelId` tag
-  (`bedrock:ListTagsForResource`, once per profile) and calls pydantic-ai as that model. So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
-  5.5 on the CLI locally and on Bedrock in CI, with no other change, in a project that
-  sets no model of its own.
+  (`bedrock:ListTagsForResource`, once per profile) and calls pydantic-ai as that model.
+  So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku 5.5 on the
+  CLI locally and on Bedrock in CI, with no other change, in a project that sets no
+  model of its own.
 - A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
   `provider: gemini`.
 - `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
@@ -108,15 +108,9 @@ onto its API.
   repository.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
   the cache keys on the id the provider sends, which for Bedrock is the inference profile
-  derived from the vendor's id (Judge configuration). When no level names a model, the
-  model is still known before any judging: at the start of a run, codeguard reads the
-  model the `claude` CLI will run from where the CLI reads it (`ANTHROPIC_MODEL`, then the
-  `env` and then the `model` of its managed, local, project and user settings, in that
-  order), and when those name none, or only an alias such as `opus`, it makes one small
-  CLI call that reports it. Every verdict in the run is keyed on that model, so a change of
-  the CLI's default model is never served a verdict of the old one. A dry run never makes
-  that call. The `codex` CLI doesn't expose its default model, so with no model named its
-  verdicts aren't cached.
+  derived from the vendor's id ([How a model is named](#how-a-model-is-named)), and, when
+  no level names a model, on the model the CLI will run ([How the model
+  resolves](#how-the-model-resolves)).
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the

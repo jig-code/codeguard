@@ -1,9 +1,11 @@
 # Working on codeguard
 
 [docs/architecture.md](architecture.md) describes codeguard's architecture: how it
-works, the invariants every change must keep, and what the judge is given. Before
-changing the judge (its template, its prompt, its tools or what it's given), the review
-pipeline, or anything an invariant covers, read it and check the change against it.
+works and the invariants every change must keep, with [the review
+pipeline](review-pipeline.md) and [what the judge is given](judge-design.md) in detail.
+Before changing the judge (its template, its prompt, its tools or what it's given), the
+review pipeline, or anything an invariant covers, read them and check the change against
+them.
 
 [docs/testing.md](testing.md#changing-codeguard) says which checks a change to
 codeguard needs.
@@ -23,7 +25,7 @@ codeguard reviewing a project, this repository included.
 The LLM tests check that the judge's instructions, request and tools still get the right
 verdicts from a real model. Each one reviews an edit in a scratch repository the way `codeguard review` does, with the
 fixture bindings' judge, `gemini-3.1-pro-preview` on Vertex AI, so they need Gemini
-credentials ([Judge with Gemini on Google Cloud](configuration.md#judge-with-gemini-on-google-cloud)) and cost tokens. They are marked
+credentials ([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)) and cost tokens. They are marked
 `llm`, which plain `pytest` deselects. CI signs in with the repository's
 `GOOGLE_CREDENTIALS` secret, a service account key with the Vertex AI User role, and
 its `GOOGLE_CLOUD_PROJECT` variable. `--judge-provider` and `--judge-model` judge them

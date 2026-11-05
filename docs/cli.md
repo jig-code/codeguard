@@ -50,13 +50,9 @@ Options to judge part of a package, or with another model:
 - `--case <text>` judges only the cases whose name contains the text; repeat it to
   judge the cases matching any of them. A rule with no matching case is left out.
 - `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or
-  `--provider bedrock` judges every selected rule with that provider; it overrides only
-  the provider. `--model` names the model by its vendor's id, or by the provider's own id; it overrides only the model,
-  with or without `--provider`. Without `--model`,
-  the model comes from the binding, else the project's default, else the package's
-  default ([Configure the judge](configuration.md#configure-the-judge)); with none,
-  `claude-cli` and `codex-cli` run their CLI with no `--model`, so its own default
-  judges, and a `gemini` or `bedrock` run is an error.
+  `--provider bedrock` overrides the provider every selected rule is judged with, and
+  `--model` the model, each on its own; whatever the run leaves out resolves as [Which
+  judge runs](configuration.md#which-judge-runs) says.
 
 A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
 contains, fails the eval before any case is judged.

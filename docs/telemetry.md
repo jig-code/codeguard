@@ -1,4 +1,4 @@
-## Telemetry
+# Telemetry
 
 Set `LOGFIRE_TOKEN` to a Logfire write token and codeguard sends a trace of each run.
 Without it, codeguard sends nothing. Set it where the agent runs: your shell profile, or

@@ -1,8 +1,9 @@
 # codeguard's architecture
 
-This document describes how codeguard works and the invariants its design keeps. A change
-to codeguard must keep every invariant here; a change that would break one needs the
-maintainers' approval before it is made.
+This document is an overview of how codeguard works and the invariants its design keeps.
+A change to codeguard must keep every invariant here; a change that would break one needs
+the maintainers' approval before it is made. [The review pipeline](review-pipeline.md)
+and [The judge](judge-design.md) hold the detail.
 
 ## How codeguard works
 
@@ -33,30 +34,21 @@ judge rule. Passing one rule does not excuse violations owned by other checks.
 
 ### Components
 
-**Bindings** map files to a rule by path globs. A binding sets the rule's severity and
-its triggers, and may name its judge provider and model over the project's and the
-package's defaults (Judge configuration, below).
-
-**Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
-or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies an
-edit until the file's skill is loaded.
-
-**The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
-and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
-prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
-
-### Testing a rule
-
-- Pattern rules and gates: `codeguard test`, with valid and invalid cases and snapshots.
-- Judge rules: `codeguard eval`. Each case is a small fixture repository plus a change,
-  with the expected violations. A case passes only when it gets the right verdict at 0.9
-  or above on every run. The eval prints the judge's reason for every case, as context
-  for fixing the rule's wording; nothing checks it.
-- Rule failures: a failing case is fixed in the rule's wording or in the case, never by
-  re-running it, never by steering the judge in the prompt, and never by adding the
-  case's code to the rule as an example.
-- Follow the writing-rules reference's
-  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+- **Bindings** map files to a rule by path globs. A binding sets the rule's severity and
+  its triggers, and may name its judge provider and model over the project's and the
+  package's defaults.
+- **The review pipeline** picks the candidate rules, runs the pattern rules, calls the
+  judge on the changes its triggers reach and reuses cached verdicts
+  ([The review pipeline](review-pipeline.md)).
+- **The judge** grades one rule against one file's change, through the `claude` or
+  `codex` CLI, Amazon Bedrock or Gemini on Vertex AI ([The judge](judge-design.md)).
+- **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
+  or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies
+  an edit until the file's skill is loaded.
+- **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern
+  rule and gate tests, with no model; `eval` runs judge rule evals, repeated N times;
+  `config` prints a setting. The plugin ships the CLI, and the GitHub Action runs it in
+  CI ([CLI](cli.md)).
 
 ## Invariants
 

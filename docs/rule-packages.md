@@ -59,7 +59,7 @@ python/
 
 The rule eval is what makes a rule trustworthy. It shows the rule flags the edits it
 should and passes the ones it should, on the models that will judge it in reviews
-([Judge configuration](architecture.md#judge-configuration)).
+([How the model resolves](judge-design.md#how-the-model-resolves)).
 
 `codeguard eval` judges with the same model, unless `--provider` and `--model` name
 another, as a package's CI does for its model matrix (the invariant that
@@ -98,9 +98,9 @@ triggers: [mock-use]
 ```
 
 `provider` and `model` are optional, each on its own: what a binding leaves out comes
-from the project's or the package's default ([Configure the
-judge](configuration.md#configure-the-judge)). Set them only for a rule whose eval passes on one model
-alone ([a bound rule's judge model](configuration.md#configuration-reference)):
+from the project's or the package's default ([Which judge
+runs](configuration.md#which-judge-runs)). Set them only for a rule whose eval passes on
+one model alone ([a bound rule's judge model](configuration.md#no-setting-on-purpose)):
 
 ```yaml
 provider: gemini                  # claude-cli, codex-cli, bedrock or gemini
@@ -263,7 +263,7 @@ reason for each case it judged, then one line per failure.
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
-| Provider and model | `--provider` and `--model`, else [Configure the judge](configuration.md#configure-the-judge) |
+| Provider and model | `--provider` and `--model`, else [Which judge runs](configuration.md#which-judge-runs) |
 | The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
 | The judge prompt and how each case is checked | codeguard |
 
