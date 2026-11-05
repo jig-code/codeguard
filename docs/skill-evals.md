@@ -34,14 +34,17 @@ changes, on Claude Haiku 5.5 through Bedrock, in two passes. The validity pass r
 case once to verify the change. Once it passes with nothing changed since, the
 reliability pass runs every case 9 more times, to the end, and reports each case's
 score. A case passes when every grader passes in all 10 runs. Any change starts again at
-the validity pass. The agent and the graders both use the model in `BEDROCK_MODEL`.
+the validity pass. The agent and the graders both use the model in the
+`SKILL_EVALS_BEDROCK_MODEL` repository variable.
 
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
-  --model "$BEDROCK_MODEL" --judge-model "$BEDROCK_MODEL" --trust-plugin --no-publish
+  --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL" \
+  --trust-plugin --no-publish
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 \
-  --model "$BEDROCK_MODEL" --judge-model "$BEDROCK_MODEL" --trust-plugin --no-publish
+  --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL" \
+  --trust-plugin --no-publish
 ```
 
 CI runs the two as separate jobs, the second starting when the first passes.
