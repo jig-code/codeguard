@@ -114,6 +114,30 @@ class TestPackagesConfig:
             PathPackageConfig(path=Path("rules"), rulesets={"python": RulesetConfig()}),
         )
 
+    def test_listed_rulesets_run_every_rule(self):
+        config = Config.model_validate(
+            {"packages": [{"kind": "path", "path": "rules", "rulesets": ["general", "python"]}]}
+        )
+
+        assert config.packages == (
+            PathPackageConfig(
+                path=Path("rules"),
+                rulesets={"general": RulesetConfig(), "python": RulesetConfig()},
+            ),
+        )
+
+    def test_ruleset_listed_twice_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            Config.model_validate(
+                {"packages": [{"kind": "path", "path": "rules", "rulesets": ["python", "python"]}]}
+            )
+
+        assert messages(error) == ["Value error, rulesets listed more than once: python"]
+
+    def test_empty_ruleset_list_is_an_error(self):
+        with pytest.raises(ValidationError):
+            Config.model_validate({"packages": [{"kind": "path", "path": "rules", "rulesets": []}]})
+
     def test_package_without_rulesets_is_an_error(self):
         with pytest.raises(ValidationError):
             Config.model_validate(

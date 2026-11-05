@@ -7,7 +7,8 @@ A project's own rules live under `.codeguard/`, in the layout
 plugin's [writing-rules skill](../skills/writing-rules/SKILL.md). The two kinds of rule
 are in [Rules](architecture.md#rules).
 
-A project can also opt into rulesets from rule packages:
+A project can also opt into rulesets from rule packages. List the rulesets to run every
+rule in each:
 
 ```yaml
 # .codeguard/config.yaml
@@ -15,6 +16,12 @@ packages:
   - kind: git
     git: https://github.com/betterwithranch/codeguard-rules.git
     ref: v0.6.0
+    rulesets: [general, python]
+```
+
+To choose a ruleset's rules or change how they run, give it settings instead:
+
+```yaml
     rulesets:
       python:
         exclude: [no-del-param]
@@ -24,7 +31,8 @@ packages:
             severity: warning
 ```
 
-- Only the listed rulesets run.
+- Only the listed rulesets run. A ruleset given by name alone runs every rule, at its own
+  severity.
 - `include` lists the only rules that run, pattern and judged; rules the package adds
   later stay off. `exclude` turns rules off. Set one or the other.
 - `rules.<id>` overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`.
@@ -264,7 +272,8 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `review_time_limit_minutes` | `5` | The review stops judging after this long. Each rule and file it didn't judge gets a `judge_error` diagnostic at the rule's severity, as a failed judge call does. The GitHub Action stops the review 2 minutes after it. | A stuck `claude` call once hung a CI review for 30 minutes with no output. A limit turns a hang into a visible failure. |
 | `ast-grep` | the version codeguard installs | The ast-grep version every pattern rule and gate runs with, through `uv tool run`. | One version for every rule, so a rule matches the same code on every machine. codeguard fails when it is outside a package's `ast-grep` range. |
 | `packages` | none | The rule packages and rulesets the project uses; see [Rules](#rules). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
-| `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity; see [Rules](#rules). | |
+| `packages[].rulesets` | none; required | The rulesets the project runs from the package: a list of names, each running every rule, or a mapping from each name to its settings; see [Rules](#rules). | A project opts into each ruleset by name. |
+| `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity, in the mapping form; see [Rules](#rules). | |
 | `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, over a package's default: by its vendor's id, which the provider maps, or by the provider's own id, such as a Bedrock application inference profile's ARN, which it passes through (the profile needs a `ModelId` tag naming the model it routes to); see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
 | `judge.provider` | `claude-cli` | Where the model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, `gemini` for Gemini. A model that isn't a Claude model needs it set; with none, it is a configuration error. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
 | `judge.bedrock.inference_prefix` | `us` | The cross-region inference profile prefix Bedrock requests use: `<prefix>.<vendor>.<model>`, `anthropic` or `openai`. | A model is named once, by its vendor's id; where it runs is the environment's. |

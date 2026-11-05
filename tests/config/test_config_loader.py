@@ -175,6 +175,30 @@ class TestConfigLoader:
             ),
         )
 
+    def test_loads_listed_and_configured_rulesets_of_a_package(self, repo):
+        repo.write("rules/codeguard-package.yaml", "name: example\nrulesets: [python]\n")
+        repo.write(
+            CONFIG,
+            "packages:\n"
+            "  - kind: path\n"
+            "    path: rules\n"
+            "    rulesets: [general]\n"
+            "  - kind: path\n"
+            "    path: rules\n"
+            "    rulesets:\n"
+            "      python:\n"
+            "        exclude: [no-print]\n",
+        )
+
+        packages = ConfigLoader(repo.root).load().packages
+
+        assert packages == (
+            PathPackageConfig(path=Path("rules"), rulesets={"general": RulesetConfig()}),
+            PathPackageConfig(
+                path=Path("rules"), rulesets={"python": RulesetConfig(exclude=("no-print",))}
+            ),
+        )
+
     def test_empty_config_file_is_an_error(self, repo):
         repo.write(CONFIG, "")
 

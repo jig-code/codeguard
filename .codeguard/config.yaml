@@ -2,6 +2,4 @@ packages:
   - kind: git
     git: https://github.com/jig-code/codeguard-rules.git
     ref: 9a19ccdeb2949bf0d1d9a171122a6a9bb9c027cb
-    rulesets:
-      general: {}
-      python: {}
+    rulesets: [general, python]
