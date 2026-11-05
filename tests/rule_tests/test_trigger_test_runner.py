@@ -45,7 +45,7 @@ class TestTriggerTestRunner:
         write_eval(
             repo,
             case(
-                "reads the value",
+                "flags reading the value",
                 "invalid",
                 "label = status.value\n",
                 before="label = status.name\n",
@@ -60,7 +60,7 @@ class TestTriggerTestRunner:
         write_eval(
             repo,
             case(
-                "changes a count",
+                "flags a count change",
                 "invalid",
                 "label = status.value\ncount = 2\n",
                 before="label = status.value\ncount = 1\n",
@@ -71,7 +71,7 @@ class TestTriggerTestRunner:
 
         assert result == RuleTestResult(
             problems=(
-                f"{EVAL_FILE} changes a count: enum-usage "
+                f"{EVAL_FILE} flags a count change: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value miss the change, which "
                 "touches code, module-statement, number-literal",
             ),
@@ -80,14 +80,14 @@ class TestTriggerTestRunner:
     def test_skipped_case_whose_change_touches_a_gate_fails(self, repo):
         write_eval(
             repo,
-            case("reads the value", "skipped", "label = status.value\n"),
+            case("skips reading the value", "skipped", "label = status.value\n"),
         )
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
 
         assert result == RuleTestResult(
             problems=(
-                f"{EVAL_FILE} reads the value: enum-usage "
+                f"{EVAL_FILE} skips reading the value: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value fire on the change, which "
                 "touches attribute-access, code, gate:enum-value, module-statement",
             ),
@@ -96,7 +96,7 @@ class TestTriggerTestRunner:
     def test_skipped_case_whose_change_misses_the_triggers_passes(self, repo):
         write_eval(
             repo,
-            case("changes a count", "skipped", "count = 2\n", before="count = 1\n"),
+            case("skips a count change", "skipped", "count = 2\n", before="count = 1\n"),
         )
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
@@ -104,20 +104,22 @@ class TestTriggerTestRunner:
         assert result == RuleTestResult()
 
     def test_valid_case_whose_change_touches_a_gate_passes(self, repo):
-        write_eval(repo, case("reads the value", "valid", "label = status.value\n"))
+        write_eval(repo, case("allows reading the value", "valid", "label = status.value\n"))
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
 
         assert result == RuleTestResult()
 
     def test_valid_case_whose_change_misses_the_triggers_fails(self, repo):
-        write_eval(repo, case("changes a count", "valid", "count = 2\n", before="count = 1\n"))
+        write_eval(
+            repo, case("allows a count change", "valid", "count = 2\n", before="count = 1\n")
+        )
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
 
         assert result == RuleTestResult(
             problems=(
-                f"{EVAL_FILE} changes a count: enum-usage "
+                f"{EVAL_FILE} allows a count change: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value miss the change, which "
                 "touches code, module-statement, number-literal",
             ),
@@ -143,14 +145,19 @@ class TestTriggerTestRunner:
     def test_case_file_outside_the_binding_paths_fails(self, repo):
         write_eval(
             repo,
-            case("reads the value", "valid", "label = status.value\n", file="tests/test_status.py"),
+            case(
+                "allows reading the value",
+                "valid",
+                "label = status.value\n",
+                file="tests/test_status.py",
+            ),
         )
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
 
         assert result == RuleTestResult(
             problems=(
-                f"{EVAL_FILE} reads the value: "
+                f"{EVAL_FILE} allows reading the value: "
                 "tests/test_status.py is outside the enum-usage paths",
             ),
         )
@@ -204,7 +211,7 @@ class TestInvalidEvalFiles:
         repo.write(
             EVAL_FILE,
             "cases:\n"
-            "  - name: reads the value\n"
+            "  - name: allows reading the value\n"
             "    inputs:\n"
             "      after: label = status.value\n"
             "      unchanged:\n"
@@ -227,7 +234,7 @@ class TestInvalidEvalFiles:
         repo.write(
             EVAL_FILE,
             "cases:\n"
-            "  - name: reads the value\n"
+            "  - name: allows reading the value\n"
             "    inputs:\n"
             "      after: label = status.value\n"
             "      unchanged:\n"
@@ -247,7 +254,7 @@ class TestInvalidEvalFiles:
         repo.write(
             EVAL_FILE,
             "cases:\n"
-            "  - name: reads the value\n"
+            "  - name: allows reading the value\n"
             "    inputs:\n"
             "      file: ../module.py\n"
             "      after: label = status.value\n"
@@ -266,7 +273,7 @@ class TestInvalidEvalFiles:
         repo.write(
             EVAL_FILE,
             "cases:\n"
-            "  - name: reads the value\n"
+            "  - name: allows reading the value\n"
             "    inputs:\n"
             "      after: label = status.value\n"
             "      unchanged:\n"

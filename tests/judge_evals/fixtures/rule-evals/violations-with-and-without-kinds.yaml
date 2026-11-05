@@ -1,5 +1,5 @@
 cases:
-  - name: passes two strings
+  - name: flags two strings
     inputs:
       after: |
         ship(status='shipped')
