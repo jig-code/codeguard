@@ -360,7 +360,8 @@ that is not only a comment or docstring) and `any`. The syntax table in
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: what the edit does, unique in the file.
+- `name`: its verdict and situation, unique in the file: `flags`, `allows` or `skips`,
+  matching its `outcome`, then the situation. It never states the harm or why.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
@@ -381,7 +382,7 @@ the review it should get:
 
 ```yaml
 cases:
-  - name: adds a second class
+  - name: flags a second class added to the file
     inputs:
       before: |
         class Order:
@@ -395,14 +396,14 @@ cases:
             pass
     expected_output:
       outcome: invalid
-  - name: defines one class
+  - name: allows a file that defines one class
     inputs:
       after: |
         class Order:
             pass
     expected_output:
       outcome: valid
-  - name: changes an attribute
+  - name: skips a change to an attribute
     inputs:
       before: |
         class Order:
@@ -430,7 +431,7 @@ held to the same bar.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
 3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
-   shows up as a failing run, named like `adds a second class [2/20]`.
+   shows up as a failing run, named like `flags a second class added to the file [2/20]`.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -447,7 +448,7 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "patches a" --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "flags a patch" --repeat 20
 codeguard eval --provider gemini --repeat 20
 ```
 
