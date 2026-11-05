@@ -329,6 +329,13 @@ class TestJudgeConfig:
     def test_calls_at_once_sets_the_concurrency(self):
         assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI) == 1
 
+    @pytest.mark.parametrize("provider", [JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI])
+    def test_calls_at_once_leaves_a_cli_a_call_per_cpu(self, provider):
+        assert JudgeConfig(calls_at_once=1).concurrency(provider) == os.process_cpu_count()
+
+    def test_calls_at_once_leaves_bedrock_two_calls_at_once(self):
+        assert JudgeConfig(calls_at_once=5).concurrency(JudgeProvider.BEDROCK) == 2
+
 
 def test_codex_concurrency_uses_the_cli_limit():
     assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI) == os.process_cpu_count()
