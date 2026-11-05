@@ -50,10 +50,10 @@ either way proves nothing about the rule.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code is a problem or why it's fine, and
-  the case's name says that stake: for an `invalid` case the harm, in the terms of the
-  rule's Why; for a `valid` case what the code keeps safe. The code already shows what
-  it does, so a name that describes the code's action or shape is renamed. This holds
-  for every case, the `skipped` one included.
+  the case's name says why: for an `invalid` case the harm, in the terms of the rule's
+  Why; for a `valid` case the situation in which the code keeps the convention; for the
+  `skipped` case what the edit leaves untouched. The code already shows what it does, so
+  a name that describes the code's action or shape is renamed.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by
