@@ -90,10 +90,12 @@ def test_bedrock_passes_its_own_model_id_through(tmp_path):
     arn = "arn:aws:bedrock:us-east-1:123456789012:application-inference-profile/haiku"
     model = JudgeModel(provider=JudgeProvider.BEDROCK, name=arn)
 
-    judge = Judges(store=Cache(tmp_path)).uncached(tmp_path, model)
+    judges = Judges(store=Cache(tmp_path))
+
+    judge = judges.uncached(tmp_path, model)
 
     assert isinstance(judge, GeminiJudge)
-    assert judge.models == BedrockClaude()
+    assert judge.models == BedrockClaude(judges.inference_profiles)
     assert judge.model == arn
 
 

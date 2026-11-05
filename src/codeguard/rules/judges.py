@@ -8,7 +8,12 @@ from diskcache import Cache
 from codeguard.claude_provider import ClaudeDefaultModel, ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import ConfigError, JudgeConfig, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
+from codeguard.gemini_provider import (
+    BedrockClaude,
+    GeminiJudge,
+    InferenceProfileModels,
+    VertexGemini,
+)
 from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
@@ -25,6 +30,8 @@ class Judges:
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     # The model the claude CLI runs when it's given none, given whether it may be asked.
     claude_default_model: Callable[[Path, bool], str | None] = _claude_default_model
+    # The model each Bedrock application inference profile routes to, read once per profile.
+    inference_profiles: InferenceProfileModels = field(default_factory=InferenceProfileModels)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
     default_models: dict[JudgeProvider, str | None] = field(init=False, default_factory=dict)
     default_models_lock: Lock = field(init=False, default_factory=Lock)
@@ -85,7 +92,7 @@ class Judges:
         return GeminiJudge(
             root,
             self.config.bedrock.model_id(model.name),
-            BedrockClaude(),
+            BedrockClaude(self.inference_profiles),
             processes,
             deadline=deadline,
             provider=model.provider,
