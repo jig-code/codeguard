@@ -91,15 +91,16 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
   each ruleset's directory instead of `.codeguard/`.
 - A judge rule whose convention holds in several languages is one rule: its binding's
-  paths name each language, and its eval has cases in each (codeguard's README, A rule
-  in several languages). The skill is written in no language's names, syntax or
-  libraries, and gets no supplement per language. Never copy a convention into a rule
-  per language. A pattern rule matches one language.
+  paths name each language, and its eval has cases in each (codeguard's
+  `docs/rule-packages.md`, A rule in several languages). The skill is written in no
+  language's names, syntax or libraries, and gets no supplement per language. Never
+  copy a convention into a rule per language. A pattern rule matches one language.
 - Before writing a rule, check the rulesets the project opts into in
   `.codeguard/config.yaml`. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.
 
-codeguard's README has the binding and rule eval formats.
+codeguard's `docs/rule-packages.md` has the binding and rule eval formats (The binding,
+The rule eval).
 
 ## Pattern rules
 
