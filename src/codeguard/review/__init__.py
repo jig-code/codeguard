@@ -1,5 +1,5 @@
 from codeguard.review.binding import Binding, Bindings
-from codeguard.review.cached_judge import CachedJudge, ReportedDefault
+from codeguard.review.cached_judge import CachedJudge
 from codeguard.review.check_step import Check, CheckStep
 from codeguard.review.deadline import Deadline
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
@@ -41,7 +41,6 @@ __all__ = [
     "JudgeTimeout",
     "PlannedCall",
     "Review",
-    "ReportedDefault",
     "Reviewer",
     "Severity",
     "Skill",

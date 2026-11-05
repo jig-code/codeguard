@@ -1,9 +1,8 @@
 import hashlib
 import json
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from threading import Lock
 
 import logfire
 from diskcache import Cache
@@ -35,26 +34,16 @@ class _StoredJudgement:
         )
 
 
-@dataclass
-class ReportedDefault:
-    """The model a CLI runs when it is given none, as this process's first run of it reports.
-    Verdicts are cached under it, and none is used before a run reports it, so a verdict
-    judged by an earlier default is never reused."""
-
-    lock: Lock = field(default_factory=Lock)
-    known: bool = False
-    # None once known: the CLI reports no model, so its verdicts can't be cached.
-    model: str | None = None
-
-
 @dataclass(frozen=True)
 class CachedJudge:
     wrapped: Judge
     store: Cache
     root: Path
     version: str = _CACHE_VERSION
-    # Set when the judge names no model, so the CLI's own default judges.
-    default: ReportedDefault | None = None
+    # The model the CLI runs when the judge names none, which keys its verdicts, or None when
+    # the judge names its model; `cacheable` is off when the CLI's model can't be told.
+    default_model: str | None = None
+    cacheable: bool = True
 
     @property
     def identity(self) -> str:
@@ -64,47 +53,28 @@ class CachedJudge:
         with logfire.span(
             "judge {rule} on {file}", rule=request.skill.name, file=request.file
         ) as span:
-            stored = self._judged_or_cached(request, span)
+            key = self._key(request)
+            stored = self._entry(key) if self.cacheable else None
+            changed = stored.changed_files(self._digest_of) if stored else ()
+            span.set_attribute("cache_hit", stored is not None and not changed)
+            span.set_attribute("changed_files", list(changed))
+            if stored is None or changed:
+                judgement = self.wrapped.judge(request)
+                stored = _StoredJudgement(
+                    judgement.verdict,
+                    {file: self._digest_of(file) for file in judgement.loaded_files},
+                )
+                if self.cacheable:
+                    self.store[key] = stored
             span.set_attribute("loaded_files", list(stored.loaded_digests))
             span.set_attribute("violations", len(stored.verdict.violations))
             return Judgement(stored.verdict, tuple(stored.loaded_digests))
 
     def has(self, request: JudgeRequest) -> bool:
-        if self.default is not None and self.default.model is None:
+        if not self.cacheable:
             return False
         stored = self._entry(self._key(request))
         return stored is not None and not stored.changed_files(self._digest_of)
-
-    def _judged_or_cached(
-        self, request: JudgeRequest, span: logfire.LogfireSpan
-    ) -> _StoredJudgement:
-        default = self.default
-        if default is not None and not default.known:
-            with default.lock:
-                if not default.known:
-                    span.set_attribute("cache_hit", False)
-                    judgement = self.wrapped.judge(request)
-                    default.model = judgement.model
-                    default.known = True
-                    return self._stored(request, judgement)
-        if default is not None and default.model is None:
-            span.set_attribute("cache_hit", False)
-            return self._stored(request, self.wrapped.judge(request))
-        stored = self._entry(self._key(request))
-        changed = stored.changed_files(self._digest_of) if stored else ()
-        span.set_attribute("cache_hit", stored is not None and not changed)
-        span.set_attribute("changed_files", list(changed))
-        if stored is None or changed:
-            return self._stored(request, self.wrapped.judge(request))
-        return stored
-
-    def _stored(self, request: JudgeRequest, judgement: Judgement) -> _StoredJudgement:
-        stored = _StoredJudgement(
-            judgement.verdict, {file: self._digest_of(file) for file in judgement.loaded_files}
-        )
-        if self.default is None or self.default.model is not None:
-            self.store[self._key(request)] = stored
-        return stored
 
     def _entry(self, key: str) -> _StoredJudgement | None:
         if key not in self.store:
@@ -125,7 +95,7 @@ class CachedJudge:
         parts = (
             self.version,
             self.identity,
-            (self.default.model or "") if self.default else "",
+            self.default_model or "",
             request.skill.text,
             request.file,
             _digest(request.changes.encode()),

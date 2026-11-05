@@ -13,7 +13,7 @@ class FakeClaudeCLI(FakeCLI):
         parser.add_argument("--model")
         parser.add_argument("--output-format", choices=["stream-json"], required=True)
         parser.add_argument("--verbose", action="store_true")
-        parser.add_argument("--json-schema", type=json.loads, required=True)
+        parser.add_argument("--json-schema", type=json.loads)
         parser.add_argument("--tools", required=True)
         parser.add_argument("--permission-prompts", choices=["none"], required=True)
         parser.add_argument("--system-prompt", required=True)

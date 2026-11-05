@@ -545,20 +545,28 @@ class TestReviewJudgeCache:
         self, repo, tmp_path, make_skill
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
-        repo.write("b.py", "y = 2\n")
+        repo.write(".claude/settings.json", '{"model": "claude-sonnet-5-5"}')
         calls = tmp_path / "calls"
-        configure_fake_cli_response(
-            {"stdout": claude_stream([], model="claude-sonnet-5-5"), "calls": str(calls)}
-        )
+        configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
-        configure_fake_cli_response(
-            {"stdout": claude_stream([], model="claude-opus-5-5"), "calls": str(calls)}
-        )
+        repo.write(".claude/settings.json", '{"model": "claude-opus-5-5"}')
 
         run_review(repo, tmp_path, bin_dir)
 
-        assert calls.read_text() == "called\n" * 5
+        assert calls.read_text() == "called\n" * 2
+
+    def test_cli_is_asked_its_default_once_per_review_when_nothing_names_it(
+        self, repo, tmp_path, make_skill
+    ):
+        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        calls = tmp_path / "calls"
+        configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
+        run_review(repo, tmp_path, bin_dir)
+
+        run_review(repo, tmp_path, bin_dir)
+
+        assert calls.read_text() == "called\n" * 3
 
 
 class TestReviewJudgeErrorsAsWarnings:

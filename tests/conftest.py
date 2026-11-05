@@ -51,6 +51,8 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in list(os.environ):
         if name.startswith("CODEGUARD_JUDGE__"):
             monkeypatch.delenv(name)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
 
 
 @pytest.fixture

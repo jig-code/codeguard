@@ -70,17 +70,15 @@ class BedrockConfig(BaseModel):
 
     # The cross-region inference profile's prefix, such as us, eu or global.
     inference_prefix: str = "us"
-    # An application inference profile's ARN, sent as the model id in place of the profile.
-    inference_profile: str | None = None
 
     def model_id(self, model: str) -> str:
-        """The cross-region inference profile that runs a model named by its vendor's id."""
+        """The id Bedrock runs a model by: a Claude or GPT model named by its vendor's id maps
+        to its cross-region inference profile; any other id, such as an application
+        inference profile's ARN, is Bedrock's own and passes through as is."""
         vendors = [
             vendor for prefix, vendor in _BEDROCK_VENDORS.items() if model.startswith(prefix)
         ]
-        if not vendors:
-            raise ConfigError(f"bedrock runs Claude and GPT models, not {model}")
-        return f"{self.inference_prefix}.{vendors[0]}.{model}"
+        return f"{self.inference_prefix}.{vendors[0]}.{model}" if vendors else model
 
 
 class JudgeConfig(BaseModel):

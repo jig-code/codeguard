@@ -26,11 +26,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    # The role allows only application inference profiles, so the judge routes through one.
+    # The role allows only application inference profiles, so the model is Haiku's profile ARN.
     env:
       CODEGUARD_JUDGE__PROVIDER: bedrock
-      CODEGUARD_JUDGE__MODEL: claude-haiku-5-5
-      CODEGUARD_JUDGE__BEDROCK__INFERENCE_PROFILE: ${{ vars.CODEGUARD_INFERENCE_PROFILE }}
+      CODEGUARD_JUDGE__MODEL: ${{ vars.CODEGUARD_JUDGE_MODEL }}
     steps:
       - uses: actions/checkout@v7
         with:

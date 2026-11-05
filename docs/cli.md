@@ -51,7 +51,7 @@ Options to judge part of a package, or with another model:
   judge the cases matching any of them. A rule with no matching case is left out.
 - `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or
   `--provider bedrock` judges every selected rule with that provider; it overrides only
-  the provider. `--model` names the model by its vendor's id; it overrides only the model,
+  the provider. `--model` names the model by its vendor's id, or by the provider's own id; it overrides only the model,
   with or without `--provider`. Without `--model`,
   the model comes from the binding, else the project's default, else the package's
   default ([Configure the judge](configuration.md#configure-the-judge)); with none,

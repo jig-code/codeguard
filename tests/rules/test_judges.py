@@ -1,9 +1,11 @@
-import pytest
+from dataclasses import dataclass, field
+from pathlib import Path
+
 from diskcache import Cache
 
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import BedrockConfig, ConfigError, JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import BedrockConfig, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge
 from codeguard.rules.judges import Judges
 
@@ -84,44 +86,84 @@ def test_bedrock_profile_takes_the_configured_prefix(tmp_path):
     assert judge.model == "eu.anthropic.claude-haiku-5-5"
 
 
-def test_bedrock_routes_through_the_configured_application_profile(tmp_path):
+def test_bedrock_passes_its_own_model_id_through(tmp_path):
     arn = "arn:aws:bedrock:us-east-1:123456789012:application-inference-profile/haiku"
-    config = JudgeConfig(bedrock=BedrockConfig(inference_profile=arn))
-    model = JudgeModel(provider=JudgeProvider.BEDROCK, name="claude-haiku-5-5")
+    model = JudgeModel(provider=JudgeProvider.BEDROCK, name=arn)
 
-    judge = Judges(config, store=Cache(tmp_path)).uncached(tmp_path, model)
+    judge = Judges(store=Cache(tmp_path)).uncached(tmp_path, model)
 
     assert isinstance(judge, GeminiJudge)
-    assert judge.models == BedrockClaude(arn)
-    assert judge.model == "us.anthropic.claude-haiku-5-5"
+    assert judge.models == BedrockClaude()
+    assert judge.model == arn
 
 
-def test_bedrock_model_of_another_vendor_is_an_error(tmp_path):
-    model = JudgeModel(provider=JudgeProvider.BEDROCK, name="gemini-3.1-pro-preview")
+@dataclass
+class RecordedDefault:
+    """A claude default model lookup that records whether each call could probe."""
 
-    with pytest.raises(ConfigError) as error:
-        Judges(store=Cache(tmp_path)).uncached(tmp_path, model)
+    model: str | None = "claude-a"
+    found_only_by_probe: bool = False
+    asked: list[bool] = field(default_factory=list)
 
-    assert str(error.value) == "bedrock runs Claude and GPT models, not gemini-3.1-pro-preview"
-
-
-@pytest.mark.parametrize("provider", [JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI])
-def test_cli_judge_without_a_model_runs_the_cli_default(tmp_path, provider):
-    judge = Judges(store=Cache(tmp_path)).uncached(tmp_path, JudgeModel(provider=provider))
-
-    assert isinstance(judge, ClaudeJudge | CodexJudge)
-    assert judge.model is None
+    def __call__(self, root: Path, probe: bool) -> str | None:
+        self.asked.append(probe)
+        return self.model if probe or not self.found_only_by_probe else None
 
 
-@pytest.mark.parametrize("provider", [JudgeProvider.GEMINI, JudgeProvider.BEDROCK])
-def test_api_judge_without_a_model_is_an_error(tmp_path, provider):
-    judges = Judges(store=Cache(tmp_path))
+class TestCliDefaultModel:
+    def test_claude_default_is_resolved_before_any_judging(self, tmp_path):
+        default = RecordedDefault()
+        judges = Judges(store=Cache(tmp_path), claude_default_model=default)
 
-    with pytest.raises(ConfigError) as error:
-        judges.uncached(tmp_path, JudgeModel(provider=provider))
+        judge = judges.cached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
 
-    assert str(error.value) == (
-        f"provider {provider} needs a model: name one in the rule's binding, in judge.model in "
-        ".codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or in judge.model in its "
-        "package's codeguard-package.yaml"
-    )
+        assert default.asked == [True]
+        assert judge.default_model == "claude-a"
+        assert judge.cacheable
+
+    def test_claude_default_is_resolved_once_per_run(self, tmp_path):
+        default = RecordedDefault()
+        judges = Judges(store=Cache(tmp_path), claude_default_model=default)
+        model = JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+
+        judges.cached(tmp_path, model)
+        judges.cached(tmp_path, model)
+
+        assert default.asked == [True]
+
+    def test_unknown_claude_default_is_not_cached(self, tmp_path):
+        judges = Judges(store=Cache(tmp_path), claude_default_model=RecordedDefault(model=None))
+
+        judge = judges.cached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
+
+        assert not judge.cacheable
+
+    def test_dry_run_without_a_probe_asks_again_when_judging(self, tmp_path):
+        default = RecordedDefault(found_only_by_probe=True)
+        judges = Judges(store=Cache(tmp_path), claude_default_model=default)
+        model = JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+
+        planned = judges.cached(tmp_path, model, probe=False)
+        judged = judges.cached(tmp_path, model)
+
+        assert default.asked == [False, True]
+        assert not planned.cacheable
+        assert judged.default_model == "claude-a"
+
+    def test_codex_without_a_model_is_not_cached(self, tmp_path):
+        judges = Judges(store=Cache(tmp_path), claude_default_model=RecordedDefault())
+
+        judge = judges.cached(tmp_path, JudgeModel(provider=JudgeProvider.CODEX_CLI))
+
+        assert not judge.cacheable
+
+    def test_named_model_needs_no_default(self, tmp_path):
+        default = RecordedDefault()
+        judges = Judges(store=Cache(tmp_path), claude_default_model=default)
+
+        judge = judges.cached(
+            tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="claude-haiku-5-5")
+        )
+
+        assert default.asked == []
+        assert judge.default_model is None

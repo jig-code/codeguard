@@ -261,19 +261,8 @@ class TestClaudeJudge:
         assert judgement == Judgement(
             Verdict(
                 reason="Judged.", violations=(make_violation(message="Move it.", confidence=0.5),)
-            ),
-            model="claude-sonnet-5-5",
+            )
         )
-
-    def test_judgement_names_the_model_claude_turns_report(
-        self, tmp_path, processes, make_judge_request
-    ):
-        turn = {"type": "assistant", "message": {"model": "claude-opus-5-5", "content": []}}
-        judge = judge_answering(tmp_path, processes, turn)
-
-        judgement = judge.judge(make_judge_request())
-
-        assert judgement.model == "claude-opus-5-5"
 
     def test_loaded_files_are_the_files_claude_read(self, tmp_path, processes, make_judge_request):
         judge = judge_answering(

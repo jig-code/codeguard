@@ -112,22 +112,30 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().confidence_threshold == 0.8
 
-    def test_loads_the_bedrock_settings(self, repo):
-        repo.write(
-            CONFIG,
-            "judge:\n  bedrock:\n    inference_prefix: eu\n    inference_profile: arn:profile\n",
-        )
-
-        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(
-            inference_prefix="eu", inference_profile="arn:profile"
-        )
-
-    def test_bedrock_inference_profile_env_var_keeps_the_file_prefix(self, repo, monkeypatch):
+    def test_loads_the_bedrock_inference_prefix(self, repo):
         repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__BEDROCK__INFERENCE_PROFILE", "arn:profile")
 
-        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(
-            inference_prefix="eu", inference_profile="arn:profile"
+        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(inference_prefix="eu")
+
+    def test_bedrock_inference_profile_is_an_error(self, repo):
+        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_profile: arn:profile\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.bedrock.inference_profile: Extra inputs are not permitted"
+        )
+
+    def test_nested_env_var_keeps_the_file_other_nested_settings(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
+
+        config = ConfigLoader(repo.root).load()
+
+        assert config.judge == JudgeConfig(
+            model="env-model", bedrock=BedrockConfig(inference_prefix="eu")
         )
 
     def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):

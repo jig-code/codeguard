@@ -107,7 +107,6 @@ judge:
   provider: bedrock                 # claude-cli (default), codex-cli, bedrock or gemini
   bedrock:
     inference_prefix: us            # the cross-region inference profile's prefix; default us
-    # inference_profile: arn:aws:bedrock:…:application-inference-profile/…  # routes through this ARN instead
   project: my-project               # Vertex AI; default GOOGLE_CLOUD_PROJECT
   location: global                  # default GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                  # Gemini only
@@ -140,8 +139,8 @@ deadline. Authentication failures, capacity errors and other process errors fail
 immediately, without retries or a separate per-call time limit.
 
 Codex uses the existing verdict cache keyed on the judge inputs and reviewed source,
-when a model is named: the `codex` CLI doesn't report the model it ran, so with none named
-its verdicts aren't cached.
+when a model is named: the `codex` CLI doesn't expose its default model, so with none
+named its verdicts aren't cached.
 Its native tools discover related repository code as the rule requires. Native events
 do not provide complete file-read tracking, so Codex does not populate `loaded_files`
 for additional context-file invalidation. Claude and Gemini tracking are unchanged.
@@ -266,10 +265,9 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `ast-grep` | the version codeguard installs | The ast-grep version every pattern rule and gate runs with, through `uv tool run`. | One version for every rule, so a rule matches the same code on every machine. codeguard fails when it is outside a package's `ast-grep` range. |
 | `packages` | none | The rule packages and rulesets the project uses; see [Rules](#rules). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
 | `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity; see [Rules](#rules). | |
-| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, by its vendor's id, over a package's default; see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
+| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, over a package's default: by its vendor's id, which the provider maps, or by the provider's own id, such as a Bedrock application inference profile's ARN, which it passes through; see [Configure the judge](#configure-the-judge). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
 | `judge.provider` | `claude-cli` | Where the model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, `gemini` for Gemini. A model that isn't a Claude model needs it set; with none, it is a configuration error. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
 | `judge.bedrock.inference_prefix` | `us` | The cross-region inference profile prefix Bedrock requests use: `<prefix>.<vendor>.<model>`, `anthropic` or `openai`. | A model is named once, by its vendor's id; where it runs is the environment's. |
-| `judge.bedrock.inference_profile` | none | An application inference profile ARN to send as the model id instead. | Some accounts must route through one. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. A `claude` call mostly waits on the network, so it follows the machine. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). | |
 

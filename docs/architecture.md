@@ -107,10 +107,13 @@ service account.
 
 Global settings stay global, in `.codeguard/config.yaml`: the default model,
 `calls_at_once` (Gemini only), the Vertex AI project and location, and the Bedrock
-inference profile.
+inference prefix. codeguard is driven by a provider and a model, and nothing else names
+the model a request runs.
 
 A model is named once, by the id its vendor gives it, and each provider maps that id onto
-its own API:
+its own API. A model may instead be named by the provider's own id, such as a Bedrock
+application inference profile's ARN, which the provider passes through as is, as the
+`claude` CLI's `--model` does:
 
 - A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
   `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
@@ -119,10 +122,9 @@ its own API:
   `anthropic` for a Claude model and `openai` for a GPT model:
   `us.anthropic.claude-haiku-5-5`, `us.openai.gpt-6-luna`. The prefix is the project's
   `judge.bedrock.inference_prefix` (`us` unless set; pydantic-ai also lists `global`,
-  `eu`, `au` and `jp`). A project that must route through an application inference
-  profile sets `judge.bedrock.inference_profile` to its ARN, which pydantic-ai sends as
-  the request's `modelId` in place of the model name (its `bedrock_inference_profile`
-  setting). So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
+  `eu`, `au` and `jp`). Any other id, such as an application inference profile's ARN for
+  an account that must route through one, is Bedrock's own and is sent as the request's
+  `modelId` as is. So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku
   5.5 on the CLI locally and on Bedrock in CI, with no other change, in a project that
   sets no model of its own.
 - A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
@@ -281,11 +283,14 @@ onto its API.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
   the cache keys on the id the provider sends, which for Bedrock is the inference profile
   derived from the vendor's id (Judge configuration). When no level names a model, the
-  cache keys on the model the CLI reports it ran: each review's first call to that CLI is
-  judged, never served from the cache, and later calls in the review reuse only verdicts
-  of the model that call reported, so a change of the CLI's default model is never served
-  a verdict of the old one. A CLI that reports no model, as the `codex` CLI doesn't, has
-  its verdicts cached only when a model is named.
+  model is still known before any judging: at the start of a run, codeguard reads the
+  model the `claude` CLI will run from where the CLI reads it (`ANTHROPIC_MODEL`, then the
+  `env` and then the `model` of its managed, local, project and user settings, in that
+  order), and when those name none, or only an alias such as `opus`, it makes one small
+  CLI call that reports it. Every verdict in the run is keyed on that model, so a change of
+  the CLI's default model is never served a verdict of the old one. A dry run never makes
+  that call. The `codex` CLI doesn't expose its default model, so with no model named its
+  verdicts aren't cached.
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
