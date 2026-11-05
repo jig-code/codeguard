@@ -103,7 +103,7 @@ skill is loaded.
 and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
 prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI, where
 it judges only through pydantic-ai with the environment's credentials; the `claude` CLI
-is never run against a model in CI (#16).
+is never run against a model in CI ([principle 16](#invariants)).
 
 ### Judge configuration
 
@@ -136,7 +136,7 @@ key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and `CODEGUARD_JUDGE__MODEL
 means nothing: the file's value stands, or the key is absent and the next level applies.
 No code knows the surface. CI never uses a subscription or a CLI tool: it judges
 through pydantic-ai, Claude on Bedrock or Gemini on Vertex AI, with the environment's
-credentials (#16). This
+credentials ([principle 16](#invariants)). This
 configures codeguard reviewing a project in CI, codeguard reviewing itself included;
 codeguard's pytest LLM tests and skill evals are a different configuration, unchanged by
 it.
@@ -173,7 +173,7 @@ its own API:
 A rule package's CI runs its rule evals as a matrix over the supported models, today
 Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock, with `codeguard eval --provider`
 and `--model` overriding every rule's binding for that run, so a rule passes whichever
-model a user picks (#22). A project's CI judges with the environment's credentials: AWS
+model a user picks ([principle 22](#invariants)). A project's CI judges with the environment's credentials: AWS
 credentials for Bedrock, a service account for Vertex AI.
 
 ### Testing a rule
@@ -189,7 +189,7 @@ credentials for Bedrock, a service account for Vertex AI.
 - Follow the writing-rules reference's
   [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
   including its treatment of deliberate pre-existing violations in scope cases.
-- In a rule package's CI, every rule eval runs on each supported model (#22). The bar is
+- In a rule package's CI, every rule eval runs on each supported model ([principle 22](#invariants)). The bar is
   20 of 20 runs for a new or changed rule and 3 of 3 otherwise.
 
 ## Invariants
@@ -215,7 +215,7 @@ the code refer to.
    prompt on every surface and machine. What the judge reads with its tools comes from the
    same files on every surface. Providers with file-read tracking record those dependencies.
    The verdict itself may vary,
-   within the bounds #8 sets.
+   within the bounds [principle 8](#invariants) sets.
 6. The judge sees only what the harness passes it and what it reads with read-only tools
    from the review's files. No user or project config, CLAUDE.md, hooks, plugins or other
    skills reach it.
@@ -226,7 +226,7 @@ the code refer to.
    critical concerns, and triggers remove the rules whose code the change can't reach.
    Change classification may remove a candidate only by deciding the change cannot make it
    fail; a failed or timed-out classification keeps every candidate. Choosing rules that
-   no binding maps is out of scope until it can satisfy #2. Code decides each step's
+   no binding maps is out of scope until it can satisfy [principle 2](#invariants). Code decides each step's
    prompt.
 8. Only three steps call a model: change classification, the judge and verify. Caching,
    recall tests and confidence gating bound their variation. Every other step is
@@ -244,7 +244,7 @@ the code refer to.
     default: a failed judge call takes its rule's severity, and locally the Stop hook
     blocks once, then lets the stop through. A bypass is explicit and per change, never
     the default.
-12. Write-time hooks block only for: the applicable skill not loaded (#10), a failed
+12. Write-time hooks block only for: the applicable skill not loaded ([principle 10](#invariants)), a failed
     deterministic check, or a high-confidence violation.
 13. Severity decides blocking: an `error` blocks the Stop hook and CI; `warning`, `info`
     and `hint` never block. A pattern rule's severity is in its YAML; a judge rule's is its
@@ -331,7 +331,7 @@ onto its API.
   are sent; for a new file, or with `--all`, the whole file is sent. The template tells
   the judge that the whole file is at its path, and to read it, or any other file, when
   the rule needs more.
-- **Isolation (#6).** The `claude` CLI provider runs `claude --safe-mode`, which loads no
+- **Isolation ([principle 6](#invariants)).** The `claude` CLI provider runs `claude --safe-mode`, which loads no
   CLAUDE.md, skills, plugins, hooks, MCP servers or memory. Its tools are read-only and
   rooted at the repository. It runs no subagents. The `codex` CLI provider runs `codex
   exec` in a read-only sandbox with project instructions, hooks, plugins, memories and
@@ -348,5 +348,5 @@ onto its API.
   directory points to an allowed exception; 0.5 when a violation is as likely as not;
   below 0.5, not reported. The scale never rewards resemblance to an example: rules hold
   none.
-- **Determinism (#5).** Claude Code adds the date, the account and the working directory
+- **Determinism ([principle 5](#invariants)).** Claude Code adds the date, the account and the working directory
   to the message. Those are the only inputs codeguard doesn't control.
