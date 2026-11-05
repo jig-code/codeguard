@@ -569,6 +569,37 @@ class TestReviewJudgeCache:
         assert calls.read_text() == "called\n" * 3
 
 
+class TestReviewWithoutGoogleCredentials:
+    def test_gemini_rule_is_a_judge_error_at_its_severity(self, repo, tmp_path, make_skill):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "severity: warning\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+        )
+        repo.commit("Bind the skill")
+        repo.write("a.py", "x = 1\n")
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith(("GOOGLE_", "GEMINI_", "CLOUDSDK_"))
+        }
+
+        result = subprocess.run(
+            [CODEGUARD, "review"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**environment, "HOME": str(tmp_path), "NO_GCE_CHECK": "True"},
+        )
+
+        assert result.stdout.startswith(
+            "a.py: warning placement: The judge call failed, so this rule was not checked."
+        )
+        assert "Gemini on Vertex AI found no Google credentials: " in result.stdout
+        assert result.returncode == 0
+
+
 class TestReviewJudgeErrorsAsWarnings:
     def test_judge_error_fails_the_review_without_the_flag(self, repo, tmp_path, make_skill):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
