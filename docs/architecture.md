@@ -45,24 +45,24 @@ violation could appear.
 **The review pipeline** runs in the Stop hook, in CI and in `codeguard review`:
 
 1. Take the changeset.
-2. Bindings and triggers pick the candidate rules.
+2. Pick the candidate rules.
 3. Pattern rules run. A file with a blocking pattern diagnostic skips the judge.
-4. Classify (planned): a model drops the rules the change can't make fail.
+4. Classify (planned): a model call narrows the candidates.
 5. The judge makes one call per rule and file.
 6. Verify (gated): a second model call confirms each violation.
 7. The confidence threshold applies: a violation below 0.9 is reported as a warning,
    never dropped.
-8. The results merge into one.
 
-**The judge** grades one rule against one file's change. The providers are the `claude` CLI in safe mode and the `codex` CLI in a
-read-only sandbox (Claude and GPT on the developer's subscription), and Amazon Bedrock
-(Claude and GPT) and Gemini on Vertex AI (both pydantic-ai, with equivalent tools).
-Judge configuration, below, says which one judges a rule.
+**The judge** grades one rule against one file's change. The providers are the `claude`
+CLI in safe mode and the `codex` CLI in a read-only sandbox (Claude and GPT on the
+developer's subscription), and Amazon Bedrock (Claude and GPT) and Gemini on Vertex AI
+(both pydantic-ai, with equivalent tools). Judge configuration, below, says which one
+judges a rule.
 
 - Its input: the judge template, which holds the instructions; the skill text; the
   `changes` element, an excerpt of the changed code with `+`, space and `-` marks and the
-  file's own line numbers; and read-only tools (Read, Grep, Glob) over the repository at
-  the change.
+  file's own line numbers; and the tools Read, Grep and Glob over the repository at the
+  change.
 - What it reads: the prompt holds what the judge will certainly need. The judge decides
   from the rule what else to read, and reads it with its tools. The prompt never says
   what to read or when. When a model fails to read what an obvious case needs, that is a
@@ -76,8 +76,8 @@ code and whole file. When a provider exposes file-read tracking, recorded contex
 changes also invalidate the verdict. Evals and CI never use the cache.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
-or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies an edit until the file's
-skill is loaded.
+or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies an
+edit until the file's skill is loaded.
 
 **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
 and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
@@ -96,13 +96,16 @@ names a model wins, codeguard passes that model explicitly, and `--provider` and
    `codeguard-package.yaml`: what the package's rules were written and evaluated
    against.
 
+When no level names a model, codeguard runs the provider's CLI with no `--model` flag,
+so the CLI's own default judges, as it does for the user. A Bedrock or Vertex AI run
+needs a model named by configuration.
+
 The project config is a pydantic-settings model. Its sources, in priority order: values
 passed in code, then environment variables, then `.codeguard/config.yaml` (a YAML
 source codeguard places below the environment), then field defaults. An environment
-variable named after a key
-overrides the file: with the prefix `CODEGUARD_` and `__` between the parts of a nested
-key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and `CODEGUARD_JUDGE__MODEL` is
-`judge.model`. That is the whole CI mechanism: the CI workflow sets them to `bedrock` or
+variable named after a key overrides the file: with the prefix `CODEGUARD_` and `__`
+between the parts of a nested key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and
+`CODEGUARD_JUDGE__MODEL` is `judge.model`. That is the whole CI mechanism: the CI workflow sets them to `bedrock` or
 `gemini` with the model, and the project config needs no line for it. An unset variable
 means nothing: the file's value stands, or the key is absent and the next level applies.
 The variables configure codeguard reviewing a project in CI, codeguard reviewing itself
@@ -135,9 +138,7 @@ its own API:
 - `provider` names where a Claude or GPT model runs: `claude-cli` (the default) or
   `bedrock` for a Claude model, `codex-cli` or `bedrock` for a GPT model. A GPT model
   needs `provider` set: with none, it is a configuration error that says to set it. A
-  provider the surface can't use, such as a CLI in CI, is an error, never a fallback.
-- The verdict cache keys on the id the provider sends (for Bedrock, the derived profile),
-  so the configured name is never an alias and a model change is visible to the cache.
+  provider the surface can't use is an error, never a fallback.
 
 A rule package's CI runs its model matrix with `codeguard eval --provider` and
 `--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
@@ -157,8 +158,7 @@ A rule package's CI runs its model matrix with `codeguard eval --provider` and
 
 ## Invariants
 
-Every design must satisfy these. Each number is a stable identifier that other docs and
-the code refer to.
+Every design must satisfy these.
 
 **Single source**
 
@@ -213,10 +213,7 @@ the code refer to.
     binding's (default `error`). A project may override a package rule's severity or
     exclude the rule; an override is a bypass, and the Stop hook tells the agent not to use
     one to silence errors. CI never makes fixes.
-
-<!-- A new list, so Markdown keeps the number 20. -->
-
-20. A review checks the change, not the files it touches:
+14. A review checks the change, not the files it touches:
     - A rule runs only when the change could make it fail.
     - A violation is reported only when the changed code is part of it, whether or not
       the base already had it. A changed line that breaks a rule is reported, so code a
@@ -228,39 +225,29 @@ the code refer to.
       other functions, and the other blocks of a statement (an edit to a `try` block
       doesn't make its untouched `except` part of the change). The judge may read them as
       context.
-21. The judge reports violations, never fixes. At Stop, the agent's session, which has the
+15. The judge reports violations, never fixes. At Stop, the agent's session, which has the
     skill loaded, decides the fix; CI only reports. Skill text states what breaks the
     rule, not how to change the code.
 
 **Scale and cost**
 
-14. Independent concerns are judged in parallel, one request each, on every surface.
+16. Independent concerns are judged in parallel, one request each, on every surface.
     Their diagnostics merge into one result.
-15. Every stage records its time and cost. Optimizations wait until metrics show where
+17. Every stage records its time and cost. Optimizations wait until metrics show where
     time and cost go.
-16. Which judge runs is configuration, never code that knows the surface: a binding's
-    provider and model, else the project's default, else the rule package's default;
-    when none names a model, the provider's CLI with no `--model` flag, so its own
-    default judges: codeguard has no built-in model, and a Bedrock or Vertex AI run
-    needs a model named by configuration. Switching providers costs one or two
-    configuration values, and the whole system follows. Local judging may use a Claude
-    or ChatGPT subscription through the `claude` or `codex` CLI. CI never uses a
-    subscription or a CLI tool:
-    it judges only through pydantic-ai, Claude on Bedrock or Gemini on Vertex AI, with
-    the environment's credentials, and the project's config takes its judge from
-    environment variables through pydantic-settings, which the CI workflow sets. The
-    `claude` CLI is never run against a model in CI; unit tests cover that it is called
-    and its output consumed.
+18. Which judge runs is configuration, never code that knows the surface. Switching
+    providers costs one or two configuration values, and the whole system follows.
+    codeguard has no built-in model. CI never uses a subscription or a CLI tool: it
+    judges through pydantic-ai with the environment's credentials. The `claude` CLI never
+    runs against a model in CI; unit tests cover that it is called and its output
+    consumed.
 
 **Portability**
 
-17. The framework has no rules built in and depends on no language. Content is
+19. The framework has no rules built in and depends on no language. Content is
     discovered at runtime.
-18. Claude Code and Codex are supported equally, each through its own adapter.
-19. An existing tool or host feature is used whenever it satisfies the other invariants.
-
-<!-- A new list, so Markdown keeps the number 22. -->
-
+20. Claude Code and Codex are supported equally, each through its own adapter.
+21. An existing tool or host feature is used whenever it satisfies the other invariants.
 22. A rule passes whichever model a user picks: a rule package's CI runs every rule eval
     on each supported model, overriding each rule's binding for that run. The bar is 20
     of 20 for a new or changed rule and 3 of 3 otherwise, in CI.
@@ -293,14 +280,14 @@ onto its API.
   are sent; for a new file, or with `--all`, the whole file is sent. The template tells
   the judge that the whole file is at its path, and to read it, or any other file, when
   the rule needs more.
-- **Isolation.** The `claude` CLI provider runs `claude --safe-mode`, which loads no
-  CLAUDE.md, skills, plugins, hooks, MCP servers or memory. Its tools are read-only and
-  rooted at the repository. It runs no subagents. The `codex` CLI provider runs `codex
-  exec` in a read-only sandbox with project instructions, hooks, plugins, memories and
-  web search off. The Bedrock and Gemini providers have equivalent read-only tools.
+- **Isolation.** The `claude` CLI provider runs `claude --safe-mode`, which also leaves
+  out MCP servers and memory, and runs no subagents. The `codex` CLI provider runs
+  `codex exec` in a read-only sandbox with project instructions, memories and web search
+  off. The Bedrock and Gemini providers have the equivalent tools, rooted at the
+  repository.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
-  the id the provider sends, which for Bedrock is the inference profile derived from the
-  vendor's id (Judge configuration).
+  the cache keys on the id the provider sends, which for Bedrock is the inference profile
+  derived from the vendor's id (Judge configuration).
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
