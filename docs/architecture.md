@@ -91,10 +91,11 @@ written and evaluated against). [Configure the
 judge](configuration.md#configure-the-judge) states the rule, with its defaults and the
 eval overrides. codeguard passes a resolved model explicitly.
 
-The project config is a pydantic-settings model. Its sources, in priority order: values
-passed in code, then environment variables, then `.codeguard/config.yaml` (a YAML
-source codeguard places below the environment), then field defaults. An environment
-variable named after a key overrides the file: with the prefix `CODEGUARD_` and `__`
+The project config is a pydantic-settings model. Its sources, in priority order:
+environment variables, then `.codeguard/config.yaml`, then field defaults. codeguard
+passes the file's values to the model, which places them below the environment, and
+nothing ranks above the environment. An environment variable named after any key
+overrides the file: with the prefix `CODEGUARD_` and `__`
 between the parts of a nested key, `CODEGUARD_JUDGE__PROVIDER` is `judge.provider` and
 `CODEGUARD_JUDGE__MODEL` is `judge.model`. That is the whole CI mechanism: the CI workflow sets them to `bedrock` or
 `gemini` with the model, and the project config needs no line for it. An unset variable
@@ -127,9 +128,10 @@ its own API:
 - A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
   `provider: gemini`.
 - `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
-  Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model. A
-  GPT model needs `provider` set: with none, it is a configuration error that says to
-  set it. A provider the surface can't use is an error, never a fallback.
+  Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model.
+  Any model that isn't a Claude model needs `provider` set: with none, it is a
+  configuration error that says to set it. A provider the surface can't use is an error,
+  never a fallback.
 
 A rule package's CI runs its model matrix with `codeguard eval --provider` and
 `--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
@@ -278,7 +280,12 @@ onto its API.
   repository.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
   the cache keys on the id the provider sends, which for Bedrock is the inference profile
-  derived from the vendor's id (Judge configuration).
+  derived from the vendor's id (Judge configuration). When no level names a model, the
+  cache keys on the model the CLI reports it ran: each review's first call to that CLI is
+  judged, never served from the cache, and later calls in the review reuse only verdicts
+  of the model that call reported, so a change of the CLI's default model is never served
+  a verdict of the old one. A CLI that reports no model, as the `codex` CLI doesn't, has
+  its verdicts cached only when a model is named.
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
