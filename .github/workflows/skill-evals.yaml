@@ -7,7 +7,10 @@ concurrency:
   cancel-in-progress: true
 # A case's score is the mean over its runs of the fraction of its graders that pass, so
 # --threshold 1 passes a case only when every grader passes in every run. The agent runs
-# on the pinned Opus profile and the graders on the pinned Haiku profile.
+# on Opus 5.5 and the graders on Haiku 5.5, unless repository variables override them.
+# For diagnosis only, each job uploads its results, the full JSON result with the
+# graders' explanations, and each run's trace.jsonl, which --keep-temp keeps under
+# TMPDIR. The graders still read only the files the agent wrote.
 jobs:
   # One run of every case verifies the change.
   skill-evals-validity:
@@ -22,16 +25,26 @@ jobs:
         with:
           role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
           aws-region: us-west-2
+      - run: mkdir -p "$RUNNER_TEMP/skill-evals" evals/results
       - run: >-
           claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1
           --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL"
           --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL"
+          --keep-temp --json evals/results/full-result.json
           --trust-plugin --no-publish
         env:
+          TMPDIR: ${{ runner.temp }}/skill-evals
           CLAUDE_CODE_USE_BEDROCK: 1
           AWS_REGION: us-west-2
-          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
-          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL || 'us.anthropic.claude-opus-5-5' }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL || 'us.anthropic.claude-haiku-5-5' }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: skill-evals-validity-results
+          path: |
+            evals/results/
+            ${{ runner.temp }}/skill-evals/**/trace.jsonl
   # Nine more runs of every case, for 10 of 10; every run completes.
   skill-evals-reliability:
     needs: skill-evals-validity
@@ -46,13 +59,23 @@ jobs:
         with:
           role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
           aws-region: us-west-2
+      - run: mkdir -p "$RUNNER_TEMP/skill-evals" evals/results
       - run: >-
           claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1
           --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL"
           --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL"
+          --keep-temp --json evals/results/full-result.json
           --trust-plugin --no-publish
         env:
+          TMPDIR: ${{ runner.temp }}/skill-evals
           CLAUDE_CODE_USE_BEDROCK: 1
           AWS_REGION: us-west-2
-          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
-          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL || 'us.anthropic.claude-opus-5-5' }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL || 'us.anthropic.claude-haiku-5-5' }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: skill-evals-reliability-results
+          path: |
+            evals/results/
+            ${{ runner.temp }}/skill-evals/**/trace.jsonl

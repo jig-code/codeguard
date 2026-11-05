@@ -33,10 +33,14 @@ CI runs them when `skills/writing-rules/`, `evals/writing-rules/` or their workf
 changes, through Bedrock, in two passes. The validity pass runs every case once to
 verify the change. Once it passes with nothing changed since, the reliability pass runs
 every case 9 more times, to the end, and reports each case's score. A case passes when
-every grader passes in all 10 runs. Any change starts again at the validity pass. The
-agent runs on Claude Opus 5.5, the model in the `SKILL_EVALS_AGENT_BEDROCK_MODEL`
-repository variable, and the graders on Claude Haiku 5.5, the model in
-`SKILL_EVALS_GRADER_BEDROCK_MODEL`.
+every grader passes in all 10 runs. Any change starts again at the validity pass.
+
+The agent runs on Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`) and the graders on
+Claude Haiku 5.5 (`us.anthropic.claude-haiku-5-5`), each by its Bedrock cross-region
+inference profile. The repository variables `SKILL_EVALS_AGENT_BEDROCK_MODEL` and
+`SKILL_EVALS_GRADER_BEDROCK_MODEL` are optional: each, when set, overrides its own
+default, for example with an application inference profile ARN. `CLAUDE_AWS_ROLE`, the
+AWS role CI assumes, is required.
 
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
@@ -53,6 +57,12 @@ claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 
 CI runs the two as separate jobs, the second starting when the first passes.
 `claude plugin eval` has no option to stop at the first failing case, so the validity
 pass runs every case once before it fails.
+
+For diagnosis, each CI job also passes `--keep-temp` and `--json`, and uploads a
+`skill-evals-validity-results` or `skill-evals-reliability-results` artifact. It holds
+`aggregate-result.json`, `report.html`, `full-result.json` with each grader's
+explanation, and each run's `trace.jsonl`. The graders still read only the files the
+agent wrote; the traces are only for finding out why a case failed.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
