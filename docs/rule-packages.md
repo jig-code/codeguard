@@ -77,24 +77,8 @@ Python and TypeScript files. A path names a language by its file extension; code
 knows javascript (`js`, `jsx`, `mjs`, `cjs`), python (`py`, `pyi`), ruby (`rb`) and
 typescript (`ts`, `tsx`, `mts`, `cts`).
 
-A language's forms of the convention go in a supplement beside the skill, named after
-the language:
+A path without an extension, like `src/**`, matches every language.
 
-```
-skills/<id>/
-  SKILL.md                   # the convention, in no language's terms
-  python.md                  # optional: the convention's forms in Python
-  typescript.md
-```
-
-- The judge gets `SKILL.md`, then the supplement for the reviewed file's language, if
-  there is one.
-- A supplement named after no language codeguard knows, or after a language the
-  binding's paths don't match, is an error. A path without an extension, like `src/**`,
-  matches every language.
-- A rule's version in a language covers `SKILL.md`, that language's supplement, its
-  triggers and paths. A change to `SKILL.md` needs every language's eval to pass again;
-  a change to a supplement, only its language's.
 - When the paths name more than one language, `codeguard eval` reports each language
   apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
   needs an `invalid` case.
@@ -149,12 +133,15 @@ so the blank line before a new method doesn't make its class part of the change.
 holding only comments and docstrings touches only `comment` and `docstring`, not the
 function or class around it: prose breaks no code rule. A rule
 that needs every change says `triggers: [any]`; `codeguard test` warns on `any`, `code`,
-`function-body` and `function-signature`. The writing-rules skill's
-[judge-rules reference](../skills/writing-rules/references/judge-rules.md#gate-every-form-of-the-violation)
-lists the built-in kinds. Three come from the diff: `definition-added-or-removed` (a def
-or class name added or removed), `code` (any line that is not only a comment or
-docstring) and `any`. The syntax table in `src/codeguard/syntax/languages/` defines each
-of the others as an ast-grep rule.
+`function-body` and `function-signature`. The built-in kinds are `comment`, `docstring`,
+`import`, `function-signature`, `function-body`, `test-function`, `fixture`, `helper-function`,
+`class-header`, `class-attribute`, `module-statement`, `annotation`, `call`,
+`control-flow`, `return-yield`, `collection-literal`, `string-literal`,
+`number-literal`, `attribute-access`, `subscript`, `conditional-expression`,
+`membership-test`, `assert` and `raise`, plus three from the diff:
+`definition-added-or-removed` (a def or class name added or removed), `code` (any line
+that is not only a comment or docstring) and `any`. The syntax table in
+`src/codeguard/syntax/languages/` defines each kind as an ast-grep rule.
 
 ### The rule eval
 

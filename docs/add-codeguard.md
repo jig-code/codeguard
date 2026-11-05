@@ -60,9 +60,13 @@ leaves it to the formatter.
 
 ## The CLI on its own
 
-The README's [Setup](../README.md#setup) installs the plugin. To run codeguard from a
-terminal, install the CLI with uv. It doesn't need the plugin, and the plugin doesn't
-need it.
+The README's [Setup](../README.md#setup) installs the plugin. In Claude Code, the plugin
+also puts `codeguard` on the PATH of the commands Claude runs, for skills such as
+writing a rule. Codex doesn't give plugins a command, so writing rules there needs the
+CLI on its own.
+
+To run codeguard from a terminal, or to write rules in Codex, install the CLI with uv.
+It doesn't need the plugin, and the plugin doesn't need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0
