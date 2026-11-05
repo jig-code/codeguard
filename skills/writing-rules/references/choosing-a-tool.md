@@ -12,7 +12,7 @@ responsibility. Don't name or set up the tool that checks it.
 | The convention | Checked by |
 |---|---|
 | A linter or type checker the project runs already has the check | That linter or type checker (Ruff, ESLint, RuboCop; basedpyright, mypy, `tsc`) |
-| A linter can express it through configuration | The linter's configuration: ESLint `no-restricted-syntax` (AST selectors) or `no-restricted-imports`, Ruff `banned-api`, a configurable RuboCop cop |
+| A linter or type checker can express it through configuration, whether or not the project turns that setting on | Its configuration: ESLint `no-restricted-syntax` (AST selectors) or `no-restricted-imports`, Ruff `banned-api`, a configurable RuboCop cop; a type checker's strictness settings |
 | Which modules may import which | The project's import linter (import-linter, `import/no-restricted-paths`) |
 | A code shape in one file | A codeguard pattern rule |
 | Logic across nodes (counting, state, types), or an autocorrect | The linter's custom rule: a Pylint checker, an ESLint plugin rule, a RuboCop custom cop |
@@ -21,9 +21,11 @@ responsibility. Don't name or set up the tool that checks it.
 
 ## Type checker settings
 
-A convention about where untyped values flow is a type checker's job. A setting that
-reports values typed `Any` catches every read of untyped data at once, with no rule to
-maintain, and leaves values with a real type alone.
+A convention about where untyped values flow is a type checker's job, including one
+asked as validation: that data from a parse, a deserializer or a network response is
+checked before it's used. Such data is untyped until code checks it, so a setting that
+reports values typed `Any` catches every unchecked use at once, with no rule to
+maintain, and leaves checked values alone.
 
 ## Language-server lookups
 

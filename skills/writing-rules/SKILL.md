@@ -26,8 +26,8 @@ words that don't depend on the language. Each piece of code the rule reads eithe
 the convention or breaks it: that is the rule's one yes/no test. The rule is that
 statement, at most one sentence fixing the meaning of a term in it a reader could take
 two ways, and why it exists, and nothing else: no examples, no list in its text of the
-shapes a violation takes, no list of what isn't one, no sentence that restates the
-statement or says what it ignores, and no supplement per language. The
+shapes a violation takes, no list of what isn't one, no sentence or clause that
+restates the statement or says what it ignores, and no supplement per language. The
 statement alone decides each piece of code.
 
 - **A statement, never a question.**
