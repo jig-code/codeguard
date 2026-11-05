@@ -6,6 +6,7 @@ import traceback
 from pathlib import Path
 
 import logfire
+import pydantic_ai
 
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
@@ -186,6 +187,8 @@ def _configure_telemetry() -> None:
         inspect_arguments=False,
     )
     logfire.instrument_pydantic_ai()
+    # codeguard's output is what the hooks and --format json read, so pydantic-ai prints nothing.
+    pydantic_ai.BANNER_ENABLED = False
 
 
 def _review(args: argparse.Namespace) -> int:
