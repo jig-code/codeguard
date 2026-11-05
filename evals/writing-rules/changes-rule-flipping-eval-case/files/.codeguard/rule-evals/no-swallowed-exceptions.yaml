@@ -1,0 +1,40 @@
+cases:
+  - name: flags a handler that passes
+    inputs:
+      file: src/shop/pay.py
+      after: |
+        def charge(order, gateway):
+            try:
+                gateway.charge(order.total)
+            except gateway.Declined:
+                pass
+    expected_output:
+      outcome: invalid
+  - name: allows a handler that logs the error and re-raises
+    inputs:
+      file: src/shop/ship.py
+      after: |
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+
+        def ship(order, carrier):
+            try:
+                carrier.book(order)
+            except Exception as error:
+                logger.exception("booking failed")
+                raise
+    expected_output:
+      outcome: valid
+  - name: allows a handler that re-raises a domain error
+    inputs:
+      file: src/shop/ship.py
+      after: |
+        def ship(order, carrier):
+            try:
+                carrier.book(order)
+            except carrier.Unavailable as error:
+                raise ShippingDelayed(order.id) from error
+    expected_output:
+      outcome: valid

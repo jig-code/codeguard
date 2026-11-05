@@ -1,5 +1,5 @@
 cases:
-  - name: passes a string
+  - name: flags a string
     inputs:
       file: shipping/ship.py
       before: |

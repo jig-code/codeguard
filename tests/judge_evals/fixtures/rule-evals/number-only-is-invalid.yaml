@@ -1,5 +1,5 @@
 cases:
-  - name: counts
+  - name: flags a count
     inputs:
       after: |
         count = 1

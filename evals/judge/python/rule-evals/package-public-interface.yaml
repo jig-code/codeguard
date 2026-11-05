@@ -1,5 +1,5 @@
 cases:
-  - name: imports a module of a package whose root exports the name
+  - name: flags an import of a package's module when the package root exports the name
     inputs:
       file: reports/summary.py
       after: |
@@ -23,7 +23,7 @@ cases:
         reports/__init__.py: ''
     expected_output:
       outcome: invalid
-  - name: keeps a caller independent of the exported type's defining module
+  - name: allows a caller independent of the exported type's defining module
     inputs:
       file: statements/summary.py
       after: |
@@ -47,7 +47,7 @@ cases:
         statements/__init__.py: ''
     expected_output:
       outcome: valid
-  - name: changes a function body, with no import
+  - name: skips a change to a function body, with no import
     inputs:
       file: reports/totals.py
       before: |

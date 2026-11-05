@@ -121,9 +121,9 @@ leaves it to the formatter.
 ### Rules
 
 A project's own rules live under `.codeguard/`. To write or change one, use the
-plugin's `writing-rules` skill: it says which kind of rule fits a convention, how to
-state the rule, and how to test it. This README documents the files and commands the
-skill works with.
+plugin's `writing-rules` skill: it says which kind of rule fits a convention and how to
+state the rule. This README documents the files the skill writes and the commands that
+test a rule.
 
 A rule is one of two kinds:
 
@@ -328,7 +328,8 @@ triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
 `<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
-(`invalid` cases are code the gate matches):
+(`invalid` cases are code the gate matches). Each test case's comment is its verdict and
+situation: `matches` for an `invalid` case, `ignores` for a `valid` one:
 
 ```yaml
 id: mock-use
@@ -360,7 +361,8 @@ that is not only a comment or docstring) and `any`. The syntax table in
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: what the edit does, unique in the file.
+- `name`: its verdict and situation, unique in the file: `flags`, `allows` or `skips`,
+  matching its `outcome`, then the situation. It never states the harm or why.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
@@ -381,7 +383,7 @@ the review it should get:
 
 ```yaml
 cases:
-  - name: adds a second class
+  - name: flags a second class added to the file
     inputs:
       before: |
         class Order:
@@ -395,14 +397,14 @@ cases:
             pass
     expected_output:
       outcome: invalid
-  - name: defines one class
+  - name: allows a file that defines one class
     inputs:
       after: |
         class Order:
             pass
     expected_output:
       outcome: valid
-  - name: changes an attribute
+  - name: skips a change to an attribute
     inputs:
       before: |
         class Order:
@@ -429,8 +431,10 @@ held to the same bar.
    classifies the diff the way a review does.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
-3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
-   shows up as a failing run, named like `adds a second class [2/20]`.
+3. Once `codeguard eval` passes with nothing changed since, `codeguard eval --repeat 19`
+   reviews each case nineteen more times, 20 in all, to the end, so an unstable verdict
+   shows up as a failing run, named like `flags a second class added to the file [2/19]`.
+   Any change starts again at step 2.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -447,7 +451,7 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "patches a" --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "flags a patch" --repeat 20
 codeguard eval --provider gemini --repeat 20
 ```
 
@@ -505,7 +509,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 |---|---|---|---|---|
 | A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
 | A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review, 20 runs of 20 | `codeguard eval --repeat 20` | yes |
+| | | each edit gets its expected review: 1 run to verify the change, then 19 more, 20 of 20 | `codeguard eval`, then `codeguard eval --repeat 19` | yes |
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
@@ -525,16 +529,13 @@ In Claude Code, install the plugin. Project settings enable it but don't install
 claude plugin install codeguard@codeguard --scope project
 ```
 
-In Claude Code, the plugin also puts `codeguard` on the PATH of the commands Claude
-runs, for skills such as writing a rule.
-
 In Codex, trust codeguard's hooks in `/hooks`. Codex doesn't give plugins a command, so
-writing rules there needs the CLI on its own.
+running codeguard yourself there needs the CLI on its own.
 
 ### The CLI on its own
 
-To run codeguard from a terminal, or to write rules in Codex, install the CLI with uv.
-It doesn't need the plugin, and the plugin doesn't need it.
+To run codeguard from a terminal, install the CLI with uv. It doesn't need the plugin,
+and the plugin doesn't need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0
@@ -920,12 +921,13 @@ them on Haiku on Bedrock. CI runs them; run them after changing the judge's inst
 tools:
 
 ```sh
-uv run pytest -m llm -n 4    # each case 3 times, as CI does
+uv run pytest -m llm -n 4 --llm-runs 1 -x    # each case once, stopping at the first failure
+uv run pytest -m llm -n 4 --llm-runs 2       # then twice more, for 3 of 3, as CI does
 ```
 
 Local Codex checks use the same fixtures with
 `--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
-add `--llm-runs 20`.
+run `--llm-runs 1 -x` first, then `--llm-runs 19` once it passes.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute

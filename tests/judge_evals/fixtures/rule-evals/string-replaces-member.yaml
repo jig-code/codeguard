@@ -1,5 +1,5 @@
 cases:
-  - name: passes a string
+  - name: flags a string
     inputs:
       file: status.py
       before: |
@@ -7,7 +7,7 @@ cases:
       after: |
         ship(status='shipped')
     expected_output: {outcome: invalid}
-  - name: passes the member
+  - name: allows the member
     inputs:
       file: status.py
       after: |

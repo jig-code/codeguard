@@ -1,6 +1,0 @@
-schema_version: "1.1"
-name: untyped-json-reads
-expected_outcome: |
-  The rule goes to the type checker, not to codeguard: the answer turns on basedpyright's reportAny (or an equivalent setting) in pyproject.toml, and no judge rule is written.
-context:
-  scaffold_script: place-files.sh

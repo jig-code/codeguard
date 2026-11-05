@@ -1,7 +1,5 @@
 #!/bin/sh
-# Run the codeguard this plugin ships, in an environment uv keeps in the plugin's data
-# directory. Hooks get that directory from the host; the Bash tool doesn't, so commands
-# Claude runs use one under the user's cache.
+# The environment lives outside the checkout, which plugin updates replace.
 set -eu
 root="$(cd "$(dirname "$0")/.." && pwd)"
 data="${CLAUDE_PLUGIN_DATA:-${XDG_CACHE_HOME:-$HOME/.cache}/codeguard}"

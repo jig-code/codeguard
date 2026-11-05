@@ -1,6 +1,6 @@
 name: enum-usge
 cases:
-  - name: passes a string
+  - name: allows a string
     inputs:
       after: |
         ship(status='shipped')

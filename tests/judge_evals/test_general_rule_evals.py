@@ -121,14 +121,14 @@ class TestGeneralRuleTriggers:
     def test_a_skipped_case_in_such_a_language_fails(self, repo):
         write_general_rule(repo)
         repo.write(
-            EVAL, "cases:\n" + case("renames a script", "orders.ts", "let s = 1;", "skipped")
+            EVAL, "cases:\n" + case("skips a renamed script", "orders.ts", "let s = 1;", "skipped")
         )
 
         result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
 
         assert result == RuleTestResult(
             problems=(
-                f"{EVAL} renames a script: orders.ts has no change kinds, "
+                f"{EVAL} skips a renamed script: orders.ts has no change kinds, "
                 f"so every {RULE} trigger fires on it",
             )
         )

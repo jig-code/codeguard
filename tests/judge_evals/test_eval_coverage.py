@@ -7,7 +7,7 @@ from codeguard.rule_tests import RuleTestResult
 ENUM_SKILL = "# Enum usage\n\nPass the enum member, never a bare literal.\n"
 INVALID_EVAL = """\
 cases:
-  - name: passes a literal
+  - name: flags a literal
     inputs:
       after: |
         ship('shipped')
