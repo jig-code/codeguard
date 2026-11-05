@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from codex_cli import FakeCodexCLI
+
+FakeCodexCLI().run()

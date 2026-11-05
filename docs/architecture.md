@@ -36,6 +36,11 @@ by exactly one rule, of one of two kinds:
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
 git and pinned to a tag. Every surface reviews with the same rules.
 
+Use the writing-rules skill's
+[tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md)
+to decide whether a requirement belongs to an existing checker, a pattern rule or a
+judge rule. Passing one rule does not excuse violations owned by other checks.
+
 ### Components
 
 **Bindings** map files to a rule by path globs. A binding sets the rule's severity, its
@@ -60,8 +65,8 @@ violation could appear.
 8. The results merge into one.
 
 **The judge** grades one rule against one file's change and returns violations, never
-fixes. The providers are Claude (the `claude` CLI in safe mode) and Gemini (pydantic-ai,
-with equivalent tools).
+fixes. The providers include Claude (the `claude` CLI in safe mode), Codex (the `codex`
+CLI in a read-only sandbox) and Gemini (pydantic-ai, with equivalent tools).
 
 - Its input: the judge template, which holds the instructions; the skill text; the
   `changes` element, an excerpt of the changed code with `+`, space and `-` marks and the
@@ -78,8 +83,8 @@ with equivalent tools).
   A violation is reported only where the changed code is part of it.
 
 **The verdict cache** stores verdicts keyed on the template, model, skill, path, changed
-code and whole file. Each verdict records the files the judge read, and is reused only
-while all of them are unchanged. Evals and CI never use the cache.
+code and whole file. When a provider exposes file-read tracking, recorded context-file
+changes also invalidate the verdict. Evals and CI never use the cache.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
 or a pass. The only adapter is for the Stop hook. It blocks once on the same errors, then
@@ -100,6 +105,9 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
+- Follow the writing-rules reference's
+  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
+  including its treatment of deliberate pre-existing violations in scope cases.
 
 ## Invariants
 
@@ -122,7 +130,8 @@ the code refer to.
    diagnostic schema.
 5. Every judge input is deterministic: the same files and skill version give the same
    prompt on every surface and machine. What the judge reads with its tools comes from the
-   same files on every surface, and the verdict records it. The verdict itself may vary,
+   same files on every surface. Providers with file-read tracking record those dependencies.
+   The verdict itself may vary,
    within the bounds #8 sets.
 6. The judge sees only what the harness passes it and what it reads with read-only tools
    from the review's files. No user or project config, CLAUDE.md, hooks, plugins or other

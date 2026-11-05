@@ -138,7 +138,8 @@ def main() -> int:
     eval_command.add_argument(
         "--model",
         help="The model --provider judges with. Default: claude-sonnet-5-5 for claude-cli, "
-        "gemini-3.1-pro-preview for gemini.",
+        "gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
+        "us.anthropic.claude-haiku-5-5 for bedrock.",
     )
     eval_command.set_defaults(run=_eval)
 

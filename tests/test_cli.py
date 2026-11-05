@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from claude_output import fake_claude_script, tool_result, tool_use
+from claude_output import claude_stream, tool_result, tool_use
+from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
 from git_repo import GitRepo
 from rules_package import write_package
 from spans import finished_span_attributes
@@ -16,6 +17,8 @@ from spans import finished_span_attributes
 from codeguard import cli
 from codeguard.file_lock import exclusive_lock
 from codeguard.review import Severity
+
+pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
 CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 BUNDLED_AST_GREP = metadata.version("ast-grep-cli")
@@ -344,18 +347,17 @@ class TestReviewOfDeletedCode:
             "class ExampleService:\n    def describe(self):\n        return 'service'\n",
         )
         violation = {"file": "service.py", "confidence": 1.0}
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        claude.write_text(
-            fake_claude_script(
-                [
-                    {**violation, "line": 1, "message": "The class lost its entry point."},
-                    {**violation, "line": 2, "message": "Untouched method."},
-                ]
-            )
+        bin_dir = FAKE_CLAUDE.parent
+        configure_fake_cli_response(
+            {
+                "stdout": claude_stream(
+                    [
+                        {**violation, "line": 1, "message": "The class lost its entry point."},
+                        {**violation, "line": 2, "message": "Untouched method."},
+                    ]
+                )
+            }
         )
-        claude.chmod(0o755)
 
         result = subprocess.run(
             [CODEGUARD, "review"],
@@ -385,11 +387,8 @@ class TestReviewDryRun:
         )
         repo.write("a.py", "x = 1\n")
         repo.write("b.rb", "x = 1\n")
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        claude.write_text("#!/bin/sh\nexit 1\n")
-        claude.chmod(0o755)
+        bin_dir = FAKE_CLAUDE.parent
+        configure_fake_cli_response({"exit_code": 1})
 
         result = subprocess.run(
             [CODEGUARD, "review", "--dry-run"],
@@ -451,7 +450,7 @@ class TestReviewJsonFormat:
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         violation = {"file": "a.py", "line": 1, "message": "Move it."}
-        (bin_dir / "claude").write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
+        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -497,12 +496,13 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        (bin_dir / "claude").write_text(
-            fake_claude_script(
-                [],
-                before=f"echo called >> {calls}\n",
-                messages=(tool_use("Read", file_path="orders/pricing.toml"),),
-            )
+        configure_fake_cli_response(
+            {
+                "stdout": claude_stream(
+                    [], messages=(tool_use("Read", file_path="orders/pricing.toml"),)
+                ),
+                "calls": str(calls),
+            }
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -519,15 +519,17 @@ class TestReviewJudgeCache:
         bin_dir = judged_repo(repo, tmp_path, make_skill)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
-        (bin_dir / "claude").write_text(
-            fake_claude_script(
-                [],
-                before=f"echo called >> {calls}\n",
-                messages=(
-                    tool_use(search, "toolu_search", pattern="discount"),
-                    tool_result("toolu_search", filenames=["orders/pricing.toml"]),
+        configure_fake_cli_response(
+            {
+                "stdout": claude_stream(
+                    [],
+                    messages=(
+                        tool_use(search, "toolu_search", pattern="discount"),
+                        tool_result("toolu_search", filenames=["orders/pricing.toml"]),
+                    ),
                 ),
-            )
+                "calls": str(calls),
+            }
         )
         run_review(repo, tmp_path, bin_dir)
         run_review(repo, tmp_path, bin_dir)
@@ -602,11 +604,8 @@ def judged_repo(repo: GitRepo, tmp_path: Path, make_skill) -> Path:
     )
     repo.commit("Bind the skill")
     repo.write("a.py", "x = 1\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    claude = bin_dir / "claude"
-    claude.write_text("#!/bin/sh\ncat > /dev/null\necho 'rate limited'\nexit 1\n")
-    claude.chmod(0o755)
+    bin_dir = FAKE_CLAUDE.parent
+    configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
     return bin_dir
 
 
@@ -705,11 +704,8 @@ class TestEvalCommand:
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        claude.write_text(fake_claude_script([{**violation, "confidence": 0.5}]))
-        claude.chmod(0o755)
+        bin_dir = FAKE_CLAUDE.parent
+        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = subprocess.run(
             [CODEGUARD, "eval"] if from_package else [CODEGUARD, "eval", str(package.root)],
@@ -734,13 +730,10 @@ class TestEvalCommand:
             "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
+        bin_dir = FAKE_CLAUDE.parent
         calls = tmp_path / "calls"
-        claude = bin_dir / "claude"
         violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
-        claude.write_text(fake_claude_script([violation], before=f"echo called >> {calls}\n"))
-        claude.chmod(0o755)
+        configure_fake_cli_response({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
         for _ in range(2):
@@ -969,18 +962,10 @@ def path_package_config(package: GitRepo) -> str:
 
 def recording_claude(tmp_path: Path, violations: list[dict]) -> Path:
     """Put a claude on PATH that saves its arguments and stdin to $CLAUDE_RECORD."""
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    claude = bin_dir / "claude"
-    claude.write_text(
-        fake_claude_script(
-            violations,
-            before='mkdir -p "$CLAUDE_RECORD"\n'
-            'printf \'%s\\0\' "$@" > "$CLAUDE_RECORD/args"\n'
-            'cat > "$CLAUDE_RECORD/stdin"\n',
-        )
+    bin_dir = FAKE_CLAUDE.parent
+    configure_fake_cli_response(
+        {"stdout": claude_stream(violations), "record_env": "CLAUDE_RECORD"}
     )
-    claude.chmod(0o755)
     return bin_dir
 
 
@@ -994,10 +979,11 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
 
 
 def recorded_call(record: Path) -> dict[str, str]:
-    arguments = (record / "args").read_text().split("\0")[:-1]
+    captured = json.loads((record / "request.json").read_text())
+    arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
-        "prompt": (record / "stdin").read_text(),
+        "prompt": captured["prompt"],
         **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
     }
 

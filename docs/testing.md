@@ -37,9 +37,15 @@ codeguard ships no rules of its own. Its fixtures, in `evals/judge/`, are a smal
 package that exists only to test the judge. A fixture rule is a judge rule there, and a
 fixture case is one of its rule eval cases.
 
-Four kinds of test share words like "case" and "eval":
+Distinguish CodeGuard's repository tests from its rule-validation features:
 
-| Test | It checks | Calls a model | A case is |
+- `pytest` runs unit and integration tests with model-provider doubles.
+- `pytest -m llm` runs tests of the review pipeline with a real judge.
+- `codeguard test` and `codeguard eval` are product commands for validating rules.
+  Running them manually can provide validation evidence for a change, but does not
+  run CodeGuard's repository test suite.
+
+| Test or feature | It checks | Calls a model | A case is |
 |---|---|---|---|
 | codeguard's tests | The CLI, config, triggers, hooks and judge, with no model | No | A test function |
 | LLM tests | The judge gives each fixture case its expected review from a real model | Yes, and verdicts can vary between runs | A fixture case |
@@ -70,6 +76,11 @@ codeguard's fixture rules only exercise the judge, so a change to one is tested 
 judge change.
 
 Re-running until a case passes doesn't meet the bar.
+
+For case construction, follow the writing-rules reference's
+[eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+It applies to rule evals in packages and apps and to CodeGuard's pytest judge fixtures,
+including cases that deliberately contain pre-existing violations to test review scope.
 
 Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
 
