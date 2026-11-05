@@ -128,10 +128,10 @@ codeguard's README has the binding and rule eval formats.
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
   the gate (`references/judge-rules.md`).
-- A case's name says what is at stake: for an `invalid` case the harm, in the terms of
-  the rule's Why, and for a `valid` case what the code keeps safe. A name that describes
-  the code's action or shape repeats the code and is renamed. This holds for the
-  `skipped` case too, whose stake is what the edit leaves untouched.
+- A case's name says what decides it: for an `invalid` case the harm, in the terms of
+  the rule's Why; for a `valid` case the situation in which the code keeps the
+  convention; for the `skipped` case what the edit leaves untouched. A name that
+  describes the code's action or shape repeats the code and is renamed.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax or names differ: keep the clearer one. Two `valid` cases differ when
   their code keeps the convention in different situations, not merely by both lacking
