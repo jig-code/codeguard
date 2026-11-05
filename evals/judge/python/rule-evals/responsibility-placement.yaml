@@ -1,5 +1,5 @@
 cases:
-  - name: recomputes another type's data
+  - name: flags code that recomputes another type's data
     inputs:
       file: orders/invoice.py
       after: |
@@ -27,7 +27,7 @@ cases:
             return sum(line.price * line.quantity for line in order.lines)
     expected_output:
       outcome: invalid
-  - name: calls the type's method
+  - name: allows a call to the type's method
     inputs:
       file: orders/receipt.py
       after: |
@@ -55,7 +55,7 @@ cases:
             return f"{customer_name}: {order.total()}"
     expected_output:
       outcome: valid
-  - name: edits a method call in a function whose untouched line recomputes another type's data
+  - name: allows an edit to a method call in a function whose untouched line recomputes another type's data
     inputs:
       file: orders/letter.py
       before: |
@@ -126,7 +126,7 @@ cases:
             return [greeting, str(amount)]
     expected_output:
       outcome: valid
-  - name: edits the line that already recomputed another type's data
+  - name: flags an edit to the line that already recomputed another type's data
     inputs:
       file: orders/letter.py
       before: |
@@ -197,7 +197,7 @@ cases:
             return [greeting, str(amount)]
     expected_output:
       outcome: invalid
-  - name: adds a function that calls the type's method beside one that recomputes
+  - name: allows a function calling the type's method added beside one that recomputes
     inputs:
       file: orders/receipt.py
       before: |

@@ -261,7 +261,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: violation on line 2 is outside the "
+            "enum-usage flags a string: violation on line 2 is outside the "
             "triggers class-header, string-literal\n"
             "  Add one of the kinds on that line to triggers in its binding: "
             "code, module-statement, number-literal",
@@ -281,7 +281,7 @@ class TestJudgeEvalRunner:
         )
 
         assert [failure.split("\n")[0] for failure in result.failures] == [
-            "enum-usage passes a string: expected outcome valid, got outcome invalid"
+            "enum-usage allows a string: expected outcome valid, got outcome invalid"
         ]
 
     def test_dataset_without_cases_fails_with_its_name(self, enum_rule):
@@ -316,7 +316,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome uncertain\n"
+            "enum-usage flags a string: expected outcome invalid, got outcome uncertain\n"
             "  reason: The code breaks the convention.\n  line 1 (0.70): Pass the member.",
         )
 
@@ -328,7 +328,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "enum-usage flags a string: expected outcome invalid, got outcome valid\n"
             "  reason: The code keeps the convention.",
         )
 
@@ -345,7 +345,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "enum-usage flags a string: expected outcome invalid, got outcome valid\n"
             "  reason: The code breaks the convention.",
         )
 
@@ -362,7 +362,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome invalid, got outcome valid\n"
+            "enum-usage flags a string: expected outcome invalid, got outcome valid\n"
             "  reason: The code breaks the convention.",
         )
 
@@ -384,7 +384,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage passes a string: expected outcome valid, got outcome uncertain\n"
+            "enum-usage allows a string: expected outcome valid, got outcome uncertain\n"
             "  reason: The code breaks the convention.\n  line 1 (0.50): Pass the member.",
         )
 
@@ -440,7 +440,7 @@ class TestJudgeEvalRunner:
         )
 
         assert result.failures == (
-            "enum-usage counts: expected outcome invalid, got outcome skipped",
+            "enum-usage flags a count: expected outcome invalid, got outcome skipped",
         )
 
     def test_judge_error_fails_the_case(self, enum_rule):
@@ -450,7 +450,7 @@ class TestJudgeEvalRunner:
 
         assert not result.passed
         assert result.failures == (
-            "enum-usage passes a string: not judged: "
+            "enum-usage flags a string: not judged: "
             "JudgeError: gemini failed with 502: upstream request failed",
         )
 
@@ -527,7 +527,7 @@ class TestJudgeEvalRunner:
             ("case-without-a-name.yaml", "cases.0.name: Field required"),
             (
                 "cases-sharing-a-name.yaml",
-                "cases: Value error, cases share a name: passes a string",
+                "cases: Value error, cases share a name: allows a string",
             ),
             ("declares-evaluators.yaml", "evaluators: Extra inputs are not permitted"),
             (
@@ -575,8 +575,8 @@ class TestReasons:
 
         enum_rule.judged_with(Verdict(reason="The call passes a string.", violations=())).write(out)
 
-        assert "enum-usage passes a string: The call passes a string.\n" in out.getvalue()
-        assert "enum-usage passes the member: The call passes a string.\n" in out.getvalue()
+        assert "enum-usage flags a string: The call passes a string.\n" in out.getvalue()
+        assert "enum-usage allows the member: The call passes a string.\n" in out.getvalue()
 
     def test_a_skipped_case_has_no_reason_to_write(self, enum_rule):
         enum_rule.bind("string-literal-trigger.yaml")
@@ -602,7 +602,7 @@ class TestRepeats:
         result = enum_rule.run(flagging("ship"), repeat=2)
 
         assert sorted(result.failures) == [
-            f"enum-usage passes a string [{run}/2]: expected outcome valid, got outcome "
+            f"enum-usage allows a string [{run}/2]: expected outcome valid, got outcome "
             "invalid\n  reason: The code breaks the convention.\n  line 1 (1.00): Rename it."
             for run in (1, 2)
         ]
@@ -617,7 +617,7 @@ class TestSelection:
 
         assert judges.listed == [["cancelling.py"]]
         assert [case.name for report in result.reports for case in report.cases] == [
-            "passes the member"
+            "allows the member"
         ]
 
     def test_judges_nothing_of_a_rule_not_selected(self, enum_rule):
@@ -651,7 +651,7 @@ class TestSelection:
 
         names = enum_rule.runner(RecordingJudges(RecordingJudge())).case_names()
 
-        assert names == {"enum-usage": ("passes a string", "passes the member")}
+        assert names == {"enum-usage": ("flags a string", "allows the member")}
 
     def test_judge_rule_without_an_eval_has_no_case_names(self, enum_rule):
         names = enum_rule.runner(RecordingJudges(RecordingJudge())).case_names()

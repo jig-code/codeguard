@@ -1,5 +1,5 @@
 cases:
-  - name: pass in except
+  - name: flags a handler that passes
     inputs:
       file: src/shop/pay.py
       after: |
@@ -10,7 +10,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
-  - name: logs the error and re-raises
+  - name: allows a handler that logs the error and re-raises
     inputs:
       file: src/shop/ship.py
       after: |
@@ -27,7 +27,7 @@ cases:
                 raise
     expected_output:
       outcome: valid
-  - name: re-raises a domain error
+  - name: allows a handler that re-raises a domain error
     inputs:
       file: src/shop/ship.py
       after: |

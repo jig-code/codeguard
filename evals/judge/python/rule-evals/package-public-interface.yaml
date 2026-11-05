@@ -1,5 +1,5 @@
 cases:
-  - name: imports a module of a package whose root exports the name
+  - name: flags an import of a package's module when the package root exports the name
     inputs:
       file: reports/summary.py
       after: |
@@ -23,11 +23,11 @@ cases:
         reports/__init__.py: ''
     expected_output:
       outcome: invalid
-  - name: imports a module because the package root imports this one
+  - name: allows a caller independent of the exported type's defining module
     inputs:
       file: statements/summary.py
       after: |
-        from billing.invoice_total import InvoiceTotal
+        from billing import InvoiceTotal
 
 
         def summarize(amounts):
@@ -35,9 +35,8 @@ cases:
       unchanged:
         billing/__init__.py: |
           from billing.invoice_total import InvoiceTotal
-          from statements.summary import summarize
 
-          __all__ = ["InvoiceTotal", "summarize"]
+          __all__ = ["InvoiceTotal"]
         billing/invoice_total.py: |
           from dataclasses import dataclass
 
@@ -48,7 +47,7 @@ cases:
         statements/__init__.py: ''
     expected_output:
       outcome: valid
-  - name: changes a function body, with no import
+  - name: skips a change to a function body, with no import
     inputs:
       file: reports/totals.py
       before: |

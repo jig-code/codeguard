@@ -1,7 +1,8 @@
 # Choosing a tool
 
 codeguard adds the checks a project's linters can't do. The cheapest exact tool decides a
-convention: take the first row that can express it. A judge rule is for judgment, never
+convention: take the first row that can express it, judged by what decides a violation,
+not by the words the convention is asked in. A judge rule is for judgment, never
 for something syntax, types or a symbol lookup decide, because an exact tool gives the
 same answer every run, costs nothing, and already runs in the editor.
 

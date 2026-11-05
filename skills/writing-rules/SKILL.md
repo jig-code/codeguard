@@ -24,9 +24,10 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
 the convention or breaks it: that is the rule's one yes/no test. The rule is that
-statement, a sentence fixing the meaning of a term in it a reader could take two ways,
-and why it exists, and nothing else: no examples, no list in its text of the shapes
-a violation takes, no list of what isn't one, and no supplement per language. The
+statement, at most one sentence fixing the meaning of a term in it a reader could take
+two ways, and why it exists, and nothing else: no examples, no list in its text of the
+shapes a violation takes, no list of what isn't one, no sentence that restates the
+statement or says what it ignores, and no supplement per language. The
 statement alone decides each piece of code.
 
 - **A statement, never a question.**
@@ -128,10 +129,11 @@ codeguard's README has the binding and rule eval formats.
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
   the gate (`references/judge-rules.md`).
-- A case's name says what decides it: for an `invalid` case the harm, in the terms of
-  the rule's Why; for a `valid` case the situation in which the code keeps the
-  convention; for the `skipped` case what the edit leaves untouched. A name that
-  describes the code's action or shape repeats the code and is renamed.
+- A case is named like a test, by its verdict and its situation: `flags`, `allows` or
+  `skips`, matching the case's expected outcome (`invalid`, `valid` or `skipped`), then
+  the situation. A name never states the harm or why; the rule's Why holds that. A gate
+  test case is named the same way, in the comment above it: `matches` for an `invalid`
+  case, `ignores` for a `valid` one, then the situation.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax or names differ: keep the clearer one. Two `valid` cases differ when
   their code keeps the convention in different situations, not merely by both lacking

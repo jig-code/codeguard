@@ -1,5 +1,5 @@
 cases:
-  - name: adds blank lines
+  - name: skips added blank lines
     inputs:
       before: |
         ship(status='shipped')

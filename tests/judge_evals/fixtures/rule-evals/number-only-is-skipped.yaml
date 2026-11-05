@@ -1,5 +1,5 @@
 cases:
-  - name: counts
+  - name: skips a count
     inputs:
       after: |
         count = 1

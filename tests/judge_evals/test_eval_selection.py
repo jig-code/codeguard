@@ -1,8 +1,8 @@
 from codeguard.judge_evals import EvalSelection
 
 CASE_NAMES = {
-    "enum-usage": ("passes a string", "passes the member"),
-    "placement": ("assigns a count",),
+    "enum-usage": ("flags a string", "allows the member"),
+    "placement": ("allows an assigned count",),
 }
 
 
@@ -11,7 +11,7 @@ class TestEvalSelection:
         selection = EvalSelection()
 
         assert selection.selects_rule("enum-usage")
-        assert selection.selects_case("passes a string")
+        assert selection.selects_case("flags a string")
         assert selection.problems(CASE_NAMES) == ()
 
     def test_selects_only_the_named_rules(self):
@@ -26,9 +26,10 @@ class TestEvalSelection:
         selection = EvalSelection(cases=("member", "count"))
 
         assert all(
-            selection.selects_case(name) for name in ("passes the member", "assigns a count")
+            selection.selects_case(name)
+            for name in ("allows the member", "allows an assigned count")
         )
-        assert not selection.selects_case("passes a string")
+        assert not selection.selects_case("flags a string")
 
     def test_rule_matching_no_judge_rule_is_a_problem(self):
         selection = EvalSelection(rules=frozenset({"placement", "enum-usge"}))

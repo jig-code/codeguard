@@ -15,8 +15,8 @@ does against what the skill says. A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check | Example |
 |---|---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `unused-functions` asks for a judge rule that flags a function nobody calls any more, which takes a lookup across the whole repository |
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `declines-unused-functions` asks for a judge rule that flags a function nobody calls any more, which takes a lookup across the whole repository |
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
 never check whether a rule the agent writes works, or whether its rule tests or rule
@@ -29,6 +29,11 @@ don't check what it says about the other tool or whether it sets that tool up. S
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
+
+Cases are named like tests. A case's directory is its expected outcome, then its
+subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
+changes an existing rule) or `declines`. A grader's file is its number, then what
+the agent's output does. A grader that checks names is a `regex`, never an `llm` grader.
 
 ## Running them
 
@@ -48,6 +53,13 @@ claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 
 CI runs the two as separate jobs, the second starting when the first passes.
 `claude plugin eval` has no option to stop at the first failing case, so the validity
 pass runs every case once before it fails.
+
+Each run writes `evals/results/<time>/`: `aggregate-result.json` has every run's score
+and each grader's verdict, and for an `llm` grader the file or reply it read.
+`report.html` shows the same. CI uploads that directory from each job, pass or fail,
+as the artifacts `skill-evals-validity-results` and `skill-evals-reliability-results`.
+A `regex` or `file_exists` grader records no evidence; `--keep-temp` keeps each run's
+workspace for those, outside the results directory.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.

@@ -11,7 +11,8 @@ agent loads before it edits. It holds, in this order, and nothing else:
 1. A title.
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
    words a reviewer would use, never a question. Where the sentence uses a term a reader
-   could take two ways, a sentence that fixes its meaning.
+   could take two ways, one sentence that fixes its meaning, and no other: a sentence
+   that restates the convention, or says what it doesn't cover, is a second statement.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It never widens the
    convention: the statement alone decides each case.
 
@@ -49,11 +50,10 @@ syntax for the same thing. No edge cases: a case a reasonable reviewer could arg
 either way proves nothing about the rule.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
-  keeps it. A reader of the case alone sees why the code is a problem or why it's fine, and
-  the case's name says why: for an `invalid` case the harm, in the terms of the rule's
-  Why; for a `valid` case the situation in which the code keeps the convention; for the
-  `skipped` case what the edit leaves untouched. The code already shows what it does, so
-  a name that describes the code's action or shape is renamed.
+  keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
+  Its name is its verdict and its situation, as `SKILL.md` says: `flags`, `allows` or
+  `skips`, matching its expected outcome, then the situation, never the harm or why. A
+  gate test case's comment is `matches` or `ignores`, then the situation.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by

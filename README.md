@@ -315,7 +315,7 @@ triggers: [mock-use]
 something else:
 
 ```yaml
-provider: gemini                  # default: claude-cli; or gemini, bedrock
+provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
 model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
 ```
 
@@ -328,7 +328,8 @@ triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
 `<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
-(`invalid` cases are code the gate matches):
+(`invalid` cases are code the gate matches). Each test case's comment is its verdict and
+situation: `matches` for an `invalid` case, `ignores` for a `valid` one:
 
 ```yaml
 id: mock-use
@@ -360,7 +361,8 @@ that is not only a comment or docstring) and `any`. The syntax table in
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: what the edit does, unique in the file.
+- `name`: its verdict and situation, unique in the file: `flags`, `allows` or `skips`,
+  matching its `outcome`, then the situation. It never states the harm or why.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
@@ -381,7 +383,7 @@ the review it should get:
 
 ```yaml
 cases:
-  - name: adds a second class
+  - name: flags a second class added to the file
     inputs:
       before: |
         class Order:
@@ -395,14 +397,14 @@ cases:
             pass
     expected_output:
       outcome: invalid
-  - name: defines one class
+  - name: allows a file that defines one class
     inputs:
       after: |
         class Order:
             pass
     expected_output:
       outcome: valid
-  - name: changes an attribute
+  - name: skips a change to an attribute
     inputs:
       before: |
         class Order:
@@ -431,8 +433,8 @@ held to the same bar.
    `codeguard review` would.
 3. Once `codeguard eval` passes with nothing changed since, `codeguard eval --repeat 19`
    reviews each case nineteen more times, 20 in all, to the end, so an unstable verdict
-   shows up as a failing run, named like `adds a second class [2/19]`. Any change starts
-   again at step 2.
+   shows up as a failing run, named like `flags a second class added to the file [2/19]`.
+   Any change starts again at step 2.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -440,16 +442,16 @@ held to the same bar.
   eval with an `invalid` case covers only the rules selected.
 - `--case <text>` judges only the cases whose name contains the text; repeat it to
   judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider gemini` or `--provider bedrock` judges every
+- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or `--provider bedrock` judges every
   selected rule with that provider instead of its binding's. `--model` names the model;
-  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gemini-3.1-pro-preview` for
+  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gpt-6-luna` for `codex-cli`, `gemini-3.1-pro-preview` for
   `gemini` and `us.anthropic.claude-haiku-5-5` for `bedrock`.
 
 A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "patches a" --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "flags a patch" --repeat 20
 codeguard eval --provider gemini --repeat 20
 ```
 
@@ -670,6 +672,56 @@ In a review, each judge rule is judged with its binding's provider and model, th
 ones its rule eval passed on; see [Judge rules](#judge-rules). A binding that sets neither is judged
 with `claude-sonnet-5-5` through the `claude` CLI.
 
+### Judge with Codex locally
+
+Set a judge rule's binding to `codex-cli` and name its model:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: codex-cli
+model: gpt-6-luna
+```
+
+Install the Codex CLI separately and sign in with `codex login` using your ChatGPT
+subscription. CodeGuard invokes `codex exec` with ephemeral sessions, read-only
+permissions and the shared verdict schema. This provider requires ChatGPT authentication;
+it does not fall back to API billing. Other providers do not require Codex to be installed.
+Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
+
+The judge uses Codex's native repository tools in the read-only sandbox, with project
+instructions, hooks, plugins, memories and web search disabled. Temporary files hold
+the shared judge instructions, verdict schema and final response; they are removed
+after each call. The provider uses `high` reasoning effort and the existing review
+deadline. Authentication failures, capacity errors and other process errors fail
+immediately, without retries or a separate per-call time limit.
+
+Codex uses the existing verdict cache keyed on the judge inputs and reviewed source.
+Its native tools discover related repository code as the rule requires. Native events
+do not provide complete file-read tracking, so Codex does not populate `loaded_files`
+for additional context-file invalidation. Claude and Gemini tracking are unchanged.
+Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+
+The existing evaluation override also accepts Codex:
+
+```sh
+codeguard eval --provider codex-cli --model gpt-6-luna
+```
+
+For GPT models in CI, use the existing `bedrock` provider with a supported Converse
+model ID, inference profile ID or ARN. AWS credentials and region resolve as before;
+this path uses metered AWS billing and does not invoke the Codex CLI:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: bedrock
+model: us.openai.gpt-6-luna
+```
+
+The AWS account must have access to the chosen model. Existing Claude, Gemini and
+Bedrock defaults and rule bindings are unchanged.
+
 ### Judge with Gemini on Google Cloud
 
 By default the judge runs `claude -p`. A judge rule whose binding sets
@@ -872,6 +924,10 @@ tools:
 uv run pytest -m llm -n 4 --llm-runs 1 -x    # each case once, stopping at the first failure
 uv run pytest -m llm -n 4 --llm-runs 2       # then twice more, for 3 of 3, as CI does
 ```
+
+Local Codex checks use the same fixtures with
+`--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
+run `--llm-runs 1 -x` first, then `--llm-runs 19` once it passes.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute

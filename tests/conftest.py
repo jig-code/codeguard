@@ -49,6 +49,11 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
 def repo(tmp_path: Path) -> GitRepo:
     git_repo = GitRepo.init(tmp_path.resolve())
     git_repo.write(
