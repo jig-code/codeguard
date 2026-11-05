@@ -10,31 +10,21 @@ maintainers' approval before it is made.
 
 codeguard raises the floor of the quality of code that a coding agent (Claude Code or
 Codex) writes on its own. It does that by defining rules the agent follows in its
-development loop, and by reviewing every change against those rules when the agent stops
-and in CI. Rules cover architecture and design as well as code-level practice. Each rule
-is defined once and applies wherever code is written or reviewed.
-
-- Prevention: the agent loads the skill for a file before it edits that file.
-- Correction: every change is reviewed by deterministic checks and an LLM judge. The
-  review runs when the agent stops and in CI, and errors block.
-
-codeguard has no rules and no languages built in. Projects and rule packages supply all
-of them.
+development loop, and by reviewing every change against those rules, with deterministic
+checks and an LLM judge, when the agent stops and in CI. Rules cover architecture and
+design as well as code-level practice.
 
 ### Rules
 
-A rule states one requirement on code and why it matters. Each requirement is checked
-by exactly one rule, of one of two kinds:
+A rule states one requirement on code and why it matters. A rule is one of two kinds:
 
 - A pattern rule is an ast-grep rule, for a requirement that can be checked mechanically.
-  Only code checks it, never a model. Its note explains why the requirement exists and
-  how to fix a violation.
+  Its note explains why the requirement exists and how to fix a violation.
 - A judge rule is a skill (`SKILL.md`), for a requirement that needs judgment. The skill
-  states the requirement and why it matters. The writing agent loads that text and the
-  judge grades against the same text. There is no separate rubric.
+  states the requirement and why it matters.
 
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
-git and pinned to a tag. Every surface reviews with the same rules.
+git and pinned to a tag.
 
 Use the writing-rules skill's
 [tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md)
@@ -52,21 +42,19 @@ is called only when the change touches one of its triggers. A trigger is a chang
 (`import`, `function-body`, …) or a gate. A gate is an ast-grep rule that matches where a
 violation could appear.
 
-**The review pipeline** is the same code on every surface (the Stop hook, CI and
-`codeguard review`):
+**The review pipeline** runs in the Stop hook, in CI and in `codeguard review`:
 
 1. Take the changeset.
 2. Bindings and triggers pick the candidate rules.
 3. Pattern rules run. A file with a blocking pattern diagnostic skips the judge.
 4. Classify (planned): a model drops the rules the change can't make fail.
-5. The judge makes one call per rule and file, in parallel.
+5. The judge makes one call per rule and file.
 6. Verify (gated): a second model call confirms each violation.
 7. The confidence threshold applies: a violation below 0.9 is reported as a warning,
    never dropped.
 8. The results merge into one.
 
-**The judge** grades one rule against one file's change and returns violations, never
-fixes. The providers are the `claude` CLI in safe mode and the `codex` CLI in a
+**The judge** grades one rule against one file's change. The providers are the `claude` CLI in safe mode and the `codex` CLI in a
 read-only sandbox (Claude and GPT on the developer's subscription), and Amazon Bedrock
 (Claude and GPT) and Gemini on Vertex AI (both pydantic-ai, with equivalent tools).
 Judge configuration, below, says which one judges a rule.
@@ -79,19 +67,16 @@ Judge configuration, below, says which one judges a rule.
   from the rule what else to read, and reads it with its tools. The prompt never says
   what to read or when. When a model fails to read what an obvious case needs, that is a
   finding about the model, not a reason to change the prompt.
-- What it sees: nothing else. No CLAUDE.md, hooks, plugins or other skills reach it.
 - Its output: a reason for its verdict, pass or fail, saying what in the changed code
   keeps the rule or breaks it, as context for whoever troubleshoots the verdict;
   and violations, each with a file, line, message and confidence (1.0, 0.9, 0.7 or 0.5).
-  A violation is reported only where the changed code is part of it.
 
 **The verdict cache** stores verdicts keyed on the template, model, skill, path, changed
 code and whole file. When a provider exposes file-read tracking, recorded context-file
 changes also invalidate the verdict. Evals and CI never use the cache.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
-or a pass. The only adapter is for the Stop hook. It blocks once on the same errors, then
-lets the stop through. Planned: a pre-edit hook that denies an edit until the file's
+or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies an edit until the file's
 skill is loaded.
 
 **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
@@ -192,8 +177,7 @@ the code refer to.
 5. Every judge input is deterministic: the same files and skill version give the same
    prompt on every surface and machine. What the judge reads with its tools comes from the
    same files on every surface. Providers with file-read tracking record those dependencies.
-   The verdict itself may vary,
-   within the bounds #8 sets.
+   The verdict itself may vary.
 6. The judge sees only what the harness passes it and what it reads with read-only tools
    from the review's files. No user or project config, CLAUDE.md, hooks, plugins or other
    skills reach it.
@@ -204,8 +188,8 @@ the code refer to.
    critical concerns, and triggers remove the rules whose code the change can't reach.
    Change classification may remove a candidate only by deciding the change cannot make it
    fail; a failed or timed-out classification keeps every candidate. Choosing rules that
-   no binding maps is out of scope until it can satisfy #2. Code decides each step's
-   prompt.
+   no binding maps is out of scope while the writing agent can't load their skills
+   before it edits. Code decides each step's prompt.
 8. Only three steps call a model: change classification, the judge and verify. Caching,
    recall tests and confidence gating bound their variation. Every other step is
    deterministic.
@@ -317,8 +301,8 @@ onto its API.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache:
   the id the provider sends, which for Bedrock is the inference profile derived from the
   vendor's id (Judge configuration).
-- **Output.** Validated against the verdict schema; output that fails validation fails
-  the run loudly.
+- **Output.** Validated against the verdict schema; output that fails validation is an
+  internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the
   code breaks the rule and nothing in the working directory points to an allowed
   exception; 0.9 when the code breaks the rule as written but the verdict rests on a
