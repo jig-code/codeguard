@@ -57,7 +57,7 @@ class JudgeConfig(BaseModel):
         return data
 
     def concurrency(self, provider: JudgeProvider) -> int:
-        if self.calls_at_once is not None:
+        if provider is JudgeProvider.GEMINI and self.calls_at_once is not None:
             return self.calls_at_once
         if provider not in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI):
             return _API_CALLS_AT_ONCE
