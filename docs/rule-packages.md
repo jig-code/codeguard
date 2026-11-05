@@ -1,6 +1,5 @@
 # Write a rule package
 
-
 A package is a git repo with a `codeguard-package.yaml` at its root:
 
 ```yaml
@@ -45,8 +44,7 @@ Rule and gate ids are unique within a ruleset.
 ## Why a rule exists
 
 Every rule says why it exists; the `writing-rules` skill says what to write and where.
-`codeguard test` reports each rule without a why: as a warning by default, as a failure
-with `--missing-why fail`, and not at all with `--missing-why off`.
+`codeguard test` reports each rule without a why ([`--missing-why`](cli.md)).
 
 ## Judge rules
 
@@ -61,14 +59,12 @@ python/
 
 The rule eval is what makes a rule trustworthy. It shows the rule flags the edits it
 should and passes the ones it should, on the models that will judge it in reviews
-([Judge configuration](architecture.md#judge-configuration)). A binding names a model
-only for a rule whose eval passes on that model alone, and a project can't switch such a
-rule to another.
+([Judge configuration](architecture.md#judge-configuration)).
 
 `codeguard eval` judges with the same model, unless `--provider` and `--model` name
-another, as a package's CI does for its model matrix
-([Invariants](architecture.md#invariants)). The override changes nothing a review judges
-with.
+another, as a package's CI does for its model matrix (the invariant that
+[a rule passes whichever model a user picks](architecture.md#invariants)). The override
+changes nothing a review judges with.
 
 ### A rule in several languages
 
@@ -78,6 +74,10 @@ knows javascript (`js`, `jsx`, `mjs`, `cjs`), python (`py`, `pyi`), ruby (`rb`) 
 typescript (`ts`, `tsx`, `mts`, `cts`).
 
 A path without an extension, like `src/**`, matches every language.
+
+codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, and fails
+on one named after a language it doesn't know or the binding's paths don't match; the
+[writing-rules skill](../skills/writing-rules/SKILL.md) says not to write one.
 
 - When the paths name more than one language, `codeguard eval` reports each language
   apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
@@ -101,7 +101,7 @@ triggers: [mock-use]
 `judge` default, then the package's, and with neither runs the `claude` CLI with no
 `--model`, so the CLI's own default judges ([Configure the
 judge](configuration.md#configure-the-judge)). Set them only for a rule whose eval passes on one model
-alone:
+alone ([a bound rule's judge model](configuration.md#configuration-reference)):
 
 ```yaml
 provider: gemini                  # claude-cli, codex-cli, bedrock or gemini; a Gemini model needs none
@@ -220,29 +220,10 @@ held to the same bar.
 3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
    shows up as a failing run, named like `adds a second class [2/20]`.
 
-`codeguard eval` takes options to judge part of a package, or with another model:
+[CLI](cli.md) lists `codeguard eval`'s options for judging part of a package, or with
+another model.
 
-- `--rule <id>` evaluates only that judge rule; repeat it for more. The check for an
-  eval with an `invalid` case covers only the rules selected.
-- `--case <text>` judges only the cases whose name contains the text; repeat it to
-  judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or
-  `--provider bedrock` judges every selected rule with that provider, over every
-  configured level. `--model` names the model as [Configure the
-  judge](configuration.md#configure-the-judge) names it. Without it, `claude-cli` and `codex-cli` run
-  their CLI with no `--model`, so the CLI's own default judges; a `gemini` or `bedrock`
-  run needs a model named by configuration.
-
-A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
-contains, fails the eval before any case is judged.
-
-```sh
-codeguard eval --rule mock-only-at-boundary --case "patches a" --repeat 20
-codeguard eval --provider gemini --repeat 20
-```
-
-Both take a package directory, so `codeguard eval path/to/package` evaluates a package
-outside the current repository. An eval tests the rule, not the code, so it never uses
+An eval tests the rule, not the code, so it never uses
 the verdict cache: every run calls the model. With a Logfire token each rule's run is
 also in Logfire, as an experiment named `<rule> on <model>` with the provider, model,
 confidence threshold, rule version (a hash of the skill, paths and triggers) and

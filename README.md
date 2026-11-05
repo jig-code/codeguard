@@ -82,18 +82,20 @@ jobs:
         with:
           role-to-assume: ${{ vars.CODEGUARD_AWS_ROLE }}
           aws-region: us-east-1
-      - uses: jig-code/codeguard@v0.9.1
+      - uses: jig-code/codeguard@v0.11.0
 ```
 
-[Add codeguard to a project](docs/add-codeguard.md#ci) says what the action does and how
-to choose its judge.
+[Run codeguard in CI](docs/add-codeguard.md#ci) explains the action and its judge.
+
+Next, opt into a rule package or write a rule of your own
+([Rules](docs/configuration.md#rules)).
 
 ## Documentation
 
 For a project that uses codeguard:
 
-- [Add codeguard to a project](docs/add-codeguard.md): CI, formatters, the CLI on its
-  own, and upgrades.
+- [Run codeguard in CI and keep it current](docs/add-codeguard.md): CI, formatters, the
+  CLI on its own, and upgrades.
 - [What the hooks check](docs/hooks.md): what a review sends the judge and what it
   reports.
 - [Configuration](docs/configuration.md): rule packages, the judge, telemetry, and every

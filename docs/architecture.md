@@ -204,7 +204,7 @@ Every design must satisfy these.
 
 11. An internal error fails loud: a visible message and an error span. It blocks by
     default: a failed judge call takes its rule's severity, and locally the Stop hook
-    blocks once, then lets the stop through. A bypass is explicit and per change, never
+    blocks every stop until the errors are fixed. A bypass is explicit and per change, never
     the default.
 12. Write-time hooks block only for: the applicable skill not loaded, a failed
     deterministic check, or a high-confidence violation.
@@ -249,8 +249,8 @@ Every design must satisfy these.
 20. Claude Code and Codex are supported equally, each through its own adapter.
 21. An existing tool or host feature is used whenever it satisfies the other invariants.
 22. A rule passes whichever model a user picks: a rule package's CI runs every rule eval
-    on each supported model, overriding each rule's binding for that run. The bar is 20
-    of 20 for a new or changed rule and 3 of 3 otherwise, in CI.
+    on each supported model, overriding each rule's binding for that run, to the bar in
+    [The bar for a judge rule](testing.md#the-bar-for-a-judge-rule).
 
 ## Judge input
 

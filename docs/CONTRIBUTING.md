@@ -5,10 +5,10 @@ works, the invariants every change must keep, and what the judge is given. Befor
 changing the judge (its template, its prompt, its tools or what it's given), the review
 pipeline, or anything an invariant covers, read it and check the change against it.
 
-[docs/testing.md](testing.md) says how to test a change to codeguard, a rule
-package or an app.
+[docs/testing.md](testing.md#changing-codeguard) says which checks a change to
+codeguard needs.
 
-Tests:
+## Run the tests
 
 ```sh
 uv run pytest
@@ -16,10 +16,12 @@ uv run pytest
 
 `uv run pytest` runs offline: it calls no model. Neither it nor the skill evals use the
 project's `judge` configuration or its `CODEGUARD_JUDGE__*` variables: those configure
-codeguard reviewing a project, this repository included. The LLM tests check that the
-judge's
-instructions, request and tools still get the right verdicts from a real model. Each
-one reviews an edit in a scratch repository the way `codeguard review` does, with the
+codeguard reviewing a project, this repository included.
+
+## LLM tests
+
+The LLM tests check that the judge's instructions, request and tools still get the right
+verdicts from a real model. Each one reviews an edit in a scratch repository the way `codeguard review` does, with the
 fixture bindings' judge, `gemini-3.1-pro-preview` on Vertex AI, so they need Gemini
 credentials ([Judge with Gemini on Google Cloud](configuration.md#judge-with-gemini-on-google-cloud)) and cost tokens. They are marked
 `llm`, which plain `pytest` deselects. CI signs in with the repository's
@@ -37,9 +39,6 @@ Local Codex checks use the same fixtures with
 `--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
 add `--llm-runs 20`.
 
-`-n 4` runs four tests at once, each making up to 2 Gemini calls at once; more may hit
-Gemini's tokens-per-minute limit.
-
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the skills and
 bindings beside them. When a case flips between runs or comes back uncertain, follow the
 `writing-rules` skill, and look at the judge prompt as well. The plain suite checks each
@@ -47,6 +46,8 @@ case's triggers.
 
 The `writing-rules` skill has its own evals in `evals/writing-rules/`;
 [docs/skill-evals.md](skill-evals.md) says how to run and write them.
+
+## Run your clone in a project
 
 Run the CLI from this clone. `--editable` links the tool to the source, so edits
 apply on the next run; reinstall only after changing dependencies:

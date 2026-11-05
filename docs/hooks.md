@@ -1,11 +1,10 @@
 # What the hooks check
 
-
 When an agent or subagent stops, the hook runs `codeguard review` in its working
 directory: the uncommitted and untracked files, whoever changed them and however. Start
 the session in the repository's directory and make changes from there. Claude Code reads a
 project's hooks only from the directory a session starts in, and a cloud session over several
-repositories starts above them, where no repository's hooks run. It runs the codeguard
+repositories starts above them, where no repository's hooks run. The hook runs the codeguard
 the plugin ships, not one on your PATH. Claude Code and Codex get the same behaviour.
 
 - An error blocks the stop, and only errors reach the agent. It blocks every time the
@@ -14,9 +13,9 @@ the plugin ships, not one on your PATH. Claude Code and Codex get the same behav
 - Everything else goes to you, not the agent: warnings, findings below the confidence
   threshold, and rules the judge couldn't check (a failed `claude` call or the time
   limit). The hook passes `--judge-errors-as-warnings`, since the agent can't fix those;
-  CI still fails on them unless the PR has the `codeguard-allow-judge-errors` label.
-- Rules the config marks `ci_only` don't run: the hook passes `--skip-ci-only`. CI
-  doesn't, so they still run there ([Rules](configuration.md#rules)).
+  CI still fails on them ([judge errors in CI](add-codeguard.md#ci)).
+- The hook passes `--skip-ci-only`, so [`ci_only` rules](configuration.md#rules) don't
+  run.
 - If the review crashes or uv can't build codeguard's environment, you see why, and the
   stop goes through.
 
@@ -37,7 +36,8 @@ removed line is part of.
 A verdict is cached until the changed code, the rest of the file, the rule, the model, or
 a file the judge loaded changes. A loaded file is one the judge read, or one its searches
 returned: a file a grep matched or a glob listed. A file a search would only start
-returning later doesn't count.
+returning later doesn't count. Verdicts are cached per provider and model, so switching
+providers doesn't reuse Claude's verdicts.
 
 The judge's reason and its [confidence scale](architecture.md#judge-input) are part of
 its verdict. A judged diagnostic prints its confidence, so a warning below

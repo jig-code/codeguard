@@ -28,10 +28,8 @@ packages:
 - `include` lists the only rules that run, pattern and judged; rules the package adds
   later stay off. `exclude` turns rules off. Set one or the other.
 - `rules.<id>` overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`.
-  `exclude_paths: []` brings back the files its binding leaves out. A project doesn't
-  override the model a binding names: the rule's evals passed on it. The project's own
-  `judge` default applies to every other rule, over a package's default ([Configure the
-  judge](#configure-the-judge)).
+  `exclude_paths: []` brings back the files its binding leaves out. For the judge model,
+  see [a bound rule's judge model](#configuration-reference).
 - `severity` on the ruleset sets every rule in it, including rules the package adds
   later; a rule's own `severity` override wins. Only `error` blocks Stop and fails CI,
   so `severity: warning` trials a package: its findings print without blocking. A
@@ -72,7 +70,7 @@ codeguard fails when that version is outside a package's `ast-grep` range.
 For a private package in CI, pass a token that can read it:
 
 ```yaml
-      - uses: jig-code/codeguard@v0.9.1
+      - uses: jig-code/codeguard@v0.11.0
         with:
           packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
 ```
@@ -267,10 +265,8 @@ Two things have no setting on purpose:
   it fails CI. A rule the judge couldn't check is code nobody checked, and a warning in
   a passing check goes unseen: if a setting could turn these into warnings for a
   project, a broken judge, an expired token or a codeguard bug would let every PR
-  through. A bypass is always for one PR: the `codeguard-allow-judge-errors` label
-  ([CI](add-codeguard.md#ci)), which shows in the PR's history. The Stop hook always passes
-  `--judge-errors-as-warnings`, because the agent can't fix a judge failure. It shows
-  the failure to you, and CI still fails on it.
+  through. A bypass is always for one PR ([CI](add-codeguard.md#ci)); the Stop hook
+  shows judge failures to you instead ([What the hooks check](hooks.md)).
 - **A bound rule's judge model.** A rule whose binding names a model is judged with it,
   the one its rule eval passed on alone. A project's `judge.model` applies to every
   other rule, over a package's default ([Configure the judge](#configure-the-judge)).

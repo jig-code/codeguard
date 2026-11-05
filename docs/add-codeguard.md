@@ -1,4 +1,4 @@
-# Add codeguard to a project
+# Run codeguard in CI and keep it current
 
 ## CI
 
@@ -81,8 +81,7 @@ it is released.
 own PR, so whatever the upgrade changes in reviews and rule tests shows up there and
 nowhere else:
 
-- Move the action's tag (`jig-code/codeguard@v<version>`, and `jig-code/codeguard/test@v<version>`
-  if the project defines rules) to the new release.
+- Move the action's tag (`jig-code/codeguard@v<version>`) to the new release.
 - Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
 
 **Auto-update in your dev environment**, so you meet a release's changes before CI does:
