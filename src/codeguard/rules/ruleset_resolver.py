@@ -38,7 +38,12 @@ class RulesetResolver:
                 if problem:
                     raise ConfigError(f"{self.root / MANIFEST_FILE} is invalid:\n  {problem}")
             loaders.extend(
-                RulesetLoader(repo=self.root, root=self.root / name, name=f"{manifest.name}/{name}")
+                RulesetLoader(
+                    repo=self.root,
+                    root=self.root / name,
+                    name=f"{manifest.name}/{name}",
+                    judge=manifest.judge,
+                )
                 for name in manifest.rulesets
             )
         for loader in loaders:

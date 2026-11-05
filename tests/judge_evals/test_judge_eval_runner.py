@@ -10,7 +10,7 @@ from factories.diagnostic import MakeViolation
 from git_repo import GitRepo
 from recording_judge import FailingJudge, RecordingJudge, RecordingJudges
 
-from codeguard.config import ConfigError, JudgeModel, JudgeProvider, RulesetLoader
+from codeguard.config import ConfigError, JudgeChoice, JudgeModel, JudgeProvider, RulesetLoader
 from codeguard.judge_evals import EvalSelection, JudgeEvalResult, JudgeEvalRunner, JudgeFactory
 from codeguard.review import Judge, Judgement, JudgeRequest, Skill, Verdict
 from codeguard.rule_tests import RuleTestResult
@@ -39,20 +39,26 @@ class EnumRule:
         judges: JudgeFactory,
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
-        model: JudgeModel | None = None,
+        override: JudgeChoice = JudgeChoice(),
     ) -> JudgeEvalResult:
-        return self.runner(judges, repeat, selection, model).run()
+        return self.runner(judges, repeat, selection, override).run()
 
     def runner(
         self,
         judges: JudgeFactory,
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
-        model: JudgeModel | None = None,
+        override: JudgeChoice = JudgeChoice(),
     ) -> JudgeEvalRunner:
         loader = RulesetLoader.local(self.repo.root)
         return JudgeEvalRunner(
-            self.repo.root, loader, judges, 0.9, repeat=repeat, selection=selection, model=model
+            self.repo.root,
+            loader,
+            judges,
+            0.9,
+            repeat=repeat,
+            selection=selection,
+            override=override,
         )
 
     def judged_with(self, verdict: Verdict) -> JudgeEvalResult:
@@ -176,11 +182,13 @@ class TestJudgeEvalRunner:
         enum_rule.bind("haiku-model.yaml")
         enum_rule.evaluate("string-is-valid.yaml")
         judges = RecordingJudges(RecordingJudge())
-        gemini = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
+        gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model="gemini-3.1-pro-preview")
 
-        result = enum_rule.run(judges, model=gemini)
+        result = enum_rule.run(judges, override=gemini)
 
-        assert [creation.model for creation in judges.created] == [gemini]
+        assert [creation.model for creation in judges.created] == [
+            JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
+        ]
         assert [report.name for report in result.reports] == [
             "enum-usage on gemini-3.1-pro-preview"
         ]

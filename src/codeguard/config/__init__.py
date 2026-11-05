@@ -5,7 +5,13 @@ from codeguard.config.config import Config
 from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE, ConfigLoader
 from codeguard.config.gate_rule import GateRule
-from codeguard.config.judge_config import JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config.judge_config import (
+    BedrockConfig,
+    JudgeChoice,
+    JudgeConfig,
+    JudgeModel,
+    JudgeProvider,
+)
 from codeguard.config.languages import LANGUAGES, language_of, named_languages
 from codeguard.config.package_config import (
     GitPackageConfig,
@@ -30,6 +36,7 @@ from codeguard.config.severity import Severity
 from codeguard.config.versions import ExactVersion, VersionRange
 
 __all__ = [
+    "BedrockConfig",
     "CONFIG_DIR",
     "CONFIG_FILE",
     "GATE_DIR",
@@ -49,6 +56,7 @@ __all__ = [
     "ExactVersion",
     "GateRule",
     "GitPackageConfig",
+    "JudgeChoice",
     "JudgeConfig",
     "JudgeModel",
     "JudgeProvider",

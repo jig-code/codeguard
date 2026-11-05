@@ -1,6 +1,6 @@
 import factory
 
-from codeguard.config import JudgeModel, JudgeProvider
+from codeguard.config import JudgeChoice
 from codeguard.review import Binding, Severity, Skill
 
 
@@ -26,5 +26,5 @@ class MakeBinding(factory.Factory):
     skill = factory.SubFactory(MakeSkill)
     paths = ("**",)
     severity = Severity.ERROR
-    model = JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="claude-sonnet-5-5")
+    judge = JudgeChoice()
     triggers = frozenset({"any"})

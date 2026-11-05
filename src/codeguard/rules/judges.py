@@ -6,7 +6,7 @@ from diskcache import Cache
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import ConfigError, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
 from codeguard.review import CachedJudge, Deadline, Judge
 
@@ -36,16 +36,22 @@ class Judges:
         processes = self.processes[model.provider]
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.name, processes, deadline=deadline)
+        if model.provider is JudgeProvider.CLAUDE_CLI:
+            return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+        if model.name is None:
+            raise ConfigError(
+                f"provider {model.provider} needs a model: name one in the rule's binding, in "
+                "judge.model in .codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or in "
+                "judge.model in its package's codeguard-package.yaml"
+            )
         if model.provider is JudgeProvider.GEMINI:
             models = VertexGemini(self.config.project, self.config.location)
             return GeminiJudge(root, model.name, models, processes, deadline=deadline)
-        if model.provider is JudgeProvider.BEDROCK:
-            return GeminiJudge(
-                root,
-                model.name,
-                BedrockClaude(),
-                processes,
-                deadline=deadline,
-                provider=model.provider,
-            )
-        return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+        return GeminiJudge(
+            root,
+            self.config.bedrock.model_id(model.name),
+            BedrockClaude(self.config.bedrock.inference_profile),
+            processes,
+            deadline=deadline,
+            provider=model.provider,
+        )

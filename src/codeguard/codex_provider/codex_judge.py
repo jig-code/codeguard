@@ -35,14 +35,17 @@ _DISABLED = (
 @dataclass(frozen=True)
 class CodexJudge:
     root: Path
-    model: str
+    # None runs the CLI with no --model, so its own default judges.
+    model: str | None
     processes: AbstractContextManager[object]
     executable: str = "codex"
     deadline: Deadline | None = None
 
     @property
     def identity(self) -> str:
-        return "\0".join(("codex-cli", self.model, "reasoning=high", "native-tools-schema-v4"))
+        return "\0".join(
+            ("codex-cli", self.model or "", "reasoning=high", "native-tools-schema-v4")
+        )
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (
@@ -99,8 +102,7 @@ class CodexJudge:
             "--skip-git-repo-check",
             "--cd",
             str(self.root.resolve()),
-            "--model",
-            self.model,
+            *(("--model", self.model) if self.model else ()),
             "--json",
             "--output-schema",
             str(schema),

@@ -120,6 +120,15 @@ class TestCodexJudge:
         assert arguments[arguments.index("--model") + 1] == "a-bound-model"
         assert 'model_reasoning_effort="high"' in arguments
 
+    def test_without_a_model_runs_its_own_default(
+        self, tmp_path, processes, fake_codex_executable, record, make_judge_request
+    ):
+        judge = CodexJudge(tmp_path, None, processes, fake_codex_executable)
+
+        judge.judge(make_judge_request())
+
+        assert "--model" not in json.loads(record.read_text())["arguments"]
+
     def test_records_usage(
         self, tmp_path, processes, fake_codex_executable, capfire, make_judge_request
     ):

@@ -14,6 +14,10 @@ from codeguard.rules import Rules, judges
 from codeguard.working_tree import WorkingTree
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
+API_PROVIDER_MODELS = {
+    JudgeProvider.BEDROCK: "claude-haiku-5-5",
+    JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
+}
 CASES = [
     pytest.param(rule_eval.name, case, id=f"{rule_eval.name}: {case.name}")
     for _, rule_eval in rule_evals(EVALS / "python")
@@ -35,11 +39,11 @@ def judged_evals(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
     provider: JudgeProvider | None = request.config.getoption("judge_provider")
     if provider is None:
         return EVALS
-    model: str = request.config.getoption("judge_model") or provider.default_model
+    model: str | None = request.config.getoption("judge_model") or API_PROVIDER_MODELS.get(provider)
     evals = shutil.copytree(EVALS, tmp_path / "evals")
     for binding in (evals / "python" / "bindings").glob("*.yaml"):
         config = yaml.safe_load(binding.read_text()) | {"provider": str(provider), "model": model}
-        binding.write_text(yaml.safe_dump(config))
+        binding.write_text(yaml.safe_dump({k: v for k, v in config.items() if v is not None}))
     return evals
 
 

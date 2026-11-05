@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -33,7 +34,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addoption(
         "--judge-model",
-        help="The model --judge-provider judges with. Default: the provider's default model.",
+        help="The model --judge-provider judges with. Default: Haiku for bedrock, Gemini 3.1 "
+        "Pro for gemini, and the CLI's own default for claude-cli and codex-cli.",
     )
 
 
@@ -46,6 +48,9 @@ def no_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CODEGUARD_CONFIG", raising=False)
+    for name in list(os.environ):
+        if name.startswith("CODEGUARD_JUDGE__"):
+            monkeypatch.delenv(name)
 
 
 @pytest.fixture

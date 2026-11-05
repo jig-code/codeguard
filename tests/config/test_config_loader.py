@@ -1,16 +1,18 @@
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
 from codeguard.config import (
+    BedrockConfig,
     BindingConfig,
     BindingsConfig,
     ChangeKind,
     Config,
     ConfigError,
     ConfigLoader,
+    JudgeChoice,
     JudgeConfig,
-    JudgeModel,
     JudgeProvider,
     PathPackageConfig,
     PatternBindingConfig,
@@ -75,16 +77,73 @@ class TestConfigLoader:
             project="my-project", location="global"
         )
 
-    def test_judge_model_is_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  provider: gemini\n  model: gemini-3.1-pro-preview\n")
+    def test_loads_the_project_judge_default(self, repo):
+        repo.write(CONFIG, "judge:\n  provider: bedrock\n  model: project-model\n")
+
+        assert ConfigLoader(repo.root).load().judge.choice == JudgeChoice(
+            provider=JudgeProvider.BEDROCK, model="project-model"
+        )
+
+    def test_judge_env_vars_override_the_file(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  provider: codex-cli\n  model: file-model\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
+
+        assert ConfigLoader(repo.root).load().judge.choice == JudgeChoice(
+            provider=JudgeProvider.BEDROCK, model="env-model"
+        )
+
+    def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  project: my-project\n  model: file-model\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
+
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
+            project="my-project", model="env-model"
+        )
+
+    def test_judge_env_var_applies_without_a_config_file(self, repo, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
+
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
+
+    def test_any_setting_env_var_overrides_the_file(self, repo, monkeypatch):
+        repo.write(CONFIG, "confidence_threshold: 0.75\n")
+        monkeypatch.setenv("CODEGUARD_CONFIDENCE_THRESHOLD", "0.8")
+
+        assert ConfigLoader(repo.root).load().confidence_threshold == 0.8
+
+    def test_loads_the_bedrock_settings(self, repo):
+        repo.write(
+            CONFIG,
+            "judge:\n  bedrock:\n    inference_prefix: eu\n    inference_profile: arn:profile\n",
+        )
+
+        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(
+            inference_prefix="eu", inference_profile="arn:profile"
+        )
+
+    def test_bedrock_inference_profile_env_var_keeps_the_file_prefix(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__BEDROCK__INFERENCE_PROFILE", "arn:profile")
+
+        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(
+            inference_prefix="eu", inference_profile="arn:profile"
+        )
+
+    def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  model: file-model\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "")
+
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(model="file-model")
+
+    def test_unknown_judge_provider_in_the_environment_is_an_error(self, repo, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "openai")
 
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge: Value error, judge.provider: a rule's binding names its provider; "
-            "judge.model: a rule's binding names its model"
+        assert str(error.value).startswith(
+            f"{repo.root}/.codeguard is invalid:\n  judge.provider: Input should be "
         )
 
     def test_loads_a_path_package(self, repo):
@@ -103,7 +162,7 @@ class TestConfigLoader:
 
         assert config.packages == (
             PathPackageConfig(
-                path=repo.root / "rules",
+                path=Path("rules"),
                 rulesets={"python": RulesetConfig(exclude=("no-print",))},
             ),
         )
@@ -115,8 +174,7 @@ class TestConfigLoader:
             ConfigLoader(repo.root).load()
 
         assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  Input should be a valid dictionary or instance of Config"
+            f"{repo.root}/.codeguard is invalid:\n  config.yaml holds no settings"
         )
 
 
@@ -146,7 +204,7 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_binding_model_defaults_to_sonnet(self, repo, make_skill):
+    def test_binding_names_no_model_by_default(self, repo, make_skill):
         repo.write(SKILL, make_skill().text)
         repo.write(
             BINDING,
@@ -155,7 +213,7 @@ class TestRulesetLoader:
 
         ruleset = RulesetLoader.local(repo.root).load()
 
-        assert ruleset.bindings.root["placement.yaml"].model == "claude-sonnet-5-5"
+        assert ruleset.bindings.root["placement.yaml"].model is None
 
     def test_binding_file_may_end_in_yml(self, repo, make_skill):
         repo.write(SKILL, make_skill().text)
@@ -205,8 +263,8 @@ class TestRulesetLoader:
 
         ruleset = RulesetLoader.local(repo.root).load()
 
-        assert ruleset.bindings.root["placement.yaml"].judge_model == JudgeModel(
-            provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview"
+        assert ruleset.bindings.root["placement.yaml"].judge == JudgeChoice(
+            provider=JudgeProvider.GEMINI, model="gemini-3.1-pro-preview"
         )
 
     def test_loads_the_binding_triggers(self, repo, make_skill):

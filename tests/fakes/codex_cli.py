@@ -22,7 +22,7 @@ class FakeCodexCLI(FakeCLI):
         )
         execute.add_argument("--skip-git-repo-check", action="store_true")
         execute.add_argument("--cd", type=Path, required=True)
-        execute.add_argument("--model", required=True)
+        execute.add_argument("--model")
         execute.add_argument("--json", action="store_true")
         execute.add_argument("--output-schema", type=Path, required=True)
         execute.add_argument("--output-last-message", type=Path, required=True)

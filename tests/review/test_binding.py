@@ -1,6 +1,10 @@
+import pytest
+
 from codeguard.config import (
     BindingConfig,
     BindingsConfig,
+    ConfigError,
+    JudgeChoice,
     JudgeModel,
     JudgeProvider,
     RuleOverride,
@@ -18,11 +22,17 @@ def write_skill(tmp_path, text: str):
     return tmp_path / SKILL_NAME
 
 
-def ruleset(tmp_path, skill, name=None, selection=RulesetConfig()) -> Ruleset:
+def ruleset(
+    tmp_path, skill, name=None, selection=RulesetConfig(), judge=JudgeChoice(), **binding
+) -> Ruleset:
     bindings = BindingsConfig(
-        {"placement.yaml": BindingConfig(triggers=frozenset({"any"}), skill=skill, paths=("**",))}
+        {
+            "placement.yaml": BindingConfig(
+                triggers=frozenset({"any"}), skill=skill, paths=("**",), **binding
+            )
+        }
     )
-    return Ruleset(name=name, root=tmp_path, bindings=bindings, selection=selection)
+    return Ruleset(name=name, root=tmp_path, bindings=bindings, selection=selection, judge=judge)
 
 
 class TestBinding:
@@ -46,7 +56,7 @@ class TestBinding:
             triggers=frozenset({"any"}), skill=skill, paths=("**",), exclude_paths=("tests/**",)
         )
 
-        binding = Binding.from_config(SKILL_NAME, config)
+        binding = Binding.from_config(SKILL_NAME, config, JudgeChoice())
 
         assert binding == make_binding(exclude_paths=("tests/**",))
 
@@ -63,21 +73,18 @@ class TestBinding:
             triggers=frozenset({"any"}), skill=skill, paths=("**",), severity=Severity.WARNING
         )
 
-        binding = Binding.from_config(SKILL_NAME, config)
+        binding = Binding.from_config(SKILL_NAME, config, JudgeChoice())
 
         assert binding == make_binding(severity=Severity.WARNING)
 
-    def test_from_config_has_its_model(self, tmp_path, make_binding, make_skill):
+    def test_from_config_has_its_judge(self, tmp_path, make_binding, make_skill):
         skill = write_skill(tmp_path, make_skill().text)
-        config = BindingConfig(
-            triggers=frozenset({"any"}), skill=skill, paths=("**",), model="claude-haiku-5-5"
-        )
+        config = BindingConfig(triggers=frozenset({"any"}), skill=skill, paths=("**",))
+        judge = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="gpt-6-luna")
 
-        binding = Binding.from_config(SKILL_NAME, config)
+        binding = Binding.from_config(SKILL_NAME, config, judge)
 
-        assert binding == make_binding(
-            model=JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="claude-haiku-5-5")
-        )
+        assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="gpt-6-luna")
 
 
 class TestBindings:
@@ -144,6 +151,97 @@ class TestBindings:
         ruleset = Ruleset(name=None, root=tmp_path, bindings=bindings, selection=selection)
 
         assert Bindings.from_rulesets([ruleset]) == (make_binding(),)
+
+
+class TestBindingsJudge:
+    def test_rule_without_a_judge_named_runs_the_claude_cli_default(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill)])
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name=None)
+
+    def test_package_default_judges_its_rules(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+        package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
+
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)])
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.BEDROCK, name="package-model")
+
+    def test_project_default_wins_over_the_package_default(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)], project)
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.BEDROCK, name="project-model")
+
+    def test_binding_wins_over_the_project_default(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        bound = ruleset(tmp_path, skill, provider=JudgeProvider.GEMINI, model="bound-model")
+
+        (binding,) = Bindings.from_rulesets([bound], project)
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.GEMINI, name="bound-model")
+
+    def test_provider_and_model_each_come_from_the_first_level_naming_it(
+        self, tmp_path, make_skill
+    ):
+        skill = write_skill(tmp_path, make_skill().text)
+        package = JudgeChoice(model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK)
+        bound = ruleset(tmp_path, skill, judge=package, model="bound-model")
+
+        (binding,) = Bindings.from_rulesets([bound], project)
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.BEDROCK, name="bound-model")
+
+    def test_project_model_with_the_package_provider(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(model="project-model")
+
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)], project)
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="project-model")
+
+    def test_override_wins_over_every_level(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        bound = ruleset(tmp_path, skill, provider=JudgeProvider.GEMINI, model="bound-model")
+        override = JudgeChoice(provider=JudgeProvider.CODEX_CLI)
+
+        (binding,) = Bindings.from_rulesets([bound], project, override)
+
+        assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="bound-model")
+
+    @pytest.mark.parametrize("model", ["gpt-6-luna", "gemini-3.1-pro-preview"])
+    def test_model_other_than_claude_with_no_provider_named_is_an_error(
+        self, tmp_path, make_skill, model
+    ):
+        skill = write_skill(tmp_path, make_skill().text)
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, model=model)])
+
+        with pytest.raises(ConfigError) as error:
+            _ = binding.model
+
+        assert str(error.value) == (
+            f"model {model} needs a provider: set provider in the rule's binding, "
+            "judge.provider in .codeguard/config.yaml (or CODEGUARD_JUDGE__PROVIDER), or "
+            "judge.provider in its package's codeguard-package.yaml"
+        )
+
+    def test_claude_model_with_no_provider_named_runs_on_the_claude_cli(self, tmp_path, make_skill):
+        skill = write_skill(tmp_path, make_skill().text)
+
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, model="claude-haiku-5-5")])
+
+        assert binding.model == JudgeModel(
+            provider=JudgeProvider.CLAUDE_CLI, name="claude-haiku-5-5"
+        )
 
 
 class TestSkill:

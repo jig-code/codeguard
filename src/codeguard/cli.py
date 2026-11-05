@@ -7,7 +7,7 @@ from pathlib import Path
 
 import logfire
 
-from codeguard.config import ConfigLoader, JudgeModel, JudgeProvider
+from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
@@ -133,13 +133,13 @@ def main() -> int:
         "--provider",
         type=JudgeProvider,
         choices=list(JudgeProvider),
-        help="Judge every selected rule with this provider instead of its binding's.",
+        help="Judge every selected rule with this provider instead of the configured one; "
+        "the model still comes from the configuration unless --model names one.",
     )
     eval_command.add_argument(
         "--model",
-        help="The model --provider judges with. Default: claude-sonnet-5-5 for claude-cli, "
-        "gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
-        "us.anthropic.claude-haiku-5-5 for bedrock.",
+        help="The model --provider judges with, by its vendor's id. Default: the configured "
+        "model, else none, so claude-cli and codex-cli run their CLI's own default.",
     )
     eval_command.set_defaults(run=_eval)
 
@@ -239,12 +239,10 @@ def _eval(args: argparse.Namespace) -> int:
     from codeguard.rules.rule_evaluation import RuleEvaluation  # noqa: PLC0415
 
     selection = EvalSelection(frozenset(args.rule), tuple(args.case))
-    model = (
-        JudgeModel(provider=args.provider, name=args.model or args.provider.default_model)
-        if args.provider
-        else None
+    override = JudgeChoice(provider=args.provider, model=args.model)
+    result = RuleEvaluation(Rules(_working_tree(args.package))).run(
+        args.repeat, selection, override
     )
-    result = RuleEvaluation(Rules(_working_tree(args.package))).run(args.repeat, selection, model)
     result.write(sys.stdout)
     return _EXIT_PASSED if result.passed else _EXIT_FAILED
 

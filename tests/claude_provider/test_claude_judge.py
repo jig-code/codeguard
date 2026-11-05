@@ -384,6 +384,17 @@ class TestClaudeJudge:
         argv = json.loads(arguments.read_text())["arguments"]
         assert argv[argv.index("--model") + 1] == "claude-opus-5-5"
 
+    def test_claude_without_a_model_runs_its_own_default(
+        self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request
+    ):
+        judge = ClaudeJudge(
+            tmp_path, model=None, processes=processes, executable=fake_claude_executable
+        )
+
+        judge.judge(make_judge_request())
+
+        assert "--model" not in json.loads(arguments.read_text())["arguments"]
+
     def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):

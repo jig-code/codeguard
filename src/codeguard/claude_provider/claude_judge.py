@@ -27,7 +27,8 @@ _READ_ONLY_TOOLS = "Read,Grep,Glob"
 @dataclass(frozen=True)
 class ClaudeJudge:
     root: Path
-    model: str
+    # None runs the CLI with no --model, so its own default judges.
+    model: str | None
     processes: AbstractContextManager[object]
     executable: str = _EXECUTABLE
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
@@ -35,7 +36,7 @@ class ClaudeJudge:
 
     @property
     def identity(self) -> str:
-        return "\0".join((_EXECUTABLE, self.model))
+        return "\0".join((_EXECUTABLE, self.model or ""))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
@@ -76,8 +77,7 @@ class ClaudeJudge:
                 self.executable,
                 "--safe-mode",
                 "-p",
-                "--model",
-                self.model,
+                *(("--model", self.model) if self.model else ()),
                 "--output-format",
                 "stream-json",
                 "--verbose",

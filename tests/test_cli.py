@@ -715,7 +715,10 @@ class TestEvalCommand:
             env={**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.stdout.endswith(
             "responsibility-placement assigns in the invoice: expected outcome invalid, got "
             "outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
@@ -797,25 +800,28 @@ class TestEvalCommand:
             text=True,
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.returncode == 0
 
     @pytest.mark.parametrize(
         ("options", "model"),
         [
-            (["--provider", "claude-cli"], "claude-sonnet-5-5"),
-            (["--provider", "claude-cli", "--model", "claude-haiku-5-5"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli", "--model", "claude-opus-5-5"], "claude-opus-5-5"),
         ],
-        ids=["default-model", "given-model"],
+        ids=["bound-model", "given-model"],
     )
-    def test_judges_with_the_given_provider_and_model(
+    def test_provider_override_keeps_the_configured_model_unless_given_one(
         self, tmp_path, tmp_path_factory, options, model
     ):
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
             'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+            "triggers: [any]\nprovider: bedrock\nmodel: claude-haiku-5-5\n",
         )
         bin_dir = recording_claude(tmp_path, [])
 
@@ -829,6 +835,31 @@ class TestEvalCommand:
 
         assert recorded_call(tmp_path / "eval")["model"] == model
         assert f"Evaluation Summary: responsibility-placement on {model}" in result.stdout
+
+    def test_provider_override_with_no_model_anywhere_runs_the_cli_default(
+        self, tmp_path, tmp_path_factory
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: gemini\n",
+        )
+        bin_dir = recording_claude(tmp_path, [])
+
+        result = subprocess.run(
+            [CODEGUARD, "eval", "--provider", "claude-cli"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
+            capture_output=True,
+            text=True,
+        )
+
+        assert recorded_call(tmp_path / "eval")["model"] is None
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(
@@ -864,6 +895,46 @@ RECORDED_OPTIONS = {
     "--tools": "tools",
     "--json-schema": "json schema",
 }
+
+
+class TestReviewJudgeDefaults:
+    def review_model(self, tmp_path, tmp_path_factory, project_config: str, **env: str):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "codeguard-package.yaml",
+            "name: example\nrulesets: [python]\njudge:\n  model: claude-haiku-5-5\n",
+        )
+        project = GitRepo.init(tmp_path_factory.mktemp("project").resolve())
+        project.write(".codeguard/config.yaml", path_package_config(package) + project_config)
+        project.write("invoice.py", INVOICE_BEFORE)
+        project.commit("Add the invoice")
+        project.write("invoice.py", INVOICE_AFTER)
+        bin_dir = recording_claude(tmp_path, [])
+        subprocess.run(
+            [CODEGUARD, "review"],
+            cwd=project.root,
+            env={**recording_env(tmp_path, bin_dir, tmp_path / "review"), **env},
+            capture_output=True,
+            check=True,
+        )
+        return recorded_call(tmp_path / "review")["model"]
+
+    def test_package_default_model_judges_its_rules(self, tmp_path, tmp_path_factory):
+        assert self.review_model(tmp_path, tmp_path_factory, "") == "claude-haiku-5-5"
+
+    def test_project_default_model_wins_over_the_package_default(self, tmp_path, tmp_path_factory):
+        config = "judge:\n  model: claude-opus-5-5\n"
+
+        assert self.review_model(tmp_path, tmp_path_factory, config) == "claude-opus-5-5"
+
+    def test_judge_model_env_var_wins_over_the_project_file(self, tmp_path, tmp_path_factory):
+        config = "judge:\n  model: claude-opus-5-5\n"
+
+        model = self.review_model(
+            tmp_path, tmp_path_factory, config, CODEGUARD_JUDGE__MODEL="claude-sonnet-5-5"
+        )
+
+        assert model == "claude-sonnet-5-5"
 
 
 class TestEvalMatchesReview:
@@ -978,13 +1049,13 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
     }
 
 
-def recorded_call(record: Path) -> dict[str, str]:
+def recorded_call(record: Path) -> dict[str, str | None]:
     captured = json.loads((record / "request.json").read_text())
     arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
         "prompt": captured["prompt"],
-        **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
+        **{name: values.get(option) for option, name in RECORDED_OPTIONS.items()},
     }
 
 

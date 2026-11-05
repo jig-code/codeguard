@@ -1,14 +1,7 @@
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    DirectoryPath,
-    Field,
-    ValidationInfo,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field
 
 from codeguard.config.ruleset_config import RulesetConfig
 
@@ -26,16 +19,9 @@ class PathPackageConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     kind: Literal["path"] = "path"
-    path: DirectoryPath
+    # Relative to the repository root.
+    path: Path
     rulesets: dict[str, RulesetConfig] = Field(min_length=1)
-
-    @field_validator("path", mode="before")
-    @classmethod
-    def resolve_path_in_working_tree(cls, path: object, info: ValidationInfo) -> object:
-        if not isinstance(path, str | Path):
-            return path
-        working_tree = (info.context or {}).get("working_tree", Path())
-        return (working_tree / path).resolve()
 
 
 type PackageConfig = Annotated[GitPackageConfig | PathPackageConfig, Field(discriminator="kind")]
