@@ -30,20 +30,23 @@ whether it sets that tool up. So:
 ## Running them
 
 CI runs them when `skills/writing-rules/`, `evals/writing-rules/` or their workflow
-changes, on Claude Haiku 5.5 through Bedrock, in two passes. The validity pass runs every
-case once to verify the change. Once it passes with nothing changed since, the
-reliability pass runs every case 9 more times, to the end, and reports each case's
-score. A case passes when every grader passes in all 10 runs. Any change starts again at
-the validity pass. The agent and the graders both use the model in the
-`SKILL_EVALS_BEDROCK_MODEL` repository variable.
+changes, through Bedrock, in two passes. The validity pass runs every case once to
+verify the change. Once it passes with nothing changed since, the reliability pass runs
+every case 9 more times, to the end, and reports each case's score. A case passes when
+every grader passes in all 10 runs. Any change starts again at the validity pass. The
+agent runs on Claude Opus 5.5, the model in the `SKILL_EVALS_AGENT_BEDROCK_MODEL`
+repository variable, and the graders on Claude Haiku 5.5, the model in
+`SKILL_EVALS_GRADER_BEDROCK_MODEL`.
 
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
-  --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL" \
+  --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
+  --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL" \
   --trust-plugin --no-publish
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 \
-  --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL" \
+  --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
+  --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL" \
   --trust-plugin --no-publish
 ```
 

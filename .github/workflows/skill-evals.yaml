@@ -6,8 +6,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 # A case's score is the mean over its runs of the fraction of its graders that pass, so
-# --threshold 1 passes a case only when every grader passes in every run. The agent and
-# the graders both run on the pinned Haiku profile.
+# --threshold 1 passes a case only when every grader passes in every run. The agent runs
+# on the pinned Opus profile and the graders on the pinned Haiku profile.
 jobs:
   # One run of every case verifies the change.
   skill-evals-validity:
@@ -24,12 +24,14 @@ jobs:
           aws-region: us-west-2
       - run: >-
           claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1
-          --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL"
+          --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL"
+          --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL"
           --trust-plugin --no-publish
         env:
           CLAUDE_CODE_USE_BEDROCK: 1
           AWS_REGION: us-west-2
-          SKILL_EVALS_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_BEDROCK_MODEL }}
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
   # Nine more runs of every case, for 10 of 10; every run completes.
   skill-evals-reliability:
     needs: skill-evals-validity
@@ -46,9 +48,11 @@ jobs:
           aws-region: us-west-2
       - run: >-
           claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1
-          --model "$SKILL_EVALS_BEDROCK_MODEL" --judge-model "$SKILL_EVALS_BEDROCK_MODEL"
+          --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL"
+          --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL"
           --trust-plugin --no-publish
         env:
           CLAUDE_CODE_USE_BEDROCK: 1
           AWS_REGION: us-west-2
-          SKILL_EVALS_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_BEDROCK_MODEL }}
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
