@@ -91,7 +91,7 @@ Rule test warnings, such as broad triggers, are advisory: they don't fail a chan
 | Anything | Lint, format, import boundaries, types and codeguard's offline tests | `uv run ruff check`, `uv run ruff format --check`, `uv run lint-imports`, `uv run basedpyright`, `uv run pytest` | Same |
 | Anything | The changed files against the rules this repository opts into in its [`.codeguard/config.yaml`](../.codeguard/config.yaml), judge rules included; an error fails. This dogfoods codeguard: every change to it must pass the rules in its own config. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files | `codeguard review --base <base branch>` | `codeguard review` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | Each fixture case's review, 3 runs | `uv run pytest -m llm -n 4` | Same |
-| The writing-rules skill or its evals | Each skill eval case's graders, 10 runs; every grader must pass in every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md) | Same |
+| The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 9 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md) | Same |
 
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
 tests. `-n 8` only sets how many run at once: any number gives the same result.
