@@ -1,6 +1,7 @@
 # codeguard
 
-[README.md](README.md) explains the CLI, rule packages and how to work on codeguard.
+[README.md](README.md) introduces codeguard and links its docs by audience;
+[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) explains how to work on codeguard.
 
 ## Design
 
