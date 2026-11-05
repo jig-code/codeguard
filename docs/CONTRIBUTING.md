@@ -1,6 +1,5 @@
 # Working on codeguard
 
-
 [docs/architecture.md](architecture.md) describes codeguard's architecture: how it
 works, the invariants every change must keep, and what the judge is given. Before
 changing the judge (its template, its prompt, its tools or what it's given), the review
@@ -38,10 +37,8 @@ Local Codex checks use the same fixtures with
 `--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
 add `--llm-runs 20`.
 
-`-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
-time: any number gives the same result, though more may hit Gemini's tokens-per-minute
-limit. [docs/testing.md](testing.md) says which to run for a
-change.
+`-n 4` runs four tests at once, each making up to 2 Gemini calls at once; more may hit
+Gemini's tokens-per-minute limit.
 
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the skills and
 bindings beside them. When a case flips between runs or comes back uncertain, follow the

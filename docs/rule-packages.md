@@ -60,17 +60,15 @@ python/
 ```
 
 The rule eval is what makes a rule trustworthy. It shows the rule flags the edits it
-should and passes the ones it should, on the models that will judge it in reviews: the
-binding's, else the project's default, else the package's ([Configure the
-judge](configuration.md#configure-the-judge)). A
-binding names a model only for a rule whose eval passes on that model alone, and a
-project can't switch such a rule to another.
+should and passes the ones it should, on the models that will judge it in reviews
+([Judge configuration](architecture.md#judge-configuration)). A binding names a model
+only for a rule whose eval passes on that model alone, and a project can't switch such a
+rule to another.
 
 `codeguard eval` judges with the same model, unless `--provider` and `--model` name
-another. A package's CI runs the evals as a matrix over the supported models, today
-Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock, overriding each binding for the
-run, so a rule passes whichever model a user picks; the bar is 20 of 20 for a new or
-changed rule and 3 of 3 otherwise. The override changes nothing a review judges with.
+another, as a package's CI does for its model matrix
+([Invariants](architecture.md#invariants)). The override changes nothing a review judges
+with.
 
 ### A rule in several languages
 
@@ -129,8 +127,7 @@ model: gemini-3.1-pro-preview     # by its vendor's id, such as claude-haiku-5-5
 A judge rule's id is its skill's directory name.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
-whose changed lines fall inside none of it, and is sent the whole of each trigger node
-around a change. A binding without `triggers` gets `[any]`, so packages written before
+whose changed lines fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
 triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
@@ -152,15 +149,12 @@ so the blank line before a new method doesn't make its class part of the change.
 holding only comments and docstrings touches only `comment` and `docstring`, not the
 function or class around it: prose breaks no code rule. A rule
 that needs every change says `triggers: [any]`; `codeguard test` warns on `any`, `code`,
-`function-body` and `function-signature`. The built-in kinds are `comment`, `docstring`,
-`import`, `function-signature`, `function-body`, `test-function`, `fixture`, `helper-function`,
-`class-header`, `class-attribute`, `module-statement`, `annotation`, `call`,
-`control-flow`, `return-yield`, `collection-literal`, `string-literal`,
-`number-literal`, `attribute-access`, `subscript`, `conditional-expression`,
-`membership-test`, `assert` and `raise`, plus three from the diff:
-`definition-added-or-removed` (a def or class name added or removed), `code` (any line
-that is not only a comment or docstring) and `any`. The syntax table in
-`src/codeguard/syntax/languages/` defines each kind as an ast-grep rule.
+`function-body` and `function-signature`. The writing-rules skill's
+[judge-rules reference](../skills/writing-rules/references/judge-rules.md#gate-every-form-of-the-violation)
+lists the built-in kinds. Three come from the diff: `definition-added-or-removed` (a def
+or class name added or removed), `code` (any line that is not only a comment or
+docstring) and `any`. The syntax table in `src/codeguard/syntax/languages/` defines each
+of the others as an ast-grep rule.
 
 ### The rule eval
 
@@ -302,19 +296,15 @@ reason for each case it judged, then one line per failure.
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
-| Provider and model | `--provider` and `--model`, else the binding, the project's default or the package's default, in that order; with none, the `claude` CLI with no `--model`, so its own default |
+| Provider and model | `--provider` and `--model`, else [Judge configuration](architecture.md#judge-configuration) |
 | The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
 | The judge prompt and how each case is checked | codeguard |
 
 ## Which test to write
 
 A project tests the rules in its `.codeguard/` the same way a package does.
-
-| You add or change | Write | It checks | Run | Calls the model |
-|---|---|---|---|---|
-| A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
-| A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review, 20 runs of 20 | `codeguard eval --repeat 20` | yes |
+[Testing](testing.md#changing-a-rule-package) says which test each change needs and how
+many runs it must pass.
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.

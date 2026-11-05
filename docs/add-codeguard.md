@@ -2,19 +2,14 @@
 
 ## CI
 
-The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. In CI the judge runs through pydantic-ai with the
-environment's credentials, never a subscription or the `claude` CLI: Claude on Amazon
-Bedrock, with the job's AWS credentials as above, or Gemini on Vertex AI with
-`google-github-actions/auth` ([Judge with Gemini on Google
-Cloud](configuration.md#judge-with-gemini-on-google-cloud)). The job's environment names which, as
-above: the project's config takes any `judge` key from an environment variable,
-`CODEGUARD_` plus the key path with `__` between its parts, which overrides the file;
-the project config needs no line for CI, and on your machine the variables are unset,
-so the file's value stands or the default falls through ([Configure the
-judge](configuration.md#configure-the-judge)). This configures codeguard reviewing a project in CI,
-codeguard reviewing itself included; codeguard's own LLM tests and skill evals are a
-different configuration and don't use it.
+The README's [CI example](../README.md#ci) adds the action. It reviews the files changed
+since the merge base with the PR's base branch, then runs the rule tests. The job's
+`CODEGUARD_JUDGE__PROVIDER` and `CODEGUARD_JUDGE__MODEL` name its judge: Claude on
+Amazon Bedrock with the job's AWS credentials, as in the example, or Gemini on Vertex AI
+with `google-github-actions/auth` ([Judge with Gemini on Google
+Cloud](configuration.md#judge-with-gemini-on-google-cloud)). [Configure the
+judge](configuration.md#configure-the-judge) says how those variables and the project's
+config combine.
 
 A judge call that couldn't complete fails the review, and no setting turns that off
 ([why](configuration.md#configuration-reference)). To merge the PR anyway, add the
@@ -63,29 +58,11 @@ codeguard ignores added and removed blank lines, which change nothing in any lan
 Other whitespace can change meaning, such as indentation in Python, so codeguard
 leaves it to the formatter.
 
-## Setup
+## The CLI on its own
 
-The plugin is codeguard: it ships the CLI and runs it with
-[uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is all anyone
-working in the project installs. The first review after an install or upgrade takes a
-little longer while uv builds codeguard's environment in the plugin's data directory.
-
-In Claude Code, install the plugin. Project settings enable it but don't install it.
-
-```sh
-claude plugin install codeguard@codeguard --scope project
-```
-
-In Claude Code, the plugin also puts `codeguard` on the PATH of the commands Claude
-runs, for skills such as writing a rule.
-
-In Codex, trust codeguard's hooks in `/hooks`. Codex doesn't give plugins a command, so
-writing rules there needs the CLI on its own.
-
-### The CLI on its own
-
-To run codeguard from a terminal, or to write rules in Codex, install the CLI with uv.
-It doesn't need the plugin, and the plugin doesn't need it.
+The README's [Setup](../README.md#setup) installs the plugin. To run codeguard from a
+terminal, install the CLI with uv. It doesn't need the plugin, and the plugin doesn't
+need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0
