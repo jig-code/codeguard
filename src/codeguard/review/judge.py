@@ -150,6 +150,8 @@ def output_schema(output: type[BaseModel]) -> JsonSchemaValue:
 class Judgement:
     verdict: Verdict
     loaded_files: tuple[str, ...] = ()
+    # The model the run reports it judged with, when the provider reports one.
+    model: str | None = None
 
 
 class JudgeError(Exception):

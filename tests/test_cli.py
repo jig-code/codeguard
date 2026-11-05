@@ -494,6 +494,7 @@ class TestReviewJudgeCache:
         self, repo, tmp_path, make_skill
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-sonnet-5-5\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -517,6 +518,7 @@ class TestReviewJudgeCache:
         self, repo, tmp_path, make_skill, search
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-sonnet-5-5\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -538,6 +540,25 @@ class TestReviewJudgeCache:
         run_review(repo, tmp_path, bin_dir)
 
         assert calls.read_text() == "called\ncalled\n"
+
+    def test_verdict_of_the_cli_default_is_judged_again_when_the_default_changes(
+        self, repo, tmp_path, make_skill
+    ):
+        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        repo.write("b.py", "y = 2\n")
+        calls = tmp_path / "calls"
+        configure_fake_cli_response(
+            {"stdout": claude_stream([], model="claude-sonnet-5-5"), "calls": str(calls)}
+        )
+        run_review(repo, tmp_path, bin_dir)
+        run_review(repo, tmp_path, bin_dir)
+        configure_fake_cli_response(
+            {"stdout": claude_stream([], model="claude-opus-5-5"), "calls": str(calls)}
+        )
+
+        run_review(repo, tmp_path, bin_dir)
+
+        assert calls.read_text() == "called\n" * 5
 
 
 class TestReviewJudgeErrorsAsWarnings:
@@ -861,16 +882,25 @@ class TestEvalCommand:
             in result.stdout
         )
 
-    def test_model_without_a_provider_exits_2(self, tmp_path):
+    def test_model_override_keeps_the_configured_provider(self, tmp_path, tmp_path_factory):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: claude-cli\nmodel: claude-haiku-5-5\n",
+        )
+        bin_dir = recording_claude(tmp_path, [])
+
         result = subprocess.run(
-            [CODEGUARD, "eval", "--model", "claude-haiku-5-5"],
-            cwd=tmp_path,
+            [CODEGUARD, "eval", "--model", "claude-opus-5-5"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
             capture_output=True,
             text=True,
         )
 
-        assert result.stderr.endswith("error: --model needs --provider\n")
-        assert result.returncode == 2
+        assert recorded_call(tmp_path / "eval")["model"] == "claude-opus-5-5"
+        assert "Evaluation Summary: responsibility-placement on claude-opus-5-5" in result.stdout
 
 
 INVOICE_BEFORE = (

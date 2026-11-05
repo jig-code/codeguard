@@ -11,10 +11,11 @@ class RecordingJudge:
     identity: str = "recording"
     loaded_files: tuple[str, ...] = ()
     received: list[JudgeRequest] = field(default_factory=list)
+    model: str | None = None
 
     def judge(self, request: JudgeRequest) -> Judgement:
         self.received.append(request)
-        return Judgement(self.verdict, self.loaded_files)
+        return Judgement(self.verdict, self.loaded_files, self.model)
 
 
 @dataclass(frozen=True)

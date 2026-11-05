@@ -8,7 +8,7 @@ from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import ConfigError, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
-from codeguard.review import CachedJudge, Deadline, Judge
+from codeguard.review import CachedJudge, Deadline, Judge, ReportedDefault
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
 
@@ -19,6 +19,8 @@ class Judges:
     store: Cache = field(default_factory=lambda: Cache(_JUDGEMENT_CACHE_DIR))
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
+    # What each CLI runs when it's given no model, as its first run reports.
+    defaults: dict[JudgeProvider, ReportedDefault] = field(init=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -26,11 +28,15 @@ class Judges:
             "processes",
             {provider: Semaphore(self.config.concurrency(provider)) for provider in JudgeProvider},
         )
+        object.__setattr__(
+            self, "defaults", {provider: ReportedDefault() for provider in JudgeProvider}
+        )
 
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> CachedJudge:
-        return CachedJudge(self.uncached(root, model, deadline), self.store, root)
+        default = self.defaults[model.provider] if model.name is None else None
+        return CachedJudge(self.uncached(root, model, deadline), self.store, root, default=default)
 
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]

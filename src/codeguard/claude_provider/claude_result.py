@@ -157,6 +157,7 @@ class _MessageBody(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     content: tuple[_ContentPart, ...]
+    model: str | None = None
 
     @field_validator("content", mode="before")
     @classmethod
@@ -215,6 +216,8 @@ class ClaudeResult(BaseModel):
     structured_output: dict[str, JsonValue] | None = None
     loaded_files: tuple[str, ...] = ()
     tool_calls: tuple[dict[str, JsonValue], ...] = ()
+    # The models Claude's turns report, else the ones its usage names.
+    models: tuple[str, ...] = ()
 
     @classmethod
     def from_stream(cls, stream: str, root: Path) -> Self:
@@ -246,8 +249,14 @@ class ClaudeResult(BaseModel):
         loaded_files = (
             file for use in tool_uses for file in use.loaded_files(root, tool_results.get(use.id))
         )
+        turn_models = {
+            message.message.model
+            for message in messages
+            if isinstance(message, _AssistantMessage) and message.message.model
+        }
         return results[-1].model_copy(
             update={
+                "models": tuple(sorted(turn_models or results[-1].model_usage)),
                 "usage_windows": windows[-1] if windows else {},
                 "loaded_files": tuple(dict.fromkeys(loaded_files)),
                 # The verdict comes as a call to this tool; it reads nothing.

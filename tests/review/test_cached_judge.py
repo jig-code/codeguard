@@ -4,7 +4,7 @@ import pytest
 from recording_judge import RecordingJudge
 from spans import finished_span_attributes
 
-from codeguard.review import CachedJudge, Judgement, JudgeRequest, Verdict
+from codeguard.review import CachedJudge, Judgement, JudgeRequest, ReportedDefault, Verdict
 
 ORDER_SERVICE = (
     "from orders.pricing import DISCOUNT\n"
@@ -229,3 +229,54 @@ class TestCachedJudge:
             False,
             ["orders/pricing.py"],
         )
+
+
+class TestCachedJudgeOnTheCliDefault:
+    def test_first_request_is_judged_though_a_verdict_is_cached(self, orders, store, total_change):
+        cached(orders, store, RecordingJudge(model="model-a"), default=ReportedDefault()).judge(
+            total_change
+        )
+        wrapped = RecordingJudge(model="model-a")
+
+        cached(orders, store, wrapped, default=ReportedDefault()).judge(total_change)
+
+        assert wrapped.received == [total_change]
+
+    def test_later_requests_reuse_verdicts_of_the_reported_default(
+        self, orders, store, total_change, make_skill
+    ):
+        default = ReportedDefault()
+        wrapped = RecordingJudge(model="model-a")
+        judge = cached(orders, store, wrapped, default=default)
+        other = JudgeRequest(
+            make_skill(), "orders/receipt.py", "     1\tdef receipt_line(order):\n"
+        )
+        judge.judge(total_change)
+        judge.judge(other)
+
+        judge.judge(total_change)
+
+        assert wrapped.received == [total_change, other]
+
+    def test_verdict_of_an_earlier_default_is_judged_again(self, orders, store, total_change):
+        old_default = ReportedDefault()
+        cached(orders, store, RecordingJudge(model="model-a"), default=old_default).judge(
+            total_change
+        )
+        new_default = ReportedDefault(known=True, model="model-b")
+        wrapped = RecordingJudge(model="model-b")
+
+        cached(orders, store, wrapped, default=new_default).judge(total_change)
+
+        assert wrapped.received == [total_change]
+
+    def test_cli_reporting_no_model_is_never_cached(self, orders, store, total_change):
+        default = ReportedDefault()
+        wrapped = RecordingJudge()
+        judge = cached(orders, store, wrapped, default=default)
+        judge.judge(total_change)
+
+        judge.judge(total_change)
+
+        assert wrapped.received == [total_change, total_change]
+        assert not judge.has(total_change)

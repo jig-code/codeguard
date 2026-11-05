@@ -49,7 +49,11 @@ class ClaudeJudge:
                 span, request.instructions, request.prompt, Verdict, _READ_ONLY_TOOLS
             )
             span.set_attributes(result.telemetry)
-            return Judgement(Verdict.model_validate(result.structured_output), result.loaded_files)
+            return Judgement(
+                Verdict.model_validate(result.structured_output),
+                result.loaded_files,
+                ",".join(result.models) or None,
+            )
 
     def _result(
         self,

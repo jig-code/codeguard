@@ -138,8 +138,10 @@ def main() -> int:
     )
     eval_command.add_argument(
         "--model",
-        help="The model --provider judges with, by its vendor's id. Default: the configured "
-        "model, else none, so claude-cli and codex-cli run their CLI's own default.",
+        help="Judge every selected rule with this model, by its vendor's id, instead of the "
+        "configured one; the provider still comes from the configuration unless --provider "
+        "names one. Default: the configured model, else none, so claude-cli and codex-cli run "
+        "their CLI's own default.",
     )
     eval_command.set_defaults(run=_eval)
 
@@ -150,8 +152,6 @@ def main() -> int:
     config_command.set_defaults(run=_config)
 
     args = parser.parse_args()
-    if getattr(args, "model", None) and not args.provider:
-        eval_command.error("--model needs --provider")
     _configure_telemetry()
     try:
         if args.run is _config:
