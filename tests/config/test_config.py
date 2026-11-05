@@ -10,6 +10,7 @@ from codeguard.config import (
     Config,
     GitPackageConfig,
     JudgeConfig,
+    JudgeModel,
     JudgeProvider,
     PathPackageConfig,
     RuleOverride,
@@ -307,6 +308,22 @@ class TestRulesetConfig:
 
         assert messages(error) == [f"Value error, provider {provider} needs a model"]
 
+    def test_codex_binding_uses_its_selected_model(self, tmp_path):
+        skill = write_skill(tmp_path)
+
+        binding = BindingConfig.model_validate(
+            {
+                "skill": skill,
+                "paths": ["**/*.py"],
+                "provider": "codex-cli",
+                "model": "a-bound-model",
+            }
+        )
+
+        assert binding.judge_model == JudgeModel(
+            provider=JudgeProvider.CODEX_CLI, name="a-bound-model"
+        )
+
 
 class TestJudgeConfig:
     def test_claude_runs_a_call_per_cpu_at_once(self):
@@ -317,3 +334,11 @@ class TestJudgeConfig:
 
     def test_calls_at_once_sets_the_concurrency(self):
         assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI) == 1
+
+
+def test_codex_concurrency_uses_the_cli_limit():
+    assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI) == os.process_cpu_count()
+
+
+def test_codex_default_remains_luna():
+    assert JudgeProvider.CODEX_CLI.default_model == "gpt-6-luna"

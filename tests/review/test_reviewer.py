@@ -22,7 +22,11 @@ class TestReviewer:
     ):
         repo.write("a.py", "print(1)\n")
         repo.write("b.py", "x = 1\n")
-        judge = RecordingJudge(Verdict(violations=(make_violation(file="b.py"),)))
+        judge = RecordingJudge(
+            Verdict(
+                reason="The code breaks the convention.", violations=(make_violation(file="b.py"),)
+            )
+        )
 
         result = review(repo, judge, make_binding(), AllLines(("a.py", "b.py")))
 
@@ -35,7 +39,9 @@ class TestReviewer:
         self, repo, make_violation, make_binding
     ):
         repo.write("a.py", "print(1)\nx = 1\n")
-        judge = RecordingJudge(Verdict(violations=(make_violation(line=1),)))
+        judge = RecordingJudge(
+            Verdict(reason="The code breaks the convention.", violations=(make_violation(line=1),))
+        )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 
@@ -45,7 +51,9 @@ class TestReviewer:
         self, repo, make_diagnostic, make_violation, make_judge_request, make_binding
     ):
         repo.write("a.py", "print(1)\nx = 1\n")
-        judge = RecordingJudge(Verdict(violations=(make_violation(line=2),)))
+        judge = RecordingJudge(
+            Verdict(reason="The code breaks the convention.", violations=(make_violation(line=2),))
+        )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 

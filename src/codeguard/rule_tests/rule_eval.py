@@ -62,11 +62,14 @@ class EditReview(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     outcome: Outcome
+    # The judge's reason for its verdict; a skipped edit has none.
+    reason: str | None = None
     violations: tuple[JudgedViolation, ...] = ()
 
     @property
     def listing(self) -> str:
-        return "".join(
+        reason = "" if self.reason is None else f"\n  reason: {self.reason}"
+        return reason + "".join(
             f"\n  line {violation.line} ({violation.confidence:.2f}): {violation.message}"
             for violation in self.violations
         )
@@ -86,6 +89,16 @@ class RuleEvalCase(BaseModel):
             raise ValueError(
                 "a case expects invalid, valid or skipped; one the judge can't decide isn't "
                 "clear enough for a rule eval"
+            )
+        return expected
+
+    @field_validator("expected_output")
+    @classmethod
+    def expects_no_reason(cls, expected: EditReview) -> EditReview:
+        if expected.reason is not None:
+            raise ValueError(
+                "a case expects no reason: the judge's reason is printed with the eval for "
+                "whoever reads it, never checked"
             )
         return expected
 

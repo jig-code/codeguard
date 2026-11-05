@@ -252,7 +252,7 @@ A judge rule is three files, all named by its id:
 
 ```
 python/
-  skills/<id>/SKILL.md       # the convention the judge checks
+  skills/<id>/SKILL.md       # the rule the judge checks
   bindings/<id>.yaml         # where it runs, when it runs, and the model that judges it
   rule-evals/<id>.yaml       # the rule eval: edits and the review each should get
 ```
@@ -315,7 +315,7 @@ triggers: [mock-use]
 something else:
 
 ```yaml
-provider: gemini                  # default: claude-cli; or gemini, bedrock
+provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
 model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
 ```
 
@@ -374,6 +374,10 @@ the review it should get:
 
   A review whose only violations are below the confidence threshold has the outcome
   `uncertain`. No case can expect it: a case fails when the judge is uncertain about it.
+
+  A case states no reason. The judge gives one with every verdict, and `codeguard eval`
+  prints it for every case it judged, so whoever reads the eval sees on what ground the
+  rule was decided; a wrong or vague reason shows where the rule's wording is unclear.
 
 ```yaml
 cases:
@@ -434,9 +438,9 @@ held to the same bar.
   eval with an `invalid` case covers only the rules selected.
 - `--case <text>` judges only the cases whose name contains the text; repeat it to
   judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider gemini` or `--provider bedrock` judges every
+- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or `--provider bedrock` judges every
   selected rule with that provider instead of its binding's. `--model` names the model;
-  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gemini-3.1-pro-preview` for
+  it defaults to `claude-sonnet-5-5` for `claude-cli`, `gpt-6-luna` for `codex-cli`, `gemini-3.1-pro-preview` for
   `gemini` and `us.anthropic.claude-haiku-5-5` for `bedrock`.
 
 A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
@@ -468,7 +472,7 @@ codeguard version, so runs of the same rule compare.
 `codeguard eval` fails a case when:
 
 - the review's outcome, or its violations when the case lists them, differ from
-  `expected_output`. The message shows what the judge reported;
+  `expected_output`. The message shows what the judge reported, its reason first;
 - it expects `invalid` and the judge flags only lines outside the triggers. Reviews
   would miss that violation, so the message lists the kinds on those lines to add to
   `triggers`;
@@ -479,8 +483,8 @@ A case counts only the violations a review would report: those on a changed or r
 line of the case's file.
 
 `codeguard eval` also fails a judge rule with no `invalid` case, and a rule eval whose
-id matches no judge rule. `codeguard eval` prints a table per rule, then one line per
-failure.
+id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
+reason for each case it judged, then one line per failure.
 
 #### Where an eval's inputs come from
 
@@ -624,15 +628,20 @@ rest of the file, the rule, the model, or a file the judge loaded changes. A loa
 is one the judge read, or one its searches returned: a file a grep matched or a glob
 listed. A file a search would only start returning later doesn't count.
 
+The judge gives a reason with every verdict, pass or fail: one sentence saying what in
+the changed code keeps the rule or breaks it. It is context for whoever reads a
+rule eval, which prints it for every case (The rule eval, above); a review prints each
+violation's message.
+
 The judge rates its confidence in each violation on a fixed scale, and the model can
 answer with no other value:
 
-| Confidence | The judge's reason |
+| Confidence | What it says |
 |---|---|
-| 1.0 | The code matches a case, sign or example the convention describes. |
-| 0.9 | The code breaks the convention as written. |
-| 0.7 | The code probably breaks the convention, but something in the working directory points to an exception it allows. |
-| 0.5 | The code is as likely to follow the convention as to break it. |
+| 1.0 | The judge is certain: what the code does is what the rule forbids, and nothing in the working directory points to an exception the rule allows. |
+| 0.9 | The code breaks the rule as written, but the verdict rests on a reading of the rule's terms a reviewer could contest. |
+| 0.7 | The code probably breaks the rule, but something in the working directory points to an exception it allows. |
+| 0.5 | The code is as likely to follow the rule as to break it. |
 
 An error below the
 threshold is reported as a warning, with its confidence, and doesn't block. The
@@ -661,6 +670,56 @@ review_time_limit_minutes: 10
 In a review, each judge rule is judged with its binding's provider and model, the same
 ones its rule eval passed on; see [Judge rules](#judge-rules). A binding that sets neither is judged
 with `claude-sonnet-5-5` through the `claude` CLI.
+
+### Judge with Codex locally
+
+Set a judge rule's binding to `codex-cli` and name its model:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: codex-cli
+model: gpt-6-luna
+```
+
+Install the Codex CLI separately and sign in with `codex login` using your ChatGPT
+subscription. CodeGuard invokes `codex exec` with ephemeral sessions, read-only
+permissions and the shared verdict schema. This provider requires ChatGPT authentication;
+it does not fall back to API billing. Other providers do not require Codex to be installed.
+Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
+
+The judge uses Codex's native repository tools in the read-only sandbox, with project
+instructions, hooks, plugins, memories and web search disabled. Temporary files hold
+the shared judge instructions, verdict schema and final response; they are removed
+after each call. The provider uses `high` reasoning effort and the existing review
+deadline. Authentication failures, capacity errors and other process errors fail
+immediately, without retries or a separate per-call time limit.
+
+Codex uses the existing verdict cache keyed on the judge inputs and reviewed source.
+Its native tools discover related repository code as the rule requires. Native events
+do not provide complete file-read tracking, so Codex does not populate `loaded_files`
+for additional context-file invalidation. Claude and Gemini tracking are unchanged.
+Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+
+The existing evaluation override also accepts Codex:
+
+```sh
+codeguard eval --provider codex-cli --model gpt-6-luna
+```
+
+For GPT models in CI, use the existing `bedrock` provider with a supported Converse
+model ID, inference profile ID or ARN. AWS credentials and region resolve as before;
+this path uses metered AWS billing and does not invoke the Codex CLI:
+
+```yaml
+skill: skills/responsibility-placement
+paths: ["app/**/*.py"]
+provider: bedrock
+model: us.openai.gpt-6-luna
+```
+
+The AWS account must have access to the chosen model. Existing Claude, Gemini and
+Bedrock defaults and rule bindings are unchanged.
 
 ### Judge with Gemini on Google Cloud
 
@@ -743,7 +802,7 @@ Without it, codeguard sends nothing. Set it where the agent runs: your shell pro
   `num_turns`, `input_tokens`, `output_tokens`, `cache_read_input_tokens` and
   `thinking_tokens`, summed over its requests, and `tool_calls`. Its time starts once the call has a slot,
   not while it waits for one. Inside it, Pydantic AI's spans record each request and
-  tool call with its content: the prompt, which holds the convention and the changed
+  tool call with its content: the prompt, which holds the rule and the changed
   code, Gemini's thought summaries, the files it read and its verdict.
 - `tool_calls` on a Claude or Gemini span is each call the judge made to its read-only
   tools, in order: the tool's name and the arguments it gave, such as the path it read or
@@ -834,6 +893,11 @@ codeguard eval                # judge rule evals; calls the configured judge
 
 ## Working on codeguard
 
+[docs/architecture.md](docs/architecture.md) describes codeguard's architecture: how it
+works, the invariants every change must keep, and what the judge is given. Before
+changing the judge (its template, its prompt, its tools or what it's given), the review
+pipeline, or anything an invariant covers, read it and check the change against it.
+
 [docs/testing.md](docs/testing.md) says how to test a change to codeguard, a rule
 package or an app.
 
@@ -858,6 +922,10 @@ tools:
 ```sh
 uv run pytest -m llm -n 4    # each case 3 times, as CI does
 ```
+
+Local Codex checks use the same fixtures with
+`--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
+add `--llm-runs 20`.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute

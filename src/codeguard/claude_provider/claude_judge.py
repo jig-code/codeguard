@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import logfire
+from logfire import LogfireSpan
+from pydantic import BaseModel
 
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
@@ -12,14 +14,14 @@ from codeguard.review import (
     Deadline,
     Judgement,
     JudgeNoVerdict,
-    JudgeProcessError,
     JudgeRequest,
     Verdict,
+    output_schema,
 )
+from codeguard.review.judge_process import check_judge_process, run_judge_process
 
 _EXECUTABLE = "claude"
 _READ_ONLY_TOOLS = "Read,Grep,Glob"
-_VERDICT_SCHEMA = json.dumps(Verdict.model_json_schema())
 
 
 @dataclass(frozen=True)
@@ -42,36 +44,34 @@ class ClaudeJudge:
             file=request.file,
             model=self.model,
         ) as span:
-            instructions = request.instructions
-            with self.warmup.after_first_call((self.model, instructions)), self.processes:
-                process = self._run(instructions, request.prompt)
-            span.set_attribute("returncode", process.returncode)
-            if process.returncode != 0:
-                raise JudgeProcessError(
-                    f"{self.executable} exited with {process.returncode}.\n"
-                    f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
-                )
-            result = ClaudeResult.from_stream(process.stdout, self.root)
+            result = self._result(
+                span, request.instructions, request.prompt, Verdict, _READ_ONLY_TOOLS
+            )
             span.set_attributes(result.telemetry)
-            if result.structured_output is None:
-                raise JudgeNoVerdict(f"{self.executable} returned no verdict:\n{process.stdout}")
-            return Judgement(result.structured_output, result.loaded_files)
+            return Judgement(Verdict.model_validate(result.structured_output), result.loaded_files)
 
-    def _run(self, instructions: str, prompt: str) -> subprocess.CompletedProcess[str]:
-        if self.deadline is None:
-            return self._run_until(instructions, prompt, None)
-        remaining = self.deadline.remaining_seconds()
-        if remaining <= 0:
-            raise self.deadline.reached()
-        try:
-            return self._run_until(instructions, prompt, remaining)
-        except subprocess.TimeoutExpired as error:
-            raise self.deadline.reached() from error
+    def _result(
+        self,
+        span: LogfireSpan,
+        instructions: str,
+        prompt: str,
+        output: type[BaseModel],
+        tools: str,
+    ) -> ClaudeResult:
+        schema = json.dumps(output_schema(output))
+        with self.warmup.after_first_call((self.model, instructions)), self.processes:
+            process = self._run(instructions, prompt, schema, tools)
+        span.set_attribute("returncode", process.returncode)
+        check_judge_process(process, self.executable)
+        result = ClaudeResult.from_stream(process.stdout, self.root)
+        if result.structured_output is None:
+            raise JudgeNoVerdict(f"{self.executable} returned no verdict:\n{process.stdout}")
+        return result
 
-    def _run_until(
-        self, instructions: str, prompt: str, timeout: float | None
+    def _run(
+        self, instructions: str, prompt: str, schema: str, tools: str
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+        return run_judge_process(
             [
                 self.executable,
                 "--safe-mode",
@@ -82,19 +82,16 @@ class ClaudeJudge:
                 "stream-json",
                 "--verbose",
                 "--json-schema",
-                _VERDICT_SCHEMA,
+                schema,
                 "--tools",
-                _READ_ONLY_TOOLS,
+                tools,
                 "--permission-prompts",
                 "none",
                 "--system-prompt",
                 instructions,
                 "--no-session-persistence",
             ],
-            input=prompt,
-            cwd=self.root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
+            prompt,
+            self.root,
+            self.deadline,
         )

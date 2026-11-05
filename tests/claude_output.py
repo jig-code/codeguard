@@ -30,7 +30,7 @@ def claude_result(violations: list[dict]) -> dict:
         "duration_api_ms": 1901,
         "total_cost_usd": 0.0022,
         "modelUsage": {"claude-sonnet-5-5": MODEL_USAGE},
-        "structured_output": {"violations": violations},
+        "structured_output": {"reason": "Judged.", "violations": violations},
     }
 
 
@@ -51,10 +51,7 @@ def tool_result(use_id: str, **result: object) -> dict:
     }
 
 
-def fake_claude_script(
-    violations: list[dict], before: str = "", messages: tuple[dict, ...] = ()
-) -> str:
-    stream = "\n".join(
+def claude_stream(violations: list[dict], messages: tuple[dict, ...] = ()) -> str:
+    return "\n".join(
         json.dumps(message) for message in (RATE_LIMIT_EVENT, *messages, claude_result(violations))
     )
-    return f"#!/bin/sh\n{before}cat > /dev/null\ncat <<'EOF'\n{stream}\nEOF\n"

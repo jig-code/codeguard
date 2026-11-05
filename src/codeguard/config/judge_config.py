@@ -17,6 +17,7 @@ class JudgeProvider(StrEnum):
     CLAUDE_CLI = "claude-cli"
     GEMINI = "gemini"
     BEDROCK = "bedrock"
+    CODEX_CLI = "codex-cli"
 
     @property
     def default_model(self) -> str:
@@ -26,6 +27,7 @@ class JudgeProvider(StrEnum):
 # The models codeguard was tested with on each provider.
 _DEFAULT_MODELS = {
     JudgeProvider.CLAUDE_CLI: "claude-sonnet-5-5",
+    JudgeProvider.CODEX_CLI: "gpt-6-luna",
     JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
     JudgeProvider.BEDROCK: "us.anthropic.claude-haiku-5-5",
 }
@@ -57,6 +59,6 @@ class JudgeConfig(BaseModel):
     def concurrency(self, provider: JudgeProvider) -> int:
         if self.calls_at_once is not None:
             return self.calls_at_once
-        if provider is not JudgeProvider.CLAUDE_CLI:
+        if provider not in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI):
             return _API_CALLS_AT_ONCE
         return os.process_cpu_count() or 1

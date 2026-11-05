@@ -23,11 +23,11 @@ cases:
         reports/__init__.py: ''
     expected_output:
       outcome: invalid
-  - name: imports a module because the package root imports this one
+  - name: keeps a caller independent of the exported type's defining module
     inputs:
       file: statements/summary.py
       after: |
-        from billing.invoice_total import InvoiceTotal
+        from billing import InvoiceTotal
 
 
         def summarize(amounts):
@@ -35,9 +35,8 @@ cases:
       unchanged:
         billing/__init__.py: |
           from billing.invoice_total import InvoiceTotal
-          from statements.summary import summarize
 
-          __all__ = ["InvoiceTotal", "summarize"]
+          __all__ = ["InvoiceTotal"]
         billing/invoice_total.py: |
           from dataclasses import dataclass
 

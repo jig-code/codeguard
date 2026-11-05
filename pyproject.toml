@@ -29,7 +29,7 @@ build-backend = "uv_build"
 testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = ["--import-mode=importlib", "-m", "not llm"]
-markers = ["llm: calls the real Gemini judge on Vertex AI; run with pytest -m llm"]
+markers = ["llm: exercises the review pipeline with a real judge using the fixture bindings or provider/model overrides; run with pytest -m llm"]
 
 [tool.ruff]
 line-length = 100
@@ -82,7 +82,7 @@ exhaustive = true
 layers = [
     "cli",
     "rules",
-    "claude_provider | gemini_provider | judge_evals",
+    "claude_provider | codex_provider | gemini_provider | judge_evals",
     "pattern_rules",
     "rule_tests",
     "review | packages",
@@ -98,6 +98,7 @@ source_modules = [
     "codeguard.cli",
     "codeguard.rules",
     "codeguard.claude_provider",
+    "codeguard.codex_provider",
     "codeguard.gemini_provider",
     "codeguard.pattern_rules",
     "codeguard.rule_tests",

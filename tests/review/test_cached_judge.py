@@ -51,7 +51,10 @@ class TestCachedJudge:
     def test_cached_judgement_is_returned_without_judging_again(
         self, orders, store, total_change, make_violation
     ):
-        verdict = Verdict(violations=(make_violation(file="orders/order_service.py"),))
+        verdict = Verdict(
+            reason="The code breaks the convention.",
+            violations=(make_violation(file="orders/order_service.py"),),
+        )
         wrapped = RecordingJudge(verdict, loaded_files=("orders/pricing.py",))
         judge = cached(orders, store, wrapped)
         request = total_change
@@ -190,7 +193,8 @@ class TestCachedJudge:
         self, orders, store, total_change, make_violation, capfire
     ):
         wrapped = RecordingJudge(
-            Verdict(violations=(make_violation(),)), loaded_files=("orders/pricing.py",)
+            Verdict(reason="The code breaks the convention.", violations=(make_violation(),)),
+            loaded_files=("orders/pricing.py",),
         )
         judge = cached(orders, store, wrapped)
         request = total_change

@@ -202,6 +202,18 @@ class TestWorkingTree:
 
         assert changed == ChangedLines({"a.py": frozenset({1, 3})}, base=git_repo.head())
 
+    def test_untracked_nested_repository_is_not_read_as_a_file(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        nested = git_repo.root / "nested"
+        nested.mkdir()
+        nested_repo = GitRepo.init(nested)
+        nested_repo.write("module.py", "value = 1\n")
+        git_repo.write("new/module.py", "value = 2\n")
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed == ChangedLines({"new/module.py": frozenset({1})}, base=git_repo.head())
+
     def test_removed_lines_are_a_deletion_point_after_the_line_before_them(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")

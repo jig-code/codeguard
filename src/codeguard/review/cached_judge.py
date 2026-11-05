@@ -7,9 +7,18 @@ from pathlib import Path
 import logfire
 from diskcache import Cache
 
-from codeguard.review.judge import INSTRUCTIONS, Judge, Judgement, JudgeRequest, Verdict
+from codeguard.review.judge import (
+    INSTRUCTIONS,
+    Judge,
+    Judgement,
+    JudgeRequest,
+    Verdict,
+    output_schema,
+)
 
-_CACHE_VERSION = "\0".join((INSTRUCTIONS, json.dumps(Verdict.model_json_schema())))
+# The schema the providers send, so a change to what the model is told, a `Confidence`
+# description included, judges every cached verdict again.
+_CACHE_VERSION = "\0".join((INSTRUCTIONS, json.dumps(output_schema(Verdict))))
 
 
 @dataclass(frozen=True)

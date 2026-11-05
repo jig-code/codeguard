@@ -59,7 +59,8 @@ def _described(fields: dict[str, object]) -> str:
 
 
 def _listed(review: EditReview, expected: EditReview) -> dict[str, object]:
-    listed = expected.model_fields_set
+    # The judge's reason is context for whoever reads the eval, printed with it, never compared.
+    listed = expected.model_fields_set - {"reason"}
     fields: dict[str, object] = review.model_dump(mode="json", include=listed - {"violations"})
     if "violations" in listed:
         fields["violations"] = [
