@@ -19,10 +19,8 @@ def case(name: str, file: str, after: str, outcome: str = "invalid") -> str:
     )
 
 
-PYTHON_CASE = case("flags a repeated status literal", "orders.py", 'STATUS = "shipped"')
-TYPESCRIPT_CASE = case(
-    "flags a repeated status literal in a script", "orders.ts", "const s = 'shipped';"
-)
+PYTHON_CASE = case("a repeated status literal", "orders.py", 'STATUS = "shipped"')
+TYPESCRIPT_CASE = case("a repeated status literal in a script", "orders.ts", "const s = 'shipped';")
 
 
 def write_general_rule(repo: GitRepo, binding: str = BOTH_LANGUAGES) -> None:

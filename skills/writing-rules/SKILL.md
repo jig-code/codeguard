@@ -138,16 +138,14 @@ codeguard's README has the binding and rule eval formats.
   private repository.
 - Give the idiomatic form a `valid` case beside the `invalid` one.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case naming it. Give each matched construct a `valid`
-  case where the convention allows it, if it has such a position, so a rule that matches
-  too widely fails a case.
+  case, with a comment above each case naming its branch. Give each matched construct a
+  `valid` case where the convention allows it, if it has such a position, so a rule that
+  matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
   the gate (`references/judge-rules.md`).
-- A case is named like a test, by its verdict, then its situation, never the harm or
-  why (the rule's Why holds that). The verdict matches the case's expected outcome: a
-  rule eval case's name says `flags`, `allows` or `skips` (`invalid`, `valid`,
-  `skipped`), a pattern rule test case's comment `flags` or `allows`, and a gate test
-  case's comment `matches` or `ignores` (`invalid`, `valid`).
+- A case's name gives only the situation it tests, unique per file. The verdict is
+  stated once: in a rule eval case's expected outcome, or by the `valid` or `invalid`
+  list a pattern rule or gate test case sits in.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax or names differ: keep the clearer one. Two `valid` cases differ when
   their code keeps the convention in different situations, not merely by both lacking
