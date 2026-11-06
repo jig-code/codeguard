@@ -35,12 +35,11 @@ verify the change. Once it passes with nothing changed since, the reliability pa
 every case 9 more times, to the end, and reports each case's score. A case passes when
 every grader passes in all 10 runs. Any change starts again at the validity pass.
 
-The agent runs on Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`) and the graders on
-Claude Haiku 5.5 (`us.anthropic.claude-haiku-5-5`), each by its Bedrock cross-region
-inference profile. The repository variables `SKILL_EVALS_AGENT_BEDROCK_MODEL` and
-`SKILL_EVALS_GRADER_BEDROCK_MODEL` are optional: each, when set, overrides its own
-default, for example with an application inference profile ARN. `CLAUDE_AWS_ROLE`, the
-AWS role CI assumes, is required.
+The agent runs on Claude Opus 5.5 and the graders on Claude Haiku 5.5, each by the
+Bedrock application inference profile in a repository variable:
+`SKILL_EVALS_AGENT_BEDROCK_MODEL` and `SKILL_EVALS_GRADER_BEDROCK_MODEL`. Both are
+required, as is `CLAUDE_AWS_ROLE`, the AWS role CI assumes; a pass with either model
+variable unset fails before it starts.
 
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
@@ -58,13 +57,10 @@ CI runs the two as separate jobs, the second starting when the first passes.
 `claude plugin eval` has no option to stop at the first failing case, so the validity
 pass runs every case once before it fails.
 
-For diagnosis, each CI job also passes `--keep-temp` and `--json`, and uploads a
-`skill-evals-validity-results` or `skill-evals-reliability-results` artifact. It holds
-`aggregate-result.json`, `report.html`, `full-result.json` with each grader's
-explanation, and each run's `trace.jsonl` under `traces/`. `--json` hides the progress
-lines, so the job prints each run's score and error from `full-result.json`. The graders
-still read only the files the agent wrote; the traces are only for finding out why a
-case failed.
+Each CI pass uploads a `skill-evals-validity-results` or
+`skill-evals-reliability-results` artifact with `aggregate-result.json`, which holds each
+grader's explanation and votes, and `report.html`. Each pass also stops starting runs
+once it passes a cost ceiling.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.

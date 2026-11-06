@@ -1,0 +1,59 @@
+name: writing-rules skill evals pass
+on:
+  workflow_call:
+    inputs:
+      pass:
+        type: string
+        required: true
+      runs:
+        type: number
+        required: true
+      max-cost-usd:
+        type: number
+        required: true
+      timeout-minutes:
+        type: number
+        required: true
+permissions: {}
+jobs:
+  skill-evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: npm install --global @anthropic-ai/claude-code@2.1.319
+      - name: Check the model variables are set
+        run: |
+          : "${SKILL_EVALS_AGENT_BEDROCK_MODEL:?Set the SKILL_EVALS_AGENT_BEDROCK_MODEL repository variable}"
+          : "${SKILL_EVALS_GRADER_BEDROCK_MODEL:?Set the SKILL_EVALS_GRADER_BEDROCK_MODEL repository variable}"
+        env:
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
+          aws-region: us-west-2
+      - run: >-
+          claude plugin eval . --scaffold --allow-tools Write Edit
+          --runs "$RUNS" --threshold 1 --max-cost-usd "$MAX_COST_USD"
+          --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL"
+          --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL"
+          --output-dir "$RUNNER_TEMP/skill-evals-results"
+          --trust-plugin --no-publish
+        env:
+          RUNS: ${{ inputs.runs }}
+          MAX_COST_USD: ${{ inputs.max-cost-usd }}
+          CLAUDE_CODE_USE_BEDROCK: 1
+          AWS_REGION: us-west-2
+          SKILL_EVALS_AGENT_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+          SKILL_EVALS_GRADER_BEDROCK_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: skill-evals-${{ inputs.pass }}-results
+          path: ${{ runner.temp }}/skill-evals-results/
