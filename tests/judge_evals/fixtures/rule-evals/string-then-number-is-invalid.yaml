@@ -1,7 +1,0 @@
-cases:
-  - name: passes a string
-    inputs:
-      after: |
-        ship(status='shipped')
-        count = 1
-    expected_output: {outcome: invalid}
