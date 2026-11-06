@@ -114,9 +114,9 @@ Every design must satisfy these.
       other functions, and the other blocks of a statement (an edit to a `try` block
       doesn't make its untouched `except` part of the change). The judge may read them as
       context.
-15. The judge reports violations, never fixes. At Stop, the agent's session, which has the
-    skill loaded, decides the fix; CI only reports. Skill text states what breaks the
-    rule, not how to change the code.
+15. The judge reports violations, never fixes. At Stop, the agent's session decides the
+    fix; CI only reports. Skill text states what breaks the rule, not how to change the
+    code.
 
 **Scale and cost**
 
