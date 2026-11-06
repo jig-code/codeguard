@@ -23,7 +23,8 @@ runs:
       shell: bash
     - run: >-
         claude plugin eval . --scaffold --allow-tools Write Edit
-        --runs "$RUNS" --threshold 1 --max-cost-usd "$MAX_COST_USD"
+        --runs "$RUNS" --threshold 1 --ablation none
+        --max-cost-usd "$MAX_COST_USD"
         --model "$AGENT_MODEL" --judge-model "$GRADER_MODEL"
         --output-dir "$RUNNER_TEMP/skill-evals-results"
         --trust-plugin --no-publish

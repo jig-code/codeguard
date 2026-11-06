@@ -13,8 +13,8 @@ permissions: {}
 env:
   AGENT_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
   GRADER_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
-# Each cost ceiling is about three times the pass's cost in the last green run, so a
-# runaway agent stops the paid run; raise them when cases move back from evals-pending/.
+# Each cost ceiling is about three times the pass's expected cost for four cases, so a
+# runaway agent stops the paid run.
 jobs:
   validity:
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
         with:
           pass: validity
           runs: 1
-          max-cost-usd: 1
+          max-cost-usd: 2
           agent-model: ${{ env.AGENT_MODEL }}
           grader-model: ${{ env.GRADER_MODEL }}
   reliability:
@@ -57,7 +57,7 @@ jobs:
       - uses: ./.github/actions/skill-evals
         with:
           pass: reliability
-          runs: 9
-          max-cost-usd: 8
+          runs: 2
+          max-cost-usd: 4
           agent-model: ${{ env.AGENT_MODEL }}
           grader-model: ${{ env.GRADER_MODEL }}

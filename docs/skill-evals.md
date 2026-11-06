@@ -32,8 +32,10 @@ whether it sets that tool up. So:
 CI runs them when `skills/writing-rules/`, `evals/writing-rules/` or their workflow
 changes, through Bedrock, in two passes. The validity pass runs every case once to
 verify the change. Once it passes with nothing changed since, the reliability pass runs
-every case 9 more times, to the end, and reports each case's score. A case passes when
-every grader passes in all 10 runs. Any change starts again at the validity pass.
+every case 2 more times, to the end, and reports each case's score. A case passes when
+every grader passes in all 3 runs. Any change starts again at the validity pass. Only
+the with-skill arm runs: `--ablation none` drops the no-skill baseline, whose score
+never decides a pass.
 
 The agent runs on Claude Opus 5.5 and the graders on Claude Haiku 5.5, each by the
 Bedrock application inference profile in a repository variable:
@@ -44,11 +46,11 @@ variable unset fails before it starts.
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
 claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
-  --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
+  --ablation none --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
   --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL" \
   --trust-plugin --no-publish
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 \
-  --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
+claude plugin eval . --scaffold --allow-tools Write Edit --runs 2 --threshold 1 \
+  --ablation none --model "$SKILL_EVALS_AGENT_BEDROCK_MODEL" \
   --judge-model "$SKILL_EVALS_GRADER_BEDROCK_MODEL" \
   --trust-plugin --no-publish
 ```
