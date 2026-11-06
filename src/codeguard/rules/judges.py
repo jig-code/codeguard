@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from os import process_cpu_count
 from pathlib import Path
 from threading import Semaphore
 
@@ -24,7 +25,10 @@ class Judges:
         object.__setattr__(
             self,
             "processes",
-            {provider: Semaphore(self.config.concurrency(provider)) for provider in JudgeProvider},
+            {
+                provider: Semaphore(self.config.concurrency(provider, process_cpu_count()))
+                for provider in JudgeProvider
+            },
         )
 
     def cached(

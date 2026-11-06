@@ -692,7 +692,7 @@ Codex uses the existing verdict cache keyed on the judge inputs and reviewed sou
 Its native tools discover related repository code as the rule requires. Native events
 do not provide complete file-read tracking, so Codex does not populate `loaded_files`
 for additional context-file invalidation. Claude and Gemini tracking are unchanged.
-Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+Concurrency follows the CLI limit, one call per CPU.
 
 The existing evaluation override also accepts Codex:
 
@@ -734,7 +734,7 @@ model: gemini-3.1-pro-preview
 judge:
   project: my-project             # default: GOOGLE_CLOUD_PROJECT
   location: global                # default: GOOGLE_CLOUD_LOCATION
-  calls_at_once: 2                # default: 2 for gemini, one per CPU for claude-cli
+  calls_at_once: 2                # Gemini only; default: 2
 ```
 
 Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
@@ -826,7 +826,7 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `packages[].rulesets.<name>.severity` | each rule's own | The severity of every rule in the ruleset, including rules the package adds later. A rule's own override wins. | `warning` trials a ruleset: its findings print without blocking. |
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rules](#rules). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
-| `judge.calls_at_once` | one per CPU for `claude-cli`, `2` for `gemini` | How many judge calls run at once. | A `claude` call mostly waits on the network, so the limit follows the machine. Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
+| `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). | |
 
 Two things have no setting on purpose:

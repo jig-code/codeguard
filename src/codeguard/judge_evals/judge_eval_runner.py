@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass, replace
 from importlib.metadata import version
+from os import process_cpu_count
 from pathlib import Path
 
 from pydantic_evals import Case, Dataset
@@ -108,6 +109,6 @@ class JudgeEvalRunner:
                 "codeguard_version": version("codeguard"),
             },
             repeat=self.repeat,
-            max_concurrency=self.judge_config.concurrency(model.provider),
+            max_concurrency=self.judge_config.concurrency(model.provider, process_cpu_count()),
             progress=False,
         )
