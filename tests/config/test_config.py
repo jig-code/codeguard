@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from packaging.version import Version
 from pydantic import ValidationError
@@ -7,8 +9,8 @@ from codeguard.config import (
     BindingsConfig,
     Config,
     GitPackageConfig,
+    JudgeChoice,
     JudgeConfig,
-    JudgeModel,
     JudgeProvider,
     PathPackageConfig,
     RuleOverride,
@@ -104,17 +106,38 @@ class TestPackagesConfig:
             ),
         )
 
-    def test_path_package_is_under_the_working_tree(self, tmp_path):
-        (tmp_path / "rules").mkdir()
-
+    def test_path_package_keeps_its_path_from_the_repository_root(self):
         config = Config.model_validate(
-            {"packages": [{"kind": "path", "path": "rules", "rulesets": {"python": {}}}]},
-            context={"working_tree": tmp_path},
+            {"packages": [{"kind": "path", "path": "rules", "rulesets": {"python": {}}}]}
         )
 
         assert config.packages == (
-            PathPackageConfig(path=tmp_path / "rules", rulesets={"python": RulesetConfig()}),
+            PathPackageConfig(path=Path("rules"), rulesets={"python": RulesetConfig()}),
         )
+
+    def test_listed_rulesets_run_every_rule(self):
+        config = Config.model_validate(
+            {"packages": [{"kind": "path", "path": "rules", "rulesets": ["general", "python"]}]}
+        )
+
+        assert config.packages == (
+            PathPackageConfig(
+                path=Path("rules"),
+                rulesets={"general": RulesetConfig(), "python": RulesetConfig()},
+            ),
+        )
+
+    def test_ruleset_listed_twice_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            Config.model_validate(
+                {"packages": [{"kind": "path", "path": "rules", "rulesets": ["python", "python"]}]}
+            )
+
+        assert messages(error) == ["Value error, rulesets listed more than once: python"]
+
+    def test_empty_ruleset_list_is_an_error(self):
+        with pytest.raises(ValidationError):
+            Config.model_validate({"packages": [{"kind": "path", "path": "rules", "rulesets": []}]})
 
     def test_package_without_rulesets_is_an_error(self):
         with pytest.raises(ValidationError):
@@ -299,14 +322,12 @@ class TestRulesetConfig:
             "Value error, model: a rule is judged with the model its binding names"
         ]
 
-    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
-    def test_api_binding_without_a_model_is_an_error(self, tmp_path, provider):
+    def test_binding_names_no_judge_by_default(self, tmp_path):
         skill = write_skill(tmp_path)
 
-        with pytest.raises(ValidationError) as error:
-            BindingConfig.model_validate({"skill": skill, "paths": ["**"], "provider": provider})
+        binding = BindingConfig.model_validate({"skill": skill, "paths": ["**"]})
 
-        assert messages(error) == [f"Value error, provider {provider} needs a model"]
+        assert binding.judge == JudgeChoice()
 
     def test_codex_binding_uses_its_selected_model(self, tmp_path):
         skill = write_skill(tmp_path)
@@ -320,9 +341,7 @@ class TestRulesetConfig:
             }
         )
 
-        assert binding.judge_model == JudgeModel(
-            provider=JudgeProvider.CODEX_CLI, name="a-bound-model"
-        )
+        assert binding.judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="a-bound-model")
 
 
 class TestJudgeConfig:
@@ -348,7 +367,3 @@ class TestJudgeConfig:
 
 def test_codex_concurrency_uses_the_cli_limit():
     assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI, CPUS) == CPUS
-
-
-def test_codex_default_remains_luna():
-    assert JudgeProvider.CODEX_CLI.default_model == "gpt-6-luna"

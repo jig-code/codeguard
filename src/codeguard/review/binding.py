@@ -8,6 +8,7 @@ from codeguard.config import (
     SKILL_FILE,
     BindingConfig,
     ChangeKind,
+    JudgeChoice,
     JudgeModel,
     PathScope,
     Ruleset,
@@ -25,20 +26,21 @@ class Binding:
     skill: Skill
     paths: tuple[str, ...]
     severity: Severity
-    model: JudgeModel
     triggers: frozenset[str]
+    # The provider and the model, each from the first level that names it.
+    judge: JudgeChoice = JudgeChoice()
     exclude_paths: tuple[str, ...] = ()
     # The skill's supplement for each language, which the judge reads after the skill.
     supplements: Mapping[str, Skill] = field(default_factory=dict, hash=False)
 
     @classmethod
-    def from_config(cls, rule: str, binding: BindingConfig) -> Self:
+    def from_config(cls, rule: str, binding: BindingConfig, judge: JudgeChoice) -> Self:
         return cls(
             rule=rule,
             skill=Skill.from_file(binding.skill.name, binding.skill / SKILL_FILE),
             paths=binding.paths,
             severity=binding.severity,
-            model=binding.judge_model,
+            judge=judge,
             triggers=binding.triggers,
             exclude_paths=binding.exclude_paths,
             supplements={
@@ -46,6 +48,10 @@ class Binding:
                 for language, file in binding.supplements.items()
             },
         )
+
+    @property
+    def model(self) -> JudgeModel:
+        return self.judge.judge_model
 
     @property
     def languages(self) -> frozenset[str]:
@@ -92,9 +98,18 @@ class Binding:
 
 class Bindings(tuple[Binding, ...]):
     @classmethod
-    def from_rulesets(cls, rulesets: Iterable[Ruleset]) -> Self:
+    def from_rulesets(
+        cls,
+        rulesets: Iterable[Ruleset],
+        project: JudgeChoice = JudgeChoice(),
+        override: JudgeChoice = JudgeChoice(),
+    ) -> Self:
+        """Each selected rule's binding. Its provider and its model each come from the override,
+        else its binding, else the project's default, else its package's."""
         return cls(
-            Binding.from_config(rule, binding)
+            Binding.from_config(
+                rule, binding, override.over(binding.judge).over(project).over(ruleset.judge)
+            )
             for ruleset in rulesets
             for rule, binding in ruleset.selected_bindings().items()
         )

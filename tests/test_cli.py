@@ -494,6 +494,7 @@ class TestReviewJudgeCache:
         self, repo, tmp_path, make_skill
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-sonnet-5-5\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -517,6 +518,7 @@ class TestReviewJudgeCache:
         self, repo, tmp_path, make_skill, search
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-sonnet-5-5\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -538,6 +540,65 @@ class TestReviewJudgeCache:
         run_review(repo, tmp_path, bin_dir)
 
         assert calls.read_text() == "called\ncalled\n"
+
+    def test_cli_default_verdict_is_keyed_default_and_reused(self, repo, tmp_path, make_skill):
+        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        calls = tmp_path / "calls"
+        configure_fake_cli_response(
+            {"stdout": claude_stream([]), "calls": str(calls), "record_env": "CLAUDE_RECORD"}
+        )
+        environment = recording_env(tmp_path, bin_dir, tmp_path / "review")
+        for _ in range(2):
+            subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
+
+        assert calls.read_text() == "called\n"
+        assert recorded_call(tmp_path / "review")["model"] is None
+
+    def test_configured_model_is_passed_and_keys_its_verdicts(self, repo, tmp_path, make_skill):
+        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        calls = tmp_path / "calls"
+        configure_fake_cli_response(
+            {"stdout": claude_stream([]), "calls": str(calls), "record_env": "CLAUDE_RECORD"}
+        )
+        environment = recording_env(tmp_path, bin_dir, tmp_path / "review")
+        subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-opus-5-5\n")
+
+        subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
+
+        assert calls.read_text() == "called\n" * 2
+        assert recorded_call(tmp_path / "review")["model"] == "claude-opus-5-5"
+
+
+class TestReviewWithoutGoogleCredentials:
+    def test_gemini_rule_is_a_judge_error_at_its_severity(self, repo, tmp_path, make_skill):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "severity: warning\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+        )
+        repo.commit("Bind the skill")
+        repo.write("a.py", "x = 1\n")
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith(("GOOGLE_", "GEMINI_", "CLOUDSDK_"))
+        }
+
+        result = subprocess.run(
+            [CODEGUARD, "review"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**environment, "HOME": str(tmp_path), "NO_GCE_CHECK": "True"},
+        )
+
+        assert result.stdout.startswith(
+            "a.py: warning placement: The judge call failed, so this rule was not checked."
+        )
+        assert "Gemini on Vertex AI found no Google credentials: " in result.stdout
+        assert result.returncode == 0
 
 
 class TestReviewJudgeErrorsAsWarnings:
@@ -715,7 +776,10 @@ class TestEvalCommand:
             env={**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.stdout.endswith(
             "responsibility-placement assigns in the invoice: expected outcome invalid, got "
             "outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
@@ -797,25 +861,28 @@ class TestEvalCommand:
             text=True,
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.returncode == 0
 
     @pytest.mark.parametrize(
         ("options", "model"),
         [
-            (["--provider", "claude-cli"], "claude-sonnet-5-5"),
-            (["--provider", "claude-cli", "--model", "claude-haiku-5-5"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli", "--model", "claude-opus-5-5"], "claude-opus-5-5"),
         ],
-        ids=["default-model", "given-model"],
+        ids=["bound-model", "given-model"],
     )
-    def test_judges_with_the_given_provider_and_model(
+    def test_provider_override_keeps_the_configured_model_unless_given_one(
         self, tmp_path, tmp_path_factory, options, model
     ):
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
             'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+            "triggers: [any]\nprovider: bedrock\nmodel: claude-haiku-5-5\n",
         )
         bin_dir = recording_claude(tmp_path, [])
 
@@ -830,16 +897,50 @@ class TestEvalCommand:
         assert recorded_call(tmp_path / "eval")["model"] == model
         assert f"Evaluation Summary: responsibility-placement on {model}" in result.stdout
 
-    def test_model_without_a_provider_exits_2(self, tmp_path):
+    def test_provider_override_with_no_model_anywhere_runs_the_cli_default(
+        self, tmp_path, tmp_path_factory
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: gemini\n",
+        )
+        bin_dir = recording_claude(tmp_path, [])
+
         result = subprocess.run(
-            [CODEGUARD, "eval", "--model", "claude-haiku-5-5"],
-            cwd=tmp_path,
+            [CODEGUARD, "eval", "--provider", "claude-cli"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
             capture_output=True,
             text=True,
         )
 
-        assert result.stderr.endswith("error: --model needs --provider\n")
-        assert result.returncode == 2
+        assert recorded_call(tmp_path / "eval")["model"] is None
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
+
+    def test_model_override_keeps_the_configured_provider(self, tmp_path, tmp_path_factory):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: claude-cli\nmodel: claude-haiku-5-5\n",
+        )
+        bin_dir = recording_claude(tmp_path, [])
+
+        result = subprocess.run(
+            [CODEGUARD, "eval", "--model", "claude-opus-5-5"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
+            capture_output=True,
+            text=True,
+        )
+
+        assert recorded_call(tmp_path / "eval")["model"] == "claude-opus-5-5"
+        assert "Evaluation Summary: responsibility-placement on claude-opus-5-5" in result.stdout
 
 
 INVOICE_BEFORE = (
@@ -864,6 +965,46 @@ RECORDED_OPTIONS = {
     "--tools": "tools",
     "--json-schema": "json schema",
 }
+
+
+class TestReviewJudgeDefaults:
+    def review_model(self, tmp_path, tmp_path_factory, project_config: str, **env: str):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "codeguard-package.yaml",
+            "name: example\nrulesets: [python]\njudge:\n  model: claude-haiku-5-5\n",
+        )
+        project = GitRepo.init(tmp_path_factory.mktemp("project").resolve())
+        project.write(".codeguard/config.yaml", path_package_config(package) + project_config)
+        project.write("invoice.py", INVOICE_BEFORE)
+        project.commit("Add the invoice")
+        project.write("invoice.py", INVOICE_AFTER)
+        bin_dir = recording_claude(tmp_path, [])
+        subprocess.run(
+            [CODEGUARD, "review"],
+            cwd=project.root,
+            env={**recording_env(tmp_path, bin_dir, tmp_path / "review"), **env},
+            capture_output=True,
+            check=True,
+        )
+        return recorded_call(tmp_path / "review")["model"]
+
+    def test_package_default_model_judges_its_rules(self, tmp_path, tmp_path_factory):
+        assert self.review_model(tmp_path, tmp_path_factory, "") == "claude-haiku-5-5"
+
+    def test_project_default_model_wins_over_the_package_default(self, tmp_path, tmp_path_factory):
+        config = "judge:\n  model: claude-opus-5-5\n"
+
+        assert self.review_model(tmp_path, tmp_path_factory, config) == "claude-opus-5-5"
+
+    def test_judge_model_env_var_wins_over_the_project_file(self, tmp_path, tmp_path_factory):
+        config = "judge:\n  model: claude-opus-5-5\n"
+
+        model = self.review_model(
+            tmp_path, tmp_path_factory, config, CODEGUARD_JUDGE__MODEL="claude-sonnet-5-5"
+        )
+
+        assert model == "claude-sonnet-5-5"
 
 
 class TestEvalMatchesReview:
@@ -978,13 +1119,13 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
     }
 
 
-def recorded_call(record: Path) -> dict[str, str]:
+def recorded_call(record: Path) -> dict[str, str | None]:
     captured = json.loads((record / "request.json").read_text())
     arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
         "prompt": captured["prompt"],
-        **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
+        **{name: values.get(option) for option, name in RECORDED_OPTIONS.items()},
     }
 
 

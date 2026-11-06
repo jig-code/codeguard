@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
 from codeguard.review import (
+    DEFAULT_MODEL_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -27,7 +28,8 @@ _READ_ONLY_TOOLS = "Read,Grep,Glob"
 @dataclass(frozen=True)
 class ClaudeJudge:
     root: Path
-    model: str
+    # None runs the CLI with no --model, so its own default judges.
+    model: str | None
     processes: AbstractContextManager[object]
     executable: str = _EXECUTABLE
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
@@ -35,7 +37,7 @@ class ClaudeJudge:
 
     @property
     def identity(self) -> str:
-        return "\0".join((_EXECUTABLE, self.model))
+        return "\0".join((_EXECUTABLE, self.model or DEFAULT_MODEL_KEY))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
@@ -76,8 +78,7 @@ class ClaudeJudge:
                 self.executable,
                 "--safe-mode",
                 "-p",
-                "--model",
-                self.model,
+                *(("--model", self.model) if self.model else ()),
                 "--output-format",
                 "stream-json",
                 "--verbose",

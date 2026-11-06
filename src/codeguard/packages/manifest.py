@@ -6,7 +6,7 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from codeguard.config import ConfigError, VersionRange
+from codeguard.config import ConfigError, JudgeChoice, VersionRange
 
 MANIFEST_FILE = "codeguard-package.yaml"
 
@@ -20,6 +20,7 @@ class Manifest(BaseModel):
     rulesets: tuple[str, ...] = Field(min_length=1)
     ast_grep: VersionRange = Field(default_factory=SpecifierSet, alias="ast-grep")
     codeguard: VersionRange = Field(default_factory=SpecifierSet)
+    judge: JudgeChoice = JudgeChoice()
 
     @classmethod
     def load(cls, root: Path) -> Self:

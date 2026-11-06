@@ -40,16 +40,16 @@ class Judges:
         processes = self.processes[model.provider]
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.name, processes, deadline=deadline)
+        if model.provider is JudgeProvider.CLAUDE_CLI:
+            return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
             models = VertexGemini(self.config.project, self.config.location)
-            return GeminiJudge(root, model.name, models, processes, deadline=deadline)
-        if model.provider is JudgeProvider.BEDROCK:
-            return GeminiJudge(
-                root,
-                model.name,
-                BedrockClaude(),
-                processes,
-                deadline=deadline,
-                provider=model.provider,
-            )
-        return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+            return GeminiJudge(root, model.api_name, models, processes, deadline=deadline)
+        return GeminiJudge(
+            root,
+            model.api_name,
+            BedrockClaude(),
+            processes,
+            deadline=deadline,
+            provider=model.provider,
+        )

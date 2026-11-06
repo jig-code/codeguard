@@ -4,9 +4,6 @@ inputs:
   base:
     description: Ref the changes are compared against. The checkout needs its history (fetch-depth 0).
     default: origin/${{ github.base_ref }}
-  claude-code-oauth-token:
-    description: Claude subscription token the judge runs with, from `claude setup-token`. Needed when a binding uses a skill.
-    required: false
   packages-token:
     description: GitHub token that can read the project's private rule packages.
     required: false
@@ -14,7 +11,7 @@ inputs:
     description: Logfire write token. When set, codeguard sends a trace of each run, with each judge call's tokens, cost and duration.
     required: false
   eval:
-    description: Also run `codeguard eval`, which calls Claude for each judge rule case. Needs claude-code-oauth-token.
+    description: Also run `codeguard eval`, which calls the judge the job's environment names for each judge rule case.
     default: 'false'
   dry-run:
     description: Run the pattern rules and list the judge calls the review would make, without calling a model. Fails only on pattern rule errors.
@@ -29,9 +26,6 @@ runs:
       run: git config --global url."https://x-access-token:${PACKAGES_TOKEN}@github.com/".insteadOf "https://github.com/"
       env:
         PACKAGES_TOKEN: ${{ inputs.packages-token }}
-    - name: Install Claude Code
-      shell: bash
-      run: npm install --global @anthropic-ai/claude-code
     - name: Check changed files
       id: review
       shell: bash
@@ -44,7 +38,6 @@ runs:
         timeout "$((limit + 2))m" uv run --frozen --project "${{ github.action_path }}" codeguard review --base "${{ inputs.base }}" ${{ inputs.dry-run == 'true' && '--dry-run' || '' }} "${judge_errors[@]}"
       env:
         ALLOW_JUDGE_ERRORS: ${{ contains(github.event.pull_request.labels.*.name, 'codeguard-allow-judge-errors') }}
-        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
         LOGFIRE_TOKEN: ${{ inputs.logfire-token }}
     - name: Point to the plugin
       if: failure() && steps.review.outcome == 'failure'
@@ -58,5 +51,4 @@ runs:
       shell: bash
       run: uv run --frozen --project "${{ github.action_path }}" codeguard eval
       env:
-        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
         LOGFIRE_TOKEN: ${{ inputs.logfire-token }}
