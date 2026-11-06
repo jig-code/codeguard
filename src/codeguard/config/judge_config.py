@@ -1,5 +1,5 @@
-import os
 from enum import StrEnum
+from os import process_cpu_count
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -61,4 +61,4 @@ class JudgeConfig(BaseModel):
             return self.calls_at_once
         if provider not in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI):
             return _API_CALLS_AT_ONCE
-        return os.process_cpu_count() or 1
+        return process_cpu_count() or 1
