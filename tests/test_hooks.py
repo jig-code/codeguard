@@ -19,7 +19,6 @@ UNDER_TEST = {"CODEGUARD": str(Path(SCRIPTS) / "codeguard")}
 UV = Path(shutil.which("uv") or "uv")
 CLAUDE_CODE_COMMAND = 'uv run --quiet --script "${CLAUDE_PLUGIN_ROOT}/hooks/stop.py" claude-code'
 CODEX_COMMAND = 'uv run --quiet --script "${CLAUDE_PLUGIN_ROOT}/hooks/stop.py" codex'
-RULE_FILES_COMMAND = 'uv run --quiet --script "${CLAUDE_PLUGIN_ROOT}/hooks/rule_files.py"'
 LOAD_THE_SKILL = (
     "Load codeguard's writing-rules skill before editing codeguard rule files: it holds "
     "the conventions for rules, gates, bindings and their cases. Invoke it with the Skill "
@@ -174,14 +173,6 @@ class TestHookConfig:
         assert result.stdout == ""
         assert (project / ".venv" / "bin" / "tool").exists()
 
-    def test_claude_code_checks_edits_and_writes_to_rule_files(self):
-        hooks = json.loads((PROJECT / "hooks" / "hooks.json").read_text())["hooks"]
-
-        assert [
-            (group["matcher"], [hook["command"] for hook in group["hooks"]])
-            for group in hooks["PreToolUse"]
-        ] == [("Edit|Write", [RULE_FILES_COMMAND])]
-
     def test_codex_reviews_when_an_agent_stops(self):
         assert commands(PROJECT / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
 
@@ -334,143 +325,6 @@ class TestStopHook:
         codex = run_stop_hook(repo, {"session_id": "s", "turn_id": "t"}, CODEX_COMMAND)
 
         assert claude_code == codex
-
-
-def transcript(tmp_path: Path, *tool_uses: dict) -> Path:
-    """A session transcript in which the assistant made these tool calls."""
-    path = tmp_path / "transcript.jsonl"
-    entries = [{"type": "user", "message": {"role": "user", "content": "Write a rule."}}]
-    entries += [
-        {
-            "type": "assistant",
-            "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "t", **use}]},
-        }
-        for use in tool_uses
-    ]
-    path.write_text("".join(f"{json.dumps(entry)}\n" for entry in entries))
-    return path
-
-
-def edit(root: Path, file: str, transcript_path: Path, tool: str = "Edit") -> dict:
-    return {
-        "session_id": "session-1",
-        "transcript_path": str(transcript_path),
-        "cwd": str(root),
-        "hook_event_name": "PreToolUse",
-        "tool_name": tool,
-        "tool_input": {"file_path": file, "old_string": "a", "new_string": "b"},
-    }
-
-
-def run_rule_files_hook(root: Path, hook_input: dict) -> dict | None:
-    result = subprocess.run(
-        ["sh", "-c", RULE_FILES_COMMAND],
-        cwd=root,
-        input=json.dumps(hook_input),
-        capture_output=True,
-        text=True,
-        env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(PROJECT)},
-    )
-    assert result.returncode == 0, result.stderr
-    return json.loads(result.stdout) if result.stdout else None
-
-
-DENIED = {
-    "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason": LOAD_THE_SKILL,
-    }
-}
-SKILL_CALL = {"name": "Skill", "input": {"skill": "codeguard:writing-rules"}}
-
-
-class TestRuleFilesHook:
-    @pytest.mark.parametrize(
-        "file",
-        [
-            ".codeguard/skills/placement/SKILL.md",
-            ".codeguard/rules/pattern/no-print.yml",
-            ".codeguard/gates/enum-value.yml",
-            ".codeguard/bindings/placement.yaml",
-            ".codeguard/rule-tests/no-print-test.yml",
-            ".codeguard/rule-evals/placement.yaml",
-        ],
-    )
-    def test_editing_a_rule_file_before_loading_the_skill_is_denied(self, tmp_path, file):
-        response = run_rule_files_hook(tmp_path, edit(tmp_path, file, transcript(tmp_path)))
-
-        assert response == DENIED
-
-    def test_writing_a_rule_file_by_its_absolute_path_is_denied(self, tmp_path):
-        file = str(tmp_path / ".codeguard/rules/pattern/no-print.yml")
-
-        response = run_rule_files_hook(
-            tmp_path, edit(tmp_path, file, transcript(tmp_path), tool="Write")
-        )
-
-        assert response == DENIED
-
-    @pytest.mark.parametrize(
-        "tool_use",
-        [
-            SKILL_CALL,
-            {"name": "Skill", "input": {"skill": "writing-rules"}},
-            {"name": "Read", "input": {"file_path": "/plugin/skills/writing-rules/SKILL.md"}},
-        ],
-        ids=["plugin-skill", "project-skill", "read-skill-file"],
-    )
-    def test_editing_a_rule_file_after_loading_the_skill_is_allowed(self, tmp_path, tool_use):
-        hook_input = edit(tmp_path, ".codeguard/bindings/a.yaml", transcript(tmp_path, tool_use))
-
-        assert run_rule_files_hook(tmp_path, hook_input) is None
-
-    @pytest.mark.parametrize(
-        "tool_use",
-        [
-            {"name": "Skill", "input": {"skill": "codeguard:writing-docs"}},
-            {
-                "name": "Read",
-                "input": {"file_path": "/plugin/skills/writing-rules/references/python.md"},
-            },
-        ],
-        ids=["another-skill", "a-reference-only"],
-    )
-    def test_other_tool_calls_do_not_count_as_loading_the_skill(self, tmp_path, tool_use):
-        hook_input = edit(tmp_path, ".codeguard/bindings/a.yaml", transcript(tmp_path, tool_use))
-
-        assert run_rule_files_hook(tmp_path, hook_input) == DENIED
-
-    @pytest.mark.parametrize(
-        "file", [".codeguard/config.yaml", "src/app.py", "docs/rules/pattern/x.yml"]
-    )
-    def test_other_files_are_not_checked(self, tmp_path, file):
-        assert run_rule_files_hook(tmp_path, edit(tmp_path, file, transcript(tmp_path))) is None
-
-    @pytest.mark.parametrize(
-        "manifest",
-        [
-            "name: example\nrulesets: [python, ruby]\n",
-            "name: example\nrulesets:\n  - python\n  - ruby\n",
-        ],
-        ids=["flow-list", "block-list"],
-    )
-    def test_editing_a_rule_file_in_a_package_ruleset_is_denied(self, tmp_path, manifest):
-        (tmp_path / "codeguard-package.yaml").write_text(manifest)
-        hook_input = edit(tmp_path, "ruby/rule-evals/placement.yaml", transcript(tmp_path))
-
-        assert run_rule_files_hook(tmp_path, hook_input) == DENIED
-
-    def test_a_directory_the_package_does_not_name_is_not_checked(self, tmp_path):
-        (tmp_path / "codeguard-package.yaml").write_text("name: example\nrulesets: [python]\n")
-        hook_input = edit(tmp_path, "scripts/rule-evals/notes.yaml", transcript(tmp_path))
-
-        assert run_rule_files_hook(tmp_path, hook_input) is None
-
-    def test_an_unreadable_transcript_lets_the_edit_through(self, tmp_path):
-        hook_input = edit(tmp_path, ".codeguard/bindings/a.yaml", tmp_path / "missing.jsonl")
-
-        assert run_rule_files_hook(tmp_path, hook_input) is None
 
 
 class TestBundledCommand:
