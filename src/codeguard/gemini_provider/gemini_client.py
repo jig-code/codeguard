@@ -1,17 +1,21 @@
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
+from google.auth.exceptions import DefaultCredentialsError
 from pydantic_ai.models import Model
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
+
+from codeguard.review import JudgeProcessError
 
 
 @dataclass(frozen=True)
 class VertexGemini:
     project: str | None = None
     location: str | None = None
+    cloud: Callable[..., GoogleCloudProvider] = GoogleCloudProvider
 
     @asynccontextmanager
     async def __call__(self, model: str) -> AsyncIterator[Model]:
@@ -24,8 +28,13 @@ class VertexGemini:
         location = self.location or os.environ.get("GOOGLE_CLOUD_LOCATION")
         if project is None and location is None and _api_key():
             # An API key identifies the project.
-            return GoogleCloudProvider()
-        return GoogleCloudProvider(project=project, location=location or "global")
+            return self.cloud()
+        try:
+            return self.cloud(project=project, location=location or "global")
+        except DefaultCredentialsError as error:
+            raise JudgeProcessError(
+                f"Gemini on Vertex AI found no Google credentials: {error}"
+            ) from error
 
 
 def _api_key() -> bool:
