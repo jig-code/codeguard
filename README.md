@@ -328,7 +328,8 @@ triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
 `<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
-(`invalid` cases are code the gate matches):
+(`invalid` cases are code the gate matches). Each test case's comment is its verdict and
+situation: `matches` for an `invalid` case, `ignores` for a `valid` one:
 
 ```yaml
 id: mock-use
