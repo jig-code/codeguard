@@ -15,7 +15,7 @@ in use.
 | `packages` | none | The rule packages and rulesets the project uses; see [Opt into a rule package](add-codeguard.md#opt-into-a-rule-package). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
 | `packages[].rulesets` | none; required | The rulesets the project runs from the package: a list of names, each running every rule, or a mapping from each name to its settings; see [Rule package keys](#rule-package-keys). | A project opts into each ruleset by name. |
 | `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity, in the mapping form; see [Rule package keys](#rule-package-keys). | |
-| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, over a package's default: by its vendor's id, which the provider maps, or by the provider's own id, such as a Bedrock application inference profile's ARN, which it passes through (the profile needs a `ModelId` tag naming the model it routes to); see [Which judge runs](#which-judge-runs). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
+| `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, over a package's default: named as [How a model is named](#how-a-model-is-named) says; see [Which judge runs](#which-judge-runs). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
 | `judge.provider` | `claude-cli` | Where the model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, `gemini` for Gemini. A model that isn't a Claude model needs it set; with none, it is a configuration error. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. A `claude` call mostly waits on the network, so it follows the machine. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
@@ -66,7 +66,7 @@ model with no provider named is a configuration error. With no model named, the 
 and `codex-cli` providers run their CLI with no `--model`, so its own default judges; a
 `bedrock` or `gemini` run with no model named is an error. `codeguard eval --provider`
 and `--model` override the provider or the model for that run ([CLI](cli.md#eval)).
-[How a model is named](judge-design.md#how-a-model-is-named) says how each provider maps
+[How a model is named](#how-a-model-is-named) says how each provider maps
 a model's id, and [Choose a judge](judges.md) how to set one up. The keys:
 
 ```yaml
@@ -126,9 +126,7 @@ sets it:
 3. The default in [Settings](#settings).
 
 CI uses the environment to name its judge, since it has no subscription; the project
-config needs no line for it. These variables configure codeguard reviewing a project,
-this repository included; codeguard's own pytest LLM tests and skill evals don't read
-them.
+config needs no line for it.
 
 ## Environment variables
 
@@ -146,6 +144,24 @@ run, sign the judge in, or turn on telemetry:
 | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |
 
+## GitHub Action inputs
+
+The `jig-code/codeguard` action reviews the PR's changed files, then runs the rule tests.
+Its judge comes from the job's environment ([Which judge runs](#which-judge-runs)).
+
+| Input | Default | What it does |
+|---|---|---|
+| `base` | `origin/${{ github.base_ref }}` | The ref the changes are compared against. The checkout needs its history (`fetch-depth: 0`). |
+| `packages-token` | none | A GitHub token that can read the project's private rule packages. |
+| `logfire-token` | none: nothing is sent | A Logfire write token; codeguard sends a trace of each run ([Telemetry](telemetry.md)). |
+| `eval` | `false` | Also run `codeguard eval`, which calls the job's judge for each judge rule case. |
+| `dry-run` | `false` | Run the pattern rules and list the judge calls the review would make, without calling a model. Fails only on pattern rule errors. |
+
+A PR with the `codeguard-allow-judge-errors` label passes `--judge-errors-as-warnings` to
+the review ([Merge a PR despite a judge
+error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). The review stops 2 minutes
+after `review_time_limit_minutes`.
+
 ## No setting on purpose
 
 - **Judge errors fail the review.** A judge call that couldn't complete, including one
@@ -153,7 +169,8 @@ run, sign the judge in, or turn on telemetry:
   it fails CI. A rule the judge couldn't check is code nobody checked, and a warning in
   a passing check goes unseen: if a setting could turn these into warnings for a
   project, a broken judge, an expired token or a codeguard bug would let every PR
-  through. A bypass is always for one PR ([CI](add-codeguard.md#ci)); the Stop hook
+  through. A bypass is always for one PR
+  ([Merge a PR despite a judge error](using-codeguard.md#merge-a-pr-despite-a-judge-error)); the Stop hook
   shows judge failures to you instead ([How a review works](how-a-review-works.md)).
 - **A bound rule's judge model.** A rule whose binding names a model is judged with it,
   the one its rule eval passed on alone. A project's `judge.model` applies to every

@@ -22,7 +22,7 @@ The review pipeline runs in the Stop hook, in CI and in `codeguard review`:
 Triggers and gates decide whether a judge rule runs on a change at all. A judge rule is
 called only when the change touches one of its triggers. A trigger is a change kind
 (`import`, `function-body`, …) or a gate. A gate is an ast-grep rule that matches where a
-violation could appear. [The binding](rule-packages.md#the-binding) lists the change
+violation could appear. [A judge rule's binding](rule-formats.md#a-judge-rules-binding) lists the change
 kinds.
 
 ## Verdict cache

@@ -2,7 +2,8 @@
 
 The judge grades one rule against one file's change. [codeguard's
 architecture](architecture.md) has the overview and the invariants it keeps; [Choose a
-judge](judges.md) says how to set each provider up.
+judge](judges.md) says how to set each provider up, and [How a model is
+named](configuration.md#how-a-model-is-named) how each maps a model's id.
 
 ## What the judge does
 
@@ -87,16 +88,15 @@ onto its API.
 
 ## How each provider runs
 
-The judge uses Codex's native repository tools in the read-only sandbox, with project
+The `codex` CLI judge uses Codex's native repository tools in the read-only sandbox, with project
 instructions, hooks, plugins, memories and web search disabled. Temporary files hold
 the shared judge instructions, verdict schema and final response; they are removed
 after each call. The provider uses `high` reasoning effort and the existing review
 deadline. Authentication failures, capacity errors and other process errors fail
 immediately, without retries or a separate per-call time limit.
 
-Codex uses the existing verdict cache keyed on the judge inputs and reviewed source,
-when a model is named: the `codex` CLI doesn't expose its default model, so with none
-named its verdicts aren't cached.
+Codex uses the verdict cache keyed on the judge inputs and reviewed source; with no model
+named, its verdicts are keyed `default` ([Model](#judge-input)).
 Its native tools discover related repository code as the rule requires. Native events
 do not provide complete file-read tracking, so Codex does not populate `loaded_files`
 for additional context-file invalidation. Claude and Gemini tracking are unchanged.

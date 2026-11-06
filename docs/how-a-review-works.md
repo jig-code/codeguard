@@ -33,14 +33,16 @@ app/orders.py:12: warning no-pre-derived-arguments: The call passes both lines a
 ## The hooks
 
 When an agent or subagent stops, the hook runs `codeguard review` in its working
-directory: the uncommitted and untracked files, whoever changed them and however. The hook runs the codeguard
-the plugin ships, not one on your PATH. Claude Code and Codex get the same behaviour.
+directory: the uncommitted and untracked files, whoever changed them and however. The
+hook runs the codeguard the plugin ships, not one on your PATH. Claude Code and Codex get the same behaviour.
+[Troubleshooting](using-codeguard.md#troubleshooting) covers a hook that doesn't run.
 
 - An error blocks the stop, and only errors reach the agent. It blocks every time the
   agent stops until the errors are fixed.
 - Everything else goes to you, not the agent: warnings, findings below the confidence
   threshold, and rules the judge couldn't check (a failed `claude` call or the time
   limit). The hook passes `--judge-errors-as-warnings`, since the agent can't fix those;
-  CI still fails on them ([judge errors in CI](add-codeguard.md#ci)).
+  CI still fails on them, unless the PR has the
+  [`codeguard-allow-judge-errors` label](using-codeguard.md#merge-a-pr-despite-a-judge-error).
 - The hook passes `--skip-ci-only`, so [`ci_only` rules](configuration.md#rule-package-keys) don't
   run.

@@ -87,7 +87,8 @@ Point a project's hooks at this clone.
 
 Release when a change on `main` should reach the projects using codeguard, or when a
 rule package needs it (a package's `codeguard` range is checked against the CLI's
-version). Engineers get only released versions; see [Upgrade](add-codeguard.md#upgrade).
+version). Engineers get only released versions; see [Keep the plugin up to
+date](using-codeguard.md#keep-the-plugin-up-to-date).
 
 1. Bump the version to the same `<version>` in all three files, in the PR with the
    change or in a PR of its own:

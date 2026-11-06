@@ -5,48 +5,50 @@ written once, in the project, and applies wherever code is written or reviewed: 
 Claude Code or Codex works, and in CI.
 
 codeguard adds the checks a project's linters can't do. It doesn't replace or wrap
-them.
+them. A pattern rule matches code exactly, as a linter does; a judge rule states a
+convention in prose, and a model judges each change against it. When the agent stops,
+codeguard reviews its changes and blocks on an error until it's fixed, so the agent
+fixes it before a person reviews the PR.
+
+Judge rules call a model: at the agent's Stop on the developer's own Claude or ChatGPT
+subscription, and in CI on Amazon Bedrock or Vertex AI with the project's cloud account
+([Choose a judge](docs/judges.md)). [Telemetry](docs/telemetry.md) records each judge
+call's tokens and cost.
 
 ## Setup
 
-1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/); the plugin runs
-   codeguard with it.
-2. Add the plugin for Claude Code or Codex, and the GitHub Action for CI, as
+1. Commit the plugin settings and add the CI job, as
    [Add codeguard to a project](docs/add-codeguard.md) shows.
-3. Opt into a rule package's rulesets in `.codeguard/config.yaml`, or write a rule of your
-   own:
-
-   ```yaml
-   packages:
-     - kind: git
-       git: https://github.com/betterwithranch/codeguard-rules.git
-       ref: v0.6.0
-       rulesets: [general, python]
-   ```
-
-When the agent stops, codeguard reviews its changes and blocks on an error until it's
-fixed ([How a review works](docs/how-a-review-works.md)).
+2. Opt into a rule package's rulesets, or write rules of your own
+   ([Write rules](docs/write-rules.md)).
+3. Each engineer installs [uv](https://docs.astral.sh/uv/getting-started/installation/)
+   and the plugin ([Use codeguard](docs/using-codeguard.md)).
 
 ## Documentation
 
 For a project that uses codeguard:
 
-- [Add codeguard to a project](docs/add-codeguard.md): Claude Code, Codex, CI, rule
-  packages, formatters, the CLI on its own, and upgrades.
-- [How a review works](docs/how-a-review-works.md): what a review sends the judge, what it
-  reports, and the hooks.
-- [Choose a judge](docs/judges.md): the providers, and setting up Codex, Gemini and
-  Bedrock.
-- [Configuration reference](docs/configuration.md): every setting and environment
-  variable, and which source wins.
-- [Telemetry](docs/telemetry.md): the traces codeguard sends to Logfire.
-- [CLI](docs/cli.md): the commands and their options.
+- [Add codeguard to a project](docs/add-codeguard.md): when you add codeguard to a
+  repository, once: the plugin settings, the CI job and its judge, rule packages and
+  formatters.
+- [Use codeguard](docs/using-codeguard.md): for every engineer on the repository:
+  installing and updating the plugin, merging past a judge error, and troubleshooting.
+- [Choose a judge](docs/judges.md): when you set up a provider: Codex, Gemini on Vertex
+  AI, or Bedrock.
+- [How a review works](docs/how-a-review-works.md): when you want to know what a review
+  sends the judge, what it reports, and what the hooks do.
+- [Configuration reference](docs/configuration.md): when you look up a setting, an
+  environment variable or a GitHub Action input.
+- [CLI](docs/cli.md): when you look up a command or option.
+- [Telemetry](docs/telemetry.md): when you want traces of codeguard's runs in Logfire.
 
-For whoever writes rules:
+For whoever writes rules or maintains a rule package:
 
-- [Write a rule package](docs/rule-packages.md): the files a rule is made of, and how to
-  test them. The plugin's [writing-rules skill](skills/writing-rules/SKILL.md) says how
-  to write a rule.
+- [Write rules](docs/write-rules.md): when you write a project's own rules or a package:
+  testing them, package CI and releases, and trying a local package.
+- [Rule formats](docs/rule-formats.md): when you look up the format of a binding, a gate,
+  a trigger or a rule eval. The plugin's [writing-rules
+  skill](skills/writing-rules/SKILL.md) says how to write a rule.
 
 For whoever works on codeguard:
 
@@ -55,3 +57,9 @@ For whoever works on codeguard:
   invariants every change keeps, with [the review pipeline](docs/review-pipeline.md) and
   [the judge](docs/judge-design.md) in detail.
 - [Testing](docs/testing.md): which checks a change needs.
+
+## Help and maintainers
+
+Report a bug or ask a question in
+[GitHub issues](https://github.com/jig-code/codeguard/issues). codeguard is maintained by
+Craig Israel.

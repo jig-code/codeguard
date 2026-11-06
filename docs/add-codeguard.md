@@ -1,5 +1,9 @@
 # Add codeguard to a project
 
+The one-time setup for a repository: the plugin settings, the CI job and its judge, the
+rule packages, and the formatters. Each engineer then installs the plugin
+([Use codeguard](using-codeguard.md)).
+
 ## Claude Code
 
 In the project's `.claude/settings.json`:
@@ -44,11 +48,19 @@ List the plugin in the project's `.agents/plugins/marketplace.json`:
 ## CI
 
 ```yaml
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   codeguard:
+    if: >-
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
+      || github.event.label.name == 'codeguard-allow-judge-errors'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       CODEGUARD_JUDGE__PROVIDER: bedrock
       CODEGUARD_JUDGE__MODEL: ${{ vars.CODEGUARD_JUDGE_MODEL }}
@@ -64,34 +76,28 @@ jobs:
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. The job's `CODEGUARD_JUDGE__PROVIDER` and
+then runs the rule tests. [GitHub Action inputs](configuration.md#github-action-inputs)
+lists what else it takes.
+
+The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
+the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call
+that couldn't complete ([Merge a PR despite a judge
+error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). Without the `if`, every
+label added to a PR re-runs the whole review and its judge calls.
+
+### Choose the CI judge
+
+CI has no subscription, so the job's `CODEGUARD_JUDGE__PROVIDER` and
 `CODEGUARD_JUDGE__MODEL` name its judge: Claude on Amazon Bedrock with the job's AWS
-credentials, as in the example, or Gemini on Vertex AI with `google-github-actions/auth`
-([Choose a judge](judges.md)). [Which judge runs](configuration.md#which-judge-runs) says
-how those variables and the project's config combine.
-
-```yaml
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-
-jobs:
-  codeguard:
-    if: >-
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled')
-      || github.event.label.name == 'codeguard-allow-judge-errors'
-```
-
-Pin the action to a release tag, as above, and adopt each codeguard release in its own
-PR ([Upgrade](#upgrade)), so a new release never changes a review without a change in
-the project.
+credentials, as in the example, or Gemini on Vertex AI with `google-github-actions/auth`.
+[Choose a judge](judges.md) says how to set up each provider and grant the job access,
+and [Which judge runs](configuration.md#which-judge-runs) how those variables and the
+project's config combine.
 
 ## Opt into a rule package
 
-A project's own rules live under `.codeguard/`, in the layout
-[Write a rule package](rule-packages.md) describes. To write or change one, use the
-plugin's [writing-rules skill](../skills/writing-rules/SKILL.md). The two kinds of rule
-are in [Rules](architecture.md#rules).
+A project's own rules live under `.codeguard/` ([Write rules](write-rules.md)). The two
+kinds of rule are in [Rules](architecture.md#rules).
 
 A project can also opt into rulesets from rule packages. List the rulesets to run every
 rule in each:
@@ -101,7 +107,7 @@ rule in each:
 packages:
   - kind: git
     git: https://github.com/betterwithranch/codeguard-rules.git
-    ref: v0.6.0
+    ref: <tag>
     rulesets: [general, python]
 ```
 
@@ -118,21 +124,24 @@ To choose a ruleset's rules or change how they run, give it settings instead
             severity: warning
 ```
 
-A git package's `ref` is a tag or commit. Local and CI reviews use the rules at that
-`ref`, so a commit gets the same rules everywhere, and a package release changes nothing
-until a project moves its `ref`. To try a release, change `ref` locally, or point a
-`kind: path` package at a checkout of it.
+A git package's `ref` is a tag or commit. codeguard fetches each `ref` once into
+`~/.cache/codeguard/packages` and reuses it, so a `ref` must not be a branch. A private
+package needs a token in CI ([A private package](write-rules.md#a-private-package)).
 
-codeguard fetches each `ref` once into `~/.cache/codeguard/packages` and reuses it, so a
-`ref` must not be a branch.
+## Pin codeguard and rule packages
 
-For a private package in CI, pass a token that can read it:
+Local and CI reviews use the rules at a package's `ref`, so a commit gets the same rules
+everywhere, and a package release changes nothing until the project moves its `ref`.
+Pin the action to a release tag, as above, for the same reason.
 
-```yaml
-      - uses: jig-code/codeguard@v0.11.0
-        with:
-          packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
-```
+Adopt each codeguard release and each rule package tag in its own PR, so whatever the
+upgrade changes in reviews and rule tests shows up there and nowhere else:
+
+- Move the action's tag (`jig-code/codeguard@v<version>`) to the new release.
+- Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
+
+To try a package release first, change `ref` locally, or point a `kind: path` package at
+a checkout of it ([Try a local package](write-rules.md#try-a-local-package)).
 
 ## Run formatters first
 
@@ -147,14 +156,7 @@ the cached verdict: it calls the model again and can reach a different verdict.
 - Format an unformatted codebase in a commit of its own. Reformatted lines are changed
   lines, so formatting inside a feature change sends every one of them to the judge.
 
-## Upgrade
+## Tell your team
 
-Pin in CI, auto-update in your dev environment. A commit on `main` reaches no one until
-it is released.
-
-**Pin in CI.** A project adopts each codeguard release and each rule package tag in its
-own PR, so whatever the upgrade changes in reviews and rule tests shows up there and
-nowhere else:
-
-- Move the action's tag (`jig-code/codeguard@v<version>`) to the new release.
-- Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
+Each engineer installs the plugin, and Codex users trust its hooks, as
+[Use codeguard](using-codeguard.md) shows. Point them there.

@@ -6,8 +6,8 @@
 | `codeguard test` | whoever writes rules, in a rule package or a project's `.codeguard/` | the rules: pattern rules and gates match their test cases, and judge rules' triggers fire on their eval cases | no |
 | `codeguard eval` | whoever writes rules | judge rules: each eval case gets its expected review | yes |
 
-`review` checks code; `test` and `eval` check the rules themselves. [Write a rule
-package](rule-packages.md#write-a-rule-package) covers `test` and `eval`.
+`review` checks code; `test` and `eval` check the rules themselves. [Write
+rules](write-rules.md#test-a-judge-rule) covers `test` and `eval`.
 
 Every command takes `-h` for its help.
 

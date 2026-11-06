@@ -1,6 +1,10 @@
 # Rule formats
 
-## Bindings
+The format of each file a rule is made of, in `.codeguard/` or a ruleset's directory
+([Where rules live](write-rules.md#where-rules-live)). [Write rules](write-rules.md) says
+how to write and test them.
+
+## A pattern rule's binding
 
 A binding applies a rule to the files that match `paths` and none of `exclude_paths`.
 A pattern rule's binding names its `rule`. A pattern rule without one runs on every file
@@ -13,30 +17,10 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 
 Rule and gate ids are unique within a ruleset.
 
-### A rule in several languages
+## A judge rule's binding
 
-A judge rule's binding `paths` decide its languages: `["**/*.py", "**/*.ts"]` runs it on
-Python and TypeScript files. A path names a language by its file extension; codeguard
-knows javascript (`js`, `jsx`, `mjs`, `cjs`), python (`py`, `pyi`), ruby (`rb`) and
-typescript (`ts`, `tsx`, `mts`, `cts`).
-
-A path without an extension, like `src/**`, matches every language.
-
-codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, and fails
-on one named after a language it doesn't know or the binding's paths don't match; the
-[writing-rules skill](../skills/writing-rules/SKILL.md) says not to write one.
-
-- When the paths name more than one language, `codeguard eval` reports each language
-  apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
-  needs an `invalid` case.
-- Triggers work per file: a change kind in any language, a gate only in its `language`.
-  Only Python has change kinds and gates so far: on a file in another language, every
-  trigger fires, and the judge is sent the changed lines without the code around them.
-
-### The binding
-
-A judge rule's binding names its `skill`, from the package root, and where and when it
-runs:
+A judge rule's binding names its `skill`, from the package root (in a project, from the
+repository root, such as `.codeguard/skills/<id>`), and where and when it runs:
 
 ```yaml
 skill: python/skills/mock-only-at-boundary
@@ -89,7 +73,27 @@ that needs every change says `triggers: [any]`; `codeguard test` warns on `any`,
 that is not only a comment or docstring) and `any`. The syntax table in
 `src/codeguard/syntax/languages/` defines each kind as an ast-grep rule.
 
-### The rule eval
+## A rule in several languages
+
+A judge rule's binding `paths` decide its languages: `["**/*.py", "**/*.ts"]` runs it on
+Python and TypeScript files. A path names a language by its file extension; codeguard
+knows javascript (`js`, `jsx`, `mjs`, `cjs`), python (`py`, `pyi`), ruby (`rb`) and
+typescript (`ts`, `tsx`, `mts`, `cts`).
+
+A path without an extension, like `src/**`, matches every language.
+
+codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, and fails
+on one named after a language it doesn't know or the binding's paths don't match; the
+[writing-rules skill](../skills/writing-rules/SKILL.md) says not to write one.
+
+- When the paths name more than one language, `codeguard eval` reports each language
+  apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
+  needs an `invalid` case.
+- Triggers work per file: a change kind in any language, a gate only in its `language`.
+  Only Python has change kinds and gates so far: on a file in another language, every
+  trigger fires, and the judge is sent the changed lines without the code around them.
+
+## The rule eval
 
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
@@ -156,7 +160,7 @@ A case that leaves them out checks only the outcome. Besides `cases`, the file m
 holds nothing else: codeguard decides how a case is judged and checked, so every rule is
 held to the same bar.
 
-### What makes a case fail
+## What makes a case fail
 
 `codeguard test` fails a case when:
 
@@ -184,7 +188,7 @@ line of the case's file.
 id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
 reason for each case it judged, then one line per failure.
 
-### Where an eval's inputs come from
+## Where an eval's inputs come from
 
 | Input | From |
 |---|---|

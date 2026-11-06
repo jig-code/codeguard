@@ -1,6 +1,13 @@
-# Write a rule package
+# Write rules
 
-A package is a git repo with a `codeguard-package.yaml` at its root:
+For whoever writes a project's own rules or maintains a rule package. The plugin's
+[writing-rules skill](../skills/writing-rules/SKILL.md) says how to write a rule;
+[Rule formats](rule-formats.md) has the format of each file.
+
+## Where rules live
+
+A project's own rules live in `.codeguard/`. A rule package is a git repo with a
+`codeguard-package.yaml` at its root:
 
 ```yaml
 name: betterwithranch
@@ -53,7 +60,7 @@ another, as a package's CI does for its model matrix (the invariant that
 [a rule passes whichever model a user picks](architecture.md#invariants)). The override
 changes nothing a review judges with.
 
-### Test a judge rule
+## Test a judge rule
 
 1. `codeguard test` checks the triggers on every case, with no model call. It commits
    each `before` and `unchanged` file to a scratch repository, writes each `after`, and
@@ -65,7 +72,8 @@ changes nothing a review judges with.
    shows up as a failing run, named like `adds a second class [2/20]`.
 
 [CLI](cli.md) lists `codeguard eval`'s options for judging part of a package, or with
-another model.
+another model. [What makes a case fail](rule-formats.md#what-makes-a-case-fail) lists
+each command's failures.
 
 An eval tests the rule, not the code, so it never uses
 the verdict cache: every run calls the model. With a Logfire token each rule's run is
@@ -73,17 +81,17 @@ also in Logfire, as an experiment named `<rule> on <model>` with the provider, m
 confidence threshold, rule version (a hash of the skill, paths and triggers) and
 codeguard version, so runs of the same rule compare.
 
-## Which test to write
-
 A project tests the rules in its `.codeguard/` the same way a package does.
 [Testing](testing.md#changing-a-rule-package) says which test each change needs and how
 many runs it must pass.
 
-Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
-releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
+## Package CI and releases
 
+Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset.
 A rule package's CI runs its model matrix with `codeguard eval --provider` and
-`--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
+`--model`, once for each model it supports.
+
+Tag releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
 [betterwithranch/codeguard-rules](https://github.com/betterwithranch/codeguard-rules) is
 an example.
 
@@ -93,3 +101,13 @@ an example.
 working on one. To use it without editing the committed config, put that config in a
 gitignored file such as `codeguard.local.yaml` and set
 `CODEGUARD_CONFIG=codeguard.local.yaml`. The path is relative to the repository root.
+
+## A private package
+
+For a private package in CI, pass the action a token that can read it:
+
+```yaml
+      - uses: jig-code/codeguard@v0.11.0
+        with:
+          packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
+```

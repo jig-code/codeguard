@@ -16,7 +16,7 @@ to set each provider up.
   ([Gemini on Google Cloud](#gemini-on-google-cloud)).
 
 Name the model a rule's eval passed on: a rule passes only on the models its eval has
-judged it with ([Write a rule package](rule-packages.md)).
+judged it with ([Write rules](write-rules.md)).
 
 ## Codex locally
 
@@ -63,7 +63,7 @@ to pass on Gemini. `codeguard eval --provider gemini` judges a rule's eval with 
 whatever is configured:
 
 ```yaml
-skill: .claude/skills/responsibility-placement
+skill: .codeguard/skills/responsibility-placement
 paths: ["app/**/*.py"]
 provider: gemini
 model: gemini-3.1-pro-preview
@@ -113,7 +113,7 @@ Set `bedrock` as the provider and name the model by its vendor's id, such as
 profile of the geography of the AWS region boto3 finds (`AWS_REGION`), such as
 `us.anthropic.claude-haiku-5-5` in `us-west-2`. An account that must route through an application inference profile
 names that profile's ARN as the model instead; the profile needs a `ModelId` tag naming
-the model it routes to ([How a model is named](judge-design.md#how-a-model-is-named)).
+the model it routes to ([How a model is named](configuration.md#how-a-model-is-named)).
 
 codeguard signs in to Bedrock as boto3 does: the AWS CLI's credentials and region on your
 machine, and the job's credentials in CI. In GitHub Actions, use
