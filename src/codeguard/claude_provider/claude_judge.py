@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
 from codeguard.review import (
+    DEFAULT_MODEL_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -36,7 +37,7 @@ class ClaudeJudge:
 
     @property
     def identity(self) -> str:
-        return "\0".join((_EXECUTABLE, self.model or ""))
+        return "\0".join((_EXECUTABLE, self.model or DEFAULT_MODEL_KEY))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(

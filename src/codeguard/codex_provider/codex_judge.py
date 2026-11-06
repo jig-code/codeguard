@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from codeguard.codex_provider.verdict_schema import verdict_schema
 from codeguard.review import (
+    DEFAULT_MODEL_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -44,7 +45,12 @@ class CodexJudge:
     @property
     def identity(self) -> str:
         return "\0".join(
-            ("codex-cli", self.model or "", "reasoning=high", "native-tools-schema-v4")
+            (
+                "codex-cli",
+                self.model or DEFAULT_MODEL_KEY,
+                "reasoning=high",
+                "native-tools-schema-v4",
+            )
         )
 
     def judge(self, request: JudgeRequest) -> Judgement:

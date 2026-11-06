@@ -20,7 +20,7 @@ RATE_LIMIT_EVENT = {
 }
 
 
-def claude_result(violations: list[dict], model: str = "claude-sonnet-5-5") -> dict:
+def claude_result(violations: list[dict]) -> dict:
     return {
         "type": "result",
         "subtype": "success",
@@ -29,7 +29,7 @@ def claude_result(violations: list[dict], model: str = "claude-sonnet-5-5") -> d
         "duration_ms": 2036,
         "duration_api_ms": 1901,
         "total_cost_usd": 0.0022,
-        "modelUsage": {model: MODEL_USAGE},
+        "modelUsage": {"claude-sonnet-5-5": MODEL_USAGE},
         "structured_output": {"reason": "Judged.", "violations": violations},
     }
 
@@ -51,10 +51,7 @@ def tool_result(use_id: str, **result: object) -> dict:
     }
 
 
-def claude_stream(
-    violations: list[dict], messages: tuple[dict, ...] = (), model: str = "claude-sonnet-5-5"
-) -> str:
+def claude_stream(violations: list[dict], messages: tuple[dict, ...] = ()) -> str:
     return "\n".join(
-        json.dumps(message)
-        for message in (RATE_LIMIT_EVENT, *messages, claude_result(violations, model))
+        json.dumps(message) for message in (RATE_LIMIT_EVENT, *messages, claude_result(violations))
     )

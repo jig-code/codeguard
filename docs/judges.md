@@ -135,8 +135,8 @@ it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 
 Set `bedrock` as the provider and name the model by its vendor's id, such as
 `claude-haiku-5-5` or `gpt-6-luna`. codeguard sends it as the cross-region inference
-profile `<prefix>.<vendor>.<id>`, with the prefix from `judge.bedrock.inference_prefix`
-(`us` unless set). An account that must route through an application inference profile
+profile of the geography of the AWS region boto3 finds (`AWS_REGION`), such as
+`us.anthropic.claude-haiku-5-5` in `us-west-2`. An account that must route through an application inference profile
 names that profile's ARN as the model instead; the profile needs a `ModelId` tag naming
 the model it routes to ([How a model is named](judge-design.md#how-a-model-is-named)).
 

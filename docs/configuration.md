@@ -17,7 +17,6 @@ in use.
 | `packages[].rulesets.<name>`: `include`, `exclude`, `severity`, `ci_only`, `rules.<id>` | every rule, at its own severity, in every review | Which of a ruleset's rules run, where, and at what severity, in the mapping form; see [Rule package keys](#rule-package-keys). | |
 | `judge.model` | none: the `claude` CLI runs with no `--model`, so its own default judges | The model for judge rules whose binding names none, over a package's default: by its vendor's id, which the provider maps, or by the provider's own id, such as a Bedrock application inference profile's ARN, which it passes through (the profile needs a `ModelId` tag naming the model it routes to); see [Which judge runs](#which-judge-runs). A Bedrock or Vertex AI run needs one named here, in the package or in the binding. | The project decides what judges its code; a package's default covers projects that don't; codeguard has no built-in model of its own. |
 | `judge.provider` | `claude-cli` | Where the model runs: `claude-cli` or `bedrock` for Claude, `codex-cli` or `bedrock` for GPT, `gemini` for Gemini. A model that isn't a Claude model needs it set; with none, it is a configuration error. | Which judge runs is configuration, so a switch is one value. CI never uses a subscription: its workflow sets `CODEGUARD_JUDGE__PROVIDER`. |
-| `judge.bedrock.inference_prefix` | `us` | The cross-region inference profile prefix Bedrock requests use: `<prefix>.<vendor>.<model>`, `anthropic` or `openai`. | A model is named once, by its vendor's id; where it runs is the environment's. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. A `claude` call mostly waits on the network, so it follows the machine. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
 
@@ -76,8 +75,6 @@ judge:
 judge:
   model: claude-sonnet-5-5          # for rules whose binding names none, over a package's default
   provider: bedrock                 # claude-cli (default), codex-cli, bedrock or gemini
-  bedrock:
-    inference_prefix: us            # the cross-region inference profile's prefix; default us
   project: my-project               # Vertex AI; default GOOGLE_CLOUD_PROJECT
   location: global                  # default GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                  # Gemini only
@@ -89,9 +86,9 @@ Settings that decide what a review reports belong in the committed config, so CI
 every machine review a commit the same way. A setting comes from the first of these that
 sets it:
 
-1. An environment variable named `CODEGUARD_` plus its key, with `__` between the parts
-   of a nested key, such as `CODEGUARD_JUDGE__PROVIDER` for `judge.provider`. An unset or
-   empty variable changes nothing.
+1. For `judge.provider` and `judge.model` only, `CODEGUARD_JUDGE__PROVIDER` and
+   `CODEGUARD_JUDGE__MODEL`. An unset or empty variable changes nothing, and no other
+   setting is read from the environment.
 2. `.codeguard/config.yaml`, or the file `CODEGUARD_CONFIG` names.
 3. The default in [Settings](#settings).
 
@@ -111,7 +108,7 @@ run, sign the judge in, or turn on telemetry:
 | `CODEGUARD_JUDGE__MODEL` | unset: the file's `judge.model`, else the package's, else none | The model for judge rules whose binding names none; CI sets the one it judges with. |
 | `CODEGUARD_CONFIG` | `.codeguard/config.yaml` | The config file to load, relative to the repository root, such as a gitignored `codeguard.local.yaml` for working on a local package. |
 | `CODEGUARD` | the codeguard the plugin ships | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
-| `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | How Bedrock signs in, locally and in CI; see [Bedrock](judges.md#bedrock). |
+| `AWS_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs, whose geography names a vendor's model's inference profile, and how it signs in, locally and in CI; see [Bedrock](judges.md#bedrock). |
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
 | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |

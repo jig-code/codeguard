@@ -31,14 +31,9 @@ runs](configuration.md#which-judge-runs) states the rule, its defaults and the e
 overrides. codeguard passes a model a level names explicitly, and is driven by a provider
 and a model alone: nothing else names the model a request runs.
 
-When no level names a model, the CLI's own default judges, and the model is still known
-before any judging. At the start of a run, codeguard reads the model the `claude` CLI
-will run from where the CLI reads it (`ANTHROPIC_MODEL`, then the `env` and then the
-`model` of its managed, local, project and user settings, in that order), and when those
-name none, or only an alias such as `opus`, it makes one small CLI call that reports it.
-Every verdict in the run is keyed on that model, so a change of the CLI's default model is
-never served a verdict of the old one. A dry run never makes that call. The `codex` CLI
-doesn't expose its default model, so with no model named its verdicts aren't cached.
+When no level names a model, codeguard runs the `claude` or `codex` CLI with no
+`--model`, so the CLI's own default judges. codeguard never asks or reads which model
+that is: its verdicts are keyed `default` ([Model](#judge-input)).
 
 ## How a model is named
 
@@ -50,11 +45,10 @@ application inference profile's ARN, which the provider passes through as is, as
 - A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
   `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
   takes: `gpt-6-luna`. A CLI sends the id as is. The Bedrock provider names it to
-  pydantic-ai as the cross-region inference profile `<prefix>.<vendor>.<id>`, the vendor
-  `anthropic` for a Claude model and `openai` for a GPT model:
-  `us.anthropic.claude-haiku-5-5`, `us.openai.gpt-6-luna`. The prefix is the project's
-  `judge.bedrock.inference_prefix` (`us` unless set; pydantic-ai also lists `global`,
-  `eu`, `au` and `jp`). Any other id, such as an application inference profile's ARN for
+  pydantic-ai as the cross-region inference profile `<geography>.<vendor>.<id>`, the
+  vendor `anthropic` for a Claude model and `openai` for a GPT model, and the geography
+  the one of the AWS region boto3 finds (`AWS_REGION`): `us.anthropic.claude-haiku-5-5`
+  in `us-west-2`, `eu.openai.gpt-6-luna` in `eu-west-1`. Any other id, such as an application inference profile's ARN for
   an account that must route through one, is Bedrock's own and is sent as the request's
   `modelId` as is. An application inference profile's ARN names no model, so the provider
   reads the model it routes to from the profile's `ModelId` tag
@@ -67,8 +61,9 @@ application inference profile's ARN, which the provider passes through as is, as
 - `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
   Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model.
   Any model that isn't a Claude model needs `provider` set: with none, it is a
-  configuration error that says to set it. A provider the surface can't use is an error,
-  never a fallback.
+  configuration error that says to set it. A model of a vendor the provider can't run,
+  such as a GPT model on `claude-cli`, is a configuration error too. A provider the
+  surface can't use is an error, never a fallback.
 
 A rule package's CI runs its model matrix with `codeguard eval --provider` and
 `--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
@@ -106,11 +101,11 @@ onto its API.
   `codex exec` in a read-only sandbox with project instructions, memories and web search
   off. The Bedrock and Gemini providers have the equivalent tools, rooted at the
   repository.
-- **Model.** A full model id, never an alias, so a model change is visible to the cache:
-  the cache keys on the id the provider sends, which for Bedrock is the inference profile
-  derived from the vendor's id ([How a model is named](#how-a-model-is-named)), and, when
-  no level names a model, on the model the CLI will run ([How the model
-  resolves](#how-the-model-resolves)).
+- **Model.** The model a level names goes to the provider and keys the cache, so naming
+  another model judges again. When no level names one, the CLI's own default judges and
+  its verdicts are keyed `default`: codeguard never asks or reads which model the CLI
+  runs, so a change of that default reuses the cached verdicts until the code or the rule
+  changes.
 - **Output.** Validated against the verdict schema; output that fails validation is an
   internal error.
 - **Confidence scale**, stated in the verdict schema: 1.0 when the judge is certain the

@@ -229,31 +229,3 @@ class TestCachedJudge:
             False,
             ["orders/pricing.py"],
         )
-
-
-class TestCachedJudgeOnTheCliDefault:
-    def test_verdict_of_another_default_model_is_judged_again(self, orders, store, total_change):
-        cached(orders, store, RecordingJudge(), default_model="claude-a").judge(total_change)
-        wrapped = RecordingJudge()
-
-        cached(orders, store, wrapped, default_model="claude-b").judge(total_change)
-
-        assert wrapped.received == [total_change]
-
-    def test_verdict_of_the_same_default_model_is_reused(self, orders, store, total_change):
-        cached(orders, store, RecordingJudge(), default_model="claude-a").judge(total_change)
-        wrapped = RecordingJudge()
-
-        cached(orders, store, wrapped, default_model="claude-a").judge(total_change)
-
-        assert wrapped.received == []
-
-    def test_uncacheable_judge_judges_every_time(self, orders, store, total_change):
-        wrapped = RecordingJudge()
-        judge = cached(orders, store, wrapped, cacheable=False)
-        judge.judge(total_change)
-
-        judge.judge(total_change)
-
-        assert wrapped.received == [total_change, total_change]
-        assert not judge.has(total_change)

@@ -541,32 +541,33 @@ class TestReviewJudgeCache:
 
         assert calls.read_text() == "called\ncalled\n"
 
-    def test_verdict_of_the_cli_default_is_judged_again_when_the_default_changes(
-        self, repo, tmp_path, make_skill
-    ):
+    def test_cli_default_verdict_is_keyed_default_and_reused(self, repo, tmp_path, make_skill):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
-        repo.write(".claude/settings.json", '{"model": "claude-sonnet-5-5"}')
         calls = tmp_path / "calls"
-        configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
-        run_review(repo, tmp_path, bin_dir)
-        run_review(repo, tmp_path, bin_dir)
-        repo.write(".claude/settings.json", '{"model": "claude-opus-5-5"}')
+        configure_fake_cli_response(
+            {"stdout": claude_stream([]), "calls": str(calls), "record_env": "CLAUDE_RECORD"}
+        )
+        environment = recording_env(tmp_path, bin_dir, tmp_path / "review")
+        for _ in range(2):
+            subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
 
-        run_review(repo, tmp_path, bin_dir)
+        assert calls.read_text() == "called\n"
+        assert recorded_call(tmp_path / "review")["model"] is None
+
+    def test_configured_model_is_passed_and_keys_its_verdicts(self, repo, tmp_path, make_skill):
+        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        calls = tmp_path / "calls"
+        configure_fake_cli_response(
+            {"stdout": claude_stream([]), "calls": str(calls), "record_env": "CLAUDE_RECORD"}
+        )
+        environment = recording_env(tmp_path, bin_dir, tmp_path / "review")
+        subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
+        repo.write(".codeguard/config.yaml", "judge:\n  model: claude-opus-5-5\n")
+
+        subprocess.run([CODEGUARD, "review"], cwd=repo.root, env=environment, check=True)
 
         assert calls.read_text() == "called\n" * 2
-
-    def test_cli_is_asked_its_default_once_per_review_when_nothing_names_it(
-        self, repo, tmp_path, make_skill
-    ):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
-        calls = tmp_path / "calls"
-        configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
-        run_review(repo, tmp_path, bin_dir)
-
-        run_review(repo, tmp_path, bin_dir)
-
-        assert calls.read_text() == "called\n" * 3
+        assert recorded_call(tmp_path / "review")["model"] == "claude-opus-5-5"
 
 
 class TestReviewWithoutGoogleCredentials:

@@ -234,6 +234,44 @@ class TestBindingsJudge:
             "judge.provider in its package's codeguard-package.yaml"
         )
 
+    @pytest.mark.parametrize(
+        ("provider", "model"),
+        [
+            (JudgeProvider.CLAUDE_CLI, "gpt-6-luna"),
+            (JudgeProvider.CODEX_CLI, "claude-haiku-5-5"),
+            (JudgeProvider.GEMINI, "claude-haiku-5-5"),
+            (JudgeProvider.BEDROCK, "gemini-3.1-pro-preview"),
+        ],
+    )
+    def test_model_the_provider_cant_run_is_an_error(self, tmp_path, make_skill, provider, model):
+        skill = write_skill(tmp_path, make_skill().text)
+        (binding,) = Bindings.from_rulesets(
+            [ruleset(tmp_path, skill, provider=provider, model=model)]
+        )
+
+        with pytest.raises(ConfigError) as error:
+            _ = binding.model
+
+        assert str(error.value) == f"provider {provider} can't run model {model}"
+
+    @pytest.mark.parametrize(
+        ("provider", "model"),
+        [
+            (JudgeProvider.BEDROCK, "arn:aws:bedrock:us-west-2:1:application-inference-profile/x"),
+            (JudgeProvider.BEDROCK, "gpt-6-luna"),
+            (JudgeProvider.CODEX_CLI, "o9-mini"),
+        ],
+    )
+    def test_model_of_no_family_the_provider_cant_run_passes(
+        self, tmp_path, make_skill, provider, model
+    ):
+        skill = write_skill(tmp_path, make_skill().text)
+        (binding,) = Bindings.from_rulesets(
+            [ruleset(tmp_path, skill, provider=provider, model=model)]
+        )
+
+        assert binding.model == JudgeModel(provider=provider, name=model)
+
     def test_claude_model_with_no_provider_named_runs_on_the_claude_cli(self, tmp_path, make_skill):
         skill = write_skill(tmp_path, make_skill().text)
 

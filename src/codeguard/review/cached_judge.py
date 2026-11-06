@@ -40,10 +40,6 @@ class CachedJudge:
     store: Cache
     root: Path
     version: str = _CACHE_VERSION
-    # The model the CLI runs when the judge names none, which keys its verdicts, or None when
-    # the judge names its model; `cacheable` is off when the CLI's model can't be told.
-    default_model: str | None = None
-    cacheable: bool = True
 
     @property
     def identity(self) -> str:
@@ -54,7 +50,7 @@ class CachedJudge:
             "judge {rule} on {file}", rule=request.skill.name, file=request.file
         ) as span:
             key = self._key(request)
-            stored = self._entry(key) if self.cacheable else None
+            stored = self._entry(key)
             changed = stored.changed_files(self._digest_of) if stored else ()
             span.set_attribute("cache_hit", stored is not None and not changed)
             span.set_attribute("changed_files", list(changed))
@@ -64,15 +60,12 @@ class CachedJudge:
                     judgement.verdict,
                     {file: self._digest_of(file) for file in judgement.loaded_files},
                 )
-                if self.cacheable:
-                    self.store[key] = stored
+                self.store[key] = stored
             span.set_attribute("loaded_files", list(stored.loaded_digests))
             span.set_attribute("violations", len(stored.verdict.violations))
             return Judgement(stored.verdict, tuple(stored.loaded_digests))
 
     def has(self, request: JudgeRequest) -> bool:
-        if not self.cacheable:
-            return False
         stored = self._entry(self._key(request))
         return stored is not None and not stored.changed_files(self._digest_of)
 
@@ -95,7 +88,6 @@ class CachedJudge:
         parts = (
             self.version,
             self.identity,
-            self.default_model or "",
             request.skill.text,
             request.file,
             _digest(request.changes.encode()),

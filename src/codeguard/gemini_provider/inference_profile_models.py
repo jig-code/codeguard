@@ -1,10 +1,7 @@
 import re
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from threading import Lock
+from functools import cache
 
 import boto3
-from botocore.client import BaseClient
 from botocore.exceptions import BotoCoreError, ClientError
 
 from codeguard.review import JudgeProcessError
@@ -22,38 +19,21 @@ def is_application_profile(model: str) -> bool:
     return _APPLICATION_PROFILE.match(model) is not None
 
 
-def _bedrock_client(region: str | None) -> BaseClient:
-    return boto3.client("bedrock", region_name=region or None)
-
-
-@dataclass
-class InferenceProfileModels:
-    """The model each application inference profile routes to, read from its `ModelId` tag
+@cache
+def application_profile_model(arn: str) -> str:
+    """The model an application inference profile routes to, read from its `ModelId` tag
     once per profile in a process."""
-
-    client: Callable[[str | None], BaseClient] = _bedrock_client
-    models: dict[str, str] = field(default_factory=dict)
-    lock: Lock = field(default_factory=Lock)
-
-    def model_of(self, arn: str) -> str:
-        with self.lock:
-            if arn not in self.models:
-                self.models[arn] = self._tagged_model(arn)
-            return self.models[arn]
-
-    def _tagged_model(self, arn: str) -> str:
-        match = _APPLICATION_PROFILE.match(arn)
-        try:
-            response = self.client(match["region"] if match else None).list_tags_for_resource(
-                resourceARN=arn
-            )
-        except (BotoCoreError, ClientError) as error:
-            raise JudgeProcessError(
-                f"Could not read the {MODEL_ID_TAG} tag of the inference profile {arn}: {error}"
-            ) from error
-        models = [tag["value"] for tag in response.get("tags", []) if tag["key"] == MODEL_ID_TAG]
-        if not models:
-            raise JudgeProcessError(
-                f"The inference profile {arn} has no {MODEL_ID_TAG} tag naming its model"
-            )
-        return models[0]
+    match = _APPLICATION_PROFILE.match(arn)
+    client = boto3.client("bedrock", region_name=(match["region"] if match else None) or None)
+    try:
+        response = client.list_tags_for_resource(resourceARN=arn)
+    except (BotoCoreError, ClientError) as error:
+        raise JudgeProcessError(
+            f"Could not read the {MODEL_ID_TAG} tag of the inference profile {arn}: {error}"
+        ) from error
+    models = [tag["value"] for tag in response.get("tags", []) if tag["key"] == MODEL_ID_TAG]
+    if not models:
+        raise JudgeProcessError(
+            f"The inference profile {arn} has no {MODEL_ID_TAG} tag naming its model"
+        )
+    return models[0]

@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from codeguard.config import (
-    BedrockConfig,
     BindingConfig,
     BindingsConfig,
     ChangeKind,
@@ -106,36 +105,27 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
 
-    def test_any_setting_env_var_overrides_the_file(self, repo, monkeypatch):
+    def test_env_var_for_another_setting_is_ignored(self, repo, monkeypatch):
         repo.write(CONFIG, "confidence_threshold: 0.75\n")
         monkeypatch.setenv("CODEGUARD_CONFIDENCE_THRESHOLD", "0.8")
 
-        assert ConfigLoader(repo.root).load().confidence_threshold == 0.8
+        assert ConfigLoader(repo.root).load().confidence_threshold == 0.75
 
-    def test_loads_the_bedrock_inference_prefix(self, repo):
+    def test_env_var_for_another_judge_setting_is_ignored(self, repo, monkeypatch):
+        repo.write(CONFIG, "judge:\n  project: my-project\n")
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROJECT", "env-project")
+        monkeypatch.setenv("CODEGUARD_JUDGE__CALLS_AT_ONCE", "9")
+
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(project="my-project")
+
+    def test_bedrock_inference_prefix_is_an_error(self, repo):
         repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
-
-        assert ConfigLoader(repo.root).load().judge.bedrock == BedrockConfig(inference_prefix="eu")
-
-    def test_bedrock_inference_profile_is_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_profile: arn:profile\n")
 
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 
         assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.bedrock.inference_profile: Extra inputs are not permitted"
-        )
-
-    def test_nested_env_var_keeps_the_file_other_nested_settings(self, repo, monkeypatch):
-        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
-
-        config = ConfigLoader(repo.root).load()
-
-        assert config.judge == JudgeConfig(
-            model="env-model", bedrock=BedrockConfig(inference_prefix="eu")
+            f"{repo.root}/.codeguard is invalid:\n  judge.bedrock: Extra inputs are not permitted"
         )
 
     def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):

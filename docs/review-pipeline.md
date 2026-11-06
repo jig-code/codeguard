@@ -31,7 +31,7 @@ The verdict cache stores verdicts keyed on the template, model, skill, path, cha
 and whole file, so a verdict is reused until the changed code, the rest of the file, the
 rule or the model changes. Verdicts are cached per provider and model, so switching
 providers doesn't reuse another provider's verdicts; when no level names a model, the key
-is the model the CLI will run ([How a model is named](judge-design.md#how-a-model-is-named)).
+is `default` ([Judge input](judge-design.md#judge-input)).
 
 When a provider exposes file-read tracking, a change to a file the judge loaded also
 invalidates the verdict. A loaded file is one the judge read, or one its searches

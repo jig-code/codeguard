@@ -8,10 +8,18 @@ from codeguard.config.config_error import ConfigError
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
 _API_CALLS_AT_ONCE = 2
-# Bedrock names a model by its vendor and the vendor's id, so a vendor's ids are told apart by
-# their prefix.
-_BEDROCK_VENDORS = {"claude-": "anthropic", "gpt-": "openai"}
-_CLAUDE_PREFIX = "claude-"
+
+
+class ModelFamily(StrEnum):
+    """A vendor's models, told apart by the prefix of the id the vendor gives them."""
+
+    CLAUDE = "claude-"
+    GPT = "gpt-"
+    GEMINI = "gemini-"
+
+    @classmethod
+    def of(cls, model: str) -> "ModelFamily | None":
+        return next((family for family in cls if model.startswith(family)), None)
 
 
 class JudgeProvider(StrEnum):
@@ -25,6 +33,28 @@ class JudgeProvider(StrEnum):
         """A CLI has a default model of its own; an API needs one named."""
         return self in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI)
 
+    @property
+    def families(self) -> frozenset[ModelFamily]:
+        return _FAMILIES[self]
+
+
+# The vendors' models each provider runs. A model of no known family, such as a Bedrock
+# application inference profile's ARN, is the provider's own id.
+_FAMILIES = {
+    JudgeProvider.CLAUDE_CLI: frozenset({ModelFamily.CLAUDE}),
+    JudgeProvider.CODEX_CLI: frozenset({ModelFamily.GPT}),
+    JudgeProvider.GEMINI: frozenset({ModelFamily.GEMINI}),
+    JudgeProvider.BEDROCK: frozenset({ModelFamily.CLAUDE, ModelFamily.GPT}),
+}
+
+
+def _unset(key: str, problem: str) -> ConfigError:
+    return ConfigError(
+        f"{problem}: set {key} in the rule's binding, judge.{key} in .codeguard/config.yaml "
+        f"(or CODEGUARD_JUDGE__{key.upper()}), or judge.{key} in its package's "
+        "codeguard-package.yaml"
+    )
+
 
 class JudgeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -36,6 +66,13 @@ class JudgeModel(BaseModel):
     @property
     def label(self) -> str:
         return self.name or f"{self.provider}'s default model"
+
+    @property
+    def api_name(self) -> str:
+        """The model an API provider runs, which has no default of its own."""
+        if self.name is None:
+            raise _unset("model", f"provider {self.provider} needs a model")
+        return self.name
 
 
 class JudgeChoice(BaseModel):
@@ -54,31 +91,15 @@ class JudgeChoice(BaseModel):
 
     @property
     def judge_model(self) -> JudgeModel:
-        """The judge this choice names: with no provider named, the claude CLI, which runs
-        only Claude models."""
-        if self.provider is None and self.model and not self.model.startswith(_CLAUDE_PREFIX):
-            raise ConfigError(
-                f"model {self.model} needs a provider: set provider in the rule's binding, "
-                "judge.provider in .codeguard/config.yaml (or CODEGUARD_JUDGE__PROVIDER), or "
-                "judge.provider in its package's codeguard-package.yaml"
-            )
-        return JudgeModel(provider=self.provider or JudgeProvider.CLAUDE_CLI, name=self.model)
-
-
-class BedrockConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    # The cross-region inference profile's prefix, such as us, eu or global.
-    inference_prefix: str = "us"
-
-    def model_id(self, model: str) -> str:
-        """The id Bedrock runs a model by: a Claude or GPT model named by its vendor's id maps
-        to its cross-region inference profile; any other id, such as an application
-        inference profile's ARN, is Bedrock's own and passes through as is."""
-        vendors = [
-            vendor for prefix, vendor in _BEDROCK_VENDORS.items() if model.startswith(prefix)
-        ]
-        return f"{self.inference_prefix}.{vendors[0]}.{model}" if vendors else model
+        """The judge this choice names: with no provider named, the claude CLI. A model of
+        a family the provider can't run is an error."""
+        family = ModelFamily.of(self.model) if self.model else None
+        if self.provider is None and self.model and family is not ModelFamily.CLAUDE:
+            raise _unset("provider", f"model {self.model} needs a provider")
+        provider = self.provider or JudgeProvider.CLAUDE_CLI
+        if family is not None and family not in provider.families:
+            raise ConfigError(f"provider {provider} can't run model {self.model}")
+        return JudgeModel(provider=provider, name=self.model)
 
 
 class JudgeConfig(BaseModel):
@@ -89,7 +110,6 @@ class JudgeConfig(BaseModel):
 
     provider: JudgeProvider | None = None
     model: str | None = None
-    bedrock: BedrockConfig = BedrockConfig()
     project: str | None = None
     location: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)

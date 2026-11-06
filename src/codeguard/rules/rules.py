@@ -74,7 +74,7 @@ class Rules:
                 PlannedCall(
                     rule=binding.rule,
                     file=file,
-                    cached=self.judges.cached(root, binding.model, probe=False).has(
+                    cached=self.judges.cached(root, binding.model).has(
                         JudgeRequest.of_change(binding, root, file, classified)
                     ),
                     triggered=binding.is_triggered(classified, file),
