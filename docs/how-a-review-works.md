@@ -46,10 +46,3 @@ the plugin ships, not one on your PATH. Claude Code and Codex get the same behav
   run.
 - If the review crashes or uv can't build codeguard's environment, you see why, and the
   stop goes through.
-
-In Claude Code, a second hook guards the rules themselves. Before an `Edit` or `Write` to
-a rule file (a skill, pattern rule, gate, binding, rule test or rule eval, under
-`.codeguard/` or a package ruleset's directory), it checks the session's transcript for
-the `writing-rules` skill: a Skill call naming it, or a Read of its `SKILL.md`. Until the
-session has loaded it, the edit is denied with a message telling the agent to load it. A
-transcript the hook can't read lets the edit through.
