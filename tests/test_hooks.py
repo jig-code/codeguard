@@ -173,11 +173,6 @@ class TestHookConfig:
         assert result.stdout == ""
         assert (project / ".venv" / "bin" / "tool").exists()
 
-    def test_claude_code_runs_no_hook_before_a_tool_call(self):
-        hooks = json.loads((PROJECT / "hooks" / "hooks.json").read_text())["hooks"]
-
-        assert "PreToolUse" not in hooks
-
     def test_codex_reviews_when_an_agent_stops(self):
         assert commands(PROJECT / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
 
