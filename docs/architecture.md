@@ -25,7 +25,7 @@ A rule states one requirement on code and why it matters. A rule is one of two k
   states the requirement and why it matters.
 
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
-git and pinned to a tag.
+git and pinned to a commit.
 
 Use the writing-rules skill's
 [tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md)
@@ -96,10 +96,11 @@ Every design must satisfy these.
 
 **Progress and blocking**
 
-11. An internal error fails loud: a visible message and an error span. It blocks by
-    default: a failed judge call takes its rule's severity, and locally the Stop hook
-    blocks every stop until the errors are fixed. A bypass is explicit and per change, never
-    the default.
+11. An internal error fails loud: a visible message and an error span. A failed judge
+    call takes its rule's severity. Locally, it goes to the developer and never blocks the
+    agent, which can't fix it; a rule's error still blocks every stop until it is fixed. In
+    CI, a failed judge call fails the review unless the PR's label bypasses it: a bypass is
+    explicit and per change, never the default.
 12. Write-time hooks block only for: the applicable skill not loaded, a failed
     deterministic check, or a high-confidence violation.
 13. Severity decides blocking: an `error` blocks the Stop hook and CI; `warning`, `info`

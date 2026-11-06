@@ -214,8 +214,9 @@ held to the same bar.
 1. `codeguard test` checks the triggers on every case, with no model call. It commits
    each `before` and `unchanged` file to a scratch repository, writes each `after`, and
    classifies the diff the way a review does.
-2. `codeguard eval` reviews every case with the binding's model, the way
-   `codeguard review` would.
+2. `codeguard eval` reviews every case with the model a review would use: the binding's,
+   else the project's default, else the package's, else the CLI's own default ([Which
+   judge runs](configuration.md#which-judge-runs)), the way `codeguard review` would.
 3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
    shows up as a failing run, named like `adds a second class [2/20]`.
 
