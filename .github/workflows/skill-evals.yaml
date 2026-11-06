@@ -5,32 +5,59 @@ on:
       - skills/writing-rules/**
       - evals/writing-rules/**
       - .github/workflows/skill-evals.yaml
-      - .github/workflows/skill-evals-run.yaml
+      - .github/actions/skill-evals/**
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 permissions: {}
+env:
+  AGENT_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+  GRADER_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
 # Each cost ceiling is about three times the pass's cost in the last green run, so a
 # runaway agent stops the paid run; raise them when cases move back from evals-pending/.
 jobs:
   validity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
-    uses: ./.github/workflows/skill-evals-run.yaml
-    with:
-      pass: validity
-      runs: 1
-      max-cost-usd: 1
-      timeout-minutes: 30
+    steps:
+      - &check-models
+        run: |
+          : "${AGENT_MODEL:?Set the SKILL_EVALS_AGENT_BEDROCK_MODEL repository variable}"
+          : "${GRADER_MODEL:?Set the SKILL_EVALS_GRADER_BEDROCK_MODEL repository variable}"
+      - &checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - &aws
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
+          aws-region: us-west-2
+      - uses: ./.github/actions/skill-evals
+        with:
+          pass: validity
+          runs: 1
+          max-cost-usd: 1
+          agent-model: ${{ env.AGENT_MODEL }}
+          grader-model: ${{ env.GRADER_MODEL }}
   reliability:
     needs: validity
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: read
       id-token: write
-    uses: ./.github/workflows/skill-evals-run.yaml
-    with:
-      pass: reliability
-      runs: 9
-      max-cost-usd: 8
-      timeout-minutes: 90
+    steps:
+      - *check-models
+      - *checkout
+      - *aws
+      - uses: ./.github/actions/skill-evals
+        with:
+          pass: reliability
+          runs: 9
+          max-cost-usd: 8
+          agent-model: ${{ env.AGENT_MODEL }}
+          grader-model: ${{ env.GRADER_MODEL }}
