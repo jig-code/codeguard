@@ -19,31 +19,31 @@ class TestPatternRuleTestRunner:
         assert result == RuleTestResult(failed=False)
 
     def test_run_with_passing_cases_passes(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
 
         result = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == RuleTestResult(failed=False)
 
     def test_run_with_failing_case_fails(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
 
         result = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == RuleTestResult(failed=True)
 
     def test_run_with_failing_case_in_the_pattern_directory_fails(self, repo):
-        repo.write(LEGACY_NO_PRINT_TEST, "id: no-print\nvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(LEGACY_NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
 
         result = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == RuleTestResult(failed=True)
 
     def test_update_snapshots_writes_each_directory_its_own_snapshots(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
         repo.write(
             ".codeguard/rule-tests/pattern/no-breakpoint-test.yml",
-            "id: no-breakpoint\ninvalid:\n  # a breakpoint call\n  - breakpoint()\n",
+            "id: no-breakpoint\ninvalid:\n  - breakpoint()\n",
         )
         runner = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard"))
 
@@ -57,22 +57,17 @@ class TestPatternRuleTestRunner:
         assert runner.run() == RuleTestResult(failed=False)
 
     def test_run_reports_snapshot_entry_for_removed_case(self, repo):
-        repo.write(
-            NO_PRINT_TEST,
-            "id: no-print\ninvalid:\n"
-            "  # a print of 1\n  - print(1)\n"
-            "  # a print of 2\n  - print(2)\n",
-        )
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n")
         runner = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard"))
         runner.update_snapshots()
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 2\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
 
         result = runner.run()
 
         assert result == RuleTestResult(failed=False, problems=(STALE_NO_PRINT_SNAPSHOT,))
 
     def test_run_reports_snapshot_of_removed_test(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
         runner = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard"))
         runner.update_snapshots()
         (repo.root / NO_PRINT_TEST).unlink()
@@ -82,15 +77,10 @@ class TestPatternRuleTestRunner:
         assert result == RuleTestResult(failed=False, problems=(STALE_NO_PRINT_SNAPSHOT,))
 
     def test_update_snapshots_removes_entries_for_removed_cases(self, repo):
-        repo.write(
-            NO_PRINT_TEST,
-            "id: no-print\ninvalid:\n"
-            "  # a print of 1\n  - print(1)\n"
-            "  # a print of 2\n  - print(2)\n",
-        )
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n")
         runner = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard"))
         runner.update_snapshots()
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 2\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
 
         result = runner.update_snapshots()
 
@@ -99,7 +89,7 @@ class TestPatternRuleTestRunner:
         assert list(snapshot["snapshots"]) == ["print(2)"]
 
     def test_update_snapshots_removes_snapshot_of_removed_test(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
         runner = PatternRuleTestRunner(Layout(repo.root, repo.root / ".codeguard"))
         runner.update_snapshots()
         (repo.root / NO_PRINT_TEST).unlink()

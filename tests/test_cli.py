@@ -1031,7 +1031,7 @@ class TestTestCommand:
         write_package(package)
         package.write(
             "python/rule-tests/no-print-test.yml",
-            "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n",
+            "id: no-print\nvalid:\n  - logging.info(1)\n",
         )
 
         result = subprocess.run(
@@ -1045,7 +1045,7 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_passing_rule_tests_exit_0(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
@@ -1056,12 +1056,10 @@ class TestTestCommand:
     def test_stale_snapshot_entry_fails(self, repo):
         repo.write(
             NO_PRINT_TEST,
-            "id: no-print\ninvalid:\n"
-            "  # a print of 1\n  - print(1)\n"
-            "  # a print of 2\n  - print(2)\n",
+            "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n",
         )
         subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 2\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
@@ -1072,7 +1070,7 @@ class TestTestCommand:
         assert result.returncode == 1
 
     def test_update_all_removes_snapshots_of_removed_tests(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
         subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
         (repo.root / NO_PRINT_TEST).unlink()
 
@@ -1081,7 +1079,7 @@ class TestTestCommand:
         assert not (repo.root / NO_PRINT_SNAPSHOT).exists()
 
     def test_invalid_binding_does_not_stop_rule_tests(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
         repo.write(".codeguard/bindings/broken.yaml", "path: [a.py]\n")
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
@@ -1095,7 +1093,7 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_broad_triggers_are_a_warning(self, repo, make_skill):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
         repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
@@ -1128,7 +1126,7 @@ class TestTestCommand:
             "id: no-print\nlanguage: python\nseverity: error\nmessage: Use logging, not print.\n"
             "rule:\n  pattern: print($$$ARGS)\n",
         )
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
 
         result = subprocess.run(
             [CODEGUARD, "test", *options], cwd=repo.root, capture_output=True, text=True
@@ -1144,8 +1142,7 @@ class TestTestCommand:
         )
         repo.write(
             ".codeguard/rule-tests/enum-value-test.yml",
-            "id: enum-value\nvalid:\n  # a name read\n  - status.name\n"
-            "invalid:\n  # a value read\n  - status.value\n",
+            "id: enum-value\nvalid:\n  - status.name\ninvalid:\n  - status.value\n",
         )
 
         result = subprocess.run(
@@ -1156,7 +1153,7 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_skill):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a logging call\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
         repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
@@ -1179,7 +1176,7 @@ class TestTestCommand:
         assert result.returncode == 1
 
     def test_failing_rule_tests_exit_1(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  # a print of 1\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
