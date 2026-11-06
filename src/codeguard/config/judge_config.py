@@ -1,5 +1,4 @@
 from enum import StrEnum
-from os import process_cpu_count
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -56,9 +55,11 @@ class JudgeConfig(BaseModel):
                 raise ValueError("; ".join(retired))
         return data
 
-    def concurrency(self, provider: JudgeProvider) -> int:
+    def concurrency(self, provider: JudgeProvider, cpus: int | None) -> int:
+        """How many calls a provider makes at once, given the machine's CPU count, which
+        may be unknown."""
         if provider is JudgeProvider.GEMINI and self.calls_at_once is not None:
             return self.calls_at_once
         if provider not in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI):
             return _API_CALLS_AT_ONCE
-        return process_cpu_count() or 1
+        return cpus or 1
