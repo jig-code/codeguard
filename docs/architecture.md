@@ -43,8 +43,7 @@ judge rule. Passing one rule does not excuse violations owned by other checks.
 - **The judge** grades one rule against one file's change, through the `claude` or
   `codex` CLI, Amazon Bedrock or Gemini on Vertex AI ([The judge](judge-design.md)).
 - **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
-  or a pass. The only adapter is for the Stop hook. Planned: a pre-edit hook that denies
-  an edit until the file's skill is loaded.
+  or a pass. The only adapter is for the Stop hook.
 - **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern
   rule and gate tests, with no model; `eval` runs judge rule evals, repeated N times;
   `config` prints a setting. The plugin ships the CLI, and the GitHub Action runs it in
@@ -89,11 +88,6 @@ Every design must satisfy these.
    deterministic.
 9. Hook inputs come only from documented host payloads, never from the transcript.
 
-**Prevention before correction**
-
-10. Before an agent edits a file, the file's applicable skill is loaded in that agent's
-    context.
-
 **Progress and blocking**
 
 11. An internal error fails loud: a visible message and an error span. A failed judge
@@ -101,8 +95,8 @@ Every design must satisfy these.
     agent, which can't fix it; a rule's error still blocks every stop until it is fixed. In
     CI, a failed judge call fails the review unless the PR's label bypasses it: a bypass is
     explicit and per change, never the default.
-12. Write-time hooks block only for: the applicable skill not loaded, a failed
-    deterministic check, or a high-confidence violation.
+12. Write-time hooks block only for a failed deterministic check or a high-confidence
+    violation.
 13. Severity decides blocking: an `error` blocks the Stop hook and CI; `warning`, `info`
     and `hint` never block. A pattern rule's severity is in its YAML; a judge rule's is its
     binding's (default `error`). A project may override a package rule's severity or
