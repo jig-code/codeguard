@@ -14,6 +14,10 @@ file is sent whole but for its blank lines outside a function or method; every f
 [review-scope invariant](architecture.md#invariants) allows: violations a changed or
 removed line is part of.
 
+codeguard ignores added and removed blank lines, which change nothing in any language.
+Other whitespace can change meaning, such as indentation in Python, so codeguard
+leaves it to the formatter.
+
 A verdict is reused until the changed code, the rest of the file, the rule, the model, or a
 file the judge loaded changes ([Verdict cache](review-pipeline.md#verdict-cache)).
 
@@ -29,20 +33,14 @@ app/orders.py:12: warning no-pre-derived-arguments: The call passes both lines a
 ## The hooks
 
 When an agent or subagent stops, the hook runs `codeguard review` in its working
-directory: the uncommitted and untracked files, whoever changed them and however. Start
-the session in the repository's directory and make changes from there. Claude Code reads a
-project's hooks only from the directory a session starts in, and a cloud session over several
-repositories starts above them, where no repository's hooks run. The hook runs the codeguard
+directory: the uncommitted and untracked files, whoever changed them and however. The hook runs the codeguard
 the plugin ships, not one on your PATH. Claude Code and Codex get the same behaviour.
 
 - An error blocks the stop, and only errors reach the agent. It blocks every time the
-  agent stops until the errors are fixed. When the agent can't fix one, interrupt it
-  and fix the rule.
+  agent stops until the errors are fixed.
 - Everything else goes to you, not the agent: warnings, findings below the confidence
   threshold, and rules the judge couldn't check (a failed `claude` call or the time
   limit). The hook passes `--judge-errors-as-warnings`, since the agent can't fix those;
   CI still fails on them ([judge errors in CI](add-codeguard.md#ci)).
 - The hook passes `--skip-ci-only`, so [`ci_only` rules](configuration.md#rule-package-keys) don't
   run.
-- If the review crashes or uv can't build codeguard's environment, you see why, and the
-  stop goes through.

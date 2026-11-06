@@ -37,21 +37,6 @@ permissions and the shared verdict schema. This provider requires ChatGPT authen
 it does not fall back to API billing. Other providers do not require Codex to be installed.
 Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
 
-The judge uses Codex's native repository tools in the read-only sandbox, with project
-instructions, hooks, plugins, memories and web search disabled. Temporary files hold
-the shared judge instructions, verdict schema and final response; they are removed
-after each call. The provider uses `high` reasoning effort and the existing review
-deadline. Authentication failures, capacity errors and other process errors fail
-immediately, without retries or a separate per-call time limit.
-
-Codex uses the existing verdict cache keyed on the judge inputs and reviewed source,
-when a model is named: the `codex` CLI doesn't expose its default model, so with none
-named its verdicts aren't cached.
-Its native tools discover related repository code as the rule requires. Native events
-do not provide complete file-read tracking, so Codex does not populate `loaded_files`
-for additional context-file invalidation. Claude and Gemini tracking are unchanged.
-Concurrency follows the CLI limit, one call per CPU.
-
 The existing evaluation override also accepts Codex:
 
 ```sh
@@ -92,16 +77,6 @@ judge:
   location: global                # default: GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                # Gemini only; default: 2
 ```
-
-Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
-tools, limited to the repository, thinks at the `LOW` level, and returns its verdict as
-structured output with the same verdict schema as Claude. A judgement that makes 10
-requests without a verdict is reported as not judged.
-
-Each provider has its own limit on calls at once (`judge.calls_at_once` for Gemini; at
-most 2 for Bedrock), so Claude and Gemini rules in one review don't wait on each other. A request that Gemini turns away
-(408, 429 or a 5xx) or whose connection breaks is sent again for about 15 seconds, and
-then the rule is reported as not judged.
 
 Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash was
 unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15

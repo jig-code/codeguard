@@ -35,39 +35,6 @@ When no level names a model, codeguard runs the `claude` or `codex` CLI with no
 `--model`, so the CLI's own default judges. codeguard never asks or reads which model
 that is: its verdicts are keyed `default` ([Model](#judge-input)).
 
-## How a model is named
-
-A model is named once, by the id its vendor gives it, and each provider maps that id onto
-its own API. A model may instead be named by the provider's own id, such as a Bedrock
-application inference profile's ARN, which the provider passes through as is, as the
-`claude` CLI's `--model` does:
-
-- A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
-  `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
-  takes: `gpt-6-luna`. A CLI sends the id as is. The Bedrock provider names it to
-  pydantic-ai as the cross-region inference profile `<geography>.<vendor>.<id>`, the
-  vendor `anthropic` for a Claude model and `openai` for a GPT model, and the geography
-  the one of the AWS region boto3 finds (`AWS_REGION`): `us.anthropic.claude-haiku-5-5`
-  in `us-west-2`, `eu.openai.gpt-6-luna` in `eu-west-1`. Any other id, such as an application inference profile's ARN for
-  an account that must route through one, is Bedrock's own and is sent as the request's
-  `modelId` as is. An application inference profile's ARN names no model, so the provider
-  reads the model it routes to from the profile's `ModelId` tag
-  (`bedrock:ListTagsForResource`, once per profile) and calls pydantic-ai as that model.
-  So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku 5.5 on the
-  CLI locally and on Bedrock in CI, with no other change, in a project that sets no
-  model of its own.
-- A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
-  `provider: gemini`.
-- `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
-  Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model.
-  Any model that isn't a Claude model needs `provider` set: with none, it is a
-  configuration error that says to set it. A model of a vendor the provider can't run,
-  such as a GPT model on `claude-cli`, is a configuration error too. A provider the
-  surface can't use is an error, never a fallback.
-
-A rule package's CI runs its model matrix with `codeguard eval --provider` and
-`--model`, today over Gemini on Vertex AI and Claude Haiku 5.5 on Bedrock.
-
 ## Judge input
 
 The judge request and the verdict schema belong to the core; a provider only maps them
@@ -117,3 +84,30 @@ onto its API.
   none.
 - **Determinism.** Claude Code adds the date, the account and the working directory
   to the message. Those are the only inputs codeguard doesn't control.
+
+## How each provider runs
+
+The judge uses Codex's native repository tools in the read-only sandbox, with project
+instructions, hooks, plugins, memories and web search disabled. Temporary files hold
+the shared judge instructions, verdict schema and final response; they are removed
+after each call. The provider uses `high` reasoning effort and the existing review
+deadline. Authentication failures, capacity errors and other process errors fail
+immediately, without retries or a separate per-call time limit.
+
+Codex uses the existing verdict cache keyed on the judge inputs and reviewed source,
+when a model is named: the `codex` CLI doesn't expose its default model, so with none
+named its verdicts aren't cached.
+Its native tools discover related repository code as the rule requires. Native events
+do not provide complete file-read tracking, so Codex does not populate `loaded_files`
+for additional context-file invalidation. Claude and Gemini tracking are unchanged.
+Concurrency follows the CLI limit, one call per CPU.
+
+Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
+tools, limited to the repository, thinks at the `LOW` level, and returns its verdict as
+structured output with the same verdict schema as Claude. A judgement that makes 10
+requests without a verdict is reported as not judged.
+
+Each provider has its own limit on calls at once (`judge.calls_at_once` for Gemini; at
+most 2 for Bedrock), so Claude and Gemini rules in one review don't wait on each other. A request that Gemini turns away
+(408, 429 or a 5xx) or whose connection breaks is sent again for about 15 seconds, and
+then the rule is reported as not judged.

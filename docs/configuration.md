@@ -45,6 +45,9 @@ A package entry's `rulesets` lists the rulesets to run, or maps each to its sett
   CI still fails the PR on the rule, so the agent meets it there instead of at Stop.
 - An unknown ruleset or rule id is an error.
 
+Diagnostics name a packaged rule by package, ruleset and id:
+`betterwithranch/python/no-del-param`.
+
 ## Which judge runs
 
 A rule's provider and its model resolve separately. Each takes the first of these levels
@@ -79,6 +82,36 @@ judge:
   location: global                  # default GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                  # Gemini only
 ```
+
+## How a model is named
+
+A model is named once, by the id its vendor gives it, and each provider maps that id onto
+its own API. A model may instead be named by the provider's own id, such as a Bedrock
+application inference profile's ARN, which the provider passes through as is, as the
+`claude` CLI's `--model` does:
+
+- A Claude model is named by its Anthropic id, the one the `claude` CLI takes:
+  `claude-haiku-5-5`. A GPT model is named by its OpenAI id, the one the `codex` CLI
+  takes: `gpt-6-luna`. A CLI sends the id as is. The Bedrock provider names it to
+  pydantic-ai as the cross-region inference profile `<geography>.<vendor>.<id>`, the
+  vendor `anthropic` for a Claude model and `openai` for a GPT model, and the geography
+  the one of the AWS region boto3 finds (`AWS_REGION`): `us.anthropic.claude-haiku-5-5`
+  in `us-west-2`, `eu.openai.gpt-6-luna` in `eu-west-1`. Any other id, such as an application inference profile's ARN for
+  an account that must route through one, is Bedrock's own and is sent as the request's
+  `modelId` as is. An application inference profile's ARN names no model, so the provider
+  reads the model it routes to from the profile's `ModelId` tag
+  (`bedrock:ListTagsForResource`, once per profile) and calls pydantic-ai as that model.
+  So `judge: {model: claude-haiku-5-5}` as a package default judges with Haiku 5.5 on the
+  CLI locally and on Bedrock in CI, with no other change, in a project that sets no
+  model of its own.
+- A Gemini model is named by its Vertex AI id, `gemini-3.1-pro-preview`, and runs with
+  `provider: gemini`.
+- `provider` names where the model runs: `claude-cli` (the default) or `bedrock` for a
+  Claude model, `codex-cli` or `bedrock` for a GPT model, `gemini` for a Gemini model.
+  Any model that isn't a Claude model needs `provider` set: with none, it is a
+  configuration error that says to set it. A model of a vendor the provider can't run,
+  such as a GPT model on `claude-cli`, is a configuration error too. A provider the
+  surface can't use is an error, never a fallback.
 
 ## Which source wins
 
