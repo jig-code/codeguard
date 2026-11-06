@@ -82,8 +82,8 @@ lists what else it takes.
 The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
 the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call
 that couldn't complete ([Merge a PR despite a judge
-error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). Without the `if`, every
-label added to a PR re-runs the whole review and its judge calls.
+error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). The `if` keeps other
+labels from re-running the review and its judge calls.
 
 ### Choose the CI judge
 
@@ -150,8 +150,8 @@ code that was never reviewed, and it changes the file, so the next review can't 
 the cached verdict: it calls the model again and can reach a different verdict.
 
 - In Claude Code, format each file when it's edited, in a `PostToolUse` hook on `Edit`
-  and `Write`, not in a `Stop` hook: hooks on the same event run in parallel, so a
-  formatter there can run after codeguard's review.
+  and `Write`, not in a `Stop` hook, where it can run after codeguard's review
+  ([Hooks](https://code.claude.com/docs/en/hooks)).
 - In CI, run the format check before the codeguard step.
 - Format an unformatted codebase in a commit of its own. Reformatted lines are changed
   lines, so formatting inside a feature change sends every one of them to the judge.

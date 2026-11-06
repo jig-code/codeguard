@@ -61,7 +61,8 @@ uv tool install --editable .
 Point a project's hooks at this clone.
 
 - Claude Code: in the project's `.claude/settings.local.json`, declare the marketplace
-  as a directory. It replaces the GitHub entry by name, for you only.
+  as a directory, which replaces the GitHub entry for you only
+  ([Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)).
   ```json
   {
     "extraKnownMarketplaces": {

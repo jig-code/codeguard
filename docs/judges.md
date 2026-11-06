@@ -31,8 +31,8 @@ judge:
   model: gpt-6-luna
 ```
 
-Install the Codex CLI separately and sign in with `codex login` using your ChatGPT
-subscription. CodeGuard invokes `codex exec` with ephemeral sessions, read-only
+Install the [Codex CLI](https://developers.openai.com/codex/cli) and sign in with your
+ChatGPT subscription. CodeGuard invokes `codex exec` with ephemeral sessions, read-only
 permissions and the shared verdict schema. This provider requires ChatGPT authentication;
 it does not fall back to API billing. Other providers do not require Codex to be installed.
 Use a current CLI supporting `--ignore-user-config`, `--ignore-rules` and `--ephemeral`.
@@ -82,26 +82,18 @@ Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash 
 unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15
 to 37 s, where 3.1 Pro's longest of 79 took 13 s (median 6.5 s).
 
-codeguard signs in with Application Default Credentials. Set it up once per project:
-
-1. Enable the Vertex AI API:
-   `gcloud services enable aiplatform.googleapis.com --project my-project`.
-2. Create a service account with the Vertex AI User role:
-   ```sh
-   gcloud iam service-accounts create codeguard --project my-project
-   gcloud projects add-iam-policy-binding my-project \
-     --member serviceAccount:codeguard@my-project.iam.gserviceaccount.com \
-     --role roles/aiplatform.user
-   ```
-3. Give codeguard the credentials. On your machine, `gcloud auth application-default login`
-   is enough. Elsewhere, create a key with
-   `gcloud iam service-accounts keys create key.json --iam-account codeguard@my-project.iam.gserviceaccount.com`
-   and set `GOOGLE_APPLICATION_CREDENTIALS` to its path. In GitHub Actions, use
-   `google-github-actions/auth` before the codeguard action.
+codeguard signs in with
+[Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc).
+It needs the Vertex AI API enabled in the project
+([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)), and
+credentials with the Vertex AI User role (`roles/aiplatform.user`): your own on your
+machine, and a [service account](https://cloud.google.com/iam/docs/service-accounts-create)
+elsewhere, through `GOOGLE_APPLICATION_CREDENTIALS` or, in GitHub Actions,
+`google-github-actions/auth` before the codeguard action.
 
 Where a proxy adds credentials to requests, as Claude Code cloud environments' network
-secrets do, use an API key bound to the service account instead: create it under
-**APIs & Services → Credentials** with only Agent Platform API allowed, have the proxy send
+secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound to the
+service account instead, restricted to the Agent Platform API: have the proxy send
 it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 `GOOGLE_API_KEY=proxy-injected` with `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`,
 `project` and `location` unset. The key identifies the project.
@@ -115,8 +107,9 @@ profile of the geography of the AWS region boto3 finds (`AWS_REGION`), such as
 names that profile's ARN as the model instead; the profile needs a `ModelId` tag naming
 the model it routes to ([How a model is named](configuration.md#how-a-model-is-named)).
 
-codeguard signs in to Bedrock as boto3 does: the AWS CLI's credentials and region on your
-machine, and the job's credentials in CI. In GitHub Actions, use
+codeguard signs in to Bedrock with the credentials and region
+[boto3 finds](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html):
+the AWS CLI's on your machine, and the job's in CI. In GitHub Actions, use
 `aws-actions/configure-aws-credentials` before the codeguard action, with a role that
 can invoke the model and, for an application inference profile, read its tags
 (`bedrock:ListTagsForResource`). [CI](add-codeguard.md#ci) shows the job.
