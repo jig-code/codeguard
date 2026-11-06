@@ -1,3 +1,0 @@
-skill: .codeguard/skills/enum-usage
-paths: ["**/*.py"]
-triggers: [any]

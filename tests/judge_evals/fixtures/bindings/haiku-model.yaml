@@ -1,4 +1,0 @@
-skill: .codeguard/skills/enum-usage
-paths: ["**/*.py"]
-triggers: [any]
-model: claude-haiku-5-5
