@@ -83,11 +83,10 @@ syntax for the same thing. No edge cases: a case a reasonable reviewer could arg
 either way proves nothing about the rule, and a judge that flips on it is right to.
 
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
-  it. A reader of the case alone sees why the code is a problem or why it's fine, and
-  the case's name says that stake: for an `invalid` case the harm, in the terms of the
-  rule's Why; for a `valid` case what the code keeps safe. The code already shows what
-  it does, so a name that describes the code's action or shape is renamed. This holds
-  for every case, the `skipped` one included.
+  it. A reader of the case alone sees why the code is a problem or why it's fine. Its
+  name is its verdict and its situation, as `SKILL.md` says: `flags`, `allows` or
+  `skips`, matching its expected outcome, then the situation, never the harm or why. A
+  gate test case's comment is `matches` or `ignores`, then the situation.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by
