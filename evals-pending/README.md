@@ -9,9 +9,9 @@ all three.
   names against a list of verbs, while the skill asks a name to say what is at stake, so
   the case fails on names the skill allows. PR 55 rewrites the skill's naming text and
   this case's graders.
-- `writing-rules/unused-functions`: its Haiku grader `02-names-an-exact-tool` voted fail
+- `writing-rules/unused-functions`: its grader `02-names-an-exact-tool` voted fail
   on replies that meet its rubric, declining the judge rule and recommending vulture.
   PR 55 rewrites that grader against its new skill text.
-- `writing-rules/flipping-eval-case`: its Haiku grader `02-drops-the-contradicting-form`
+- `writing-rules/flipping-eval-case`: its grader `02-drops-the-contradicting-form`
   voted fail on a SKILL.md that meets its rubric, stating one convention with no broad
   catch in it. PR 55 rewrites that grader against its new skill text.

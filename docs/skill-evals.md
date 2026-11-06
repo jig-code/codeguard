@@ -37,11 +37,11 @@ every grader passes in all 3 runs. Any change starts again at the validity pass.
 the with-skill arm runs: `--ablation none` drops the no-skill baseline, whose score
 never decides a pass.
 
-The agent runs on Claude Opus 5.5 and the graders on Claude Haiku 5.5, each by the
-Bedrock application inference profile in a repository variable:
-`SKILL_EVALS_AGENT_BEDROCK_MODEL` and `SKILL_EVALS_GRADER_BEDROCK_MODEL`. Both are
-required, as is `CLAUDE_AWS_ROLE`, the AWS role CI assumes; a pass with either model
-variable unset fails before it starts.
+The repository variables `SKILL_EVALS_AGENT_BEDROCK_MODEL` and
+`SKILL_EVALS_GRADER_BEDROCK_MODEL` set the agent's model (`--model`) and the graders'
+(`--judge-model`): a Bedrock model id or inference profile. Both are required, as is
+`CLAUDE_AWS_ROLE`, the AWS role CI assumes; a pass with either model variable unset
+fails before it starts.
 
 ```sh
 export CLAUDE_CODE_USE_BEDROCK=1
