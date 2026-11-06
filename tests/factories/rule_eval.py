@@ -3,7 +3,7 @@ from pydantic_evals.evaluators import EvaluatorContext
 from pydantic_evals.otel import SpanTree
 
 from codeguard.review import Verdict
-from codeguard.rule_tests import EditCase, EditReview, JudgedViolation, Outcome
+from codeguard.rule_tests import EditCase, EditReview, JudgedViolation, Outcome, RuleEvalCase
 
 
 class MakeVerdict(factory.Factory):
@@ -54,3 +54,12 @@ class MakeEvaluatorContext(factory.Factory):
     _span_tree = factory.LazyFunction(SpanTree)
     attributes = factory.LazyFunction(dict)
     metrics = factory.LazyFunction(dict)
+
+
+class MakeRuleEvalCase(factory.Factory):
+    class Meta:
+        model = RuleEvalCase
+
+    name = "a string"
+    inputs = factory.SubFactory(MakeEditCase)
+    expected_output = factory.SubFactory(MakeEditReview, outcome=Outcome.VALID)

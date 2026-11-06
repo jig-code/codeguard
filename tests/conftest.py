@@ -10,6 +10,7 @@ from factories.rule_eval import (
     MakeEditReview,
     MakeEvaluatorContext,
     MakeJudgedViolation,
+    MakeRuleEvalCase,
     MakeVerdict,
 )
 from factories.skill import MakeBinding, MakeSkill
@@ -28,6 +29,7 @@ register(MakeEditCase)
 register(MakeJudgedViolation)
 register(MakeEditReview)
 register(MakeEvaluatorContext)
+register(MakeRuleEvalCase)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

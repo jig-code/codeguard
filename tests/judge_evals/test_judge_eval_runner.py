@@ -29,16 +29,16 @@ def enum_rule(repo):
     )
 
 
-def a_case(name: str, after: str, outcome: str = "valid") -> dict[str, object]:
-    return {"name": name, "inputs": {"after": after}, "expected_output": {"outcome": outcome}}
-
-
 @pytest.mark.usefixtures("enum_rule")
 class TestJudgeEvalRunner:
-    def test_rule_is_reported_as_one_experiment_named_after_the_rule_and_model(self, repo):
+    def test_rule_is_reported_as_one_experiment_named_after_the_rule_and_model(
+        self, repo, make_rule_eval_case
+    ):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         runner = JudgeEvalRunner(
             repo.root, RulesetLoader.local(repo.root), RecordingJudges(RecordingJudge()), 0.9
@@ -49,10 +49,14 @@ class TestJudgeEvalRunner:
         assert [report.name for report in result.reports] == ["enum-usage on claude-haiku-5-5"]
         assert [report.dataset_name for report in result.reports] == ["enum-usage"]
 
-    def test_experiment_records_the_model_and_the_rule_and_codeguard_versions(self, repo):
+    def test_experiment_records_the_model_and_the_rule_and_codeguard_versions(
+        self, repo, make_rule_eval_case
+    ):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         loader = RulesetLoader.local(repo.root)
         [binding] = Bindings.from_rulesets([loader.load()])
@@ -68,10 +72,12 @@ class TestJudgeEvalRunner:
             "codeguard_version": version("codeguard"),
         }
 
-    def test_case_is_judged_with_the_model_the_binding_names(self, repo):
+    def test_case_is_judged_with_the_model_the_binding_names(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         judges = RecordingJudges(RecordingJudge())
         runner = JudgeEvalRunner(repo.root, RulesetLoader.local(repo.root), judges, 0.9)
@@ -82,10 +88,12 @@ class TestJudgeEvalRunner:
             JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="claude-haiku-5-5")
         ]
 
-    def test_given_model_judges_instead_of_the_binding_s(self, repo):
+    def test_given_model_judges_instead_of_the_binding_s(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         judges = RecordingJudges(RecordingJudge())
         gemini = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
@@ -100,10 +108,14 @@ class TestJudgeEvalRunner:
             "enum-usage on gemini-3.1-pro-preview"
         ]
 
-    def test_failing_case_fails_once_per_repeat_numbered(self, repo, make_verdict, make_violation):
+    def test_failing_case_fails_once_per_repeat_numbered(
+        self, repo, make_rule_eval_case, make_verdict, make_violation
+    ):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         verdict = make_verdict(
             breaking=True, violations=(make_violation(file="module.py", message="Rename it."),)
@@ -124,10 +136,12 @@ class TestJudgeEvalRunner:
             for run in (1, 2)
         ]
 
-    def test_judge_error_is_reported_as_a_case_not_judged(self, repo):
+    def test_judge_error_is_reported_as_a_case_not_judged(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         runner = JudgeEvalRunner(
             repo.root, RulesetLoader.local(repo.root), RecordingJudges(FailingJudge()), 0.9
@@ -140,11 +154,14 @@ class TestJudgeEvalRunner:
             "JudgeError: gemini failed with 502: upstream request failed",
         )
 
-    def test_eval_for_an_unknown_rule_is_reported_as_a_problem(self, repo):
+    def test_eval_for_an_unknown_rule_is_reported_as_a_problem(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
             yaml.safe_dump(
-                {"name": "enum-usge", "cases": [a_case("a string", "ship(status='shipped')\n")]}
+                {
+                    "name": "enum-usge",
+                    "cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)],
+                }
             ),
         )
         runner = JudgeEvalRunner(
@@ -159,14 +176,18 @@ class TestJudgeEvalRunner:
             )
         )
 
-    def test_selected_case_name_judges_only_the_cases_holding_it(self, repo):
+    def test_selected_case_name_judges_only_the_cases_holding_it(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
             yaml.safe_dump(
                 {
                     "cases": [
-                        a_case("a string", "ship(status='shipped')\n", "invalid"),
-                        a_case("the member", "ship(status=Status.SHIPPED)\n"),
+                        make_rule_eval_case(expected_output__outcome="invalid").model_dump(
+                            mode="json", exclude_defaults=True
+                        ),
+                        make_rule_eval_case(
+                            name="the member", inputs__after="ship(status=Status.SHIPPED)\n"
+                        ).model_dump(mode="json", exclude_defaults=True),
                     ]
                 }
             ),
@@ -183,10 +204,12 @@ class TestJudgeEvalRunner:
 
         assert [case.name for report in result.reports for case in report.cases] == ["the member"]
 
-    def test_rule_not_selected_is_neither_judged_nor_reported(self, repo):
+    def test_rule_not_selected_is_neither_judged_nor_reported(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         judges = RecordingJudges(RecordingJudge())
         runner = JudgeEvalRunner(
@@ -202,14 +225,18 @@ class TestJudgeEvalRunner:
         assert result == JudgeEvalResult()
         assert judges.created == []
 
-    def test_case_names_lists_each_judge_rule_s_cases(self, repo):
+    def test_case_names_lists_each_judge_rule_s_cases(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
             yaml.safe_dump(
                 {
                     "cases": [
-                        a_case("a string", "ship(status='shipped')\n", "invalid"),
-                        a_case("the member", "ship(status=Status.SHIPPED)\n"),
+                        make_rule_eval_case(expected_output__outcome="invalid").model_dump(
+                            mode="json", exclude_defaults=True
+                        ),
+                        make_rule_eval_case(
+                            name="the member", inputs__after="ship(status=Status.SHIPPED)\n"
+                        ).model_dump(mode="json", exclude_defaults=True),
                     ]
                 }
             ),
@@ -222,10 +249,14 @@ class TestJudgeEvalRunner:
 
         assert names == {"enum-usage": ("a string", "the member")}
 
-    def test_judge_reason_is_reported_for_each_judged_case(self, repo, make_verdict):
+    def test_judge_reason_is_reported_for_each_judged_case(
+        self, repo, make_rule_eval_case, make_verdict
+    ):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         verdict = make_verdict(reason="The call passes a string.")
         runner = JudgeEvalRunner(
@@ -246,10 +277,12 @@ class TestJudgeEvalRunner:
 
         assert result.failures == ("enum-usage: no case was evaluated",)
 
-    def test_rule_with_no_case_selected_is_left_out(self, repo):
+    def test_rule_with_no_case_selected_is_left_out(self, repo, make_rule_eval_case):
         repo.write(
             ".codeguard/rule-evals/enum-usage.yaml",
-            yaml.safe_dump({"cases": [a_case("a string", "ship(status='shipped')\n")]}),
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
         )
         runner = JudgeEvalRunner(
             repo.root,
