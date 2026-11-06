@@ -29,13 +29,18 @@ whether it sets that tool up. So:
 
 ## Running them
 
-CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes. Each case
-runs 3 times, and passes when at least 80% of its graders pass, averaged over the runs.
+A case passes when every grader passes in all 3 runs. With Bedrock credentials in the
+environment, and a Bedrock model id or inference profile for the agent and for the
+graders:
 
 ```sh
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 3 --threshold 0.8 \
+CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Edit \
+  --runs 3 --threshold 1 --ablation none \
+  --model <agent model id> --judge-model <grader model id> \
   --trust-plugin --no-publish
 ```
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
+
+CI runs them from `.github/workflows/skill-evals.yaml`.
