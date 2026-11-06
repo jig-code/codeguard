@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -18,6 +17,8 @@ from codeguard.config import (
     RulesetConfig,
     Severity,
 )
+
+CPUS = 7
 
 
 def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
@@ -345,21 +346,24 @@ class TestRulesetConfig:
 
 class TestJudgeConfig:
     def test_claude_runs_a_call_per_cpu_at_once(self):
-        assert JudgeConfig().concurrency(JudgeProvider.CLAUDE_CLI) == os.process_cpu_count()
+        assert JudgeConfig().concurrency(JudgeProvider.CLAUDE_CLI, CPUS) == CPUS
 
     def test_gemini_runs_two_calls_at_once(self):
-        assert JudgeConfig().concurrency(JudgeProvider.GEMINI) == 2
+        assert JudgeConfig().concurrency(JudgeProvider.GEMINI, CPUS) == 2
 
     def test_calls_at_once_sets_the_concurrency(self):
-        assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI) == 1
+        assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI, CPUS) == 1
 
     @pytest.mark.parametrize("provider", [JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI])
-    def test_calls_at_once_leaves_a_cli_a_call_per_cpu(self, provider):
-        assert JudgeConfig(calls_at_once=1).concurrency(provider) == os.process_cpu_count()
+    def test_calls_at_once_is_ignored_on_a_cli(self, provider):
+        assert JudgeConfig(calls_at_once=1).concurrency(provider, CPUS) == CPUS
 
-    def test_calls_at_once_leaves_bedrock_two_calls_at_once(self):
-        assert JudgeConfig(calls_at_once=5).concurrency(JudgeProvider.BEDROCK) == 2
+    def test_calls_at_once_is_ignored_on_bedrock(self):
+        assert JudgeConfig(calls_at_once=5).concurrency(JudgeProvider.BEDROCK, CPUS) == 2
+
+    def test_a_cli_without_a_cpu_count_runs_one_call_at_once(self):
+        assert JudgeConfig().concurrency(JudgeProvider.CLAUDE_CLI, None) == 1
 
 
 def test_codex_concurrency_uses_the_cli_limit():
-    assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI) == os.process_cpu_count()
+    assert JudgeConfig().concurrency(JudgeProvider.CODEX_CLI, CPUS) == CPUS

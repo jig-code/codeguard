@@ -1,4 +1,3 @@
-import os
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -118,9 +117,11 @@ class JudgeConfig(BaseModel):
     def choice(self) -> JudgeChoice:
         return JudgeChoice(provider=self.provider, model=self.model)
 
-    def concurrency(self, provider: JudgeProvider) -> int:
+    def concurrency(self, provider: JudgeProvider, cpus: int | None) -> int:
+        """How many calls a provider makes at once, given the machine's CPU count, which
+        may be unknown."""
         if provider is JudgeProvider.GEMINI and self.calls_at_once is not None:
             return self.calls_at_once
         if not provider.runs_a_cli:
             return _API_CALLS_AT_ONCE
-        return os.process_cpu_count() or 1
+        return cpus or 1
