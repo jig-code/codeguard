@@ -328,8 +328,8 @@ triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
 `<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
-(`invalid` cases are code the gate matches). Each test case's comment is its verdict and
-situation: `matches` for an `invalid` case, `ignores` for a `valid` one:
+(`invalid` cases are code the gate matches). A case's comment is `matches` or `ignores`,
+then the situation:
 
 ```yaml
 id: mock-use
@@ -361,8 +361,7 @@ that is not only a comment or docstring) and `any`. The syntax table in
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: its verdict and situation, unique in the file: `flags`, `allows` or `skips`,
-  matching its `outcome`, then the situation. It never states the harm or why.
+- `name`: `flags`, `allows` or `skips`, matching `outcome`, then the situation; unique per file.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
