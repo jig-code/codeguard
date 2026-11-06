@@ -26,11 +26,10 @@ The LLM tests check that the judge's instructions, request and tools still get t
 verdicts from a real model. Each one reviews an edit in a scratch repository the way `codeguard review` does, with the
 fixture bindings' judge, `gemini-3.1-pro-preview` on Vertex AI, so they need Gemini
 credentials ([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)) and cost tokens. They are marked
-`llm`, which plain `pytest` deselects. CI signs in with the repository's
-`GOOGLE_CREDENTIALS` secret, a service account key with the Vertex AI User role, and
-its `GOOGLE_CLOUD_PROJECT` variable. `--judge-provider` and `--judge-model` judge them
+`llm`, which plain `pytest` deselects. `--judge-provider` and `--judge-model` judge them
 with another model, as `codeguard eval --provider` does: `--judge-provider bedrock` runs
-them on Haiku on Bedrock. CI runs them; run them after changing the judge's instructions, request or
+them on Haiku on Bedrock. CI runs them
+([`ci.yaml`](../.github/workflows/ci.yaml)); run them after changing the judge's instructions, request or
 tools:
 
 ```sh
