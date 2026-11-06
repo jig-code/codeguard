@@ -1,0 +1,43 @@
+name: writing-rules skill evals pass
+description: Run the writing-rules skill evals through Bedrock and upload the results.
+inputs:
+  pass:
+    description: The pass's name, validity or reliability, used in the artifact name.
+    required: true
+  runs:
+    description: Runs of each case.
+    required: true
+  max-cost-usd:
+    description: The pass's cost ceiling.
+    required: true
+  agent-model:
+    description: The agent's Bedrock model.
+    required: true
+  grader-model:
+    description: The graders' Bedrock model.
+    required: true
+runs:
+  using: composite
+  steps:
+    - run: npm install --global @anthropic-ai/claude-code@2.1.319
+      shell: bash
+    - run: >-
+        claude plugin eval . --scaffold --allow-tools Write Edit
+        --runs "$RUNS" --threshold 1 --ablation none
+        --max-cost-usd "$MAX_COST_USD"
+        --model "$AGENT_MODEL" --judge-model "$GRADER_MODEL"
+        --output-dir "$RUNNER_TEMP/skill-evals-results"
+        --trust-plugin --no-publish
+      shell: bash
+      env:
+        RUNS: ${{ inputs.runs }}
+        MAX_COST_USD: ${{ inputs.max-cost-usd }}
+        AGENT_MODEL: ${{ inputs.agent-model }}
+        GRADER_MODEL: ${{ inputs.grader-model }}
+        CLAUDE_CODE_USE_BEDROCK: 1
+        AWS_REGION: us-west-2
+    - uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: skill-evals-${{ inputs.pass }}-results
+        path: ${{ runner.temp }}/skill-evals-results/
