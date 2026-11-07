@@ -48,13 +48,14 @@ class StoreCheckingJudge(RecordingJudge):
     unstored_files: list[str] = field(default_factory=list)
 
     def judge(self, request):
-        self._assert_not_stored(request)                # assertion buried in the fake
+        self._assert_not_stored(request)  # assertion buried in the fake
         self.unstored_files.append(request.file)
         return super().judge(request)
 
     def _assert_not_stored(self, request):
         assert self.store is not None
-        assert list(self.store) == []                   # reaches into the cache layer
+        assert list(self.store) == []  # reaches into the cache layer
+
 
 # GOOD — use the shared fake directly; assert on its in-layer state in the test body
 wrapped = RecordingJudge()

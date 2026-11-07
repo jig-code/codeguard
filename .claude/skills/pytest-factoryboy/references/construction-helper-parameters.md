@@ -20,20 +20,22 @@ def make_state(**overrides) -> SomeState:
     defaults.update(overrides)
     return SomeState(**defaults)
 
+
 # FLAG — destructure-and-dispatch: named keys are popped out and routed to different
 # destinations, so no single sink can validate the key set — which is exactly why it
 # must hand-roll the TypeError. Every popped key is a real parameter in hiding.
 def make_runtime(*, resources=None, **overrides):
-    formatter = overrides.pop("formatter", default_formatter)   # -> into config
-    on_complete = overrides.pop("on_complete", None)            # -> into config
-    service = overrides.pop("service", RealService())           # -> into factory
+    formatter = overrides.pop("formatter", default_formatter)  # -> into config
+    on_complete = overrides.pop("on_complete", None)  # -> into config
+    service = overrides.pop("service", RealService())  # -> into factory
     ctx = Factory(formatter=formatter, on_complete=on_complete, service=service).build()
     reporter = overrides.pop("reporter", None)
     if reporter is not None:
-        ctx.reporter = reporter                                 # -> mutated post-build
+        ctx.reporter = reporter  # -> mutated post-build
     if overrides:
         raise TypeError(f"unexpected: {', '.join(overrides)}")  # rebuilds a language feature
     return Runtime(context=ctx)
+
 
 # FIXED — the popped keys become the signature. Typos error at the call site; the
 # second sink is routed by name, no bag needed.
@@ -43,8 +45,7 @@ def make_runtime(
     on_complete: OnComplete | None = None,
     service: Service | None = None,
     reporter: Reporter | None = None,
-) -> Runtime:
-    ...
+) -> Runtime: ...
 ```
 
 ## Trace values to their source, don't extract from assembled results

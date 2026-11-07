@@ -15,14 +15,14 @@ Two requirements, both mandatory:
 # AVOID - module-level function and/or module-level pytestmark
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
-def test_stores_the_judgement():
-    ...
+
+def test_stores_the_judgement(): ...
+
 
 # PREFERRED - class named after the SUT, mark on the class
 @pytest.mark.usefixtures("fake_cli_config")
 class TestCachedJudge:
-    def test_stores_the_judgement(self):
-        ...
+    def test_stores_the_judgement(self): ...
 ```
 
 Other class-wide marks follow the same rule — decorate the class (`@pytest.mark.llm`, etc.), don't hoist them to a module `pytestmark`.
@@ -42,14 +42,13 @@ class JudgeTests(unittest.TestCase):
     def test_judges(self, tmp_path):  # pytest pattern (the fixture is never injected)
         ...
 
+
 # PREFERRED - Standardize on pytest style
 class TestJudge:
     @pytest.fixture(autouse=True)
-    def setup(self):
-        ...
+    def setup(self): ...
 
-    def test_judges(self, tmp_path):
-        ...
+    def test_judges(self, tmp_path): ...
 ```
 
 ## Fixture Best Practices
@@ -65,9 +64,9 @@ def reset_state():
     yield
     # cleanup here runs after each test
 
+
 @pytest.fixture(scope="session")  # Only for truly immutable resources
-def shared_resource():
-    ...
+def shared_resource(): ...
 ```
 
 ### Remove Placeholder Fixtures
@@ -80,6 +79,7 @@ Empty or placeholder fixtures add confusion. Remove unused fixtures or document 
 def reset_cached_agents():
     """Reset cached agents for test isolation."""
     pass  # No longer needed
+
 
 # PREFERRED - Remove entirely or implement properly
 ```
@@ -114,6 +114,7 @@ Class attributes shared across test methods can leave state in a bad condition f
 # AVOID - Shared mutable state
 class TestSuite:
     worker_process = None  # Class-level, shared
+
 
 # PREFERRED - Test-level isolation or robust health checking
 class TestSuite:

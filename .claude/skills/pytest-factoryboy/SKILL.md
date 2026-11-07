@@ -16,10 +16,13 @@ Factories live in `tests/factories/`, named `Make<Type>`, registered in `conftes
 class MakeBinding(factory.Factory):
     class Meta:
         model = Binding
+
     skill = factory.SubFactory(MakeSkill)
+
 
 # conftest.py
 register(MakeBinding)
+
 
 # test
 def test_something(self, make_binding):
@@ -32,9 +35,11 @@ def test_something(self, make_binding):
 class MakeJudgeRequest(factory.Factory):
     class Meta:
         model = JudgeRequest
+
     class Params:
         line = 1
         code = "print(1)"
+
     skill = factory.SubFactory(MakeSkill)
     file = "a.py"
     changes = factory.LazyAttribute(lambda o: f"+{o.line:>6}\t{o.code}\n")
@@ -63,14 +68,13 @@ class MakeJudgedDiagnostic(MakeDiagnostic):
         exclude = ("binding", "request")
 
     binding = factory.SubFactory(MakeBinding)
-    request = factory.SubFactory(
-        MakeJudgeRequest, skill=factory.SelfAttribute("..binding.skill")
-    )
+    request = factory.SubFactory(MakeJudgeRequest, skill=factory.SelfAttribute("..binding.skill"))
     rule = factory.SelfAttribute("binding.rule")
     file = factory.SelfAttribute("request.file")
 
-MakeJudgedDiagnostic()                   # builds binding + request
-MakeJudgedDiagnostic(binding=binding)    # request's skill derives from it
+
+MakeJudgedDiagnostic()  # builds binding + request
+MakeJudgedDiagnostic(binding=binding)  # request's skill derives from it
 ```
 
 **Tell you needed this:** the same derivation (`skill=binding.skill`) written
@@ -111,7 +115,9 @@ Use `__` (double-underscore) to pass values through to a nested SubFactory at th
 class MakeJudgeRequest(factory.Factory):
     class Meta:
         model = JudgeRequest
+
     skill = factory.SubFactory(MakeSkill)
+
 
 # Call site — forward name to the nested skill SubFactory
 request = make_judge_request(skill__name="no-print")
@@ -128,9 +134,7 @@ make_binding(
 # WRONG — wrapper that just forwards to nested factory kwargs
 def _make_request(rule=None):
     name = rule or "no-print"
-    return MakeJudgeRequest(
-        skill=MakeSkill(name=name, text="# No print\n")
-    )
+    return MakeJudgeRequest(skill=MakeSkill(name=name, text="# No print\n"))
 ```
 
 ## Pattern 4: `factory.Trait` for same-model variants
@@ -141,9 +145,12 @@ Use a Trait when usage patterns differ by one/few param values. Do NOT create a 
 class MakeDiagnostic(factory.Factory):
     class Meta:
         model = Diagnostic
+
     severity = Severity.ERROR
+
     class Params:
         warning = factory.Trait(severity=Severity.WARNING, note=None)
+
 
 # Usage:
 make_diagnostic(warning=True, file="b.py")
@@ -171,6 +178,7 @@ Input models are test inputs — define them as classes (the data), then use a s
 class _Answer(BaseModel):
     reason: str
     level: Literal["low", "high"] | None = None
+
 
 @pytest.fixture
 def answer_schema():
@@ -225,11 +233,14 @@ When two constructed fields must share a **derived intermediate** (e.g. two fiel
 **Subclass only for *structural/behavioral* specialization, never for *data*.** If the "specializations" differ merely by which input classes, which data payloads, or which context keys they use, that is differ-by-**data** — use `Params`/`Trait`/`__` forwarding, or a fixture that supplies the data (the shared-intermediate above). A tree of per-scenario subclasses each hard-coding a specific object graph + data payload is inheritance used where parameters belong.
 
 ```python
-class MakeGeminiBinding(MakeBinding):          # reuses the parent's `rule` derivation
+class MakeGeminiBinding(MakeBinding):  # reuses the parent's `rule` derivation
     class Params:
-        model_name = JudgeProvider.GEMINI.default_model   # the varying knob
+        model_name = JudgeProvider.GEMINI.default_model  # the varying knob
+
     model = factory.LazyAttribute(
-        lambda o: JudgeModel(provider=JudgeProvider.GEMINI, name=o.model_name))
+        lambda o: JudgeModel(provider=JudgeProvider.GEMINI, name=o.model_name)
+    )
+
 
 # conftest:  register(MakeGeminiBinding, "gemini_binding")   →   make_gemini_binding(model_name=..., severity=...)
 ```
@@ -245,10 +256,11 @@ When a **reusable** type is produced in production by a `Builder` (`XBuilder(...
 Shape: declare the builder's *inputs* as factory attributes, then have `_create` read them off `**kwargs` (read the bag, not a positional signature — that survives adding declarations) and call the builder.
 
 ```python
-class MakeThing(factory.Factory):   # production: ThingBuilder(a, b).build()
+class MakeThing(factory.Factory):  # production: ThingBuilder(a, b).build()
     class Meta:
         model = Thing
-    a = ...            # the builder's inputs, as ordinary declarations/Params/LazyAttribute
+
+    a = ...  # the builder's inputs, as ordinary declarations/Params/LazyAttribute
     b = ...
 
     @classmethod
@@ -265,21 +277,27 @@ class MakeThing(factory.Factory):   # production: ThingBuilder(a, b).build()
 `Meta.model` binds **one** model class per factory — `Trait` and call-time kwargs vary field *values*, never the model *class*. So a discriminated union / family of **distinct model classes** (each with different required fields) needs **one factory per model**; there is no idiomatic "one factory, pick the class by a param." When those per-model factories share construction logic (a common Param, a derived id, a default), hoist the shared declarations into an **abstract base factory** (`class Meta: abstract = True`) and subclass it — each subclass sets its own `Meta.model` and adds only its own fields. This is FactoryBoy's documented inheritance idiom ([abstract factories](https://factoryboy.readthedocs.io/en/stable/reference.html#factory.FactoryOptions.abstract)); it removes the duplication without collapsing distinct models.
 
 ```python
-class MakeMessage(factory.Factory):        # never instantiated directly
+class MakeMessage(factory.Factory):  # never instantiated directly
     class Meta:
         abstract = True
+
     class Params:
         parent = None
+
     parent_id = factory.LazyAttribute(lambda o: o.parent.id if o.parent else uuid4())
+
 
 class MakeCommandMessage(MakeMessage):
     class Meta:
         model = CommandMessage
+
     command = "run"
+
 
 class MakeStatusMessage(MakeMessage):
     class Meta:
         model = StatusMessage
+
     code = 200
 ```
 

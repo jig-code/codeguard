@@ -91,11 +91,11 @@ A test helper must not carry speculative flexibility. Two independent tests:
   ```python
   # factory defaults (already): MakeBinding(..., severity=Severity.ERROR)
   #                              MakeBinding(..., rule=<the skill's name>)
-  def _any_change_binding(skill):                             # FLAG — gate 13(e)
+  def _any_change_binding(skill):  # FLAG — gate 13(e)
       return make_binding(
           skill=skill,
-          severity=Severity.ERROR,                              # == the builder default
-          rule=skill.name,                                      # == the builder default behavior
+          severity=Severity.ERROR,  # == the builder default
+          rule=skill.name,  # == the builder default behavior
       )
   ```
 

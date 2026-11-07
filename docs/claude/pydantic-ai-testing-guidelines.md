@@ -69,6 +69,7 @@ from pydantic_ai.messages import ModelRequest
 from pydantic_ai.models.test import TestModel
 from myapp.agent import my_agent, MyDeps
 
+
 def test_dynamic_instructions_include_context():
     deps = MyDeps(rule="no-print")
 

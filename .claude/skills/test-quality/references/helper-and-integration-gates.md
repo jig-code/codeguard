@@ -45,10 +45,11 @@ The most damaging form takes `(judge, request, result)`, asserts on the `result`
 ```python
 # BAD — helper asserts the previous judgement, reads the cache, edits the file, judges again
 def rejudge_after_edit(judge, repo, request, judgement) -> Judgement:
-    assert judgement.verdict.violations == ()                     # spec assertion, invisible to the test
-    assert len(list(judge.store)) == 1                            # reaches around the boundary
+    assert judgement.verdict.violations == ()  # spec assertion, invisible to the test
+    assert len(list(judge.store)) == 1  # reaches around the boundary
     repo.write(request.file, "print(2)\n")
-    return judge.judge(request)                                    # the act, hidden
+    return judge.judge(request)  # the act, hidden
+
 
 # at 14 call sites — the reader sees neither the assertions nor the judge call:
 judgement = rejudge_after_edit(judge, repo, request, judgement)

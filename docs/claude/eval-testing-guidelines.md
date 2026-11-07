@@ -40,7 +40,9 @@ def violation_lines(inputs: JudgedChange) -> list[int]:
         "responsibility-placement", EVALS / "python/skills/responsibility-placement/SKILL.md"
     )
     judge = Judges().uncached(EVALS, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name=MODEL))
-    verdict = judge.judge(JudgeRequest(skill=skill, file=inputs.file, changes=inputs.changes)).verdict
+    verdict = judge.judge(
+        JudgeRequest(skill=skill, file=inputs.file, changes=inputs.changes)
+    ).verdict
     return sorted(violation.line for violation in verdict.violations)
 
 
@@ -57,7 +59,9 @@ class TestResponsibilityPlacementEval:
                 ),
                 Case(
                     name="method_on_its_own_type",
-                    inputs=JudgedChange(file="orders.py", changes="+     4\t    def total(self): ..."),
+                    inputs=JudgedChange(
+                        file="orders.py", changes="+     4\t    def total(self): ..."
+                    ),
                     expected_output=[],
                 ),
                 # every responsibility-placement scenario belongs in this dataset
