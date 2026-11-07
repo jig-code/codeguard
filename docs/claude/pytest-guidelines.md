@@ -4,54 +4,51 @@ These guidelines apply when writing or reviewing pytest test code.
 
 ## Test Style
 
-### Group tests in a class; mark `django_db` on the class
+### Group tests in a class; put class-wide marks on the class
 
 Two requirements, both mandatory:
 
-1. **Every test lives in a `Test<SUT>` class** named after the system under test (`TestBuildResponse` for `BuildResponse`, `TestResolveFieldOptionsSelection` for that node). No module-level `def test_*` functions.
-2. **Apply `@pytest.mark.django_db` as a decorator on that class**, never as a module-level `pytestmark = pytest.mark.django_db`. The decorator keeps the mark attached to the tests it governs, so a reader looking at the class sees it needs the database; a module-level `pytestmark` hides that at the top of the file, detached from the class, and silently applies to anything later added to the module.
+1. **Every test lives in a `Test<SUT>` class** named after the system under test (`TestCachedJudge` for `CachedJudge`, `TestBindings` for `Bindings`). No module-level `def test_*` functions.
+2. **Apply a class-wide mark (`@pytest.mark.usefixtures("fake_cli_config")`, `@pytest.mark.llm`) as a decorator on that class**, never as a module-level `pytestmark = pytest.mark.usefixtures("fake_cli_config")`. The decorator keeps the mark attached to the tests it governs, so a reader looking at the class sees what it needs; a module-level `pytestmark` hides that at the top of the file, detached from the class, and silently applies to anything later added to the module.
 
 ```python
 # AVOID - module-level function and/or module-level pytestmark
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
-def test_renders_option_section():
+def test_stores_the_judgement():
     ...
 
 # PREFERRED - class named after the SUT, mark on the class
-@pytest.mark.django_db
-class TestRenderOptionsAnswer:
-    def test_renders_option_section(self):
+@pytest.mark.usefixtures("fake_cli_config")
+class TestCachedJudge:
+    def test_stores_the_judgement(self):
         ...
 ```
 
-Other class-wide marks follow the same rule — decorate the class (`@pytest.mark.django_db(transaction=True)`, etc.), don't hoist them to a module `pytestmark`.
+Other class-wide marks follow the same rule — decorate the class (`@pytest.mark.llm`, etc.), don't hoist them to a module `pytestmark`.
 
 Fixture, factory, and test-object construction — module-level constants, module-level helper functions, fixture-returning-callables, and keeping one construction path per type across a file — is governed by the `pytest-factoryboy` skill. Load it before writing fixtures or factories.
 
-### Don't Mix Django TestCase with pytest Fixtures
+### Don't Mix unittest.TestCase with pytest Fixtures
 
-Mixing Django's `TestCase`/`TransactionTestCase` classes with pytest fixtures creates confusion about which cleanup mechanism is in effect and can cause unexpected database state.
+Mixing `unittest.TestCase` classes with pytest fixtures creates confusion about which setup and cleanup mechanism is in effect and can leave unexpected state behind.
 
 ```python
 # AVOID - Mixed patterns
-class WebSocketTests(TransactionTestCase):
-    def setUp(self):  # Django pattern
+class JudgeTests(unittest.TestCase):
+    def setUp(self):  # unittest pattern
         ...
 
-    @pytest.mark.asyncio  # pytest pattern
-    async def test_connection(self):
+    def test_judges(self, tmp_path):  # pytest pattern (the fixture is never injected)
         ...
 
 # PREFERRED - Standardize on pytest style
-@pytest.mark.django_db(transaction=True)
-class TestWebSocket:
+class TestJudge:
     @pytest.fixture(autouse=True)
     def setup(self):
         ...
 
-    @pytest.mark.asyncio
-    async def test_connection(self):
+    def test_judges(self, tmp_path):
         ...
 ```
 
@@ -107,23 +104,6 @@ async with condition:
     await condition.wait_for(predicate)
 ```
 
-### Standardize asyncio_mode Configuration
-
-Use `strict` mode and explicitly mark async tests to avoid behavior differences between test configurations.
-
-```ini
-# pytest.ini
-[pytest]
-asyncio_mode = strict
-```
-
-```python
-# Explicitly mark async tests
-@pytest.mark.asyncio
-async def test_async_operation():
-    ...
-```
-
 ## Test Isolation
 
 ### Avoid Class-Level Mutable State
@@ -149,16 +129,14 @@ When temporarily changing test behavior (settings, feature flags, environment), 
 
 ```python
 # AVOID - Imperatively mutating fixtures
-def test_error_handling(self, settings):
-    settings.RAISE_ON_ERROR = False
+def test_reads_the_config(self, monkeypatch, tmp_path):
+    monkeypatch.setenv("CODEGUARD_CONFIG", str(tmp_path / "config.yaml"))
     # test code...
 
 # PREFERRED - Declarative decorator
-from django.test import override_settings
-
-@override_settings(RAISE_ON_ERROR=False)
-def test_error_handling(self):
+@mock.patch.dict(os.environ, {"CODEGUARD_CONFIG": "config.yaml"})
+def test_reads_the_config(self):
     # test code...
 ```
 
-This pattern applies to Django settings (`@override_settings`), environment variables (`@mock.patch.dict(os.environ, ...)`), and other test context managers that have decorator equivalents.
+This pattern applies to environment variables (`@mock.patch.dict(os.environ, ...)`), settings objects (`@mock.patch.object(...)`), and other test context managers that have decorator equivalents.

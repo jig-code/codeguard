@@ -4,82 +4,81 @@ Eval tests verify LLM behavior with real model calls. They use `pydantic-evals` 
 
 ## Running Eval Tests
 
-Always use the task command:
+[docs/testing.md](../testing.md) says which changes need the eval tests and how to run them:
 
 ```bash
 # Run all eval tests
-task backend:test_eval
+uv run pytest -m llm -n 4
 
 # Run one eval file
-task backend:test_eval -- referral_accounts/referral_visit/evals/test_referral_visit_extraction_eval.py
+uv run pytest -m llm tests/rules/test_judge_prompt.py
 
-# Run one test
-task backend:test_eval -- referral_accounts/referral_visit/evals/test_referral_visit_extraction_eval.py::TestReferralVisitExtractionEval::test_extracts_accounts_as_a_valid_list_across_representative_notes
+# Run one case
+uv run pytest -m llm tests/rules/test_judge_prompt.py -k "responsibility-placement: <case>"
 ```
 
-To prove reliability, run the suite repeatedly in independent processes; see "Reliability" below.
+To prove reliability, run each case several times; see "Reliability" below.
+
+These rules cover codeguard's own LLM tests and evals. They do not cover `JudgeEvalRunner` and `codeguard eval`, which are product features codeguard ships for rule packages to evaluate their judge rules.
 
 ## Where Eval Tests Live
 
-- Put eval tests in an `evals/` directory beside the code they evaluate, named `test_*_eval.py`, marked `@pytest.mark.eval`.
-- Add every new `evals/` directory to the `testpaths` in `backend/pytest-eval.ini`, or `task backend:test_eval` will not collect it.
-- Give every `evals/` directory a `conftest.py` that re-exports `chat_workflow_core.testing.plugin`; copy an existing one. The plugin sets the `LLMJudge` model from `EVAL_JUDGE_MODEL_ARN` and flushes Logfire at the end of the session.
+- Put eval tests under `tests/` beside the tests of the code they evaluate, and mark the class `@pytest.mark.llm`. Plain `uv run pytest` deselects them; `-m llm` selects them.
+- Put the rules and cases they judge in `evals/judge/`, the fixture rule package, not in the test module.
 
 ## The Pattern
 
 ```python
 @dataclass(frozen=True)
-class ReferralNoteInputs:
-    note: str
-    prior_messages: tuple[str, ...] = ()
+class JudgedChange:
+    file: str
+    changes: str
 
 
-def extract_account_names(inputs: ReferralNoteInputs) -> list[str]:
-    directory = OfficeReferralAccountDirectory(office=None, accounts=[], prospects=[])
-    extraction = ReferralVisitExtractor().extract(
-        inputs.note,
-        directory,
-        list(inputs.prior_messages),
-        visit_date=timezone.now(),
+def violation_lines(inputs: JudgedChange) -> list[int]:
+    skill = Skill.from_file(
+        "responsibility-placement", EVALS / "python/skills/responsibility-placement/SKILL.md"
     )
-    return sorted(account.name for account in extraction.accounts)
+    judge = Judges().uncached(EVALS, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name=MODEL))
+    verdict = judge.judge(JudgeRequest(skill=skill, file=inputs.file, changes=inputs.changes)).verdict
+    return sorted(violation.line for violation in verdict.violations)
 
 
-@pytest.mark.eval
-class TestReferralVisitExtractionEval:
-    def test_account_extraction(self):
-        dataset = Dataset[ReferralNoteInputs, list[str], None](
-            name="referral_visit_account_extraction",
+@pytest.mark.llm
+class TestResponsibilityPlacementEval:
+    def test_violation_lines(self):
+        dataset = Dataset[JudgedChange, list[int], None](
+            name="responsibility_placement_violations",
             cases=[
                 Case(
-                    name="one_account_named_in_note",
-                    inputs=ReferralNoteInputs(note="Visited Riverside Senior Living today..."),
-                    expected_output=["Riverside Senior Living"],
+                    name="method_reads_another_types_data",
+                    inputs=JudgedChange(file="orders.py", changes="+    12\tdef total(order): ..."),
+                    expected_output=[12],
                 ),
                 Case(
-                    name="no_accounts_in_family_note",
-                    inputs=ReferralNoteInputs(note="Spoke with the daughter about..."),
+                    name="method_on_its_own_type",
+                    inputs=JudgedChange(file="orders.py", changes="+     4\t    def total(self): ..."),
                     expected_output=[],
                 ),
-                # every account-extraction scenario belongs in this dataset
+                # every responsibility-placement scenario belongs in this dataset
             ],
             evaluators=[EqualsExpected()],
         )
 
-        report = dataset.evaluate_sync(extract_account_names, name=dataset.name)
+        report = dataset.evaluate_sync(violation_lines, name=dataset.name)
 
         assert_eval_passed(report)
 ```
 
 The rules behind it:
 
-- **One dataset per task.** A dataset holds every case for one behavior of one LLM call, such as "account extraction" or "routing an ambiguous statement". Add cases to it as scenarios appear; do not create a dataset per test method.
-- **The task function calls the LLM exactly the way production code does,** through the same agent object or extractor, then returns the value the cases compare. Do not wrap the call in a shared runner class.
-- **Inputs are typed.** When a case needs more than a prompt (prior messages, a directory, deps that vary per case), make the inputs a frozen dataclass or Pydantic model and build the call inside the task function. Build domain objects with factories and fixtures per the `pytest-factoryboy` skill.
+- **One dataset per task.** A dataset holds every case for one behavior of one LLM call, such as "responsibility-placement violations" or "routing an ambiguous statement". Add cases to it as scenarios appear; do not create a dataset per test method.
+- **The task function calls the LLM exactly the way production code does,** through the same judge or agent object, then returns the value the cases compare. Do not wrap the call in a shared runner class.
+- **Inputs are typed.** When a case needs more than a prompt (a file, its changes, deps that vary per case), make the inputs a frozen dataclass or Pydantic model and build the call inside the task function. Build domain objects with factories and fixtures per the `pytest-factoryboy` skill.
 - **Expected results live in `Case.expected_output`,** never in evaluator constructor arguments or case metadata.
-- **Name the experiment.** Pass `name=` to `evaluate_sync` so each run is identifiable in Logfire.
-- **Assert with `assert_eval_passed`** from `chat_workflow_core.testing.eval_runner`. It fails on any failed assertion, any evaluator error, and any case whose task raised. Do not write another report assertion.
-- Do not use `EvalRunner` or `assert_report_passed` in new evals. They are being removed: `EvalRunner` hides the framework's task and run options and retries tasks that raise, and `assert_report_passed` ignores cases whose task raised.
+- **Name the experiment.** Pass `name=` to `evaluate_sync` so each run is identifiable in the report and its spans.
+- **Assert with one `assert_eval_passed(report)`.** It fails on any failed assertion, any evaluator error, and any case whose task raised. codeguard has no such helper yet: define it once in a shared test module when the first eval needs it, and do not write another report assertion.
+- Do not wrap evals in a shared eval runner class. A runner hides the framework's task and run options and tends to retry tasks that raise, and a report assertion that ignores cases whose task raised lets them pass. This covers codeguard's own LLM tests and evals, not `JudgeEvalRunner` and `codeguard eval`, which are product features for rule packages.
 
 ## Projecting the Output
 
@@ -108,8 +107,7 @@ Use the framework's built-in evaluators:
 
 - Put evaluators shared by every case at dataset level. Add a case-level evaluator only for a check one case needs.
 - Write a custom evaluator only for logic no built-in provides. It checks one thing, compares the output against the case's expected output, and does not share a name with a built-in.
-- Of the custom evaluators in `backend/testing/evaluators.py`, only `UnorderedEqualsExpected`, `MatchesAnyOfFields` (several outputs are equally valid) and `DoesNotContainTerms` remain for new evals. The others duplicate built-ins or projections and are being removed.
-- Do not pass a model to `LLMJudge`; the eval plugin sets the judge model from `EVAL_JUDGE_MODEL_ARN`, separate from `CHAT_AI_MODEL_ARN`, so a run against a candidate model keeps the same judge. If the candidate is the judge's model, move the judge to another model first, so no model grades its own output. Write rubrics that state the exact property to check, and set `include_input=True` when the judgment depends on the input.
+- Do not pass a model to each `LLMJudge`; set one default judge model for the session with `set_default_judge_model`, separate from the model under test, so a run against a candidate model keeps the same judge. If the candidate is the judge's model, move the judge to another model first, so no model grades its own output. Write rubrics that state the exact property to check, and set `include_input=True` when the judgment depends on the input.
 
 ## The CI Bar
 
@@ -121,11 +119,11 @@ Use the framework's built-in evaluators:
 
 ## Reliability
 
-`task backend:test_eval_reliability` runs the suite in independent processes and reports the pass rate; a reliable eval passes every run. Route a dataset's cases through `selected_eval_cases` so `CASE=<case_name>` can scope a reliability run to one case:
+`--llm-runs N` runs each LLM test N times; a reliable eval passes every run. [docs/testing.md](../testing.md) sets how many runs a change needs. `-k` scopes a reliability run to one case:
 
 ```bash
-task backend:test_eval_reliability REPEAT=10
-task backend:test_eval_reliability CASE=one_account_named_in_note REPEAT=10
+uv run pytest -m llm -n 4 --llm-runs 10
+uv run pytest -m llm -n 4 --llm-runs 10 -k "responsibility-placement: <case>"
 ```
 
 A case that fails on any run is a real failure, not a flake. Fix it as below.
@@ -140,10 +138,8 @@ When an eval case fails, fix the agent's instructions, not the eval case input. 
 
 ## Eval Independence from Instruction Examples
 
-Eval inputs must not duplicate text from the agent's instruction examples. A case that reuses an instruction example tests memorization, not the rule. Use different domains, phrasing and values from those in the agent's `*_instructions.md`.
+Eval inputs must not duplicate text from the agent's instruction examples. A case that reuses an instruction example tests memorization, not the rule. Use different domains, phrasing and values from those in the judge's instructions (`src/codeguard/review/judge.md`) and the rule's `SKILL.md`.
 
 ## Debugging Failures
 
-Eval runs report to the `otter-dev` Logfire project. Logfire picks the project from the write token; `LOGFIRE_PROJECT` only sets the `deployment.environment` label. CI uses the `LOGFIRE_TOKEN` repository secret, an `otter-dev` token. Locally, put an `otter-dev` write token in `LOGFIRE_TOKEN` in the root `.env`; with it blank, evals still run but send nothing.
-
-Each experiment appears in Logfire with its cases, outputs and evaluator results. Pydantic-ai agents and extractors that call `AnthropicBedrock` directly both record their model requests and responses.
+Tests send nothing to Logfire: the autouse `no_telemetry` fixture removes `LOGFIRE_TOKEN`. Read a failure from the test report, which shows each case's output and evaluator results. To check what a run recorded, capture its spans in the test (`capfire`) and assert on their attributes.
