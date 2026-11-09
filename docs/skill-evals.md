@@ -33,7 +33,11 @@ don't check what it says about the other tool or whether it sets that tool up. S
 Cases are named like tests. A case's directory is its expected outcome, then its
 subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
 changes an existing rule) or `declines`. A grader's file is its number, then what
-the agent's output does. A grader that checks names is a `regex`, never an `llm` grader.
+the agent's output does.
+
+A grader checks whatever a pattern can decide with a `regex` or another deterministic
+type, and an `llm` grader judges only meaning: a pattern gives the same answer every
+run, while a judge votes.
 
 ## Running them
 
