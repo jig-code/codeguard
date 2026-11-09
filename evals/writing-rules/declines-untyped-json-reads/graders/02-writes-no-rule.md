@@ -1,6 +1,6 @@
 ---
 type: file_exists
-path: ".codeguard/skills/**"
+path: ".codeguard/**"
 exists: false
 weight: 1
 ---
