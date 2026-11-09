@@ -13,7 +13,7 @@ name: codeguard
 rulesets: [python]
 ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
-judge:                     # optional: the judge for rules whose binding and project name none
+judge:                     # optional: see Choose a judge (judges.md)
   provider: bedrock
   model: us.anthropic.claude-haiku-5-5
 ```

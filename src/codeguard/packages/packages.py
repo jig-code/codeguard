@@ -48,7 +48,7 @@ class Packages:
                 root=root / name,
                 name=f"{manifest.name}/{name}",
                 selection=selection,
-                judge=manifest.judge,
+                package_judge=manifest.judge,
             ).load()
             problems = SelectionCheck(ruleset).problems()
             if problems:

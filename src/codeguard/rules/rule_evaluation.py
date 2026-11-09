@@ -14,7 +14,7 @@ class RuleEvaluation:
         self,
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
-        override: JudgeChoice = JudgeChoice(),
+        judge_override: JudgeChoice = JudgeChoice(),
     ) -> JudgeEvalResult:
         rules = self.rules
         root = rules.working_tree.root
@@ -34,7 +34,7 @@ class RuleEvaluation:
                     config.judge,
                     rules.ast_grep,
                     selection,
-                    override,
+                    judge_override,
                 ),
             )
             for loader in rules.resolver.own_rulesets

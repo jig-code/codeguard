@@ -28,7 +28,7 @@ class RulesetLoader:
     name: str | None = None
     selection: RulesetConfig = field(default_factory=RulesetConfig)
     files: frozenset[str] = frozenset()
-    judge: JudgeChoice = JudgeChoice()
+    package_judge: JudgeChoice = JudgeChoice()
 
     @classmethod
     def local(cls, working_tree: Path) -> Self:
@@ -70,7 +70,7 @@ class RulesetLoader:
             bindings=bindings,
             selection=self.selection,
             pattern_bindings=pattern_bindings,
-            judge=self.judge,
+            package_judge=self.package_judge,
         )
         try:
             gates = ruleset.gates()

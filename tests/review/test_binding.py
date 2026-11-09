@@ -23,7 +23,7 @@ def write_skill(tmp_path, text: str):
 
 
 def ruleset(
-    tmp_path, skill, name=None, selection=RulesetConfig(), judge=JudgeChoice(), **binding
+    tmp_path, skill, name=None, selection=RulesetConfig(), package_judge=JudgeChoice(), **binding
 ) -> Ruleset:
     bindings = BindingsConfig(
         {
@@ -32,7 +32,13 @@ def ruleset(
             )
         }
     )
-    return Ruleset(name=name, root=tmp_path, bindings=bindings, selection=selection, judge=judge)
+    return Ruleset(
+        name=name,
+        root=tmp_path,
+        bindings=bindings,
+        selection=selection,
+        package_judge=package_judge,
+    )
 
 
 class TestBinding:
@@ -183,7 +189,7 @@ class TestBindingsJudge:
         skill = write_skill(tmp_path, make_skill().text)
         package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
 
-        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)])
+        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, package_judge=package)])
 
         assert binding.model == JudgeModel(provider=JudgeProvider.BEDROCK, name="package-model")
 
@@ -192,7 +198,9 @@ class TestBindingsJudge:
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
 
-        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)], project)
+        (binding,) = Bindings.from_rulesets(
+            [ruleset(tmp_path, skill, package_judge=package)], project
+        )
 
         assert binding.model == JudgeModel(provider=JudgeProvider.BEDROCK, name="project-model")
 
@@ -211,7 +219,7 @@ class TestBindingsJudge:
         skill = write_skill(tmp_path, make_skill().text)
         package = JudgeChoice(model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK)
-        bound = ruleset(tmp_path, skill, judge=package, model="bound-model")
+        bound = ruleset(tmp_path, skill, package_judge=package, model="bound-model")
 
         (binding,) = Bindings.from_rulesets([bound], project)
 
@@ -222,7 +230,9 @@ class TestBindingsJudge:
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(model="project-model")
 
-        (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill, judge=package)], project)
+        (binding,) = Bindings.from_rulesets(
+            [ruleset(tmp_path, skill, package_judge=package)], project
+        )
 
         assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="project-model")
 

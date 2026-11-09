@@ -28,15 +28,14 @@ class JudgeEvalRunner:
     judge_config: JudgeConfig = JudgeConfig()
     ast_grep: AstGrep = AstGrep()
     selection: EvalSelection = EvalSelection()
-    # Overrides every rule's provider, model or both, over every configured level.
-    override: JudgeChoice = JudgeChoice()
+    judge_override: JudgeChoice = JudgeChoice()
 
     def case_names(self) -> dict[str, tuple[str, ...]]:
         cases = {dataset.name: dataset.cases for _, dataset in rule_evals(self.ruleset.root)}
         return {
             binding.skill.name: tuple(case.name for case in cases.get(binding.skill.name, ()))
             for binding in Bindings.from_rulesets(
-                [self.ruleset.load()], self.judge_config.choice, self.override
+                [self.ruleset.load()], self.judge_config.choice, self.judge_override
             )
         }
 
@@ -54,7 +53,7 @@ class JudgeEvalRunner:
         bindings = {
             binding.skill.name: binding
             for binding in Bindings.from_rulesets(
-                [ruleset], self.judge_config.choice, self.override
+                [ruleset], self.judge_config.choice, self.judge_override
             )
         }
         unknown = tuple(

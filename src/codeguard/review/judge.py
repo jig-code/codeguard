@@ -13,7 +13,6 @@ from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severit
 from codeguard.review.skill import Skill
 from codeguard.working_tree import AllLines, ChangedLines
 
-# What keys a verdict judged by the claude CLI's own default model, when no level names one.
 DEFAULT_MODEL_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
 

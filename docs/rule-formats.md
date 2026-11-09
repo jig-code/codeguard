@@ -28,9 +28,8 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
 
-`provider` and `model` are optional, each on its own. One the binding leaves out comes
-from the project, then the rule's package, and then the default
-([Choose a judge](judges.md)):
+`provider` and `model` are optional, each on its own; [Choose a judge](judges.md) says
+where one the binding leaves out comes from:
 
 ```yaml
 provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock

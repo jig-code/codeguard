@@ -42,7 +42,7 @@ class RulesetResolver:
                     repo=self.root,
                     root=self.root / name,
                     name=f"{manifest.name}/{name}",
-                    judge=manifest.judge,
+                    package_judge=manifest.judge,
                 )
                 for name in manifest.rulesets
             )

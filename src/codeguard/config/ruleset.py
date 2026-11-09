@@ -43,8 +43,7 @@ class Ruleset:
     pattern_bindings: PatternBindingsConfig = PatternBindingsConfig({})
     # Outside CI, as in the agent's Stop hook, the rules the selection marks `ci_only` are off.
     skip_ci_only: bool = False
-    # The rule package's default judge: what its rules were written and evaluated against.
-    judge: JudgeChoice = JudgeChoice()
+    package_judge: JudgeChoice = JudgeChoice()
 
     def excludes(self, rule: str) -> bool:
         return self.selection.excludes(rule) or (

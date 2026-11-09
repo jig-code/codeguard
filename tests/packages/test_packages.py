@@ -64,7 +64,7 @@ class TestPackages:
 
         (ruleset,) = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
 
-        assert ruleset.judge == JudgeChoice(provider=JudgeProvider.BEDROCK, model="a-model")
+        assert ruleset.package_judge == JudgeChoice(provider=JudgeProvider.BEDROCK, model="a-model")
 
     def test_package_judge_default_with_another_key_is_an_error(self, repo, package, fetch):
         package.write(
