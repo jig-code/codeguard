@@ -15,7 +15,7 @@ does against what the skill says. A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check | Example |
 |---|---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
 | A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say why | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `declines-a-dead-code-rule` asks for a judge rule that flags a function nobody calls, which takes a lookup across the whole repository |
 
 The evals test only the skill. They never check whether a rule the agent writes works,
