@@ -44,7 +44,11 @@ class Packages:
             if name not in manifest.rulesets:
                 self._fail(f"{location}.rulesets: {manifest.name} has no ruleset {name}")
             ruleset = RulesetLoader(
-                repo=root, root=root / name, name=f"{manifest.name}/{name}", selection=selection
+                repo=root,
+                root=root / name,
+                name=f"{manifest.name}/{name}",
+                selection=selection,
+                judge=manifest.judge,
             ).load()
             problems = SelectionCheck(ruleset).problems()
             if problems:
@@ -54,7 +58,7 @@ class Packages:
     def _root(self, package: PackageConfig) -> Path:
         if isinstance(package, GitPackageConfig):
             return self.fetch.fetch(package.git, package.ref)
-        return package.path
+        return (self.working_tree / package.path).resolve()
 
     def _fail(self, *problems: str) -> None:
         listed = "".join(f"\n  {problem}" for problem in problems)

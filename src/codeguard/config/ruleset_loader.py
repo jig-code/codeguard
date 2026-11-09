@@ -11,6 +11,7 @@ from codeguard.config.change_kind import ChangeKind
 from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE
 from codeguard.config.gate_rule import GateRule
+from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.pattern_binding_config import PatternBindingsConfig
 from codeguard.config.ruleset import BINDINGS_DIR, Ruleset
 from codeguard.config.ruleset_config import RulesetConfig
@@ -27,6 +28,7 @@ class RulesetLoader:
     name: str | None = None
     selection: RulesetConfig = field(default_factory=RulesetConfig)
     files: frozenset[str] = frozenset()
+    judge: JudgeChoice = JudgeChoice()
 
     @classmethod
     def local(cls, working_tree: Path) -> Self:
@@ -68,6 +70,7 @@ class RulesetLoader:
             bindings=bindings,
             selection=self.selection,
             pattern_bindings=pattern_bindings,
+            judge=self.judge,
         )
         try:
             gates = ruleset.gates()

@@ -4,7 +4,7 @@ import pytest
 import yaml
 from recording_judge import FailingJudge, RecordingJudge, RecordingJudges
 
-from codeguard.config import JudgeModel, JudgeProvider, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider, RulesetLoader
 from codeguard.judge_evals import EvalSelection, JudgeEvalResult, JudgeEvalRunner
 from codeguard.review import Bindings
 from codeguard.rule_tests import RuleTestResult
@@ -96,14 +96,16 @@ class TestJudgeEvalRunner:
             ),
         )
         judges = RecordingJudges(RecordingJudge())
-        gemini = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
+        gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model="gemini-3.1-pro-preview")
         runner = JudgeEvalRunner(
-            repo.root, RulesetLoader.local(repo.root), judges, 0.9, model=gemini
+            repo.root, RulesetLoader.local(repo.root), judges, 0.9, override=gemini
         )
 
         result = runner.run()
 
-        assert [creation.model for creation in judges.created] == [gemini]
+        assert [creation.model for creation in judges.created] == [
+            JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
+        ]
         assert [report.name for report in result.reports] == [
             "enum-usage on gemini-3.1-pro-preview"
         ]

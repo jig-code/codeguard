@@ -8,7 +8,7 @@ from pathlib import Path
 import logfire
 import pydantic_ai
 
-from codeguard.config import ConfigLoader, JudgeModel, JudgeProvider
+from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
@@ -242,12 +242,14 @@ def _eval(args: argparse.Namespace) -> int:
     from codeguard.rules.rule_evaluation import RuleEvaluation  # noqa: PLC0415
 
     selection = EvalSelection(frozenset(args.rule), tuple(args.case))
-    model = (
-        JudgeModel(provider=args.provider, name=args.model or args.provider.default_model)
+    override = (
+        JudgeChoice(provider=args.provider, model=args.model or args.provider.default_model)
         if args.provider
-        else None
+        else JudgeChoice()
     )
-    result = RuleEvaluation(Rules(_working_tree(args.package))).run(args.repeat, selection, model)
+    result = RuleEvaluation(Rules(_working_tree(args.package))).run(
+        args.repeat, selection, override
+    )
     result.write(sys.stdout)
     return _EXIT_PASSED if result.passed else _EXIT_FAILED
 

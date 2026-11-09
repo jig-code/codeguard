@@ -20,6 +20,7 @@ in use.
 | `packages[].rulesets.<name>.severity` | each rule's own | The severity of every rule in the ruleset, including rules the package adds later. A rule's own override wins. | `warning` trials a ruleset: its findings print without blocking. |
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rule package keys](#rule-package-keys). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
+| `judge.provider`, `judge.model` | `claude-cli` and `claude-sonnet-5-5` | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
 
@@ -55,13 +56,14 @@ Diagnostics name a packaged rule by package, ruleset and id:
 
 Settings that decide what a review reports belong in the committed config, not in the
 environment, so CI and every machine review a commit the same way. Environment variables
-only choose the config file or the codeguard to run, sign the judge in, or turn on
-telemetry:
+only choose the config file or the codeguard to run, choose and sign in the judge, or turn
+on telemetry:
 
 | Variable | Default | What it does |
 |---|---|---|
 | `CODEGUARD_CONFIG` | `.codeguard/config.yaml` | The config file to load, relative to the repository root, such as a gitignored `codeguard.local.yaml` for working on a local package. |
 | `CODEGUARD` | the codeguard the plugin ships | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
+| `CODEGUARD_JUDGE__PROVIDER`, `CODEGUARD_JUDGE__MODEL` | unset | Set `judge.provider` and `judge.model` in place of the config file's, such as for a CI job that judges with Bedrock while developers use the `claude` CLI. An empty variable counts as unset. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
 | `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs and how it signs in; see [Bedrock](judges.md#bedrock). |
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
@@ -80,6 +82,7 @@ telemetry:
   and shows in the PR's history. The Stop hook passes `--judge-errors-as-warnings`,
   because the agent can't fix a judge failure. It shows the failure to you, and CI still
   fails on it.
-- **A rule's judge model.** A judge rule is judged with the model its binding names, the
-  one its rule eval passed on. A project can't switch it to a model the eval never ran
-  on.
+- **A rule's judge model.** A judge rule is judged with the provider and model its binding
+  names, the ones its rule eval passed on. A project can't switch it to a model the eval
+  never ran on: `judge.provider` and `judge.model` apply only to bindings that leave them
+  out.
