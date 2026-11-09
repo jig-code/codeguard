@@ -41,8 +41,10 @@ For a project that uses codeguard:
 
 For whoever writes rules or maintains a rule package:
 
-- [Write rules](docs/write-rules.md): when you write a project's own rules or a package:
-  testing them, package CI and releases, and trying a local package.
+- [Write rules](docs/write-rules.md): when you write or change a rule, with the plugin's
+  writing-rules skill, and test it.
+- [Make a rule package](docs/rule-packages.md): when you start or maintain a package: its
+  repo and manifest, CI and releases, and trying a local or private one.
 - [Rule formats](docs/rule-formats.md): when you look up the format of a binding, a gate,
   a trigger or a rule eval. The plugin's [writing-rules
   skill](skills/writing-rules/SKILL.md) says how to write a rule.

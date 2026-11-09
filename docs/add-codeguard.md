@@ -113,7 +113,7 @@ To choose a ruleset's rules or change how they run, give it settings instead
 
 A git package's `ref` is a tag or commit. codeguard fetches each `ref` once into
 `~/.cache/codeguard/packages` and reuses it, so a `ref` must not be a branch. A private
-package needs a token in CI ([A private package](write-rules.md#a-private-package)).
+package needs a token in CI ([A private package](rule-packages.md#a-private-package)).
 
 ## Pin codeguard and rule packages
 
@@ -128,7 +128,7 @@ upgrade changes in reviews and rule tests shows up there and nowhere else:
 - Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
 
 To try a package release first, change `ref` locally, or point a `kind: path` package at
-a checkout of it ([Try a local package](write-rules.md#try-a-local-package)).
+a checkout of it ([Try a local package](rule-packages.md#try-a-local-package)).
 
 ## Run formatters first
 
