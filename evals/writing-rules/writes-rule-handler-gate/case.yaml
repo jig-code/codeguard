@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: writes-rule-handler-gate
+expected_outcome: |
+  A judge rule, handler-says-why, with a gate handler-says-why-gate whose matched node holds the exception handler's code and nothing around it, not the try statement, block or function that holds the handler, and a binding whose triggers name that gate.
+context:
+  scaffold_script: place-files.sh

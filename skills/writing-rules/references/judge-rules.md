@@ -1,27 +1,7 @@
-# Writing a judge rule that judges reliably
+# Writing a judge rule
 
-A judge rule is ready when every eval case comes out the same way on every run. A
-result is unreliable when it flips between runs, is judged with low confidence, or
-comes back as a warning. That is a defect in the rule's wording or in the case. The
-judge gives a reason with every verdict, pass or fail, and `codeguard eval` prints it
-for every case: read it first. A reason that rests the verdict on the wrong code, or on
-something the convention doesn't say, or that is vague, means the rule's wording is
-unclear; reword the convention so it decides the case on the ground you meant.
-
-- Don't re-run until it passes.
-- Open the binding and check its `triggers` before anything else. `any`, `code`,
-  `function-body` or `function-signature` sends the judge code the convention can't
-  decide, and the judge wavers on it. Narrowing the triggers to the node that holds the
-  violation (Gate every form, below) is part of every fix to an unreliable rule. Never
-  loosen a gate to get past a failure.
-- Don't add the failing case's code to the skill as an example, and don't add a
-  carve-out for it. The judge would then pass the case by matching it, and the next
-  piece of code fails the same way. Restate the convention so its statement decides the
-  case.
-- Don't change the rule's wording to get a weak case to pass. Fix the case, or drop it.
-
-A fix touches whichever of the three files is at fault, and often more than one: the
-skill's wording, the binding's triggers, and the case's code or name.
+Don't add a case's code to the skill as an example, and don't add a carve-out for it.
+Restate the convention so its statement decides the case.
 
 ## Write the skill
 
@@ -31,60 +11,49 @@ agent loads before it edits. It holds, in this order, and nothing else:
 1. A title.
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
    words a reviewer would use, never a question. Where the sentence uses a term a reader
-   could take two ways, a sentence that fixes its meaning.
-3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
-   prompt, so it helps the judge apply the convention to code the statement doesn't
-   name, but it never widens the convention: the statement alone decides each case.
+   could take two ways, one sentence that fixes its meaning, and no other: a sentence,
+   or a clause joined to the convention's sentence, that restates the convention, gives
+   its purpose or says what it doesn't cover is a second statement: the judge checks it as
+   well, and it can drift from the first. The purpose goes under `## Why`.
+3. `## Why`: the harm the rule prevents, in a sentence or two. It never widens the
+   convention: the statement alone decides each case.
 
 No examples. No `## Violation` list of the shapes a violation takes, no `## Not a
 violation` list of code near the boundary, and no other section: each shape is decided
 by the statement, or the statement is unclear. A shape that contradicts the statement
-(a form that the statement says keeps the convention) is dropped from the rule or moved
+(a shape that the statement says keeps the convention) is dropped from the rule or moved
 to a rule of its own; its mention in the skill, even as a non-violation, is a second
-convention. No forms of the convention in any language or library, and no supplement
+convention. No shapes of the convention in any language or library, and no supplement
 per language: a rule in several languages is one skill, in no language's names, syntax
-or libraries. Leave out the fix, and anything telling the judge how to answer: the
-judge's own prompt sets its output and its confidence scale.
+or libraries. Leave out the fix, and anything telling the judge how to answer.
 
-A judge that can't decide a piece of code from the statement, or decides it on the
-wrong ground, has found an unclear statement. Reword the statement so it decides that
-code. A rule that needs a new example each time it meets new code has a bad convention.
+## Gate every shape of the violation
 
-## Gate every form of the violation
-
-A violation outside the binding's `triggers` is never reported; codeguard's README says
-how triggers select what the judge sees.
-
-- List the syntactic forms the violation takes, and give each one an `invalid` gate
-  test, so a gate that stops matching a form fails `codeguard test`.
-- Gate on where a violation appears, not on the rule's topic: a rule about passing enum
-  members needs a gate on literals, because the enum is defined elsewhere.
-- Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`. A wider gate costs judge calls and tokens;
-  `codeguard review --dry-run` counts the calls.
-- A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
-  `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
-  `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
-  `annotation`, `call`, `control-flow`, `return-yield`, `collection-literal`,
-  `string-literal`, `number-literal`, `attribute-access`, `subscript`,
-  `conditional-expression`, `membership-test`, `assert`, `raise`,
-  `definition-added-or-removed`, `code` and `any`. When no kind fits the node, write a
-  gate: an ast-grep rule in `gates/<id>.yml` that matches the node, named in `triggers`
-  and tested like a pattern rule.
+- List the syntactic shapes the violation takes in the gate's tests, not in the rule's
+  text: give each one an `invalid` gate test, so a gate that stops matching a shape
+  fails a test.
+- Gate on where a violation appears in the changed code, not on where the rule's topic
+  is defined.
+- A gate matches the code a violation needs and nothing around it: not the statement,
+  block or function that holds that code. The judge is sent the whole of each node a
+  gate matches, and is called for every change inside one.
+- A trigger is a built-in change kind (codeguard's README, The binding, lists them) or
+  a gate. When no kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
+  that matches the node, named in `triggers` and tested like a pattern rule.
 
 ## Write a few clear eval cases
 
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
-way code breaks the convention and one `valid` case for each distinct way code keeps it
-near the boundary, up to about three of each, and a `skipped` case outside the gate. A
-convention with one way to break it has one `invalid` case. Each case tests one thing
+way code breaks the convention and one `valid` case for each distinct way code keeps it,
+and a `skipped` case outside the gate. A convention with one way to break it has one
+`invalid` case. Each case tests one thing
 none of the others does: a different thing the code does or fails to do, not another
 syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
-either way proves nothing about the rule, and a judge that flips on it is right to.
+either way proves nothing about the rule.
 
-- An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
-  it. A reader of the case alone sees why the code is a problem or why it's fine. It is
-  named as `SKILL.md` says.
+- An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
+  keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
+  It is named as `SKILL.md` says.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by
@@ -93,20 +62,10 @@ either way proves nothing about the rule, and a judge that flips on it is right 
 - A case tests one thing. Every line of it but the one under test is plainly correct
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before
-  keeping the case. Deliberate invalid code is appropriate when necessary to test the
-  stated behavior, including a pre-existing violation that the change does not
-  participate in and must leave unreported under the review scope architecture.
-  Keep that violation small and unambiguous; fundamental defects such as import cycles
-  must not obscure the behavior under test. A pre-existing violation is not automatically
-  out of scope: the change may participate in the violating construct or behavior.
-  This guidance applies both to rule evals in packages and apps and to CodeGuard's
-  judge fixtures run through pytest.
-- Pair the cases: for what the convention allows, a `valid` case, and beside it an
-  `invalid` case of the same shape that breaks the rule.
+  keeping the case.
 - A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss, then reword the convention until the case passes, reading the judge's reason on
-each run; never add the code to the skill. The bar is 3 runs of 3.
+miss; never add the code to the skill.

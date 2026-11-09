@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: writes-rule-default-gate
+expected_outcome: |
+  A judge rule, safe-defaults, with a gate safe-defaults-gate whose matched node is a single parameter with a default (or its default value), not the parameter list, the function or anything larger, and a binding whose triggers name that gate.
+context:
+  scaffold_script: place-files.sh

@@ -13,8 +13,7 @@ permissions: {}
 env:
   AGENT_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
   GRADER_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
-# Each cost ceiling is about three times the pass's expected cost for four cases, so a
-# runaway agent stops the paid run.
+# Each cost ceiling stops a runaway agent's paid run.
 jobs:
   validity:
     runs-on: ubuntu-latest
@@ -40,7 +39,7 @@ jobs:
         with:
           pass: validity
           runs: 1
-          max-cost-usd: 2
+          max-cost-usd: 3
           agent-model: ${{ env.AGENT_MODEL }}
           grader-model: ${{ env.GRADER_MODEL }}
   reliability:
@@ -58,6 +57,6 @@ jobs:
         with:
           pass: reliability
           runs: 2
-          max-cost-usd: 4
+          max-cost-usd: 6
           agent-model: ${{ env.AGENT_MODEL }}
           grader-model: ${{ env.GRADER_MODEL }}
