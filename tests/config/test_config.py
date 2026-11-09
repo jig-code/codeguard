@@ -116,6 +116,62 @@ class TestPackagesConfig:
             PathPackageConfig(path=tmp_path / "rules", rulesets={"python": RulesetConfig()}),
         )
 
+    def test_listed_rulesets_run_every_rule(self):
+        config = Config.model_validate(
+            {
+                "packages": [
+                    {
+                        "kind": "git",
+                        "git": "https://example.com/rules.git",
+                        "ref": "v1.0.0",
+                        "rulesets": ["general", "python"],
+                    }
+                ]
+            }
+        )
+
+        assert config.packages == (
+            GitPackageConfig(
+                git="https://example.com/rules.git",
+                ref="v1.0.0",
+                rulesets={"general": RulesetConfig(), "python": RulesetConfig()},
+            ),
+        )
+
+    def test_ruleset_listed_twice_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            Config.model_validate(
+                {
+                    "packages": [
+                        {
+                            "kind": "git",
+                            "git": "https://example.com/rules.git",
+                            "ref": "v1.0.0",
+                            "rulesets": ["python", "python"],
+                        }
+                    ]
+                }
+            )
+
+        assert messages(error) == ["Value error, rulesets listed more than once: python"]
+
+    def test_empty_ruleset_list_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            Config.model_validate(
+                {
+                    "packages": [
+                        {
+                            "kind": "git",
+                            "git": "https://example.com/rules.git",
+                            "ref": "v1.0.0",
+                            "rulesets": [],
+                        }
+                    ]
+                }
+            )
+
+        assert messages(error) == ["Value should have at least 1 item after validation, not 0"]
+
     def test_package_without_rulesets_is_an_error(self):
         with pytest.raises(ValidationError):
             Config.model_validate(
