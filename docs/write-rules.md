@@ -2,7 +2,7 @@
 
 For whoever writes a project's own rules or maintains a rule package. The plugin's
 [writing-rules skill](../skills/writing-rules/SKILL.md) says which kind of rule fits a
-convention, how to state it and how to test it; [Rule formats](rule-formats.md) has the
+convention and how to state it; [Rule formats](rule-formats.md) has the
 format of each file.
 
 ## Where rules live

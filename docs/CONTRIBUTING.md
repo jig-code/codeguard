@@ -42,7 +42,8 @@ limit.
 
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the skills and
 bindings beside them. When a case flips between runs or comes back uncertain, follow the
-`writing-rules` skill, and look at the judge prompt as well. The plain suite checks each
+Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
+[Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
 The `writing-rules` skill has its own evals in `evals/writing-rules/`;

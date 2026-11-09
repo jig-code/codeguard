@@ -47,6 +47,14 @@ A review judges each change once, so a case that flips between runs is a review 
 wrongly blocks or misses. A judge rule passes its rule eval when every case gets its
 expected review on every run.
 
+A check that calls a model runs in two passes. The validity pass runs each case once to
+verify the change, and stops at the first failure, so a broken change costs one run.
+Once it passes with nothing changed since, the reliability pass runs each case N-1 more
+times, for N in all: 2 more for a rule's 3 runs of 3. The reliability pass never
+stops early: it runs every case to the end and reports each case's pass rate, and it
+passes only at N of N. Any change starts again at the validity pass. Each row below
+gives both passes' commands.
+
 CI runs a rule's eval only for a change that can change its verdicts:
 
 | You change | Each case of the rule passes |
@@ -64,8 +72,11 @@ Re-running until a case passes doesn't meet the bar.
 
 For case construction, follow the writing-rules reference's
 [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
-It applies to rule evals in packages and apps and to CodeGuard's pytest judge fixtures,
-including cases that deliberately contain pre-existing violations to test review scope.
+It applies to rule evals in packages and apps and to codeguard's pytest judge fixtures.
+A fixture that tests review scope may also hold a pre-existing violation of the rule under
+test, in code the change leaves untouched and doesn't take part in, so the review must
+leave it unreported. Keep that violation small and plain, and let it break no other
+rule, so nothing else in the fixture obscures the behavior under test.
 
 Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
 

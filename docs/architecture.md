@@ -99,7 +99,8 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
   case's code to the rule as an example.
 - Follow the writing-rules reference's
   [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
-  including its treatment of deliberate pre-existing violations in scope cases.
+  and [docs/testing.md](testing.md) for a fixture that holds a pre-existing violation to
+  test review scope.
 
 ## Invariants
 

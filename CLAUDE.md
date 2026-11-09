@@ -21,8 +21,10 @@ Before testing any change, follow [docs/testing.md](docs/testing.md).
 
 ## Rules
 
-Before adding or changing a rule, and whenever a rule eval, an LLM test or a judged
-review fails, flips between runs or reports a warning, follow
-[skills/writing-rules/SKILL.md](skills/writing-rules/SKILL.md). This covers the LLM
+Before adding or changing a rule, follow
+[skills/writing-rules/SKILL.md](skills/writing-rules/SKILL.md). Whenever a rule eval, an
+LLM test or a judged review fails, flips between runs or reports a warning, follow the
+Rule failures bullet in [docs/architecture.md](docs/architecture.md#testing-a-rule) and
+[docs/testing.md](docs/testing.md). This covers the LLM
 tests' fixtures in `evals/judge`, every rule package, and judged reviews of codeguard's
 own code.

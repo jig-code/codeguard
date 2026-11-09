@@ -1,6 +1,6 @@
 ---
 name: writing-rules
-description: Use when adding or changing a codeguard rule, its tests, or its snapshots — any file under .codeguard/ or in a codeguard rule package. Use even if you already know ast-grep; codeguard adds its own layout, scoping, and test conventions.
+description: Writes codeguard rules: decides whether a convention is codeguard's to check, states it as a pattern rule or a judge rule, gates it and writes its cases. Use when adding or changing a codeguard rule, its tests, or its snapshots — any file under .codeguard/ or in a codeguard rule package. Use even if you already know ast-grep; codeguard adds its own layout, scoping, and test conventions.
 ---
 
 # Writing codeguard rules
@@ -18,12 +18,10 @@ rule that misjudged code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
-5. **Verify** (Verify, below).
 
-For a judge rule, also read `references/judge-rules.md` before writing or changing it,
-and whenever its eval fails, flips between runs or reports a warning. For the project's
-language's tools and pattern rule examples, read `references/python.md`,
-`references/typescript.md` or `references/ruby.md`.
+For a judge rule, also read `references/judge-rules.md` before writing or changing it.
+For the project's language's tools and pattern rule examples, read
+`references/python.md`, `references/typescript.md` or `references/ruby.md`.
 
 ## The convention
 
@@ -162,19 +160,3 @@ codeguard's README has the binding and rule eval formats.
   reviewed code to get past it.
 - Leave the codebase clean for a new rule: fix each existing violation, or put an
   `ast-grep-ignore: <id>` comment on the line above it.
-
-## Verify
-
-A rule is proven accurate only by its own cases, run through codeguard. Running it over
-other code finds code to fix, not evidence that the rule is right.
-
-```sh
-codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id>             # a judge rule: verifies the change in 1 run; calls the model
-codeguard eval --rule <id> --repeat 2  # then 2 more: every case passes 3 runs of 3
-codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
-```
-
-In CI, run the evals of the rules a change touches. Never run `codeguard review --all`
-without `--dry-run`: it judges every file against every judge rule. codeguard's README
-has every command's options.

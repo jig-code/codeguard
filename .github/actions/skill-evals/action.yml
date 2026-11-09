@@ -26,7 +26,7 @@ runs:
         --runs "$RUNS" --threshold 1 --ablation none
         --max-cost-usd "$MAX_COST_USD"
         --model "$AGENT_MODEL" --judge-model "$GRADER_MODEL"
-        --output-dir "$RUNNER_TEMP/skill-evals-results"
+        --output-dir "$RUNNER_TEMP/skill-evals-results" --keep-temp
         --trust-plugin --no-publish
       shell: bash
       env:
@@ -41,3 +41,9 @@ runs:
       with:
         name: skill-evals-${{ inputs.pass }}-results
         path: ${{ runner.temp }}/skill-evals-results/
+    - uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: skill-evals-${{ inputs.pass }}-traces
+        path: /tmp/claude-eval-*/out/
+        if-no-files-found: error

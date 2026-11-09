@@ -20,9 +20,6 @@ Install the plugin ([Discover plugins](https://code.claude.com/docs/en/discover-
 claude plugin install codeguard@codeguard --scope project
 ```
 
-The plugin also puts `codeguard` on the PATH of the commands Claude runs, for skills
-such as writing a rule.
-
 ### Codex
 
 Trust codeguard's hooks in `/hooks` ([Codex hooks](https://developers.openai.com/codex/hooks)).
@@ -63,9 +60,8 @@ claude plugin update codeguard@codeguard --scope project
 
 ## The CLI on its own
 
-The plugin runs codeguard for the agent. To run codeguard from a terminal, or to write
-rules in Codex, install the CLI with uv. It doesn't need the plugin, and the plugin
-doesn't need it.
+The plugin runs codeguard for the agent. To run codeguard from a terminal, install the
+CLI with uv. It doesn't need the plugin, and the plugin doesn't need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0
