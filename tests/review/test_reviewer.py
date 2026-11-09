@@ -33,7 +33,20 @@ class TestReviewer:
         assert result == Review(
             diagnostics=(make_diagnostic(), make_diagnostic(judged=True, file="b.py"))
         )
-        assert judge.received == [make_judge_request(file="b.py", changes="+     1\tx = 1\n")]
+        assert judge.received == [
+            make_judge_request(
+                file="b.py",
+                changes=(
+                    "diff --git a/b.py b/b.py\n"
+                    "new file mode 100644\n"
+                    "index 0000000..7d4290a\n"
+                    "--- /dev/null\n"
+                    "+++ b/b.py\n"
+                    "@@ -0,0 +1 @@\n"
+                    "+x = 1\n"
+                ),
+            )
+        ]
 
     def test_violations_on_unchanged_lines_are_not_reported(
         self, repo, make_violation, make_binding
@@ -58,4 +71,17 @@ class TestReviewer:
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 
         assert result == Review(diagnostics=(make_diagnostic(judged=True, line=2),))
-        assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]
+        assert judge.received == [
+            make_judge_request(
+                changes=(
+                    "diff --git a/a.py b/a.py\n"
+                    "new file mode 100644\n"
+                    "index 0000000..12a3943\n"
+                    "--- /dev/null\n"
+                    "+++ b/a.py\n"
+                    "@@ -0,0 +1,2 @@\n"
+                    "+print(1)\n"
+                    "+x = 1\n"
+                )
+            )
+        ]

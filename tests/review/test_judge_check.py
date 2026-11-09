@@ -110,28 +110,19 @@ class TestJudgeCheck:
 
         assert set(judge.received) == {
             make_judge_request(),
-            make_judge_request(file="b.py", changes="+     1\tx = 1\n"),
-        }
-
-    def test_judge_gets_the_changed_function_of_the_file(
-        self, tmp_path, make_binding, make_judge_request
-    ):
-        (tmp_path / "pricing.py").write_text(
-            "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
-        )
-        judge = RecordingJudge()
-        scope = ChangedLines({"pricing.py": frozenset({5})}).with_judged_lines(
-            {"pricing.py": frozenset({4, 5})}
-        )
-
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope).check(["pricing.py"])
-
-        assert judge.received == [
             make_judge_request(
-                file="pricing.py",
-                changes="      4\tdef discounted(total):\n+     5\t    return total - DISCOUNT\n",
-            )
-        ]
+                file="b.py",
+                changes=(
+                    "diff --git a/b.py b/b.py\n"
+                    "new file mode 100644\n"
+                    "index 0000000..7d4290a\n"
+                    "--- /dev/null\n"
+                    "+++ b/b.py\n"
+                    "@@ -0,0 +1 @@\n"
+                    "+x = 1\n"
+                ),
+            ),
+        }
 
     def test_file_outside_the_binding_paths_is_not_judged(self, tmp_path, make_binding):
         judge = RecordingJudge()
@@ -174,7 +165,20 @@ class TestJudgeCheck:
 
         JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope).check(["a.md"])
 
-        assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
+        assert judge.received == [
+            make_judge_request(
+                file="a.md",
+                changes=(
+                    "diff --git a/a.md b/a.md\n"
+                    "new file mode 100644\n"
+                    "index 0000000..7f3b95d\n"
+                    "--- /dev/null\n"
+                    "+++ b/a.md\n"
+                    "@@ -0,0 +1 @@\n"
+                    "+# A\n"
+                ),
+            )
+        ]
 
     def test_binding_without_triggers_judges_every_changed_file(
         self, tmp_path, make_binding, make_judge_request
