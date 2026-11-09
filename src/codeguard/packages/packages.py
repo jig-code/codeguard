@@ -10,10 +10,9 @@ from codeguard.config import (
     GitPackageConfig,
     PackageConfig,
     Ruleset,
-    RulesetLoader,
 )
 from codeguard.packages.git_fetch import GitFetch
-from codeguard.packages.manifest import Manifest
+from codeguard.packages.package import Package
 from codeguard.packages.selection_check import SelectionCheck
 
 
@@ -32,24 +31,14 @@ class Packages:
         )
 
     def _rulesets(self, location: str, package: PackageConfig) -> Iterator[Ruleset]:
-        root = self._root(package)
-        manifest = Manifest.load(root)
-        codeguard_problem = manifest.codeguard_problem(self.codeguard)
-        if codeguard_problem:
-            self._fail(f"{location}: {codeguard_problem}")
-        ast_grep_problem = manifest.ast_grep_problem(self.ast_grep)
-        if ast_grep_problem:
-            self._fail(f"{location}: {ast_grep_problem}")
+        installed = Package.load(self._root(package))
+        version_problem = installed.version_problem(self.codeguard, self.ast_grep)
+        if version_problem:
+            self._fail(f"{location}: {version_problem}")
         for name, selection in package.rulesets.items():
-            if name not in manifest.rulesets:
-                self._fail(f"{location}.rulesets: {manifest.name} has no ruleset {name}")
-            ruleset = RulesetLoader(
-                repo=root,
-                root=root / name,
-                name=f"{manifest.name}/{name}",
-                selection=selection,
-                package_judge=manifest.judge,
-            ).load()
+            if name not in installed.manifest.rulesets:
+                self._fail(f"{location}.rulesets: {installed.manifest.name} has no ruleset {name}")
+            ruleset = installed.ruleset_loader(name, selection).load()
             problems = SelectionCheck(ruleset).problems()
             if problems:
                 self._fail(*(f"{location}.rulesets.{name}: {problem}" for problem in problems))

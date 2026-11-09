@@ -32,10 +32,6 @@ class Manifest(BaseModel):
         except ValidationError as error:
             raise ConfigError.invalid(file, error) from error
 
-    @classmethod
-    def in_repo(cls, root: Path) -> Self | None:
-        return cls.load(root) if (root / MANIFEST_FILE).is_file() else None
-
     def ast_grep_problem(self, version: Version) -> str | None:
         if self.ast_grep.contains(version, prereleases=True):
             return None
