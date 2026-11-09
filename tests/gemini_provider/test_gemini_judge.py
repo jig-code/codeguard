@@ -272,7 +272,18 @@ class TestGeminiJudge:
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         (feedback,) = models.sent(1)
         assert isinstance(feedback, UserPromptPart)
-        assert '"loc":["reason"],"msg":"Field required"' in str(feedback.content)
+        assert (
+            "<validation_errors>\n"
+            '[{"type":"missing","loc":["reason"],"msg":"Field required",'
+            '"input":{"violations":[{"file":"a.py"}]}},'
+            '{"type":"missing","loc":["violations",0,"line"],"msg":"Field required",'
+            '"input":{"file":"a.py"}},'
+            '{"type":"missing","loc":["violations",0,"message"],"msg":"Field required",'
+            '"input":{"file":"a.py"}},'
+            '{"type":"missing","loc":["violations",0,"confidence"],"msg":"Field required",'
+            '"input":{"file":"a.py"}}]\n'
+            "</validation_errors>"
+        ) in feedback.content
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
