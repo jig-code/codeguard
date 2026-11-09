@@ -8,8 +8,9 @@ page is what each engineer does.
 
 The plugin ships the codeguard CLI, its review hooks and the writing-rules skill, and
 runs the CLI with [uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is
-all anyone working in the project installs. The first review after an install or upgrade
-takes a little longer while uv builds codeguard's environment.
+all anyone working in the project installs. Carrying the CLI keeps the hook and the CLI it
+runs on the same version. The first review after an install or upgrade takes a little
+longer while uv builds codeguard's environment.
 
 ### Claude Code
 
