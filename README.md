@@ -435,10 +435,11 @@ held to the same bar.
 1. `codeguard test` checks the triggers on every case, with no model call. It commits
    each `before` and `unchanged` file to a scratch repository, writes each `after`, and
    classifies the diff the way a review does.
-2. `codeguard eval` reviews every case with the binding's model, the way
-   `codeguard review` would.
-3. `codeguard eval --repeat 3` reviews each case three times, so an unstable verdict
-   shows up as a failing run, named like `a second class added to the file [2/3]`.
+2. `codeguard eval` reviews every case once with the binding's model, the way
+   `codeguard review` would, to verify the change.
+3. Once it passes, `codeguard eval --repeat 2` reviews each case twice more, so an
+   unstable verdict shows up as a failing run, named like
+   `a second class added to the file [2/2]`.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -455,8 +456,10 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 3
-codeguard eval --provider gemini --repeat 3
+codeguard eval --rule mock-only-at-boundary --case "a patch"
+codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 2
+codeguard eval --provider gemini
+codeguard eval --provider gemini --repeat 2
 ```
 
 Both take a package directory, so `codeguard eval path/to/package` evaluates a package
@@ -513,7 +516,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 |---|---|---|---|---|
 | A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
 | A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review, 3 runs of 3 | `codeguard eval --repeat 3` | yes |
+| | | each edit gets its expected review, 3 runs of 3 | `codeguard eval`, then `codeguard eval --repeat 2` | yes |
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
