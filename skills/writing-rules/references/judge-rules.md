@@ -36,10 +36,9 @@ or libraries. Leave out the fix, and anything telling the judge how to answer.
 - A gate matches the code a violation needs and nothing around it: not the statement,
   block or function that holds that code. The judge is sent the whole of each node a
   gate matches, and is called for every change inside one.
-- A trigger is a built-in change kind (codeguard's `docs/rule-packages.md`, The binding,
-  lists them) or a gate. When no kind fits the node, write a gate: an ast-grep rule in
-  `gates/<id>.yml` that matches the node, named in `triggers` and tested like a pattern
-  rule.
+- A trigger is a built-in change kind (codeguard's README, The binding, lists them) or
+  a gate. When no kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
+  that matches the node, named in `triggers` and tested like a pattern rule.
 
 ## Write a few clear eval cases
 
