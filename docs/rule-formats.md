@@ -40,8 +40,7 @@ model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedro
 A judge rule's id is its skill's directory name.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
-whose changed lines fall inside none of it, and is sent the whole of each trigger node
-around a change. A binding without `triggers` gets `[any]`, so packages written before
+whose changed lines fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
 triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in

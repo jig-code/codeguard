@@ -1,9 +1,8 @@
 # codeguard's architecture
 
-This document is an overview of how codeguard works and the invariants its design keeps.
-A change to codeguard must keep every invariant here; a change that would break one needs
-the maintainers' approval before it is made. [The review pipeline](review-pipeline.md)
-and [The judge](judge-design.md) hold the detail.
+This document says why codeguard works as it does and the invariants its design keeps. A
+change to codeguard must keep every invariant here; a change that would break one needs
+the maintainers' approval before it is made. How each part works is in its code.
 
 ## How codeguard works
 
@@ -47,16 +46,42 @@ judge rule. Passing one rule does not excuse violations owned by other checks.
 **Bindings** map files to a rule by path globs. A binding sets the rule's severity, its
 triggers, and its judge provider and model.
 
-**The review pipeline** picks the candidate rules, runs the pattern rules, calls the
-judge on the changes its triggers reach and reuses cached verdicts
-([The review pipeline](review-pipeline.md)).
+**The review pipeline** ([`review/review.py`](../src/codeguard/review/review.py)) is the
+same code on every surface, so a commit gets the same review at the agent's Stop, in CI
+and from `codeguard review` (#4). Triggers and gates run first and cheaply, so the judge,
+the costly step, is called only for a rule the change could make fail (#20). Pattern
+rules run before the judge, and a file with a blocking pattern diagnostic skips it,
+because that file has to change anyway.
 
 **The judge** grades one rule against one file's change, through the `claude` or `codex`
-CLI, Gemini on Vertex AI or Amazon Bedrock ([The judge](judge-design.md)).
+CLI, Gemini on Vertex AI or Amazon Bedrock. Its instructions are
+[`review/judge.md`](../src/codeguard/review/judge.md), and the changed code it gets comes
+from the syntax table in [`syntax/`](../src/codeguard/syntax/).
+
+- The prompt holds only what the judge will certainly have to read; the judge decides
+  from the rule what else to read, and reads it with its tools. The prompt never says
+  what to read or when, so a rule's verdict rests on the rule's text alone. When a model
+  fails to read what an obvious case needs, that is a finding about the model, not a
+  reason to change the prompt.
+- Each provider runs isolated (#6): no user or project config, instructions, hooks,
+  plugins, memory or other skills reach it, so a verdict depends only on the rule and the
+  repository.
+- The judge reports violations, never fixes (#21), with a reason for its verdict as
+  context for whoever troubleshoots it, and a confidence on a fixed scale stated in the
+  verdict schema. The scale never rewards resemblance to an example, since rules hold
+  none.
+- Output that fails the verdict schema fails the run loudly (#11).
+- A model is named by its full id, never an alias, so a model change is visible to the
+  verdict cache.
+
+**The verdict cache** ([`review/cached_judge.py`](../src/codeguard/review/cached_judge.py))
+reuses a verdict until something the judge's answer depends on changes, so an agent that
+stops again without changing a file doesn't pay for the same judgement twice. Evals and
+CI never use it: an eval tests the rule, and CI judges a commit fresh.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
-or a pass. The only adapter is for the Stop hook. It blocks once on the same errors, then
-lets the stop through.
+or a pass. The only adapter is for the Stop hook, which blocks every time the agent stops
+while errors remain.
 
 **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
 and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`

@@ -52,8 +52,8 @@ python/
 
 The rule eval is what makes a rule trustworthy. It shows the rule flags the edits it
 should and passes the ones it should, on the model that will judge it in reviews: the
-binding's ([How the model is chosen](judge-design.md#how-the-model-is-chosen)). To move a
-rule to another model, change its binding and pass its rule eval again.
+binding's ([Choose a judge](judges.md)). To move a rule to another model, change its
+binding and pass its rule eval again.
 
 `codeguard eval` judges with the binding's model too, unless `--provider` names another.
 That is for a package whose bar is passing on more than one model, such as a CI job per
@@ -61,9 +61,7 @@ provider; it changes nothing a review judges with.
 
 ## Test a judge rule
 
-1. `codeguard test` checks the triggers on every case, with no model call. It commits
-   each `before` and `unchanged` file to a scratch repository, writes each `after`, and
-   classifies the diff the way a review does.
+1. `codeguard test` checks the triggers on every case, with no model call.
 2. `codeguard eval` reviews every case once with the binding's model, the way
    `codeguard review` would, to verify the change.
 3. Once it passes, `codeguard eval --repeat 2` reviews each case twice more, so an
@@ -71,15 +69,13 @@ provider; it changes nothing a review judges with.
    `a second class added to the file [2/2]`. A case passes when it gets its expected
    review on all 3 runs.
 
-[CLI](cli.md#eval) lists `codeguard eval`'s options for judging part of a package, or
-with another model. [What makes a case fail](rule-formats.md#what-makes-a-case-fail)
+`codeguard eval -h` lists its options for judging part of a package, or with another
+model ([CLI](cli.md#eval)). [What makes a case fail](rule-formats.md#what-makes-a-case-fail)
 lists each command's failures.
 
-An eval tests the rule, not the code, so it never uses the verdict cache: every run calls
-the model. With a Logfire token each rule's run is also in Logfire, as an experiment named
-`<rule> on <model>` with the provider, model, confidence threshold, rule version (a hash
-of the skill, paths and triggers) and codeguard version, so runs of the same rule
-compare.
+An eval tests the rule, not the code, so every run calls the model. With a Logfire token
+each rule's run is also in Logfire, as an experiment named `<rule> on <model>`, so runs
+of the same rule compare ([Telemetry](telemetry.md)).
 
 A project tests the rules in its `.codeguard/` the same way a package does.
 [Testing](testing.md#changing-a-rule-package) says which test each change needs.

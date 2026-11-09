@@ -68,8 +68,7 @@ jobs:
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. [GitHub Action inputs](configuration.md#github-action-inputs)
-lists what else it takes.
+then runs the rule tests. [`action.yml`](../action.yml) lists what else it takes.
 
 A judge rule bound to the `claude` CLI, the default, needs the token: create it with
 `claude setup-token` and store it as a repository secret. A rule bound to Gemini or

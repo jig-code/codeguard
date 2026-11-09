@@ -1,8 +1,7 @@
 # Contributing
 
-[codeguard's architecture](architecture.md) describes how codeguard works and the
-invariants every change must keep, with [the review pipeline](review-pipeline.md) and
-[the judge](judge-design.md) in detail. Before changing the judge (its template, its
+[codeguard's architecture](architecture.md) says why codeguard works as it does and the
+invariants every change must keep. Before changing the judge (its template, its
 prompt, its tools or what it's given), the review pipeline, or anything an invariant
 covers, read it and check the change against it.
 

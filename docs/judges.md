@@ -91,8 +91,7 @@ it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 
 ## Bedrock
 
-`provider: bedrock` judges with Claude, or a GPT model, on Amazon Bedrock through the
-same tools as Gemini. The model is a Bedrock inference profile, such as
+`provider: bedrock` judges with Claude, or a GPT model, on Amazon Bedrock. The model is a Bedrock inference profile, such as
 `us.anthropic.claude-haiku-5-5`, and the AWS account must have access to it. codeguard
 signs in with the credentials and region (`AWS_DEFAULT_REGION`)
 [boto3 finds](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html):

@@ -50,9 +50,8 @@ For whoever writes rules or maintains a rule package:
 For whoever works on codeguard:
 
 - [Contributing](docs/CONTRIBUTING.md): working on codeguard, and releases.
-- [Architecture](docs/architecture.md): an overview of how codeguard works and the
-  invariants every change keeps, with [the review pipeline](docs/review-pipeline.md) and
-  [the judge](docs/judge-design.md) in detail.
+- [Architecture](docs/architecture.md): why codeguard works as it does, and the
+  invariants every change keeps.
 - [Testing](docs/testing.md): which checks a change needs.
 
 ## Help and maintainers

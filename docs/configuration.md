@@ -1,7 +1,8 @@
 # Configuration reference
 
 A project's settings live in `.codeguard/config.yaml`, which is committed, so a commit
-gets the same review on every machine and in CI. Every setting is optional.
+gets the same review on every machine and in CI. Every setting is optional. The GitHub
+Action's inputs are in [`action.yml`](../action.yml).
 [Add codeguard to a project](add-codeguard.md) and [Choose a judge](judges.md) show them
 in use.
 
@@ -66,24 +67,6 @@ telemetry:
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
 | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |
-
-## GitHub Action inputs
-
-The `jig-code/codeguard` action reviews the PR's changed files, then runs the rule tests.
-
-| Input | Default | What it does |
-|---|---|---|
-| `base` | `origin/${{ github.base_ref }}` | The ref the changes are compared against. The checkout needs its history (`fetch-depth: 0`). |
-| `claude-code-oauth-token` | none | The Claude subscription token the judge runs with, from `claude setup-token`. Needed when a judge rule is bound to the `claude` CLI. |
-| `packages-token` | none | A GitHub token that can read the project's private rule packages. |
-| `logfire-token` | none: nothing is sent | A Logfire write token; codeguard sends a trace of each run ([Telemetry](telemetry.md)). |
-| `eval` | `false` | Also run `codeguard eval`, which calls the judge for each judge rule case. |
-| `dry-run` | `false` | Run the pattern rules and list the judge calls the review would make, without calling a model. Fails only on pattern rule errors. |
-
-A PR with the `codeguard-allow-judge-errors` label passes `--judge-errors-as-warnings` to
-the review ([Merge a PR despite a judge
-error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). The review stops 2 minutes
-after `review_time_limit_minutes`.
 
 ## No setting on purpose
 

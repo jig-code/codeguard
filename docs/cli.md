@@ -43,20 +43,8 @@ codeguard eval --repeat 2     # judge each case twice; default 1
 codeguard eval path/to/package  # evaluate a package outside the current repository
 ```
 
-Options to judge part of a package, or with another model:
-
-- `--rule <id>` evaluates only that judge rule; repeat it for more. The check for an
-  eval with an `invalid` case covers only the rules selected.
-- `--case <text>` judges only the cases whose name contains the text; repeat it to
-  judge the cases matching any of them. A rule with no matching case is left out.
-- `--provider claude-cli`, `--provider codex-cli`, `--provider gemini` or
-  `--provider bedrock` judges every selected rule with that provider instead of its
-  binding's. `--model` names the model; it defaults to `claude-sonnet-5-5` for
-  `claude-cli`, `gpt-6-luna` for `codex-cli`, `gemini-3.1-pro-preview` for `gemini` and
-  `us.anthropic.claude-haiku-5-5` for `bedrock`.
-
-A `--rule` that names no judge rule, or a `--case` that no selected rule's case name
-contains, fails the eval before any case is judged.
+`--rule` and `--case` judge part of a package, and `--provider` and `--model` judge it
+with another model; `codeguard eval -h` lists them:
 
 ```sh
 codeguard eval --rule mock-only-at-boundary --case "a patch"
