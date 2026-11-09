@@ -28,20 +28,19 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
 
-`provider` and `model` are optional, each on its own: what a binding leaves out comes
-from the project's or the package's default ([Which judge
-runs](configuration.md#which-judge-runs)). Set them only for a rule whose eval passes on
-one model alone ([a bound rule's judge model](configuration.md#no-setting-on-purpose)):
+`provider` and `model` are optional. A binding that leaves them out is judged with
+`claude-sonnet-5-5` through the `claude` CLI. Set them only to judge the rule with
+something else ([Choose a judge](judges.md)):
 
 ```yaml
-provider: gemini                  # claude-cli, codex-cli, bedrock or gemini
-model: gemini-3.1-pro-preview     # by its vendor's id, such as claude-haiku-5-5 or gpt-6-luna
+provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
+model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
 ```
 
 A judge rule's id is its skill's directory name.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
-whose changed lines fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
+whose [changed lines](how-a-review-works.md#what-a-review-reports) fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
 triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
@@ -82,9 +81,10 @@ typescript (`ts`, `tsx`, `mts`, `cts`).
 
 A path without an extension, like `src/**`, matches every language.
 
-codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, and fails
-on one named after a language it doesn't know or the binding's paths don't match; the
-[writing-rules skill](../skills/writing-rules/SKILL.md) says not to write one.
+codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, after
+`SKILL.md`, and fails on one named after a language it doesn't know or the binding's
+paths don't match; the [writing-rules skill](../skills/writing-rules/SKILL.md) says not to
+write one.
 
 - When the paths name more than one language, `codeguard eval` reports each language
   apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
@@ -181,8 +181,8 @@ held to the same bar.
 - the judge call fails, such as a quota error that outlasts the provider's retries. The
   other cases still run, so a passing eval means every case was judged.
 
-A case counts only the violations a review would report: those on a changed or removed
-line of the case's file.
+A case counts only the violations a review would report: those a changed line of the
+case's file is part of ([What a review reports](how-a-review-works.md#what-a-review-reports)).
 
 `codeguard eval` also fails a judge rule with no `invalid` case, and a rule eval whose
 id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
@@ -195,6 +195,6 @@ reason for each case it judged, then one line per failure.
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
 | The convention | the skill |
 | Paths and triggers | the binding |
-| Provider and model | `--provider` and `--model`, else [Which judge runs](configuration.md#which-judge-runs) |
+| Provider and model | the binding, or `--provider` and `--model` |
 | The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
 | The judge prompt and how each case is checked | codeguard |

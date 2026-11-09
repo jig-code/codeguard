@@ -5,15 +5,13 @@ written once, in the project, and applies wherever code is written or reviewed: 
 Claude Code or Codex works, and in CI.
 
 codeguard adds the checks a project's linters can't do. It doesn't replace or wrap
-them. A pattern rule matches code exactly, as a linter does; a judge rule states a
-convention in prose, and a model judges each change against it. When the agent stops,
-codeguard reviews its changes and blocks on an error until it's fixed, so the agent
-fixes it before a person reviews the PR.
+them. A pattern rule matches code by its syntax tree, as a linter does; a judge rule
+states a convention in prose, and a model judges each change against it. When the agent
+stops, codeguard reviews its changes and blocks on an error until it's fixed.
 
-Judge rules call a model: at the agent's Stop on the developer's own Claude or ChatGPT
-subscription, and in CI on Amazon Bedrock or Vertex AI with the project's cloud account
-([Choose a judge](docs/judges.md)). [Telemetry](docs/telemetry.md) records each judge
-call's tokens and cost.
+Judge rules call a model: at the agent's Stop on the developer's own subscription, and
+in CI with the project's Claude token or cloud account ([Choose a judge](docs/judges.md)).
+[Telemetry](docs/telemetry.md) records each judge call's tokens and cost.
 
 ## Setup
 
@@ -29,8 +27,7 @@ call's tokens and cost.
 For a project that uses codeguard:
 
 - [Add codeguard to a project](docs/add-codeguard.md): when you add codeguard to a
-  repository, once: the plugin settings, the CI job and its judge, rule packages and
-  formatters.
+  repository, once: the plugin settings, the CI job, rule packages and formatters.
 - [Use codeguard](docs/using-codeguard.md): for every engineer on the repository:
   installing and updating the plugin, merging past a judge error, and troubleshooting.
 - [Choose a judge](docs/judges.md): when you set up a provider: Codex, Gemini on Vertex
@@ -44,8 +41,10 @@ For a project that uses codeguard:
 
 For whoever writes rules or maintains a rule package:
 
-- [Write rules](docs/write-rules.md): when you write a project's own rules or a package:
-  testing them, package CI and releases, and trying a local package.
+- [Write rules](docs/write-rules.md): when you write or change a rule, with the plugin's
+  writing-rules skill, and test it.
+- [Make a rule package](docs/rule-packages.md): when you start or maintain a package: its
+  repo and manifest, CI and releases, and trying a local or private one.
 - [Rule formats](docs/rule-formats.md): when you look up the format of a binding, a gate,
   a trigger or a rule eval. The plugin's [writing-rules
   skill](skills/writing-rules/SKILL.md) says how to write a rule.
@@ -53,9 +52,8 @@ For whoever writes rules or maintains a rule package:
 For whoever works on codeguard:
 
 - [Contributing](docs/CONTRIBUTING.md): working on codeguard, and releases.
-- [Architecture](docs/architecture.md): an overview of how codeguard works and the
-  invariants every change keeps, with [the review pipeline](docs/review-pipeline.md) and
-  [the judge](docs/judge-design.md) in detail.
+- [Architecture](docs/architecture.md): why codeguard works as it does, and the
+  invariants every change keeps.
 - [Testing](docs/testing.md): which checks a change needs.
 
 ## Help and maintainers

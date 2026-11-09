@@ -1,7 +1,7 @@
 # Add codeguard to a project
 
-The one-time setup for a repository: the plugin settings, the CI job and its judge, the
-rule packages, and the formatters. Each engineer then installs the plugin
+The one-time setup for a repository: the plugin settings, the CI job, the rule packages,
+and the formatters. Each engineer then installs the plugin
 ([Use codeguard](using-codeguard.md)).
 
 ## Claude Code
@@ -58,41 +58,28 @@ jobs:
       (github.event.action != 'labeled' && github.event.action != 'unlabeled')
       || github.event.label.name == 'codeguard-allow-judge-errors'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      CODEGUARD_JUDGE__PROVIDER: bedrock
-      CODEGUARD_JUDGE__MODEL: ${{ vars.CODEGUARD_JUDGE_MODEL }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.CODEGUARD_AWS_ROLE }}
-          aws-region: us-east-1
       - uses: jig-code/codeguard@v0.11.0
+        with:
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. [GitHub Action inputs](configuration.md#github-action-inputs)
-lists what else it takes.
+then runs the rule tests. [`action.yml`](../action.yml) lists what else it takes.
+
+A judge rule bound to the `claude` CLI, the default, needs the token: create it with
+`claude setup-token` and store it as a repository secret. A rule bound to Gemini or
+Bedrock needs that provider's credentials in the job instead
+([Choose a judge](judges.md)).
 
 The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
 the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call
 that couldn't complete ([Merge a PR despite a judge
 error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). The `if` keeps other
 labels from re-running the review and its judge calls.
-
-### Choose the CI judge
-
-CI has no subscription, so the job's `CODEGUARD_JUDGE__PROVIDER` and
-`CODEGUARD_JUDGE__MODEL` name its judge: Claude on Amazon Bedrock with the job's AWS
-credentials, as in the example, or Gemini on Vertex AI with `google-github-actions/auth`.
-[Choose a judge](judges.md) says how to set up each provider and grant the job access,
-and [Which judge runs](configuration.md#which-judge-runs) how those variables and the
-project's config combine.
 
 ## Opt into a rule package
 
@@ -106,7 +93,7 @@ rule in each:
 # .codeguard/config.yaml
 packages:
   - kind: git
-    git: https://github.com/betterwithranch/codeguard-rules.git
+    git: https://github.com/jig-code/codeguard-rules.git
     ref: <tag>
     rulesets: [general, python]
 ```
@@ -126,7 +113,7 @@ To choose a ruleset's rules or change how they run, give it settings instead
 
 A git package's `ref` is a tag or commit. codeguard fetches each `ref` once into
 `~/.cache/codeguard/packages` and reuses it, so a `ref` must not be a branch. A private
-package needs a token in CI ([A private package](write-rules.md#a-private-package)).
+package needs a token in CI ([A private package](rule-packages.md#a-private-package)).
 
 ## Pin codeguard and rule packages
 
@@ -141,7 +128,7 @@ upgrade changes in reviews and rule tests shows up there and nowhere else:
 - Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
 
 To try a package release first, change `ref` locally, or point a `kind: path` package at
-a checkout of it ([Try a local package](write-rules.md#try-a-local-package)).
+a checkout of it ([Try a local package](rule-packages.md#try-a-local-package)).
 
 ## Run formatters first
 

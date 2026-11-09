@@ -6,10 +6,11 @@ page is what each engineer does.
 
 ## Install the plugin
 
-The plugin is codeguard: it ships the CLI and runs it with
-[uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is all anyone
-working in the project installs. The first review after an install or upgrade takes a
-little longer while uv builds codeguard's environment in the plugin's data directory.
+The plugin ships the codeguard CLI, its review hooks and the writing-rules skill, and
+runs the CLI with [uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is
+all anyone working in the project installs. Carrying the CLI keeps the hook and the CLI it
+runs on the same version. The first review after an install or upgrade takes a little
+longer while uv builds codeguard's environment.
 
 ### Claude Code
 
@@ -34,10 +35,9 @@ agent and what reaches you.
 A judge call that couldn't complete fails the review, and no setting turns that off
 ([why](configuration.md#no-setting-on-purpose)). To merge the PR anyway, add the
 `codeguard-allow-judge-errors` label to it, so each bypass is chosen for one PR and
-shows in its history. The action then passes
-`--judge-errors-as-warnings` to the review, so those calls print as warnings, and rule
-violations still fail. The label doesn't cover the `eval` input's `codeguard eval`,
-which still fails on them.
+shows in its history. The action then passes `--judge-errors-as-warnings` to the review,
+so those calls print as warnings, and rule violations still fail. The label doesn't
+cover the `eval` input's `codeguard eval`, which still fails on them.
 
 Adding the label starts a new review, and removing it starts a strict one
 ([the CI job](add-codeguard.md#ci)).
@@ -49,9 +49,9 @@ release the project pins ([Pin codeguard and rule
 packages](add-codeguard.md#pin-codeguard-and-rule-packages)).
 
 Turn on auto-update for the codeguard marketplace in your dev environment, so you meet a
-release's changes before CI does ([Discover plugins](https://code.claude.com/docs/en/discover-plugins)). If a
-release breaks a branch you're working on, turn auto-update off until the fix ships. To
-update by hand:
+release's changes before CI does ([Discover
+plugins](https://code.claude.com/docs/en/discover-plugins)). If a release breaks a branch
+you're working on, turn auto-update off until the fix ships. To update by hand:
 
 ```sh
 claude plugin marketplace update codeguard
@@ -60,9 +60,8 @@ claude plugin update codeguard@codeguard --scope project
 
 ## The CLI on its own
 
-The plugin runs codeguard for the agent. To run codeguard from a terminal, or to write
-rules in Codex, install the CLI with uv.
-It doesn't need the plugin, and the plugin doesn't need it.
+The plugin runs codeguard for the agent. To run codeguard from a terminal, install the
+CLI with uv. It doesn't need the plugin, and the plugin doesn't need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0

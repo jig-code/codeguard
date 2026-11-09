@@ -1,27 +1,8 @@
-# Writing a judge rule that judges reliably
+# Writing a judge rule
 
-A judge rule is ready when every eval case comes out the same way on every run. A
-result is unreliable when it flips between runs, is judged with low confidence, or
-comes back as a warning. That is a defect in the rule's wording or in the case. The
-judge gives a reason with every verdict, pass or fail, and `codeguard eval` prints it
-for every case: read it first. A reason that rests the verdict on the wrong code, or on
-something the convention doesn't say, or that is vague, means the rule's wording is
-unclear; reword the convention so it decides the case on the ground you meant.
-
-- Don't re-run until it passes.
-- Open the binding and check its `triggers` before anything else. `any`, `code`,
-  `function-body` or `function-signature` sends the judge code the convention can't
-  decide, and the judge wavers on it. Narrowing the triggers to the node that holds the
-  violation (Gate every form, below) is part of every fix to an unreliable rule. Never
-  loosen a gate to get past a failure.
-- Don't add the failing case's code to the skill as an example, and don't add a
-  carve-out for it. The judge would then pass the case by matching it, and the next
-  piece of code fails the same way. Restate the convention so its statement decides the
-  case.
-- Don't change the rule's wording to get a weak case to pass. Fix the case, or drop it.
-
-A fix touches whichever of the three files is at fault, and often more than one: the
-skill's wording, the binding's triggers, and the case's code or name.
+Don't add a case's code to the skill as an example, and don't add a carve-out for it:
+the judge would then pass the case by matching it, and the next piece of code fails the
+same way. Restate the convention so its statement decides the case.
 
 ## Write the skill
 
@@ -93,14 +74,7 @@ either way proves nothing about the rule, and a judge that flips on it is right 
 - A case tests one thing. Every line of it but the one under test is plainly correct
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before
-  keeping the case. Deliberate invalid code is appropriate when necessary to test the
-  stated behavior, including a pre-existing violation that the change does not
-  participate in and must leave unreported under the review scope architecture.
-  Keep that violation small and unambiguous; fundamental defects such as import cycles
-  must not obscure the behavior under test. A pre-existing violation is not automatically
-  out of scope: the change may participate in the violating construct or behavior.
-  This guidance applies both to rule evals in packages and apps and to CodeGuard's
-  judge fixtures run through pytest.
+  keeping the case.
 - Pair the cases: for what the convention allows, a `valid` case, and beside it an
   `invalid` case of the same shape that breaks the rule.
 - A rule in several languages has cases in each, each case's `file` in its language.
@@ -108,5 +82,4 @@ either way proves nothing about the rule, and a judge that flips on it is right 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss, then reword the convention until the case passes, reading the judge's reason on
-each run; never add the code to the skill. The bar stays 20 runs of 20.
+miss; never add the code to the skill.
