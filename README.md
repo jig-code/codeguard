@@ -121,9 +121,9 @@ leaves it to the formatter.
 ### Rules
 
 A project's own rules live under `.codeguard/`. To write or change one, use the
-plugin's `writing-rules` skill: it says which kind of rule fits a convention, how to
-state the rule, and how to test it. This README documents the files and commands the
-skill works with.
+plugin's `writing-rules` skill: it says which kind of rule fits a convention and how to
+state the rule. This README documents the files the skill writes and the commands that
+test a rule.
 
 A rule is one of two kinds:
 
@@ -536,16 +536,13 @@ In Claude Code, install the plugin. Project settings enable it but don't install
 claude plugin install codeguard@codeguard --scope project
 ```
 
-In Claude Code, the plugin also puts `codeguard` on the PATH of the commands Claude
-runs, for skills such as writing a rule.
-
 In Codex, trust codeguard's hooks in `/hooks`. Codex doesn't give plugins a command, so
-writing rules there needs the CLI on its own.
+running codeguard yourself there needs the CLI on its own.
 
 ### The CLI on its own
 
-To run codeguard from a terminal, or to write rules in Codex, install the CLI with uv.
-It doesn't need the plugin, and the plugin doesn't need it.
+To run codeguard from a terminal, install the CLI with uv. It doesn't need the plugin,
+and the plugin doesn't need it.
 
 ```sh
 uv tool install git+https://github.com/jig-code/codeguard@v0
@@ -938,7 +935,8 @@ change.
 
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the skills and
 bindings beside them. When a case flips between runs or comes back uncertain, follow the
-`writing-rules` skill, and look at the judge prompt as well. The plain suite checks each
+Rule failures bullet in [docs/architecture.md](docs/architecture.md#testing-a-rule) and
+[docs/testing.md](docs/testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
 The `writing-rules` skill has its own evals in `evals/writing-rules/`;
