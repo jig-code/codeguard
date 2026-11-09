@@ -13,7 +13,8 @@ agent loads before it edits. It holds, in this order, and nothing else:
    words a reviewer would use, never a question. Where the sentence uses a term a reader
    could take two ways, one sentence that fixes its meaning, and no other: a sentence,
    or a clause joined to the convention's sentence, that restates the convention or says
-   what it doesn't cover is a second statement.
+   what it doesn't cover is a second statement: the judge checks it as well, and it can
+   drift from the first.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It never widens the
    convention: the statement alone decides each case.
 

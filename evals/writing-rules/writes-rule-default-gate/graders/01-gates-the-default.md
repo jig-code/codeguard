@@ -1,6 +1,6 @@
 ---
 type: llm
-focus: { source: file, path: .codeguard/gates/import-time-defaults-gate.yml }
+focus: { source: file, path: .codeguard/gates/safe-defaults-gate.yml }
 weight: 1
 ---
 

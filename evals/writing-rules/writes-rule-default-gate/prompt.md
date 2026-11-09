@@ -5,6 +5,6 @@ timeout_seconds: 900
 allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
 ---
 
-Write a codeguard judge rule for this project: a parameter's default is a value that can be computed once when the module loads, not something each call should compute afresh, which record in src/shop/audit.py gets wrong with stamp. Call the rule import-time-defaults and its gate import-time-defaults-gate. Give it a gate and an eval.
+Write a codeguard judge rule for this project: a parameter's default is the choice that can't destroy data when a caller leaves it out, which export_orders in src/shop/archive.py gets wrong with overwrite. Call the rule safe-defaults and its gate safe-defaults-gate. Give it a gate and an eval.
 
-Input files: pyproject.toml, src/shop/__init__.py, src/shop/audit.py, .codeguard/config.yaml
+Input files: pyproject.toml, src/shop/__init__.py, src/shop/archive.py, .codeguard/config.yaml
