@@ -90,13 +90,8 @@ rules codeguard reviews itself with are tested in their package's CI.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | A pattern rule, a gate or their tests | Each rule and gate matches its `invalid` snippets and none of its `valid` ones | `codeguard rules test` | Same |
-<<<<<<< HEAD
 | A judge rule's skill directory, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
-| The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
-=======
-| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
 | The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval`, then `codeguard rules eval --repeat 2` | Same |
->>>>>>> origin/main
 
 Run both commands at the package root; they cover every ruleset.
 
