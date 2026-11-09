@@ -69,7 +69,7 @@ changes nothing a review judges with.
    else the project's default, else the package's, else the CLI's own default ([Which
    judge runs](configuration.md#which-judge-runs)), the way `codeguard review` would.
 3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
-   shows up as a failing run, named like `adds a second class [2/20]`.
+   shows up as a failing run, named like `a second class added to the file [2/20]`.
 
 [CLI](cli.md) lists `codeguard eval`'s options for judging part of a package, or with
 another model. [What makes a case fail](rule-formats.md#what-makes-a-case-fail) lists

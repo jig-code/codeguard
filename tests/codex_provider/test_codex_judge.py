@@ -158,7 +158,7 @@ class TestCodexJudge:
         assert attempts.read_text() == "called\n"
 
     @pytest.mark.parametrize("answer", [None, "not json", '{"reason":"Incomplete"}'])
-    def test_invalid_or_missing_verdict(
+    def test_invalid_or_missing_verdict_is_no_verdict(
         self, tmp_path, processes, record, make_judge_request, answer
     ):
         configure_fake_cli_response({"record": str(record), "answer": answer})
@@ -200,7 +200,7 @@ class TestCodexJudge:
         with pytest.raises(JudgeTimeout, match="time limit"):
             judge.judge(make_judge_request())
 
-    def test_missing_executable(self, tmp_path, processes, make_judge_request):
+    def test_missing_executable_is_a_process_error(self, tmp_path, processes, make_judge_request):
         judge = CodexJudge(tmp_path, MODEL, processes, str(tmp_path / "missing-codex"))
 
         with pytest.raises(JudgeProcessError, match="Could not start"):

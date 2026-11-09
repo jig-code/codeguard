@@ -761,7 +761,8 @@ class TestEvalCommand:
         write_package(package)
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
+            "cases:\n  - name: an assignment in the invoice\n"
+            "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
@@ -781,8 +782,8 @@ class TestEvalCommand:
             in result.stdout
         )
         assert result.stdout.endswith(
-            "responsibility-placement assigns in the invoice: expected outcome invalid, got "
-            "outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
+            "responsibility-placement an assignment in the invoice: expected outcome "
+            "invalid, got outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
         )
         assert result.returncode == 1
 
@@ -791,7 +792,8 @@ class TestEvalCommand:
         write_package(package)
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            "cases:\n  - name: assigns in the invoice\n    inputs:\n      file: invoice.py\n"
+            "cases:\n  - name: an assignment in the invoice\n"
+            "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
         bin_dir = FAKE_CLAUDE.parent
@@ -1300,14 +1302,15 @@ class TestTestCommand:
         )
         repo.write(
             ".codeguard/rule-evals/placement.yaml",
-            "cases:\n  - name: assigns a count\n    inputs:\n      after: |\n        count = 1\n"
+            "cases:\n  - name: an assigned count\n"
+            "    inputs:\n      after: |\n        count = 1\n"
             "    expected_output:\n      outcome: invalid\n",
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
-            ".codeguard/rule-evals/placement.yaml assigns a count: placement "
+            ".codeguard/rule-evals/placement.yaml an assigned count: placement "
             "triggers comment miss the change, which touches code, module-statement, "
             "number-literal\n"
         )

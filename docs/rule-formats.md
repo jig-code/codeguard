@@ -98,7 +98,7 @@ on one named after a language it doesn't know or the binding's paths don't match
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: what the edit does, unique in the file.
+- `name`: the situation it tests, unique per file.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
@@ -119,7 +119,7 @@ the review it should get:
 
 ```yaml
 cases:
-  - name: adds a second class
+  - name: a second class added to the file
     inputs:
       before: |
         class Order:
@@ -133,14 +133,14 @@ cases:
             pass
     expected_output:
       outcome: invalid
-  - name: defines one class
+  - name: a file that defines one class
     inputs:
       after: |
         class Order:
             pass
     expected_output:
       outcome: valid
-  - name: changes an attribute
+  - name: a change to an attribute
     inputs:
       before: |
         class Order:

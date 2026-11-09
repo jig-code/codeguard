@@ -1,36 +1,22 @@
 import asyncio
 
 import pytest
+from google.auth.exceptions import DefaultCredentialsError
+from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
 from codeguard.gemini_provider import VertexGemini
 from codeguard.review import JudgeProcessError
 
-GOOGLE_CREDENTIALS = (
-    "GOOGLE_API_KEY",
-    "GEMINI_API_KEY",
-    "GOOGLE_APPLICATION_CREDENTIALS",
-    "GOOGLE_CLOUD_PROJECT",
-    "GOOGLE_CLOUD_LOCATION",
-    "CLOUDSDK_CONFIG",
-)
 
-
-@pytest.fixture
-def no_google_credentials(monkeypatch, tmp_path):
-    for name in GOOGLE_CREDENTIALS:
-        monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("NO_GCE_CHECK", "True")
-
-
-async def connect(models: VertexGemini) -> None:
-    async with models("gemini-3.1-pro-preview"):
-        pass
-
-
-@pytest.mark.usefixtures("no_google_credentials")
 def test_missing_google_credentials_are_a_judge_error():
-    with pytest.raises(JudgeProcessError) as error:
-        asyncio.run(connect(VertexGemini()))
+    def no_credentials(**_: str) -> GoogleCloudProvider:
+        raise DefaultCredentialsError("no credentials found")
 
-    assert str(error.value).startswith("Gemini on Vertex AI found no Google credentials: ")
+    models = VertexGemini(project="my-project", location="global", cloud=no_credentials)
+
+    with pytest.raises(JudgeProcessError) as error:
+        asyncio.run(models("gemini-3.1-pro-preview").__aenter__())
+
+    assert str(error.value) == (
+        "Gemini on Vertex AI found no Google credentials: no credentials found"
+    )

@@ -58,7 +58,7 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "patches a" --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 20
 codeguard eval --provider gemini --repeat 20
 ```
 
