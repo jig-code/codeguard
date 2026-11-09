@@ -34,7 +34,7 @@ from the project, then the rule's package, and then the default
 
 ```yaml
 provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
-model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; every provider but claude-cli needs one
+model: gemini-3.1-pro-preview     # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
 A judge rule's id is its skill's directory name.

@@ -104,8 +104,8 @@ class JudgeEvalRunner:
         task = EditReviewTask(binding, self.judges, self.confidence_threshold, scanner)
         return await dataset.evaluate(
             task,
-            name=f"{dataset.name} on {model.name}",
-            task_name=model.name,
+            name=f"{dataset.name} on {model.label}",
+            task_name=model.label,
             metadata={
                 "provider": model.provider,
                 "model": model.name,

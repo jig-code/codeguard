@@ -28,7 +28,7 @@ class JudgeProvider(StrEnum):
     CODEX_CLI = "codex-cli"
 
     @property
-    def default_model(self) -> str:
+    def default_model(self) -> str | None:
         return _DEFAULT_MODELS[self]
 
     @property
@@ -42,7 +42,8 @@ class JudgeProvider(StrEnum):
 
 # The models codeguard was tested with on each provider.
 _DEFAULT_MODELS = {
-    JudgeProvider.CLAUDE_CLI: "claude-sonnet-5-5",
+    # None runs the claude CLI with no model named, so its own default judges.
+    JudgeProvider.CLAUDE_CLI: None,
     JudgeProvider.CODEX_CLI: "gpt-6-luna",
     JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
     JudgeProvider.BEDROCK: "us.anthropic.claude-haiku-5-5",
@@ -71,7 +72,19 @@ class JudgeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider
-    name: str
+    # None runs the claude CLI with no model named, so its own default judges.
+    name: str | None = None
+
+    @property
+    def label(self) -> str:
+        return self.name or f"{self.provider}'s default model"
+
+    @property
+    def required_name(self) -> str:
+        """The model a provider with no default of its own runs."""
+        if self.name is None:
+            raise _unset("model", f"provider {self.provider} needs a model")
+        return self.name
 
 
 class JudgeChoice(BaseModel):
@@ -91,7 +104,7 @@ class JudgeChoice(BaseModel):
     @property
     def judge_model(self) -> JudgeModel:
         """The judge this choice names: with no provider named, the claude CLI, and with no
-        model named, its default. Any other provider needs a model named, and a model of a
+        model named, the CLI's own default. Any other provider needs a model named, and a model of a
         family the provider can't run is an error."""
         family = ModelFamily.of(self.model) if self.model else None
         if self.provider is None and self.model and family is not ModelFamily.CLAUDE:
@@ -101,7 +114,7 @@ class JudgeChoice(BaseModel):
             raise ConfigError(f"provider {provider} can't run model {self.model}")
         if self.model is None and provider is not JudgeProvider.CLAUDE_CLI:
             raise _unset("model", f"provider {provider} needs a model")
-        return JudgeModel(provider=provider, name=self.model or provider.default_model)
+        return JudgeModel(provider=provider, name=self.model)
 
 
 class JudgeConfig(BaseModel):

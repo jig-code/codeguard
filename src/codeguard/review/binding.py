@@ -104,11 +104,14 @@ class Bindings(tuple[Binding, ...]):
         project: JudgeChoice = JudgeChoice(),
         override: JudgeChoice = JudgeChoice(),
     ) -> Self:
-        """Each selected rule's binding. Its provider and its model each come from the override,
-        else its binding, else the project's default, else its package's."""
+        """Each selected rule's binding. An override that names a provider is its whole judge;
+        otherwise its provider and its model each come from its binding, else the project's
+        default, else its package's."""
         return cls(
             Binding.from_config(
-                rule, binding, override.over(binding.judge).over(project).over(ruleset.judge)
+                rule,
+                binding,
+                override if override.provider else binding.judge.over(project).over(ruleset.judge),
             )
             for ruleset in rulesets
             for rule, binding in ruleset.selected_bindings().items()

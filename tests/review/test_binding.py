@@ -159,9 +159,7 @@ class TestBindingsJudge:
 
         (binding,) = Bindings.from_rulesets([ruleset(tmp_path, skill)])
 
-        assert binding.model == JudgeModel(
-            provider=JudgeProvider.CLAUDE_CLI, name="claude-sonnet-5-5"
-        )
+        assert binding.model == JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name=None)
 
     @pytest.mark.parametrize(
         "provider", [JudgeProvider.CODEX_CLI, JudgeProvider.GEMINI, JudgeProvider.BEDROCK]
@@ -228,15 +226,15 @@ class TestBindingsJudge:
 
         assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="project-model")
 
-    def test_override_wins_over_every_level(self, tmp_path, make_skill):
+    def test_override_naming_a_provider_replaces_every_level(self, tmp_path, make_skill):
         skill = write_skill(tmp_path, make_skill().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         bound = ruleset(tmp_path, skill, provider=JudgeProvider.GEMINI, model="bound-model")
-        override = JudgeChoice(provider=JudgeProvider.CODEX_CLI)
+        override = JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)
 
         (binding,) = Bindings.from_rulesets([bound], project, override)
 
-        assert binding.model == JudgeModel(provider=JudgeProvider.CODEX_CLI, name="bound-model")
+        assert binding.model == JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name=None)
 
     @pytest.mark.parametrize("model", ["gpt-6-luna", "gemini-3.1-pro-preview"])
     def test_model_other_than_claude_with_no_provider_named_is_an_error(

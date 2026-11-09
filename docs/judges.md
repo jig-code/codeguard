@@ -11,8 +11,9 @@ are each taken from the first of these that names it:
 3. the rule's package: `judge` in its `codeguard-package.yaml`
    ([Rule packages](rule-packages.md)).
 
-A rule none of them names is judged with `claude-sonnet-5-5` through the `claude` CLI. A
-model with no provider named is run with `claude-cli`, so it must be a Claude model. Every
+With no provider named, a rule is judged through the `claude` CLI. With no model named
+either, codeguard passes the CLI no model, so the CLI's own default judges. A model with
+no provider named is run with `claude-cli`, so it must be a Claude model. Every
 provider but `claude-cli` needs a model, and a provider can't run another vendor's model,
 such as `codex-cli` with a Claude model; codeguard reports each of these as a config
 error before it judges. This page says how to set each provider up.
