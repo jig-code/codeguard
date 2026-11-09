@@ -11,7 +11,7 @@ A project's own rules live in `.codeguard/`. A rule package is a git repo with a
 `codeguard-package.yaml` at its root:
 
 ```yaml
-name: jig-code
+name: codeguard
 rulesets: [python]
 ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
