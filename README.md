@@ -130,14 +130,21 @@ A rule is one of two kinds:
 - A **pattern rule** is an ast-grep rule. It matches code by its syntax tree.
 - A **judge rule** is a skill that Claude judges each change to a file against.
 
-A project can also opt into rulesets from rule packages:
+A project can also opt into rulesets from rule packages. List the rulesets to run every
+rule in each:
 
 ```yaml
 # .codeguard/config.yaml
 packages:
   - kind: git
     git: https://github.com/betterwithranch/codeguard-rules.git
-    ref: v0.6.0
+    ref: <tag>
+    rulesets: [general, python]
+```
+
+To choose a ruleset's rules or change how they run, give it settings instead:
+
+```yaml
     rulesets:
       python:
         exclude: [no-del-param]
@@ -147,7 +154,8 @@ packages:
             severity: warning
 ```
 
-- Only the listed rulesets run.
+- Only the listed rulesets run. A ruleset given by name alone runs every rule, at its own
+  severity.
 - `include` lists the only rules that run, pattern and judged; rules the package adds
   later stay off. `exclude` turns rules off. Set one or the other.
 - `rules.<id>` overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`.
@@ -821,6 +829,7 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `review_time_limit_minutes` | `5` | The review stops judging after this long. Each rule and file it didn't judge is reported as not checked, at the rule's severity. The GitHub Action stops the review 2 minutes after it. | A stuck `claude` call once hung a CI review for 30 minutes with no output. A limit turns a hang into a visible failure. |
 | `ast-grep` | the version codeguard installs | The ast-grep version every pattern rule and gate runs with, through `uv tool run`. | One version for every rule, so a rule matches the same code on every machine. codeguard fails when it is outside a package's `ast-grep` range. |
 | `packages` | none | The rule packages and rulesets the project uses; see [Rules](#rules). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
+| `packages[].rulesets` | none; required | The rulesets the project runs from the package: a list of names, each running every rule, or a mapping from each name to its settings; see [Rules](#rules). | A project opts into each ruleset by name. |
 | `packages[].rulesets.<name>.include` | every rule in the ruleset | The only rules that run. Rules the package adds later stay off. Set it or `exclude`, not both. | |
 | `packages[].rulesets.<name>.exclude` | none | Rules that don't run. | |
 | `packages[].rulesets.<name>.severity` | each rule's own | The severity of every rule in the ruleset, including rules the package adds later. A rule's own override wins. | `warning` trials a ruleset: its findings print without blocking. |
