@@ -9,12 +9,14 @@ _HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # ASCII whitespace, the same set git treats as blank.
 _BLANK = " \t\r\f\v"
 # Every option the user's git config could change is pinned, so the judge gets the same diff
-# on every machine (invariant #5).
+# on every machine (invariant #5). The attributes file gives each language git has a built-in
+# diff driver for that driver, so function context is the changed function, not the class
+# around it; a repository's own attributes still take precedence.
 _DIFF = (
     "-c",
     "core.quotePath=false",
     "-c",
-    "core.attributesFile=/dev/null",
+    f"core.attributesFile={Path(__file__).parent / 'diff_drivers.gitattributes'}",
     "-c",
     "diff.interHunkContext=0",
     "-c",

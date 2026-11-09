@@ -256,7 +256,7 @@ class TestWorkingTree:
             " import os\n"
             " import sys\n"
             " \n"
-            "@@ -5,9 +6,9 @@ import sys\n"
+            "@@ -5,9 +6,9 @@\n"
             " def f():\n"
             "     a = 1\n"
             "     b = 2\n"
@@ -267,6 +267,45 @@ class TestWorkingTree:
             " \n"
             " \n"
             " def g():\n"
+        )
+
+    def test_diff_of_a_method_edit_holds_the_method_not_its_class(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        source = (
+            "class Order:\n"
+            "    def total(self):\n"
+            "        return 1\n"
+            "\n"
+            "    def tax(self):\n"
+            "        rate = 2\n"
+            "        base = 3\n"
+            "        extra = 4\n"
+            "        return rate * base + extra\n"
+            "\n"
+            "    def fee(self):\n"
+            "        return 5\n"
+        )
+        git_repo.write("a.py", source)
+        git_repo.commit("Add a")
+        git_repo.write("a.py", source.replace("rate * base + extra", "rate * base"))
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "index 4cab5d4..4f585fb 100644\n"
+            "--- a/a.py\n"
+            "+++ b/a.py\n"
+            "@@ -5,8 +5,8 @@ def total(self):\n"
+            "     def tax(self):\n"
+            "         rate = 2\n"
+            "         base = 3\n"
+            "         extra = 4\n"
+            "-        return rate * base + extra\n"
+            "+        return rate * base\n"
+            " \n"
+            "     def fee(self):\n"
+            "         return 5\n"
         )
 
     def test_diff_ignores_the_git_config(self, tmp_path):
@@ -310,11 +349,7 @@ class TestWorkingTree:
             "index bf7f0c9..4754884 100644\n"
             "--- a/a.py\n"
             "+++ b/b.py\n"
-            "@@ -7,4 +7,4 @@ x5 = 5\n"
-            " x6 = 6\n"
-            " x7 = 7\n"
-            " x8 = 8\n"
-            "-x9 = 9\n"
+            "@@ -1,10 +1,10 @@\n" + "".join(f" x{i} = {i}\n" for i in range(9)) + "-x9 = 9\n"
             "+x9 = 10\n"
         )
 
