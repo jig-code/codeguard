@@ -1,47 +1,72 @@
-# Redundant Test Anti-Patterns
+# Signal (gate 1)
 
-The governing question for every test: **what change to my own code would make this fail?** A test earns its place only when a plausible bug in *your* logic turns it red. If the only way to break it is to edit the declaration it mirrors, or to break framework/generic code that is already tested elsewhere, it has no independent signal — delete it.
+- The deciding question
+- Defect 1: tautology
+- Defect 2: framework behavior
+- Defect 3: already verified elsewhere
+- Integration tests earn their level
 
-The patterns below are recurring instances of three underlying defects. Match on the defect, not the surface shape: a novel form of the same defect still fails the gate. When in doubt, apply the defect's diagnostic question.
+Ask of every test: what change to my own code would make this fail? Match a test on the
+defect below, not its surface shape. A test without signal is deleted, or not written.
 
-**Tautology vs. real constraint — the deciding question.** When a test asserts against a declared value (a default, a numeric bound, a config field), ask: *if this assertion went red, would I fix the code or fix the test?* If the declared value answers to an authority **outside** the declaration — a confidence is a 0–100 percentage, a count can't be negative, an age can't exceed 150 — then a red test means the code drifted from a real-world invariant, so you'd fix the code. **That test has signal; keep it.** If the value is arbitrary, answerable only to itself — a label string, a question key, a priority that could be any number — then a red test just means someone edited the declaration, and you'd mechanically update the test to match. **That's a tautology; delete it.** A `Field(le=100)` bound-rejection test is the keep case; a `label == "Frequency"` echo is the delete case. The distinction is not the assertion mechanics — it is whether the expected value is governed by something the code must obey.
+## The deciding question
 
-## Defect 1 — The test transcribes the thing it claims to test (tautology)
+For an assertion against a declared value (a default, a bound, a config field): if it went
+red, would you fix the code or the test? When the value answers to something outside the
+declaration (a confidence is between 0 and 1, a line number is positive), you'd fix the
+code: keep the test. When it answers only to itself (a label, a message string, a default
+someone chose), you'd update the test: it's a tautology.
 
-The expected value is a restatement of the system-under-test's own source: its field declarations, its config annotations, the literal it was constructed from. Such a test cannot catch a bug, because the only edit that turns it red is changing the declaration — which forces changing the test in lockstep. The two move together forever and verify nothing in between.
+## Defect 1: tautology
 
-**Diagnostic:** *Could I regenerate the entire expected value by mechanically reading the source?* If yes, it's a tautology.
+The expected value restates the SUT's own source, so only an edit to the declaration turns
+it red. Check: could you regenerate the expected value by reading the source?
 
-Instances:
-- **Config-mirroring** — extracting a model's declarative config and asserting it equals a hand-written copy of those same annotations (e.g. `{member.name: float(member) for member in Confidence} == {"CERTAIN": 1.0, "HIGHLY_PROBABLE": 0.9, ...}`, or asserting a binding carries the severity its config declares). The expected dict just re-types the declaration.
-- **Smoke tests for declarative config / domain-variant replay** — plugging a concrete model into already-tested generic infrastructure (a registry, a definition builder) to read back the config it was handed. The generic machinery is tested once with a synthetic model; repeating it per real domain type proves nothing new.
-- **`isinstance`/protocol conformance checks** — restate the type declaration; already proven by any test that exercises the object.
+- Asserting a model's declared config equals a hand-typed copy of it (the severity a
+  binding's config declares, an enum's member values).
+- Plugging a concrete type into tested generic machinery to read back the config it was
+  given.
+- `isinstance` or protocol-conformance checks, which any test that uses the object
+  already proves.
 
-Keep such a test only when it reaches domain-specific logic — a custom validator, an override, a computed default — that the generic/declarative path does not already cover.
+Keep such a test when it reaches logic of yours that the generic path doesn't cover: a
+custom validator, an override, a computed default.
 
-## Defect 2 — The test exercises the framework, not your logic
+## Defect 2: framework behavior
 
-The behavior under test is guaranteed by the framework (Pydantic, the stdlib, a library), not written by you. No change to your code could break it without the framework itself breaking.
+Pydantic, the stdlib or a library guarantees the behavior; no decision of yours is under
+test. Check: whose code fails if this goes red?
 
-**Diagnostic:** *Whose code fails if this assertion goes red — mine, or the framework's?* If it's the framework's, delete it.
+A declared constraint is your decision even though Pydantic enforces it: a test that
+`Diagnostic(confidence=1.5, ...)` is rejected under `Field(le=1)` has signal. These don't:
 
-**Separate the decision from the mechanism.** A declared constraint like `Field(le=100)` is **your** decision; Pydantic is only the mechanism that enforces it. A test that the bound rejects out-of-range input (`Config(confidence_threshold=1.5)` raises against its `le=1`) verifies *your* decision and has signal — apply the deciding question above; do **not** dismiss it as framework behavior just because Pydantic does the raising. Framework behavior is when *no decision of yours* is under test: that a field accepts its own declared type, that assignment round-trips, that a default takes its declared value.
+- A default equals the literal it was declared with (a computed default has signal).
+- A field with no validator accepts any value of its type.
+- `model_validate(model.model_dump()) == model` for a model with no custom serializer.
+- Each member of an enum or `Literal` is accepted.
 
-Instances:
-- **Default-value echoes** — asserting a field defaults to `None`, or that a configured default equals the literal it was declared with. The default value is a tunable knob, not an invariant: if it changed you'd update the test, not the code. (A *computed* default produced by your own logic is different — that has signal.)
-- **Absence-of-validation tests** — asserting a field with no custom validator accepts arbitrary values of its declared type (e.g. that a plain `str` field accepts any string, or that two records with the same flag are both allowed). Asserting the *absence* of a constraint proves nothing a regression could break.
-- **Round-trip serialization** of a model with no custom serializers — `model_validate(model_dump()) == original` is Pydantic's contract, not yours.
-- **Exhaustive enum/Literal iteration** confirming each member is accepted — framework validation, not business logic.
+## Defect 3: already verified elsewhere
 
-Test a default, validator, serializer, or constraint only when it encodes a decision your code must obey, and then assert the behavior of that decision — not the framework plumbing around it.
+Check: if this test were deleted, would any behavior go unverified?
 
-## Defect 3 — The behavior is already verified elsewhere
+- A subclass that adds no logic, already covered by the base class's tests.
+- LLM call plumbing: scripting the model and asserting its output passes through
+  unchanged. Unit-test an LLM caller for its own branching (prompt construction, result
+  mapping, routing); the LLM tests cover the judge itself.
+- A domain-variant replay, below.
 
-The assertion is real signal, but an existing test already covers it. The duplicate adds maintenance cost and no protection.
+## Integration tests earn their level
 
-**Diagnostic:** *If I deleted this test, would any behavior go unverified by the remaining suite?* If no, delete it.
+An integration test is justified by a wiring bug between components that no unit test on
+either side can catch: a key both sides must agree on, a ref one side must register, an
+order the pipeline must keep. Name that bug, or the test is redundant.
 
-Instances:
-- **Pass-through subclass tests** — a subclass that adds no custom logic is already covered by the base class tests.
-- **LLM call plumbing tests** — mocking the model and asserting the mocked output passes through unchanged verifies wiring, not behavior. If a function's only logic is `call agent -> return result`, eval tests already prove the agent works. Only unit-test LLM callers with real branching logic (prompt construction, result mapping, conditional routing).
-- **Domain-variant integration replay** — an integration test that runs a *real* domain type through a *generic* mechanism (evaluator, mapper, registry walk) and asserts an end-to-end result, when the seam is already covered on both sides: the generic mechanism is tested once with a synthetic domain in its own suite, and the domain-specific half (validation, projection, field config) is tested in the domain's own unit suite. Running the real type through the generic path proves only that generic code runs the same way for one more type — which the generic suite already guarantees. **Diagnostic for this instance:** *name the wiring bug between the two components that this test alone catches.* A real such bug — a key two sides must agree on, a ref the domain must register for the mapper to resolve, a pipeline ordering — is genuine integration signal; keep a *generic* test for it. "It exercises the real type end-to-end" is not a bug, it's a replay. A frequent companion tell: the test needs `replace`/`model_copy` result-normalization to strip framework noise (e.g. an enum-validation `ctx`) that a narrower unit test on the same field would never surface. The remedy is to delete the per-domain integration test and, if the seam lacks generic coverage, add one synthetic-domain case to the mechanism's suite. See "Integration tests must earn their level" in SKILL.md.
+The usual redundant form runs a real type through a generic mechanism (a registry walk, a
+mapper) whose generic half is tested with a synthetic type and whose type-specific half is
+tested in its own suite. It only shows the generic code runs for one more type. Needing
+result normalization (gate 12) to strip framework noise is a second tell.
+
+To review one, trace each step to the unit test covering it. When every step is covered,
+delete the test; if the seam itself has no generic test, add one synthetic case to the
+mechanism's suite, and assert a lone config invariant (the type registered the field the
+mapper needs) directly.

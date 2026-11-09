@@ -1,113 +1,104 @@
-# Reuse and Helper Existence
+# Reuse and helper existence (gates 5, 14, 16)
 
-These rules govern test *infrastructure*: reuse what already exists, and let no helper carry weight it doesn't earn. Both fight the same rot — a sprawl of near-identical local `_make_*` helpers that drift apart, hide the shapes under test, and accept misspelled arguments silently.
+- Reuse shared test infrastructure
+- Seed children through their parent
+- Import types from their defining module
+- Factory convergence and `# factory-exempt`
+- Helpers earn their parameters and existence
 
 ## Reuse shared test infrastructure
 
-Before writing a local helper function, factory, fake class, or input builder, search conftest.py and test utility modules for existing equivalents. This applies to:
+Before writing a helper, factory, fake or input builder, search `tests/conftest.py`,
+`tests/factories/` and the test utility modules (`tests/recording_judge.py`,
+`tests/git_repo.py`, `tests/fakes/`) for one that builds the same type. Grep for the
+return type (`JudgeRequest`, `Diagnostic`). When a factory exists, use it and pass the
+variant through its fields or traits (`make_diagnostic(judged=True)`), rather than a local
+`_make_judged_diagnostic` that re-types `Diagnostic(...)` with its own defaults. When
+several test files define the same helper, move it into a shared factory.
 
-- **Helper functions** (`_make_request()`, `_make_binding()`) — if conftest already provides a factory for the same type (e.g., `make_judge_request`, `make_binding`), use it rather than duplicating the construction logic locally. A local wrapper that *configures* the shared helper is fine; reimplementing the same `Skill(...)` / `JudgeRequest(skill=...)` pattern is not.
-- **Fake classes** — if the test needs a judge that records what it received, check `recording_judge.py` or conftest before defining an inline `_SpyJudge`. Shared fakes exist to be reused.
-- **Object builders** — before hand-rolling a `Diagnostic(...)`, `Violation(...)`, or any other dataclass/Pydantic constructor inside a local `_make_*` helper, grep conftest for an existing `make_<type>` builder of that exact type. The tell is a local helper whose body is a bare constructor call with literal defaults for a type conftest already builds — e.g. a local `_make_judged_diagnostic` hand-rolling `Diagnostic(...)` when `make_diagnostic` exists and already supports the variant (`judged`, `judge_error`). Reuse the shared builder and pass the variant fields through its overrides; do not re-implement the constructor call with a parallel set of defaults.
-- **Non-standard idioms** — avoid introducing patterns not established in the codebase (sentinel objects, custom descriptor protocols) when standard Python or existing helpers achieve the same goal. If `None` vs an empty collection is a meaningful distinction, use an `if param is None:` guard with `None` as the default — don't introduce `_SENTINEL = object()` unless the codebase already uses that pattern.
+Use the idioms the suite already uses. When `None` and an empty collection mean different
+things, default to `None` and guard with `if param is None:` rather than a sentinel
+object.
 
-**How to check**: grep conftest.py for the return type you're constructing (e.g., `JudgeRequest`, `Diagnostic`). If a factory exists, use it. If multiple test files each define an identical local helper, that's a consolidation signal — extract to conftest.
+## Seed children through their parent
 
-### Parent-owned children must be seeded through the parent
+When a production creator (a builder, a `from_*`/`of_*` constructor, a service method)
+makes a parent and its children, test setup drives that creator and keeps its result.
+A conftest loop that re-implements the creator
+is `test-quality` gate 10 shadowing.
 
-When production owns a parent aggregate/lifecycle operation that creates child records or child value objects, test setup should drive that parent creator and keep the parent-facing result available to the test. A child-only helper is the wrong abstraction when callers then need the parent id, correlation id, or completion result and have to reverse-navigate through child links.
+A child type's own tests may build children directly, since the child is the SUT.
+Elsewhere, don't hand a child a reference to a parent that was never created (a fresh
+uuid, a path to a file never written): create the parent first. A missing check that the
+reference resolves is a modeling gap to fix, not to rely on. When a test needs the
+parent's id or result, take it from the parent creator's result, not by navigating back
+through child links. When the production operation has no
+result that carries what callers need, add it to production rather than a test-only
+bundle type.
 
-The smell:
+## Import types from their defining module
 
-```python
-lines = seed_order_lines(...)
-order_id = lines[0].order_links[0].order_id
-```
+`conftest.py` is for fixture discovery. Import a type from the module that defines it
+(`from recording_judge import RecordingJudge`), never `from conftest import ...`.
 
-That setup has hidden the parent result and forced the test to depend on the link-table implementation. The correct shape is the production result type whose fields match the production boundary:
+## Factory convergence and `# factory-exempt`
 
-```python
-order = orders.place(...)
-request = ShipmentRequest(
-    customer_id=customer.id,
-    line_ids=order.ready_lines[0].line_ids,
-)
-result = shipper.ship(request)
+Test data builders are `Make<Type>` factories in `tests/factories/`, registered in
+`tests/conftest.py`. A top-level `def make_*`/`def build_*` that returns a construction,
+or a collection of them, is a factory to write unless it is one of three shapes, each
+marked `# factory-exempt: <why FactoryBoy can't build it>`:
 
-assert sent["order_id"] == str(result.order_ids[0])
-```
+- **Dynamic model.** It builds a model class from a `type` argument, and the model is
+  setup for a different SUT. When the test checks what the model builder produces, the
+  builder call is the act: inline it (`test-quality` gate 10).
+- **Behavior-bearing stub or fake.** The object's point is its methods (a recording spy),
+  not its data. Prefer a named top-level stub class that the function instantiates.
+- **Fixed setup graph.** It assembles objects no caller parameterizes, and at least one
+  has behavior or sits at a process boundary (a subprocess, a recording spy). A nested
+  frozen dataclass or Pydantic model is data a `SubFactory` graph builds, and a function
+  callers pass arguments to is a parameterized builder: both are factories.
 
-This is not a ban on child factories. A child type's own test may create children directly because the child behavior is the SUT. Outside that scope, children are detail records of the parent operation, so the parent creator owns setup and correlation.
+These are factories, not exempt shapes:
 
-Do not create a test-only setup type to bundle the parent result with children. If the production operation lacks a result object or property that callers need, add it to the production abstraction and use that in tests.
+- A function that returns a collection of constructions the suite already writes inline
+  (`tuple(make_violation(line=n) for n in lines)`): inline the literal.
+- Plain data FactoryBoy could build with `SubFactory`, `LazyAttribute` or `Trait`, even
+  awkwardly.
 
-### Never import types from conftest
+Each input form gets its own branch-free factory, not one factory reconciling
+alternatives (`test-quality` gate 13).
 
-`conftest.py` is pytest's fixture-discovery mechanism, not a re-export hub. Test files must import types (models, fakes, factories, constants) from their **defining module** — the `.py` file where the `class`/`def`/assignment lives — never from a conftest that happens to import it for its own fixture use. The import resolves today but is fragile: conftest may drop the symbol when its own fixtures change, and a reader searching for the type's definition is misled into conftest rather than the canonical source.
+The marker is a claim to verify:
 
-**Mechanical check:** any `from <app>.conftest import <Name>` or `from conftest import <Name>` in a `test_*.py` file is a flag. Trace `<Name>` to its defining module and import from there instead (e.g. `from recording_judge import RecordingJudge`, not `from conftest import RecordingJudge`).
+- The function still passes `test-quality` gates 10 and 14.
+- A side effect given as the reason is consumed: name the value it produces (a written
+  file feeds `changes`) and check the call sites. When every caller overrides or ignores
+  it, the side effect is dead and the function is an ordinary factory.
+- An import-linter reason names the contract in `pyproject.toml` and the forbidden module,
+  and the function imports that module.
 
-### Factory convergence
+## Helpers earn their parameters and existence
 
-Test-data builders are **`factory.Factory` classes named `Make<Type>`, living in `tests/factories/`**, registered via `pytest_factoryboy.register()` in `tests/conftest.py`. The factory class is the importable artifact (`MakeJudgeRequest(file=...)`); `register()` additionally exposes the auto `make_<type>` / `<type>` fixtures for injection, and tests use those fixtures (SKILL.md Pattern 8). A **new top-level `def make_*`/`def build_*` whose body returns a constructed object** (`return SomeType(...)`, `return SomeBuilder(...).build()`, **or a collection of constructions** `return [SomeType(...) for ...]`) is a convergence violation — write a factory instead. Each distinct *input form* gets its own branch-free factory (e.g. a registry built from input models vs. from explicit entries are two factories, never one with an `if`), never a single factory reconciling alternative inputs (gate 12).
+For each local `_make_*`/`_build_*`, check:
 
-**The escape-hatch is narrow, and "factory_boy can't express it" is NOT a sufficient reason on its own.** Before marking anything `# factory-exempt`, check it is not one of these — which are violations to *delete or inline*, never to exempt:
-- **Collection-of-constructions over an inline literal** (`make_violations(lines)` → `tuple(Violation(...) for ... in lines)`). A factory builds *one* object, so "it returns a list, not a single construction" does not make it exempt — it makes it a **gate-13 thin wrapper**. If the suite already writes the literal inline (grep for the bare `[Type(...) ...]` next to a call site — it almost always exists), delete the helper and inline the literal. A positional-tuple input (`(int, str, str)`) standing in for named fields is a second, independent reason to delete (an anonymous structural type where a named one belongs).
-- **Plain-data construction in any shape factory_boy *could* build** — nested models, a dict of models, defaulted fields. "It's slightly awkward in factory_boy" is not structural impossibility; write the factory (use `SubFactory`, `LazyAttribute`, `Trait`).
+1. **Call sites.** Exactly one: inline it.
+2. **Parameters.** One no caller passes a non-default value to is dead: delete it. One
+   every caller passes has a dead default: make it required and delete any constant that
+   backed the default.
+3. **Projection.** The body is one builder call read for one attribute
+   (`return make_judge_request(...).prompt`): return the object, or inline.
+4. **Wrapped literal.** The body wraps a builder in a literal the suite writes inline
+   (`Verdict(reason=..., violations=tuple(make_violation(...)))`): use the literal.
+5. **Re-passed defaults.** Every argument beyond the caller's own equals the builder's
+   default (`make_binding(skill=skill, severity=Severity.ERROR, rule=skill.name)`): strip
+   them, and inline the bare call that remains.
+6. **One-constructor pass-through** (`return Thing(context=context)`): inline it, unless
+   its return annotation is load-bearing. Inline it at one site and run basedpyright. When
+   it stays green, inline everywhere. When only a `cast()` or `# type: ignore` fixes it,
+   keep the wrapper as the one place the type is widened, and report the production typing
+   defect.
 
-**Clearing the factory bar is necessary, not sufficient — a `# factory-exempt` helper must still pass gates 10 and 13.** "factory_boy structurally cannot build this" answers only the *convergence* question. It does NOT waive the other gates, and the `# factory-exempt:` comment must never be read as a terminal verdict that ends the audit. Two gates routinely catch helpers that legitimately clear the factory bar yet should still be deleted or inlined:
-- **Gate 10 — does it return the act under test?** A construction helper must return the *constructed object*, never the result of a terminal call on it (`return Builder(...).build(...)`, `return make_x(...).resolve(...)`). The tell is a test class named after the builder (`TestBuildItemOutputModel`) whose every test asserts what the helper's terminal call *produces* — then the helper has absorbed the SUT into conftest, and the dynamic-model carve-out below does **not** apply (see its "setup for a *different* SUT" condition). Fix: inline the production call into each test body so the act is visible.
-- **Gate 13 — does it earn its existence?** Single-file (one test file's worth of call sites is not shared infrastructure — inline), thin-wrapper (`Verdict(...)` wrap + a one-line production call the test could write itself), dead params/defaults. A dynamically-typed return value does not exempt a helper whose body is a two-line construct-and-delegate the suite already writes inline.
-
-**A side-effect exemption is valid only if the side-effect's output is consumed by callers — verify against the call sites, never accept the stated reason on its face.** The trap: a helper `make_review_request` marked `# factory-exempt: writes the reviewed file into the repo before building the request` whose reason is *literally true* (the helper does write the file) yet *dead* — the written file feeds exactly one field (`changes`), and **every caller overrides that field**, so the file is orphaned at 100% of call sites and the helper builds plain data factory_boy could produce. Reviewing a side-effect reason is the same discipline as auditing a comment (verify, don't just judge the topic): judging the side-effect *worthy* ("writing a file is a legitimate factory-exempt reason") is exactly how a dead one survives. **Mechanical check:** name the field/value the side-effect produces (the written file → `changes`; a spy's recording → an assertion on it; a dynamic model → a downstream SUT call), then grep every call site — if all callers override that field, pass their own version, or never read it, the side-effect is dead, the exemption is false, and the helper is an ordinary construction to converge into a factory. The real seeding, if any, lives in the *caller* that actually threads the value through, not the exempt helper. **Secondary catch on the same helper:** `**overrides` merged via `defaults.update(overrides)` (rather than splatted untouched into one typed sink) is still a gate-12 destructure violation even under a valid exemption — it silently swallows a bogus `rule_name=...` argument (not a field of the request, not a param of the helper), which a typed signature would have rejected.
-
-Three sanctioned exception shapes stay as functions, each marked `# factory-exempt: <specific structural reason>`. The reason must name *why factory_boy structurally cannot build it* — a vague "dynamic subclass" / "outside factory_boy" is rejected (it was exactly the loose wording that waved through a plain-data packer):
-- a **dynamic-model fixture-factory** — builds a per-call dynamically-typed model from a `type` argument (e.g. `make_answer_schema(answer_model)`); the model class itself does not exist until called. **Legitimate ONLY when the dynamic model is *setup for a different SUT* — the helper returns the model so a downstream component can consume it.** If the test verifies *what the model builder produces* (the builder is the SUT), the builder call is the act under test, not setup: that fails gate 10 — inline the production builder call into the test body, do not exempt it. The carve-out covers the structural fact that factory_boy can't synthesize a new model class; it does not license hiding the SUT.
-- a **behavior-bearing stub/fake** — returns an object whose point is its *methods* (a `resolve(...)`, a recording spy), not its data; `factory.Factory` builds data, not behavior. Prefer a **named top-level stub class** the helper instantiates over a per-call closure-class defined inside the helper (a self-less per-call class is mis-placed behavior).
-- a **no-override setup fixture** — assembles a fixed multi-object graph that **no caller parameterizes** (e.g. `two_ruleset_setup`), where a factory is pure ceremony. **Both halves are load-bearing, and "assembles a collaborator graph" is the phrase most often abused — verify both before accepting it:**
-  - **"collaborator graph" ≠ nested construction.** Constructing a frozen dataclass / Pydantic model whose fields are themselves objects (`Binding(skill=Skill(name, text), model=JudgeModel(provider=..., name=...), ...)`) is **exactly what factory_boy builds** with `SubFactory` / `LazyAttribute` — it is NOT a structural impossibility. The exemption applies only when a wired collaborator has genuine *behavior* or sits at a *process boundary* factory_boy cannot express (a live network client, a recording spy, a subprocess) — not merely because several plain objects are nested. "It wires up real production types" describes most data composition; it is not a reason. A helper building a `Binding` fails this: a frozen dataclass of plain collaborators (`Skill(...)` and `JudgeModel(...)` are in-memory ctors that carry no boundary), trivially a `SubFactory` graph.
-  - **"no caller parameterizes" is a hard precondition, not decoration.** If the helper takes parameters callers actually pass (`make_bound_rule(rule=..., skill=..., paths=...)` — three params, overridden across ~25 sites), it is a **parameterized builder**, which is precisely what a `factory.Factory` with `Params`/`SubFactory`/`LazyAttribute` is for — not a fixed setup fixture. The `two_ruleset_setup` exemplar takes *zero* overrides; that is the bar. A shared-collaborator linkage (e.g. `rule` defaulting to `skill.name` off the same skill) is expressible as a `LazyAttribute` reading the `skill` param — it does not justify a function.
-
-**An import-linter exemption must name the forbidden module AND the helper must actually import it — verify, never inherit the phrase.** A legitimate "must stay in conftest per import-linter rule" (e.g. a helper that imports `pydantic_evals`, a `forbidden_modules` target) is real only when the helper's body imports a module a contract forbids the *test's* source package from importing. Check `[tool.importlinter]` in `pyproject.toml`: name the contract and the forbidden module, then confirm the helper actually imports it. A helper carrying this reason whose imports touch *no* forbidden module (it just constructs `Binding`, `Skill`, `JudgeRequest` — none forbidden) has a copy-pasted justification: the pin does not apply, and it converges into a `tests/factories/` factory like any other construction.
-
-The `# factory-exempt: <reason>` comment on the `def` is the escape-hatch; any unmarked `make_*`/`build_*` returning a construction (including a collection-of-constructions return) is a flag. The marker alone cannot show whether the marked helper truly clears gates 10/13 or whether its stated reason is true, so the marker is a claim a reviewer must verify, never a pass on its own.
-
-## Helpers earn their parameters and their existence
-
-A test helper must not carry speculative flexibility. Two independent tests:
-
-**Dead parameters.** Every explicit parameter (beyond a transparent `**overrides` bag — see gate 12) must be passed a non-default value by at least one caller. A parameter that is *only ever* defaulted is dead and must be deleted, inlining its default. The smell is a parameter list richer than any caller exercises — e.g. `_make_judged_diagnostic(rule, *, confidence=1.0, severity=Severity.ERROR)` whose sole caller passes only `rule="no-print"`.
-
-**Dead defaults (the symmetric case).** The mirror image is equally dead: a parameter that *every* caller overrides never falls back on its default value, so the default — and any module-level constant that exists only to supply it — is dead by construction. The smell is `def _make_request(file=_DEFAULT_FILE, ...)` where all four callers pass `file=...` explicitly and `_DEFAULT_FILE` is referenced nowhere else. The default reads as a supported fallback that no test actually exercises, and the backing constant is pure noise. Fix: drop the default (make the parameter required) and delete the orphaned constant. This is distinct from the dead-parameter case — the parameter itself stays; only its unused default goes.
-
-**Single call site.** A helper with exactly one call site is not shared infrastructure — it is indirection that hides the constructed shape from the one test that needs it. Inline it into that test (building any sub-objects via the relevant shared `make_<type>` builder). The point of a setup helper is to *amortize* boilerplate across several tests; with one caller there is nothing to amortize, only a layer to see through.
-
-**Thin-wrapper shim.** A helper whose net contribution over a shared builder is a trivial navigation or construction the suite *already writes inline* is a low-value abstraction *even with many call sites*. Four shapes:
-
-- **Projects off the object** — body is a single shared-builder call followed by an attribute projection (`return make_judge_request(...).prompt`). Its only contribution is the `.attribute` access (plus, at most, a couple of constant kwargs), and the name it introduces (`_build_prompt`) hides both the real type being constructed (a request) and the navigation step. Returning a lone property also throws away the rest of the object, so a test that later needs a sibling attribute can't reuse the helper.
-- **Wraps the builder in an inline literal** — body wraps a shared `make_<type>` builder in the construction literal the rest of the suite types by hand: `return Verdict(reason="...", violations=tuple(make_violation(line=n) for n in lines))` when ~50 other sites write `Verdict(...)` directly. The helper's only contribution is the `Container([...])` wrapping, which is not boilerplate worth amortizing — it *is* the established idiom. The name (`_verdict`) buys nothing the literal doesn't already say, and the indirection hides the one shape (a `Verdict`) the tests are exercising.
-- **Re-passes the builder's own defaults** — body delegates to a shared builder, forwarding the caller's one real param, and adds arguments that merely *re-state values the builder already defaults to*. The net configuration is zero, so the helper is the bare builder call wearing a name. Worked example:
-
-  ```python
-  # factory defaults (already): MakeBinding(..., severity=Severity.ERROR)
-  #                              MakeBinding(..., rule=<the skill's name>)
-  def _any_change_binding(skill):  # FLAG — gate 13(e)
-      return make_binding(
-          skill=skill,
-          severity=Severity.ERROR,  # == the builder default
-          rule=skill.name,  # == the builder default behavior
-      )
-  ```
-
-  Strip the two redundant arguments and the body is `make_binding(skill=skill)` — exactly what a sibling test class already writes inline at six sites, while `_any_change_binding` is used at only four. The re-passed defaults are worse than dead weight: a reader assumes they are load-bearing (why else specify `severity`?) and is misled about what the test depends on. **Fix:** delete the helper, inline the bare builder call at its call sites, matching the idiom the sibling class already uses.
-- **One-constructor pass-through** — body is a bare `return Runtime(context=context)` (or any single-constructor forward), contributing only the constructor the suite calls inline elsewhere. With the inline idiom present (e.g. a sibling test module writes `Runtime(context=context)` directly ×6), the wrapper is a shim regardless of caller count. **The load-bearing-annotation carve-out, however, can rescue it:** if the wrapper's *return annotation* widens a type the bare constructor infers incompatibly, inlining forces a `cast()`/`# type: ignore` at every site, and the wrapper is the one chokepoint laundering the mismatch — keep it. The shape: `def make_runtime(context: Context) -> Runtime[Context]: return Runtime(context=context)`, where the SUT declares `Runtime[Context]`, `Context` is a bare `typing.Protocol` that a library's bounded `Runtime[ContextT: ...]` does not accept, and `Runtime(context=TestCtx)` infers `Runtime[TestCtx]`, invariant-incompatible with the SUT's `Runtime[Context]`. **Decisive check:** inline it at one site and rerun the type-checker — green ⇒ true shim, delete and inline everywhere; red, fixable only with a cast ⇒ load-bearing, keep the wrapper and file the *production-typing* defect (make the context a dataclass/BaseModel base so the generic becomes valid and the wrapper later deletes cleanly). This carve-out is narrow: it applies only when the annotation does type-system work the bare constructor cannot — not to a wrapper that merely "reads clearer."
-
-The first three are distinct from the configuring wrapper gate 5 blesses: a blessed wrapper returns the shared builder's result *whole*, set with **non-default** config that saves real boilerplate. **The discriminator: is the helper's body anything more than `shared_builder(...)` plus a navigation/wrapping the suite already performs inline, or plus arguments that equal the builder's defaults?** No ⇒ thin-wrapper shim. Fix by using the inline idiom directly (the `Verdict(...)` literal, reading `.prompt` in the test body, or the bare `make_<type>(...)` call). Only promote to a *new conftest builder* when the construction genuinely recurs across files **and** no inline idiom for it already exists — wrapping an existing inline idiom in a local helper is never the fix.
-
-**Mechanical test:** for each local `_make_*` / `_build_*`:
-- (a) count call sites — exactly one ⇒ inline it;
-- (b) for each named parameter, grep the call sites for a non-default argument — none found ⇒ the parameter is dead, remove it; *every* call site passes one ⇒ the parameter's default is dead, drop it (make the parameter required) and delete any constant that backed it;
-- (c) is the body `shared_builder(...).attr` — one builder call projected to a single attribute? ⇒ return the constructed object whole (or inline), don't bake the projection into the helper;
-- (d) is the body `Container([shared_builder(...)])` — a shared builder wrapped in a construction literal (`Verdict(...)`, `set(...)`, `tuple(...)`)? grep the suite for that literal — if it's written inline at many sites, ⇒ use the inline literal directly, the helper wraps an established idiom and earns nothing;
-- (e) does the body delegate to a shared builder, forwarding the caller's params, where every *additional* argument equals that builder's default (a re-passed default formatter, a fresh random id the builder already generates)? ⇒ no-op shim — strip the redundant arguments, and if what remains is the bare builder call, inline it. A sibling test class writing that bare call inline confirms the idiom exists and the shim is the minority form.
-- (f) is the body a bare single-constructor forward (`return Runtime(context=context)`)? ⇒ shim if that constructor is the suite's inline idiom — **but inline it at one site and rerun the type-checker before deleting**. Stays green ⇒ true shim, inline everywhere. Turns red, fixable only by a `cast()`/`# type: ignore` ⇒ the return annotation is load-bearing (widens a Protocol/concrete type to the declared generic param); keep the wrapper as the single chokepoint and file the production-typing defect instead of scattering casts.
+A specialization that sets non-default configuration on a registered factory is a
+subclass (pattern 11), not a helper. A new shared builder is for a construction that
+recurs across files with no inline idiom; wrapping an existing inline idiom in a helper
+isn't.

@@ -1,23 +1,37 @@
-# Fixture and Test-Data Design
+# Fixtures and test data (gates 9, 15)
 
-Rules for how fixtures return values, how test data reaches the test, and how parent/child objects are seeded. These extend the patterns in `SKILL.md`.
+## One object per fixture
 
-## One fixture per concept, never tuples
+A fixture returns one object, never a tuple (`return judge, store, repo`). Write one
+fixture per concept (`repo`, `store`, `judge`), depending on each other, so each test's
+signature names what it uses.
 
-Fixtures return a single object. Never return a tuple to bundle multiple objects (`return judge, store, repo`) — this forces positional destructuring, hides what each test actually needs, and couples unrelated concerns. Instead, define separate named fixtures (`repo`, `store`, `judge`) that depend on each other via pytest's fixture dependency graph. Each test then declares exactly the fixtures it needs in its signature.
+A fixture that returns data (a repo, a request, a model) doesn't also set up environment
+(environment variables, the fake CLIs' config, telemetry). That is a separate setup-only
+fixture, such as `fake_cli_config`, `no_telemetry` or `committed_config`, which may
+return `None`. What a setup fixture may do is `test-quality` gate 17.
 
-**Keep setup fixtures separate from object/data fixtures.** A fixture that returns a repo, request, model instance, or other data object must not also hide environment setup such as environment variables, fake CLI config, telemetry, registries, or external service state. Use explicit setup-only fixtures for those dependencies (`fake_cli_config`, `no_telemetry`, `committed_config`) and request the object/data fixtures directly in the test signature. A setup-only fixture may return `None`/`pass`; its purpose is the dependency edge, not a bundled value.
+## Test data through fixtures
 
-## Test data flows through fixtures, not module constants
+A constructed value two or more tests use (a model, a tuple of domain objects, a config
+dict) is a fixture, not a module-level constant, so each test's signature declares it and
+a test can override it. A bare scalar that names an external token (a prompt string, a
+regex, a URL template, `MODEL`) may be a module constant, unless a test asserts on it as
+an identity (below).
 
-A module-level `SCREAMING_SNAKE` constant for test input data (values passed to the SUT) or expected output bypasses pytest's fixture dependency-injection graph. The test signature no longer declares what data it needs — a reader must scan the body to discover hidden dependencies. Fixtures are pytest's mechanism for making test data dependencies explicit, composable, and overridable.
+## Identities
 
-**Rule:** any constructed value (a model instance, a tuple/list of domain objects, a configuration dict) that two or more tests consume must be a `@pytest.fixture`, not a module constant. A test that needs the value declares it in its signature — visible, overridable per-test via parametrize, and composable with other fixtures.
+A test that asserts on a runtime identity (an id, a session or correlation key, passed in
+and asserted) owns it: it creates the value in its body and passes it through setup, so the
+assertion shows the value flowed through the SUT. A shared constant used in both setup and
+an `assert` passes even when the SUT substitutes its own value.
 
-**The narrow exception — true constants that are names for opaque tokens.** A bare scalar that names a well-known identifier and carries no construction logic (`MODEL = "gemini-3.1-pro-preview"`, a regex pattern, a URL template) may stay module-level because it has no dependencies to compose and no lifecycle to manage. The discriminator: does the value *construct* domain objects (models, dataclasses, tuples of typed things) or is it a *bare scalar/string naming an external concept*? Construction → fixture; naming → constant is acceptable.
+A factory's identity fields default to a fresh value, not a shared constant, so tests
+built from it aren't coupled.
 
-**The exemption does NOT extend to a runtime identity a test asserts on.** A bare scalar naming an *opaque external token* (a prompt string, regex, URL template) may stay module-level. But a shared constant standing in for a *runtime identity* — `user_id`, `session_id`, `job_id`, a correlation UUID — that any test passes as input **and then asserts on** is not exempt, even though it's a bare scalar. The asserting test must **own** the value: construct it inline (`user_id = str(uuid4())`) and thread it through setup, so the assertion proves the value *flowed through the SUT* rather than proving two references to the same module constant are trivially equal. A shared `FIXED_ID = "0000…0001"` asserted via `assert result.user_id == FIXED_ID` is a tautology dressed as a check — it passes regardless of whether the SUT propagated the value or substituted its own. **Mechanical tell:** a `SCREAMING_SNAKE` id constant that appears both in a factory/setup call *and* in an `assert` → flag; the test owns it inline instead.
+Give a test an id only when the SUT correlates on it and the object it names exists or is
+asserted. When an id is needed only because a wide constructor requires it, narrow the
+setup to the real inputs instead.
 
-**Corollary for shared factories:** a factory's identity fields default to *fresh* values (`factory.LazyFunction(lambda: str(uuid4()))`), never a shared constant — a fixed identity default silently couples every test built from it and lets non-owning assertions pass.
-
-Parent-owned children are seeded through the parent creator — see [reuse-and-helper-existence.md](reuse-and-helper-existence.md).
+Parent-owned children are seeded through the parent's creator:
+[reuse-and-helper-existence.md](reuse-and-helper-existence.md).
