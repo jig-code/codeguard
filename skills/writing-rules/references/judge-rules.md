@@ -12,7 +12,10 @@ agent loads before it edits. It holds, in this order, and nothing else:
 1. A title.
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
    words a reviewer would use, never a question. Where the sentence uses a term a reader
-   could take two ways, a sentence that fixes its meaning.
+   could take two ways, one sentence that fixes its meaning, and no other: a sentence,
+   or a clause joined to the convention's sentence, that restates the convention, gives
+   its purpose or says what it doesn't cover is a second statement: the judge checks it as
+   well, and it can drift from the first. The purpose goes under `## Why`.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
@@ -20,16 +23,12 @@ agent loads before it edits. It holds, in this order, and nothing else:
 No examples. No `## Violation` list of the shapes a violation takes, no `## Not a
 violation` list of code near the boundary, and no other section: each shape is decided
 by the statement, or the statement is unclear. A shape that contradicts the statement
-(a form that the statement says keeps the convention) is dropped from the rule or moved
+(a shape that the statement says keeps the convention) is dropped from the rule or moved
 to a rule of its own; its mention in the skill, even as a non-violation, is a second
-convention. No forms of the convention in any language or library, and no supplement
+convention. No shapes of the convention in any language or library, and no supplement
 per language: a rule in several languages is one skill, in no language's names, syntax
 or libraries. Leave out the fix, and anything telling the judge how to answer: the
 judge's own prompt sets its output and its confidence scale.
-
-A judge that can't decide a piece of code from the statement, or decides it on the
-wrong ground, has found an unclear statement. Reword the statement so it decides that
-code. A rule that needs a new example each time it meets new code has a bad convention.
 
 ## Gate every form of the violation
 
@@ -56,16 +55,16 @@ how triggers select what the judge sees.
 ## Write a few clear eval cases
 
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
-way code breaks the convention and one `valid` case for each distinct way code keeps it
-near the boundary, up to about three of each, and a `skipped` case outside the gate. A
-convention with one way to break it has one `invalid` case. Each case tests one thing
-none of the others does: a different thing the code does or fails to do, not another
-syntax for the same thing. No edge cases: a case a reasonable reviewer could argue
-either way proves nothing about the rule, and a judge that flips on it is right to.
+way code breaks the convention and one `valid` case for each distinct way code keeps it,
+and a `skipped` case outside the gate. A convention with one way to break it has one
+`invalid` case. Each case tests one thing none of the others does: a different thing the
+code does or fails to do, not another syntax for the same thing. No edge cases: a case a
+reasonable reviewer could argue either way proves nothing about the rule, and a judge
+that flips on it is right to.
 
-- An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
-  it. A reader of the case alone sees why the code is a problem or why it's fine. It is
-  named as `SKILL.md` says.
+- An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
+  keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
+  It is named as `SKILL.md` says.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by
@@ -75,8 +74,6 @@ either way proves nothing about the rule, and a judge that flips on it is right 
   code: a second bug anywhere in the case, whatever the rule says about it, lets the
   judge flag the case for the wrong reason. Read each line as a reviewer would before
   keeping the case.
-- Pair the cases: for what the convention allows, a `valid` case, and beside it an
-  `invalid` case of the same shape that breaks the rule.
 - A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes

@@ -35,7 +35,7 @@ markers = ["llm: exercises the review pipeline with a real judge using the fixtu
 line-length = 100
 target-version = "py313"
 # The writing-rules eval cases keep the defects their tasks are about.
-extend-exclude = ["evals/writing-rules", "evals-pending"]
+extend-exclude = ["evals/writing-rules"]
 
 [tool.ruff.lint]
 select = [

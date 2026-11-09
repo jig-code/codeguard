@@ -5,10 +5,8 @@ description: Writes codeguard rules: decides whether a convention is codeguard's
 
 # Writing codeguard rules
 
-codeguard checks the changed lines of each changed file against the project's rules:
-pattern rules (ast-grep) and judge rules (a skill a model judges the change against). An
-`error` diagnostic blocks the agent's Stop and fails CI. Each principle here corrected a
-rule that misjudged code.
+A rule is a pattern rule, an ast-grep rule that matches code by its syntax, or a judge
+rule, a convention a model judges each change against.
 
 ## Workflow
 
@@ -25,11 +23,13 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
-the statement or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else: no examples, no list of the shapes a
-violation takes, no list of what isn't one, and no supplement per language. The
-statement alone decides each piece of code; the judge reads it as a reviewer would, and
-says on what ground the code keeps or breaks it.
+the convention or breaks it: that is the rule's one yes/no test. The rule is that
+statement, at most one sentence fixing the meaning of a term in it a reader could take
+two ways, and why it exists, and nothing else: no examples, no list in its text of the
+shapes a violation takes, no list of what isn't one, no sentence or clause that
+restates the statement, gives its purpose (that is the Why) or says what it ignores, and
+no supplement per language. The statement alone decides each piece of code; the judge
+reads it as a reviewer would, and says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
@@ -55,14 +55,15 @@ says on what ground the code keeps or breaks it.
   framework uses it, though: calling the framework's API is fine, while copying its
   shape into the project's own code may not be. A statement that flags idiomatic code
   is restated so it doesn't; it isn't given an exception for that code.
-- **Decided by its wording, never by examples.** When the judge decides a case wrongly,
-  or on the wrong ground, the statement is unclear: reword it so the statement decides
-  the case. An example would only make the judge match code to it, and the next case
-  fails the same way.
-- **Each code shape breaks at most one rule.** When two rules contradict each other (one
-  flags what the other requires) or overlap (both flag the same code), settle it before
-  either ships: move the shape to one rule, or merge them.
-- **Match a code pattern, never a named class, function or file.**
+- **Decided by its wording, never by examples.** A case the statement decides wrongly,
+  or on the wrong ground, shows the statement is unclear: reword it so the statement
+  decides the case. An example would only make the judge match code to it, and the next
+  case fails the same way.
+- **Never contradicts another rule.** A new rule never flags what another rule in the
+  project or package requires.
+- **A rule names a specific class, function or file only when its convention is about
+  that one.** A rule meant for many classes or functions matches what they share, never
+  one of them standing in for the rest.
 
 ## Why it exists
 
@@ -71,14 +72,12 @@ when the code or the design around it changes. A rule nobody can trace to a reas
 only be kept or dropped blind.
 
 - A judge rule: a `## Why` section in its skill (`references/judge-rules.md`).
-- A pattern rule: `metadata.why` in its rule file. codeguard doesn't print it; `note`
-  stays what the blocked agent reads.
+- A pattern rule: `metadata.why` in its rule file.
 - Optionally, where the rule comes from: a `Source:` line in the Why section, or
   `metadata.source`. A link to public documentation, or the bug, PR comment or team
   decision behind it.
 
-A gate is a judge rule's trigger, not a rule, and needs no why. `codeguard test` reports
-a rule without one.
+A gate is a judge rule's trigger, not a rule, and needs no why.
 
 ## Layout
 
@@ -112,29 +111,27 @@ codeguard's README has the binding and rule eval formats.
 
 ## Pattern rules
 
-- Match the construct only where it breaks the convention: a `len()` compared with a
-  literal, not a `len()` inside a slice. `stopBy: end` on `has` or `inside` searches every
-  descendant or ancestor; in a positive match, use it only when the construct breaks the
-  convention in every position.
+- Match the shape only where it breaks the convention, not everywhere it appears.
+  `stopBy: end` on `has` or `inside` searches every descendant or ancestor; in a
+  positive match, use it only when the shape breaks the convention in every position.
 - Put the reason and the fix in the rule's `note`. codeguard prints it under the
-  diagnostic, so it is what the blocked agent reads (no comments in rule files).
+  diagnostic, so it is what the blocked agent reads (no comments in the rule's own file).
 - Scope a rule with a binding, `bindings/<id>.yaml` with `rule`, `paths` and
   `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
-  the scope. The exception is a file name that is the convention itself (`__all__` only
-  in `__init__.py`).
-- When syntax decides only some forms of a convention, write a pattern rule for those
-  forms and a judge rule gated on every form. No judge rule runs on a file with an
+  the scope. The exception is a file name that is the convention itself.
+- When syntax decides only some shapes a violation takes, write a pattern rule for those
+  shapes and a judge rule gated on every shape. No judge rule runs on a file with an
   `error` diagnostic, so the two report the same code only if the pattern rule is a
   `warning`.
 
 ## Cases
 
-- Use made-up code and names (`ExampleModel`), so a case shows the pattern rather than
+- Use made-up code and names, so a case shows the pattern rather than
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
-- Give the idiomatic form a `valid` case beside the `invalid` one.
+- Give idiomatic code a `valid` case beside the `invalid` one.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case naming its branch. Give each matched construct a
+  case, with a comment above each case naming its branch. Give each matched shape a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
