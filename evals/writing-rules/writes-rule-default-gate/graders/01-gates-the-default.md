@@ -8,5 +8,5 @@ The node this ast-grep gate matches is the one its top-level rule selects: its o
 
 The skill says: "A gate matches the code a violation needs and nothing around it: not the statement, block or function that holds that code."
 
-PASS if that node is the code the violation is in, a parameter with a default, or a part of it such as the default value, and not code that holds the parameter.
-FAIL if that node is code that holds the parameter, such as the parameter list, the function, class or decorated definition, a block or the module.
+PASS if that node is the code the violation is in, a parameter with a default, or a part of it such as the default value, and not code that holds it.
+FAIL if not: for example the node is code that holds it, such as the parameter list, the function, class or decorated definition, a block or the module, or code unrelated to it.
