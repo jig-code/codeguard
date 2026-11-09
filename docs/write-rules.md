@@ -17,6 +17,10 @@ ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
 ```
 
+The name only prefixes the package's rule ids, as in `codeguard/python/no-del-param`.
+A project picks the package by its git URL and ref
+([Opt into a rule package](add-codeguard.md#opt-into-a-rule-package)).
+
 Each ruleset is a directory with the same layout as a project's `.codeguard/`:
 
 ```
