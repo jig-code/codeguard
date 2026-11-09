@@ -1,5 +1,5 @@
 cases:
-  - name: method passes a default the type declares, earlier in its file
+  - name: a method passing a default the type declares, earlier in its file
     inputs:
       file: exports/scheduler.py
       before: |
@@ -64,7 +64,7 @@ cases:
                 self.queue.put(job)
     expected_output:
       outcome: invalid
-  - name: method passes on a value the type requires, earlier in its file
+  - name: a method passing on a value the type requires, earlier in its file
     inputs:
       file: jobs/scheduler.py
       before: |
@@ -129,7 +129,7 @@ cases:
                 self.queue.put(job)
     expected_output:
       outcome: valid
-  - name: changes a constant, with no call
+  - name: a change to a constant, with no call
     inputs:
       file: exports/limits.py
       before: |

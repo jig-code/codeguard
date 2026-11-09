@@ -1,5 +1,5 @@
 cases:
-  - name: discards an exception
+  - name: a handler that discards its exception
     inputs:
       file: payments/charge.py
       after: |
@@ -10,7 +10,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
-  - name: logs and re-raises an exception
+  - name: a handler that logs and re-raises its exception
     inputs:
       file: payments/refund.py
       after: |
@@ -27,7 +27,7 @@ cases:
                 raise
     expected_output:
       outcome: valid
-  - name: changes no control flow
+  - name: an edit that changes no control flow
     inputs:
       file: payments/charge.py
       before: |
@@ -36,7 +36,7 @@ cases:
         RETRIES = 2
     expected_output:
       outcome: skipped
-  - name: edits the clause of a handler that already discarded its exception
+  - name: an edit to the clause of a handler that already discarded its exception
     inputs:
       file: payments/charge.py
       before: |
@@ -53,7 +53,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
-  - name: edits a call in a try block whose untouched handler discards its exception
+  - name: an edit to a call in a try block whose untouched handler discards its exception
     inputs:
       file: payments/charge.py
       before: |
@@ -70,7 +70,7 @@ cases:
                 pass
     expected_output:
       outcome: valid
-  - name: edits a condition in a function whose untouched handler discards its exception
+  - name: an edit to a condition in a function whose untouched handler discards its exception
     inputs:
       file: payments/charge.py
       before: |
@@ -91,7 +91,7 @@ cases:
                 pass
     expected_output:
       outcome: valid
-  - name: adds a re-raising handler beside a function that discards its exception
+  - name: a re-raising handler added beside a function that discards its exception
     inputs:
       file: payments/gateway.py
       before: |
@@ -130,7 +130,7 @@ cases:
                 raise
     expected_output:
       outcome: valid
-  - name: adds a discarding handler beside a function that re-raises
+  - name: a discarding handler added beside a function that re-raises
     inputs:
       file: payments/gateway.py
       before: |
@@ -170,7 +170,7 @@ cases:
                 pass
     expected_output:
       outcome: invalid
-  - name: removes the logging that kept a handler from discarding its exception
+  - name: removing the logging that kept a handler from discarding its exception
     inputs:
       file: payments/refund.py
       before: |
@@ -198,7 +198,7 @@ cases:
                 metrics.increment("refund.failed")
     expected_output:
       outcome: invalid
-  - name: removes a metric from a handler that still logs its exception
+  - name: removing a metric from a handler that still logs its exception
     inputs:
       file: payments/refund.py
       before: |

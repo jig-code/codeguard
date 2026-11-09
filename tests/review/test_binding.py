@@ -26,7 +26,7 @@ def ruleset(tmp_path, skill, name=None, selection=RulesetConfig()) -> Ruleset:
 
 
 class TestBinding:
-    def test_files_matching_its_paths(self, make_binding):
+    def test_files_matching_its_paths_are_kept(self, make_binding):
         binding = make_binding(paths=("app/**/*.py",))
 
         files = binding.files(["app/a.py", "app/models/b.py", "scripts/c.py"])
