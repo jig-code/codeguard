@@ -60,7 +60,9 @@ contains, fails the eval before any case is judged.
 
 ```sh
 codeguard eval --rule mock-only-at-boundary --case "a patch"
+codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 2
 codeguard eval --provider gemini
+codeguard eval --provider gemini --repeat 2
 ```
 
 ## config

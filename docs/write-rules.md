@@ -66,9 +66,10 @@ provider; it changes nothing a review judges with.
    classifies the diff the way a review does.
 2. `codeguard eval` reviews every case once with the binding's model, the way
    `codeguard review` would, to verify the change.
-3. `codeguard eval --repeat 2` reviews each case twice more, so an unstable verdict shows
-   up as a failing run, named like `a second class added to the file [2/2]`. A case
-   passes when it gets its expected review on all 3 runs.
+3. Once it passes, `codeguard eval --repeat 2` reviews each case twice more, so an
+   unstable verdict shows up as a failing run, named like
+   `a second class added to the file [2/2]`. A case passes when it gets its expected
+   review on all 3 runs.
 
 [CLI](cli.md#eval) lists `codeguard eval`'s options for judging part of a package, or
 with another model. [What makes a case fail](rule-formats.md#what-makes-a-case-fail)
