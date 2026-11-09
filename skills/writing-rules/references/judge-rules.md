@@ -32,8 +32,9 @@ judge's own prompt sets its output and its confidence scale.
 
 ## Gate every form of the violation
 
-A violation outside the binding's `triggers` is never reported; codeguard's README says
-how triggers select what the judge sees.
+A violation outside the binding's `triggers` is never reported; codeguard's
+`docs/rule-formats.md` (A judge rule's binding) says how triggers select what the judge
+sees.
 
 - List the syntactic forms the violation takes, and give each one an `invalid` gate
   test, so a gate that stops matching a form fails `codeguard test`.
