@@ -90,7 +90,7 @@ Rule test warnings, such as broad triggers, are advisory: they don't fail a chan
 |---|---|---|---|
 | Anything | Lint, format, import boundaries, types and codeguard's offline tests | `uv run ruff check`, `uv run ruff format --check`, `uv run lint-imports`, `uv run basedpyright`, `uv run pytest` | Same |
 | Anything | The changed files against the rules this repository opts into in its [`.codeguard/config.yaml`](../.codeguard/config.yaml), judge rules included; an error fails. This dogfoods codeguard: every change to it must pass the rules in its own config. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files | `codeguard review --base <base branch>` | `codeguard review` |
-| The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | Each fixture case's review, 3 runs | `uv run pytest -m llm -n 4` | Same |
+| The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | Each fixture case's review: 1 run to verify the change, then 2 more, 3 of 3 | `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` | Same |
 | The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 2 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md) | Same |
 
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
@@ -105,7 +105,7 @@ rules codeguard reviews itself with are tested in their package's CI.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | A pattern rule, a gate or their tests | Each rule and gate matches its `invalid` snippets and none of its `valid` ones | `codeguard rules test` | Same |
-| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts, 20 runs | `codeguard rules test`, `codeguard rules eval --rule <id> --repeat 20` | Same |
+| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 19 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 19` | Same |
 | The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
 
 Run both commands at the package root; they cover every ruleset.
@@ -115,7 +115,7 @@ Run both commands at the package root; they cover every ruleset.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | The app's code | The changed files against the app's rules; an error fails. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files | `codeguard review --base <base branch>` | `codeguard review` |
-| A rule the app defines | Each rule's tests and each case's triggers, then the verdicts of each judge rule whose rule or eval cases changed, 20 runs | `codeguard rules test`, `codeguard rules eval --rule <id> --repeat 20` | Same |
+| A rule the app defines | Each rule's tests and each case's triggers, then the verdicts of each judge rule whose rule or eval cases changed: 1 run to verify the change, then 19 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 19` | Same |
 | The codeguard release the actions are pinned to | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
 
 - An app with no rules of its own has only the first row.
