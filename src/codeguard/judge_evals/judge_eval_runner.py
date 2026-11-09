@@ -1,5 +1,5 @@
 import asyncio
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from importlib.metadata import version
 from os import process_cpu_count
 from pathlib import Path
@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import JudgeConfig, JudgeModel, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeConfig, RulesetLoader
 from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
@@ -28,14 +28,15 @@ class JudgeEvalRunner:
     judge_config: JudgeConfig = JudgeConfig()
     ast_grep: AstGrep = AstGrep()
     selection: EvalSelection = EvalSelection()
-    # Judges every rule with this model instead of its binding's.
-    model: JudgeModel | None = None
+    judge_override: JudgeChoice = JudgeChoice()
 
     def case_names(self) -> dict[str, tuple[str, ...]]:
         cases = {dataset.name: dataset.cases for _, dataset in rule_evals(self.ruleset.root)}
         return {
             binding.skill.name: tuple(case.name for case in cases.get(binding.skill.name, ()))
-            for binding in Bindings.from_rulesets([self.ruleset.load()])
+            for binding in Bindings.from_rulesets(
+                [self.ruleset.load()], self.judge_config.choice, self.judge_override
+            )
         }
 
     def run(self) -> JudgeEvalResult:
@@ -49,7 +50,12 @@ class JudgeEvalRunner:
         if not evals:
             return JudgeEvalResult()
         ruleset = self.ruleset.load()
-        bindings = {binding.skill.name: binding for binding in Bindings.from_rulesets([ruleset])}
+        bindings = {
+            binding.skill.name: binding
+            for binding in Bindings.from_rulesets(
+                [ruleset], self.judge_config.choice, self.judge_override
+            )
+        }
         unknown = tuple(
             f"{file.relative_to(self.root)}: no judge rule {dataset.name}"
             for file, dataset in evals
@@ -82,7 +88,7 @@ class JudgeEvalRunner:
     async def _evaluate(
         self, rule_eval: RuleEval, binding: Binding, language: str | None, scanner: SyntaxScanner
     ) -> RuleEvalReport:
-        model = self.model or binding.model
+        model = binding.model
         dataset = Dataset[EditCase, EditReview, None](
             name=rule_eval.name,
             cases=[
@@ -94,13 +100,11 @@ class JudgeEvalRunner:
                 ViolationsOnTriggers(tuple(sorted(binding.triggers)), self.confidence_threshold),
             ],
         )
-        task = EditReviewTask(
-            replace(binding, model=model), self.judges, self.confidence_threshold, scanner
-        )
+        task = EditReviewTask(binding, self.judges, self.confidence_threshold, scanner)
         return await dataset.evaluate(
             task,
-            name=f"{dataset.name} on {model.name}",
-            task_name=model.name,
+            name=f"{dataset.name} on {model.label}",
+            task_name=model.label,
             metadata={
                 "provider": model.provider,
                 "model": model.name,

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from codeguard.config import JudgeModel
+from codeguard.config import JudgeChoice
 from codeguard.judge_evals import EvalCoverage, EvalSelection, JudgeEvalResult, JudgeEvalRunner
 from codeguard.rule_tests import RuleTestResult
 from codeguard.rules.rules import Rules
@@ -14,7 +14,7 @@ class RuleEvaluation:
         self,
         repeat: int = 1,
         selection: EvalSelection = EvalSelection(),
-        model: JudgeModel | None = None,
+        judge_override: JudgeChoice = JudgeChoice(),
     ) -> JudgeEvalResult:
         rules = self.rules
         root = rules.working_tree.root
@@ -34,7 +34,7 @@ class RuleEvaluation:
                     config.judge,
                     rules.ast_grep,
                     selection,
-                    model,
+                    judge_override,
                 ),
             )
             for loader in rules.resolver.own_rulesets
