@@ -125,17 +125,14 @@ The rule eval).
   private repository.
 - Give idiomatic code a `valid` case beside the `invalid` one.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case: `flags` for an `invalid` case, `allows` for a
-  `valid` one, then the situation. Give each matched shape a
+  case, with a comment above each case naming its branch. Give each matched shape a
   `valid` case where the convention allows it, if it has such a position, so a rule that
   matches too widely fails a case.
 - A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
   the gate (`references/judge-rules.md`).
-- A case is named like a test, by its verdict and its situation: `flags`, `allows` or
-  `skips`, matching the case's expected outcome (`invalid`, `valid` or `skipped`), then
-  the situation. A name never states the harm or why; the rule's Why holds that. A gate
-  test case is named the same way, in the comment above it: `matches` for an `invalid`
-  case, `ignores` for a `valid` one, then the situation.
+- A case's name gives only the situation it tests, unique per file. The verdict is
+  stated once: in a rule eval case's expected outcome, or by the `valid` or `invalid`
+  list a pattern rule or gate test case sits in.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax or names differ: keep the clearer one. Two `valid` cases differ when
   their code keeps the convention in different situations, not merely by both lacking

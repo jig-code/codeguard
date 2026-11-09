@@ -1,4 +1,0 @@
-cases:
-  - name: passes a string
-    inputs:
-      after: x

@@ -37,29 +37,18 @@ the agent's output does. A grader that checks names is a `regex`, never an `llm`
 
 ## Running them
 
-CI runs them when `skills/writing-rules/` or `evals/writing-rules/` changes, in two
-passes. The validity pass runs every case once to verify the change. Once it passes with
-nothing changed since, the reliability pass runs every case 9 more times, to the end,
-and reports each case's score. A case passes when every grader passes in all 10 runs.
-Any change starts again at the validity pass.
+A case passes when every grader passes in all 3 runs. With Bedrock credentials in the
+environment, and a Bedrock model id or inference profile for the agent and for the
+graders:
 
 ```sh
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 \
-  --trust-plugin --no-publish
-claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 \
+CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Edit \
+  --runs 3 --threshold 1 --ablation none \
+  --model <agent model id> --judge-model <grader model id> \
   --trust-plugin --no-publish
 ```
 
-CI runs the two as separate jobs, the second starting when the first passes.
-`claude plugin eval` has no option to stop at the first failing case, so the validity
-pass runs every case once before it fails.
-
-Each run writes `evals/results/<time>/`: `aggregate-result.json` has every run's score
-and each grader's verdict, and for an `llm` grader the file or reply it read.
-`report.html` shows the same. CI uploads that directory from each job, pass or fail,
-as the artifacts `skill-evals-validity-results` and `skill-evals-reliability-results`.
-A `regex` or `file_exists` grader records no evidence; `--keep-temp` keeps each run's
-workspace for those, outside the results directory.
-
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
+
+CI runs them from `.github/workflows/skill-evals.yaml`.

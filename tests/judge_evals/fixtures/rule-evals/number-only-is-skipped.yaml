@@ -1,6 +1,0 @@
-cases:
-  - name: skips a count
-    inputs:
-      after: |
-        count = 1
-    expected_output: {outcome: skipped}

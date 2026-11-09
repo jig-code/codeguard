@@ -1,5 +1,0 @@
-skill: .codeguard/skills/enum-usage
-paths: ["**/*.py"]
-triggers: [any]
-provider: gemini
-model: gemini-3.1-pro-preview

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: writes-rule-created-flag-tuples
 expected_outcome: |
-  A judge rule, no-created-flag-results, whose skill is one declarative convention and a ## Why section and nothing else, no examples or lists of forms; and whose eval has a few clear cases, a valid case calling a framework's get_or_create, case names that start with flags, allows or skips matching each case's expected outcome, and no case mixing in a second defect.
+  A judge rule, no-created-flag-results, whose skill is one declarative convention and a ## Why section and nothing else, no examples or lists of forms; and whose eval has a few clear cases, a valid case calling a framework's get_or_create, case names that give each case's situation, and no case mixing in a second defect.
 context:
   scaffold_script: place-files.sh

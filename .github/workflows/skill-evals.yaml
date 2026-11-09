@@ -1,37 +1,63 @@
 name: writing-rules skill evals
 on:
   pull_request:
-    paths: [skills/writing-rules/**, evals/writing-rules/**]
+    paths:
+      - skills/writing-rules/**
+      - evals/writing-rules/**
+      - .github/workflows/skill-evals.yaml
+      - .github/actions/skill-evals/**
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+permissions: {}
+env:
+  AGENT_MODEL: ${{ vars.SKILL_EVALS_AGENT_BEDROCK_MODEL }}
+  GRADER_MODEL: ${{ vars.SKILL_EVALS_GRADER_BEDROCK_MODEL }}
+# Each cost ceiling is about three times the pass's expected cost for four cases, so a
+# runaway agent stops the paid run.
 jobs:
-  # One run of every case verifies the change.
-  skill-evals-validity:
+  validity:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - run: npm install --global @anthropic-ai/claude-code
-      - run: claude plugin eval . --scaffold --allow-tools Write Edit --runs 1 --threshold 1 --trust-plugin --no-publish
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      - uses: actions/upload-artifact@v7
-        if: always()
+      - &check-models
+        run: |
+          : "${AGENT_MODEL:?Set the SKILL_EVALS_AGENT_BEDROCK_MODEL repository variable}"
+          : "${GRADER_MODEL:?Set the SKILL_EVALS_GRADER_BEDROCK_MODEL repository variable}"
+      - &checkout
+        uses: actions/checkout@v7
         with:
-          name: skill-evals-validity-results
-          path: evals/results/
-  # Nine more runs of every case, for 10 of 10; every run completes.
-  skill-evals-reliability:
-    needs: skill-evals-validity
+          persist-credentials: false
+      - &aws
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
+          aws-region: us-west-2
+      - uses: ./.github/actions/skill-evals
+        with:
+          pass: validity
+          runs: 1
+          max-cost-usd: 2
+          agent-model: ${{ env.AGENT_MODEL }}
+          grader-model: ${{ env.GRADER_MODEL }}
+  reliability:
+    needs: validity
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
-      - run: npm install --global @anthropic-ai/claude-code
-      - run: claude plugin eval . --scaffold --allow-tools Write Edit --runs 9 --threshold 1 --trust-plugin --no-publish
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      - uses: actions/upload-artifact@v7
-        if: always()
+      - *check-models
+      - *checkout
+      - *aws
+      - uses: ./.github/actions/skill-evals
         with:
-          name: skill-evals-reliability-results
-          path: evals/results/
+          pass: reliability
+          runs: 2
+          max-cost-usd: 4
+          agent-model: ${{ env.AGENT_MODEL }}
+          grader-model: ${{ env.GRADER_MODEL }}

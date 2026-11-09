@@ -1,7 +1,0 @@
-name: enum-usge
-cases:
-  - name: allows a string
-    inputs:
-      after: |
-        ship(status='shipped')
-    expected_output: {outcome: valid}

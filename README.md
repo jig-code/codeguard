@@ -328,8 +328,7 @@ triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
 `<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
-(`invalid` cases are code the gate matches). Each test case's comment is its verdict and
-situation: `matches` for an `invalid` case, `ignores` for a `valid` one:
+(`invalid` cases are code the gate matches):
 
 ```yaml
 id: mock-use
@@ -361,8 +360,7 @@ that is not only a comment or docstring) and `any`. The syntax table in
 `rule-evals/<id>.yaml` (or `<id>.yml`, but not both) lists cases. Each case is an edit and
 the review it should get:
 
-- `name`: its verdict and situation, unique in the file: `flags`, `allows` or `skips`,
-  matching its `outcome`, then the situation. It never states the harm or why.
+- `name`: the situation it tests, unique per file.
 - `inputs`: the edit. `before` is the file before it (leave it out for a new file),
   `after` is the file after it, and `file` is its path (default `module.py`), which
   must match the binding's paths. `unchanged` maps the path of each other file the
@@ -383,7 +381,7 @@ the review it should get:
 
 ```yaml
 cases:
-  - name: flags a second class added to the file
+  - name: a second class added to the file
     inputs:
       before: |
         class Order:
@@ -397,14 +395,14 @@ cases:
             pass
     expected_output:
       outcome: invalid
-  - name: allows a file that defines one class
+  - name: a file that defines one class
     inputs:
       after: |
         class Order:
             pass
     expected_output:
       outcome: valid
-  - name: skips a change to an attribute
+  - name: a change to an attribute
     inputs:
       before: |
         class Order:
@@ -431,10 +429,8 @@ held to the same bar.
    classifies the diff the way a review does.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
-3. Once `codeguard eval` passes with nothing changed since, `codeguard eval --repeat 19`
-   reviews each case nineteen more times, 20 in all, to the end, so an unstable verdict
-   shows up as a failing run, named like `flags a second class added to the file [2/19]`.
-   Any change starts again at step 2.
+3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
+   shows up as a failing run, named like `a second class added to the file [2/20]`.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -451,7 +447,7 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "flags a patch" --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 20
 codeguard eval --provider gemini --repeat 20
 ```
 
@@ -509,7 +505,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 |---|---|---|---|---|
 | A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
 | A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review: 1 run to verify the change, then 19 more, 20 of 20 | `codeguard eval`, then `codeguard eval --repeat 19` | yes |
+| | | each edit gets its expected review, 20 runs of 20 | `codeguard eval --repeat 20` | yes |
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
@@ -588,13 +584,6 @@ the plugin ships, not one on your PATH. Claude Code and Codex get the same behav
   doesn't, so they still run there ([Rules](#rules)).
 - If the review crashes or uv can't build codeguard's environment, you see why, and the
   stop goes through.
-
-In Claude Code, a second hook guards the rules themselves. Before an `Edit` or `Write` to
-a rule file (a skill, pattern rule, gate, binding, rule test or rule eval, under
-`.codeguard/` or a package ruleset's directory), it checks the session's transcript for
-the `writing-rules` skill: a Skill call naming it, or a Read of its `SKILL.md`. Until the
-session has loaded it, the edit is denied with a message telling the agent to load it. A
-transcript the hook can't read lets the edit through.
 
 The judge gets the code the change touched: each changed function or method, with its
 decorators; each changed statement outside them, whole, with the header and decorators of
@@ -700,7 +689,7 @@ Codex uses the existing verdict cache keyed on the judge inputs and reviewed sou
 Its native tools discover related repository code as the rule requires. Native events
 do not provide complete file-read tracking, so Codex does not populate `loaded_files`
 for additional context-file invalidation. Claude and Gemini tracking are unchanged.
-Concurrency follows the CLI limit (one call per CPU), or `judge.calls_at_once` when set.
+Concurrency follows the CLI limit, one call per CPU.
 
 The existing evaluation override also accepts Codex:
 
@@ -742,7 +731,7 @@ model: gemini-3.1-pro-preview
 judge:
   project: my-project             # default: GOOGLE_CLOUD_PROJECT
   location: global                # default: GOOGLE_CLOUD_LOCATION
-  calls_at_once: 2                # default: 2 for gemini, one per CPU for claude-cli
+  calls_at_once: 2                # Gemini only; default: 2
 ```
 
 Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
@@ -834,7 +823,7 @@ gets the same review on every machine and in CI. Every setting is optional.
 | `packages[].rulesets.<name>.severity` | each rule's own | The severity of every rule in the ruleset, including rules the package adds later. A rule's own override wins. | `warning` trials a ruleset: its findings print without blocking. |
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rules](#rules). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
-| `judge.calls_at_once` | one per CPU for `claude-cli`, `2` for `gemini` | How many judge calls run at once. | A `claude` call mostly waits on the network, so the limit follows the machine. Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
+| `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
 | `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Judge with Gemini on Google Cloud](#judge-with-gemini-on-google-cloud). | |
 
 Two things have no setting on purpose:
@@ -921,13 +910,12 @@ them on Haiku on Bedrock. CI runs them; run them after changing the judge's inst
 tools:
 
 ```sh
-uv run pytest -m llm -n 4 --llm-runs 1 -x    # each case once, stopping at the first failure
-uv run pytest -m llm -n 4 --llm-runs 2       # then twice more, for 3 of 3, as CI does
+uv run pytest -m llm -n 4    # each case 3 times, as CI does
 ```
 
 Local Codex checks use the same fixtures with
 `--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
-run `--llm-runs 1 -x` first, then `--llm-runs 19` once it passes.
+add `--llm-runs 20`.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute
