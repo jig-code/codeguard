@@ -14,6 +14,7 @@ from factories.rule_eval import (
     MakeRuleEvalCase,
     MakeVerdict,
 )
+from factories.ruleset import MakeBindingConfig, MakeRuleset
 from factories.skill import MakeBinding, MakeSkill
 from git_repo import GitRepo
 from pytest_factoryboy import register
@@ -24,6 +25,8 @@ register(MakeDiagnostic)
 register(MakeViolation)
 register(MakeSkill)
 register(MakeBinding)
+register(MakeBindingConfig)
+register(MakeRuleset)
 register(MakeJudgeRequest)
 register(MakeVerdict)
 register(MakeEditCase)
@@ -48,7 +51,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addoption(
         "--judge-model",
-        help="The model --judge-provider judges with. Default: the provider's default model.",
+        help="The model --judge-provider judges with. Default: the provider's default model; "
+        "none for claude-cli, so the claude CLI runs its own default.",
     )
 
 

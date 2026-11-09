@@ -35,7 +35,7 @@ def judged_evals(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
     provider: JudgeProvider | None = request.config.getoption("judge_provider")
     if provider is None:
         return EVALS
-    model: str = request.config.getoption("judge_model") or provider.default_model
+    model: str | None = request.config.getoption("judge_model") or provider.default_model
     evals = shutil.copytree(EVALS, tmp_path / "evals")
     for binding in (evals / "python" / "bindings").glob("*.yaml"):
         config = yaml.safe_load(binding.read_text()) | {"provider": str(provider), "model": model}
