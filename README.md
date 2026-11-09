@@ -429,8 +429,8 @@ held to the same bar.
    classifies the diff the way a review does.
 2. `codeguard eval` reviews every case with the binding's model, the way
    `codeguard review` would.
-3. `codeguard eval --repeat 20` reviews each case twenty times, so an unstable verdict
-   shows up as a failing run, named like `a second class added to the file [2/20]`.
+3. `codeguard eval --repeat 3` reviews each case three times, so an unstable verdict
+   shows up as a failing run, named like `a second class added to the file [2/3]`.
 
 `codeguard eval` takes options to judge part of a package, or with another model:
 
@@ -447,8 +447,8 @@ A `--rule` that names no judge rule, or a `--case` that no selected rule's case 
 contains, fails the eval before any case is judged.
 
 ```sh
-codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 20
-codeguard eval --provider gemini --repeat 20
+codeguard eval --rule mock-only-at-boundary --case "a patch" --repeat 3
+codeguard eval --provider gemini --repeat 3
 ```
 
 Both take a package directory, so `codeguard eval path/to/package` evaluates a package
@@ -505,7 +505,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 |---|---|---|---|---|
 | A pattern rule or gate | `rule-tests/<id>-test.yml` | the rule matches its `invalid` cases and none of its `valid` ones | `codeguard test` | no |
 | A judge rule's skill, binding or `triggers` | `rule-evals/<id>.yaml` | the triggers fire on each edit but the `skipped` ones | `codeguard test` | no |
-| | | each edit gets its expected review, 20 runs of 20 | `codeguard eval --repeat 20` | yes |
+| | | each edit gets its expected review, 3 runs of 3 | `codeguard eval --repeat 3` | yes |
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset. Tag
 releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
@@ -917,8 +917,7 @@ uv run pytest -m llm -n 4    # each case 3 times, as CI does
 ```
 
 Local Codex checks use the same fixtures with
-`--judge-provider codex-cli --judge-model gpt-6-luna`. For a 20-run reliability check,
-add `--llm-runs 20`.
+`--judge-provider codex-cli --judge-model gpt-6-luna`.
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute

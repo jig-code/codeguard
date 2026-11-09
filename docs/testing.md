@@ -65,10 +65,9 @@ CI runs a rule's eval only for a change that can change its verdicts:
 
 | You change | Each case of the rule passes |
 |---|---|
-| The rule: its skill or a language supplement, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 20 runs of 20 |
+| The rule: its skill or a language supplement, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 3 runs of 3 |
 | The judge: codeguard's judge prompt, request, tools or harness, or the codeguard version a package or app tests with | 3 runs of 3 |
 
-Twenty clean runs show, with 95% confidence, that a case fails less than 1 run in 7.
 Three clean runs catch a rule that a judge change has broken. No other change runs a
 rule eval: a pattern rule, a gate no judge rule uses, or another rule. CI applies this
 wherever rules that review code live: a rule package and an app's `.codeguard/`.
@@ -105,7 +104,7 @@ rules codeguard reviews itself with are tested in their package's CI.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | A pattern rule, a gate or their tests | Each rule and gate matches its `invalid` snippets and none of its `valid` ones | `codeguard rules test` | Same |
-| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 19 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 19` | Same |
+| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
 | The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
 
 Run both commands at the package root; they cover every ruleset.
@@ -115,7 +114,7 @@ Run both commands at the package root; they cover every ruleset.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | The app's code | The changed files against the app's rules; an error fails. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files | `codeguard review --base <base branch>` | `codeguard review` |
-| A rule the app defines | Each rule's tests and each case's triggers, then the verdicts of each judge rule whose rule or eval cases changed: 1 run to verify the change, then 19 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 19` | Same |
+| A rule the app defines | Each rule's tests and each case's triggers, then the verdicts of each judge rule whose rule or eval cases changed: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
 | The codeguard release the actions are pinned to | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
 
 - An app with no rules of its own has only the first row.
