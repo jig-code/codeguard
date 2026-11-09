@@ -6,10 +6,10 @@ page is what each engineer does.
 
 ## Install the plugin
 
-The plugin is codeguard: it ships the CLI and runs it with
-[uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is all anyone
-working in the project installs. The first review after an install or upgrade takes a
-little longer while uv builds codeguard's environment in the plugin's data directory.
+The plugin ships the codeguard CLI, its review hooks and the writing-rules skill, and
+runs the CLI with [uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is
+all anyone working in the project installs. The first review after an install or upgrade
+takes a little longer while uv builds codeguard's environment.
 
 ### Claude Code
 
