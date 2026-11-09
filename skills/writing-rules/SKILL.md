@@ -170,7 +170,8 @@ other code finds code to fix, not evidence that the rule is right.
 
 ```sh
 codeguard test                 # rule tests and eval triggers; --update-all regenerates snapshots
-codeguard eval --rule <id> --repeat 3  # a judge rule: every case passes 3 runs of 3; calls the model
+codeguard eval --rule <id>             # a judge rule: verifies the change in 1 run; calls the model
+codeguard eval --rule <id> --repeat 2  # then 2 more: every case passes 3 runs of 3
 codeguard review --all --dry-run  # existing violations of pattern rules; calls no model
 ```
 
