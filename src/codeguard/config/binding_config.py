@@ -36,7 +36,6 @@ class BindingConfig(BaseModel):
 
     @property
     def judge(self) -> JudgeChoice:
-        """The rule's own choice of judge, over the project's and its package's defaults."""
         return JudgeChoice(provider=self.provider, model=self.model)
 
     @model_validator(mode="before")

@@ -10,8 +10,6 @@ _API_CALLS_AT_ONCE = 2
 
 
 class ModelFamily(StrEnum):
-    """A vendor's models, told apart by the prefix of the id the vendor gives them."""
-
     CLAUDE = "claude-"
     GPT = "gpt-"
     GEMINI = "gemini-"
@@ -28,8 +26,11 @@ class JudgeProvider(StrEnum):
     CODEX_CLI = "codex-cli"
 
     @property
+    def default_model(self) -> str | None:
+        return _DEFAULT_MODELS[self]
+
+    @property
     def runs_a_cli(self) -> bool:
-        """A CLI has a default model of its own; an API needs one named."""
         return self in (JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI)
 
     @property
@@ -37,8 +38,15 @@ class JudgeProvider(StrEnum):
         return _FAMILIES[self]
 
 
-# The vendors' models each provider runs. A model of no known family, such as a Bedrock
-# application inference profile's ARN, is the provider's own id.
+# The models codeguard was tested with on each provider.
+_DEFAULT_MODELS = {
+    JudgeProvider.CLAUDE_CLI: None,
+    JudgeProvider.CODEX_CLI: "gpt-6-luna",
+    JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
+    JudgeProvider.BEDROCK: "us.anthropic.claude-haiku-5-5",
+}
+
+
 _FAMILIES = {
     JudgeProvider.CLAUDE_CLI: frozenset({ModelFamily.CLAUDE}),
     JudgeProvider.CODEX_CLI: frozenset({ModelFamily.GPT}),
@@ -59,7 +67,6 @@ class JudgeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider
-    # None runs a CLI with no model named, so its own default judges.
     name: str | None = None
 
     @property
@@ -67,17 +74,13 @@ class JudgeModel(BaseModel):
         return self.name or f"{self.provider}'s default model"
 
     @property
-    def api_name(self) -> str:
-        """The model an API provider runs, which has no default of its own."""
+    def required_name(self) -> str:
         if self.name is None:
             raise _unset("model", f"provider {self.provider} needs a model")
         return self.name
 
 
 class JudgeChoice(BaseModel):
-    """One level's choice of judge: a binding's, the project's or a rule package's. The
-    provider and the model each come from the first level that names it."""
-
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None
@@ -90,21 +93,18 @@ class JudgeChoice(BaseModel):
 
     @property
     def judge_model(self) -> JudgeModel:
-        """The judge this choice names: with no provider named, the claude CLI. A model of
-        a family the provider can't run is an error."""
         family = ModelFamily.of(self.model) if self.model else None
         if self.provider is None and self.model and family is not ModelFamily.CLAUDE:
             raise _unset("provider", f"model {self.model} needs a provider")
         provider = self.provider or JudgeProvider.CLAUDE_CLI
         if family is not None and family not in provider.families:
             raise ConfigError(f"provider {provider} can't run model {self.model}")
+        if self.model is None and provider is not JudgeProvider.CLAUDE_CLI:
+            raise _unset("model", f"provider {provider} needs a model")
         return JudgeModel(provider=provider, name=self.model)
 
 
 class JudgeConfig(BaseModel):
-    """The project's `judge`: its default choice of judge, and the settings that stay
-    global."""
-
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None

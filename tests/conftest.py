@@ -14,6 +14,7 @@ from factories.rule_eval import (
     MakeRuleEvalCase,
     MakeVerdict,
 )
+from factories.ruleset import MakeBindingConfig, MakeRuleset
 from factories.skill import MakeBinding, MakeSkill
 from git_repo import GitRepo
 from pytest_factoryboy import register
@@ -24,6 +25,8 @@ register(MakeDiagnostic)
 register(MakeViolation)
 register(MakeSkill)
 register(MakeBinding)
+register(MakeBindingConfig)
+register(MakeRuleset)
 register(MakeJudgeRequest)
 register(MakeVerdict)
 register(MakeEditCase)
@@ -48,8 +51,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addoption(
         "--judge-model",
-        help="The model --judge-provider judges with. Default: Haiku for bedrock, Gemini 3.1 "
-        "Pro for gemini, and the CLI's own default for claude-cli and codex-cli.",
+        help="The model --judge-provider judges with. Default: the provider's default model; "
+        "none for claude-cli, so the claude CLI runs its own default.",
     )
 
 
@@ -65,8 +68,6 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in list(os.environ):
         if name.startswith("CODEGUARD_JUDGE__"):
             monkeypatch.delenv(name)
-    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
 
 
 @pytest.fixture

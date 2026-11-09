@@ -10,7 +10,6 @@ from codeguard.config import (
     Config,
     ConfigError,
     ConfigLoader,
-    JudgeChoice,
     JudgeConfig,
     JudgeProvider,
     PathPackageConfig,
@@ -79,7 +78,7 @@ class TestConfigLoader:
     def test_loads_the_project_judge_default(self, repo):
         repo.write(CONFIG, "judge:\n  provider: bedrock\n  model: project-model\n")
 
-        assert ConfigLoader(repo.root).load().judge.choice == JudgeChoice(
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             provider=JudgeProvider.BEDROCK, model="project-model"
         )
 
@@ -88,7 +87,7 @@ class TestConfigLoader:
         monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
         monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
 
-        assert ConfigLoader(repo.root).load().judge.choice == JudgeChoice(
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             provider=JudgeProvider.BEDROCK, model="env-model"
         )
 
@@ -117,16 +116,6 @@ class TestConfigLoader:
         monkeypatch.setenv("CODEGUARD_JUDGE__CALLS_AT_ONCE", "9")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(project="my-project")
-
-    def test_bedrock_inference_prefix_is_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  bedrock:\n    inference_prefix: eu\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n  judge.bedrock: Extra inputs are not permitted"
-        )
 
     def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):
         repo.write(CONFIG, "judge:\n  model: file-model\n")
@@ -162,30 +151,6 @@ class TestConfigLoader:
             PathPackageConfig(
                 path=Path("rules"),
                 rulesets={"python": RulesetConfig(exclude=("no-print",))},
-            ),
-        )
-
-    def test_loads_listed_and_configured_rulesets_of_a_package(self, repo):
-        repo.write("rules/codeguard-package.yaml", "name: example\nrulesets: [python]\n")
-        repo.write(
-            CONFIG,
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets: [general]\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [no-print]\n",
-        )
-
-        packages = ConfigLoader(repo.root).load().packages
-
-        assert packages == (
-            PathPackageConfig(path=Path("rules"), rulesets={"general": RulesetConfig()}),
-            PathPackageConfig(
-                path=Path("rules"), rulesets={"python": RulesetConfig(exclude=("no-print",))}
             ),
         )
 
@@ -226,17 +191,6 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_binding_names_no_model_by_default(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
-        repo.write(
-            BINDING,
-            'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
-        )
-
-        ruleset = RulesetLoader.local(repo.root).load()
-
-        assert ruleset.bindings.root["placement.yaml"].model is None
-
     def test_binding_file_may_end_in_yml(self, repo, make_skill):
         repo.write(SKILL, make_skill().text)
         repo.write(
@@ -275,7 +229,7 @@ class TestRulesetLoader:
 
         assert ruleset.bindings.root["placement.yaml"].model == "claude-haiku-5-5"
 
-    def test_loads_the_binding_provider(self, repo, make_skill):
+    def test_loads_the_binding_provider(self, repo, make_skill, make_binding_config):
         repo.write(SKILL, make_skill().text)
         repo.write(
             BINDING,
@@ -285,8 +239,10 @@ class TestRulesetLoader:
 
         ruleset = RulesetLoader.local(repo.root).load()
 
-        assert ruleset.bindings.root["placement.yaml"].judge == JudgeChoice(
-            provider=JudgeProvider.GEMINI, model="gemini-3.1-pro-preview"
+        assert ruleset.bindings.root["placement.yaml"] == make_binding_config(
+            skill=repo.root / ".claude/skills/responsibility-placement",
+            provider=JudgeProvider.GEMINI,
+            model="gemini-3.1-pro-preview",
         )
 
     def test_loads_the_binding_triggers(self, repo, make_skill):

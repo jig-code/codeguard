@@ -28,7 +28,6 @@ _READ_ONLY_TOOLS = "Read,Grep,Glob"
 @dataclass(frozen=True)
 class ClaudeJudge:
     root: Path
-    # None runs the CLI with no --model, so its own default judges.
     model: str | None
     processes: AbstractContextManager[object]
     executable: str = _EXECUTABLE

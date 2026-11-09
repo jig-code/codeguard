@@ -27,7 +27,6 @@ class Binding:
     paths: tuple[str, ...]
     severity: Severity
     triggers: frozenset[str]
-    # The provider and the model, each from the first level that names it.
     judge: JudgeChoice = JudgeChoice()
     exclude_paths: tuple[str, ...] = ()
     # The skill's supplement for each language, which the judge reads after the skill.
@@ -101,14 +100,16 @@ class Bindings(tuple[Binding, ...]):
     def from_rulesets(
         cls,
         rulesets: Iterable[Ruleset],
-        project: JudgeChoice = JudgeChoice(),
-        override: JudgeChoice = JudgeChoice(),
+        project_judge: JudgeChoice = JudgeChoice(),
+        judge_override: JudgeChoice = JudgeChoice(),
     ) -> Self:
-        """Each selected rule's binding. Its provider and its model each come from the override,
-        else its binding, else the project's default, else its package's."""
         return cls(
             Binding.from_config(
-                rule, binding, override.over(binding.judge).over(project).over(ruleset.judge)
+                rule,
+                binding,
+                judge_override
+                if judge_override.provider
+                else binding.judge.over(project_judge).over(ruleset.package_judge),
             )
             for ruleset in rulesets
             for rule, binding in ruleset.selected_bindings().items()

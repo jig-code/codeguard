@@ -134,15 +134,13 @@ def main() -> int:
         "--provider",
         type=JudgeProvider,
         choices=list(JudgeProvider),
-        help="Judge every selected rule with this provider instead of the configured one; "
-        "the model still comes from the configuration unless --model names one.",
+        help="Judge every selected rule with this provider instead of its binding's.",
     )
     eval_command.add_argument(
         "--model",
-        help="Judge every selected rule with this model, by its vendor's id, instead of the "
-        "configured one; the provider still comes from the configuration unless --provider "
-        "names one. Default: the configured model, else none, so claude-cli and codex-cli run "
-        "their CLI's own default.",
+        help="The model --provider judges with. Default: none for claude-cli, so the claude "
+        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
+        "us.anthropic.claude-haiku-5-5 for bedrock.",
     )
     eval_command.set_defaults(run=_eval)
 
@@ -153,6 +151,8 @@ def main() -> int:
     config_command.set_defaults(run=_config)
 
     args = parser.parse_args()
+    if getattr(args, "model", None) and not args.provider:
+        eval_command.error("--model needs --provider")
     _configure_telemetry()
     try:
         if args.run is _config:
@@ -242,7 +242,11 @@ def _eval(args: argparse.Namespace) -> int:
     from codeguard.rules.rule_evaluation import RuleEvaluation  # noqa: PLC0415
 
     selection = EvalSelection(frozenset(args.rule), tuple(args.case))
-    override = JudgeChoice(provider=args.provider, model=args.model)
+    override = (
+        JudgeChoice(provider=args.provider, model=args.model or args.provider.default_model)
+        if args.provider
+        else JudgeChoice()
+    )
     result = RuleEvaluation(Rules(_working_tree(args.package))).run(
         args.repeat, selection, override
     )

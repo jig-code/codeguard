@@ -71,13 +71,17 @@ from the syntax table in [`syntax/`](../src/codeguard/syntax/).
   verdict schema. The scale never rewards resemblance to an example, since rules hold
   none.
 - Output that fails the verdict schema fails the run loudly (#11).
-- A model is named by its full id, never an alias, so a model change is visible to the
-  verdict cache.
+- A configured model is passed to the provider by its full id; **The verdict cache**
+  below says how that keys verdicts.
 
 **The verdict cache** ([`review/cached_judge.py`](../src/codeguard/review/cached_judge.py))
 reuses a verdict until something the judge's answer depends on changes, so an agent that
 stops again without changing a file doesn't pay for the same judgement twice. Evals and
-CI never use it: an eval tests the rule, and CI judges a commit fresh.
+CI never use it: an eval tests the rule, and CI judges a commit fresh. A model a binding,
+the project or a package names keys its verdicts, so changing it judges afresh. With none
+named, the `claude` CLI runs its own default and verdicts are keyed on `default`:
+codeguard doesn't know which model that is, so a user who changes the CLI's default clears
+the cache themselves.
 
 **Host adapters** turn a hook payload into a CLI call, and the CLI's result into a block
 or a pass. The only adapter is for the Stop hook, which blocks every time the agent stops

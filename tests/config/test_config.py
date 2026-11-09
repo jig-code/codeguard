@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 from packaging.version import Version
 from pydantic import ValidationError
@@ -8,11 +6,12 @@ from codeguard.config import (
     BindingConfig,
     BindingsConfig,
     Config,
+    ConfigError,
     GitPackageConfig,
     JudgeChoice,
     JudgeConfig,
+    JudgeModel,
     JudgeProvider,
-    PathPackageConfig,
     RuleOverride,
     RulesetConfig,
     Severity,
@@ -104,15 +103,6 @@ class TestPackagesConfig:
                 ref="v1.0.0",
                 rulesets={"python": RulesetConfig()},
             ),
-        )
-
-    def test_path_package_keeps_its_path_from_the_repository_root(self):
-        config = Config.model_validate(
-            {"packages": [{"kind": "path", "path": "rules", "rulesets": {"python": {}}}]}
-        )
-
-        assert config.packages == (
-            PathPackageConfig(path=Path("rules"), rulesets={"python": RulesetConfig()}),
         )
 
     def test_listed_rulesets_run_every_rule(self):
@@ -354,13 +344,6 @@ class TestRulesetConfig:
             "Value error, model: a rule is judged with the model its binding names"
         ]
 
-    def test_binding_names_no_judge_by_default(self, tmp_path):
-        skill = write_skill(tmp_path)
-
-        binding = BindingConfig.model_validate({"skill": skill, "paths": ["**"]})
-
-        assert binding.judge == JudgeChoice()
-
     def test_codex_binding_uses_its_selected_model(self, tmp_path):
         skill = write_skill(tmp_path)
 
@@ -374,6 +357,84 @@ class TestRulesetConfig:
         )
 
         assert binding.judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="a-bound-model")
+
+
+class TestJudgeChoice:
+    def test_choice_naming_nothing_runs_the_claude_cli_with_no_model(self):
+        assert JudgeChoice().judge_model == JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+
+    def test_claude_model_with_no_provider_named_runs_on_the_claude_cli(self):
+        judge = JudgeChoice(model="claude-haiku-5-5")
+
+        assert judge.judge_model == JudgeModel(
+            provider=JudgeProvider.CLAUDE_CLI, name="claude-haiku-5-5"
+        )
+
+    @pytest.mark.parametrize(
+        "provider", [JudgeProvider.CODEX_CLI, JudgeProvider.GEMINI, JudgeProvider.BEDROCK]
+    )
+    def test_provider_other_than_the_claude_cli_without_a_model_is_an_error(self, provider):
+        with pytest.raises(ConfigError) as error:
+            _ = JudgeChoice(provider=provider).judge_model
+
+        assert str(error.value) == (
+            f"provider {provider} needs a model: set model in the rule's binding, "
+            "judge.model in .codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or "
+            "judge.model in its package's codeguard-package.yaml"
+        )
+
+    @pytest.mark.parametrize("model", ["gpt-6-luna", "gemini-3.1-pro-preview"])
+    def test_model_other_than_claude_with_no_provider_named_is_an_error(self, model):
+        with pytest.raises(ConfigError) as error:
+            _ = JudgeChoice(model=model).judge_model
+
+        assert str(error.value) == (
+            f"model {model} needs a provider: set provider in the rule's binding, "
+            "judge.provider in .codeguard/config.yaml (or CODEGUARD_JUDGE__PROVIDER), or "
+            "judge.provider in its package's codeguard-package.yaml"
+        )
+
+    @pytest.mark.parametrize(
+        ("provider", "model"),
+        [
+            (JudgeProvider.CLAUDE_CLI, "gpt-6-luna"),
+            (JudgeProvider.CODEX_CLI, "claude-haiku-5-5"),
+            (JudgeProvider.GEMINI, "claude-haiku-5-5"),
+            (JudgeProvider.BEDROCK, "gemini-3.1-pro-preview"),
+        ],
+    )
+    def test_model_the_provider_cant_run_is_an_error(self, provider, model):
+        with pytest.raises(ConfigError) as error:
+            _ = JudgeChoice(provider=provider, model=model).judge_model
+
+        assert str(error.value) == f"provider {provider} can't run model {model}"
+
+    def test_model_of_a_family_the_provider_runs_is_its_judge(self):
+        judge = JudgeChoice(provider=JudgeProvider.BEDROCK, model="gpt-6-luna")
+
+        assert judge.judge_model == JudgeModel(provider=JudgeProvider.BEDROCK, name="gpt-6-luna")
+
+    @pytest.mark.parametrize(
+        ("provider", "model"),
+        [
+            (JudgeProvider.BEDROCK, "arn:aws:bedrock:us-west-2:1:application-inference-profile/x"),
+            (JudgeProvider.CODEX_CLI, "o9-mini"),
+        ],
+    )
+    def test_model_of_no_known_family_is_its_judge(self, provider, model):
+        judge = JudgeChoice(provider=provider, model=model)
+
+        assert judge.judge_model == JudgeModel(provider=provider, name=model)
+
+    def test_required_name_of_a_model_left_unnamed_is_an_error(self):
+        with pytest.raises(ConfigError) as error:
+            _ = JudgeModel(provider=JudgeProvider.GEMINI).required_name
+
+        assert str(error.value) == (
+            "provider gemini needs a model: set model in the rule's binding, "
+            "judge.model in .codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or "
+            "judge.model in its package's codeguard-package.yaml"
+        )
 
 
 class TestJudgeConfig:

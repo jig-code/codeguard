@@ -28,13 +28,12 @@ paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
 
-`provider` and `model` are optional. A binding that leaves them out is judged with
-`claude-sonnet-5-5` through the `claude` CLI. Set them only to judge the rule with
-something else ([Choose a judge](judges.md)):
+`provider` and `model` are optional, each on its own; [Choose a judge](judges.md) says
+where one the binding leaves out comes from:
 
 ```yaml
 provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
-model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedrock need one
+model: gemini-3.1-pro-preview     # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
 A judge rule's id is its skill's directory name.

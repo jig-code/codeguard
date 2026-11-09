@@ -23,6 +23,9 @@ type RulesetSelections = Annotated[
 ]
 
 
+type RepositoryRelativePath = Path
+
+
 class GitPackageConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -36,8 +39,7 @@ class PathPackageConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     kind: Literal["path"] = "path"
-    # Relative to the repository root.
-    path: Path
+    path: RepositoryRelativePath
     rulesets: RulesetSelections
 
 
