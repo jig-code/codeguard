@@ -10,7 +10,6 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
-    RetryPromptPart,
     TextPart,
     ToolCallPart,
     ToolReturnPart,
@@ -271,7 +270,20 @@ class TestGeminiJudge:
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
-        assert any(isinstance(part, RetryPromptPart) for part in models.sent(1))
+        (feedback,) = models.sent(1)
+        assert isinstance(feedback, UserPromptPart)
+        assert (
+            "<validation_errors>\n"
+            '[{"type":"missing","loc":["reason"],"msg":"Field required",'
+            '"input":{"violations":[{"file":"a.py"}]}},'
+            '{"type":"missing","loc":["violations",0,"line"],"msg":"Field required",'
+            '"input":{"file":"a.py"}},'
+            '{"type":"missing","loc":["violations",0,"message"],"msg":"Field required",'
+            '"input":{"file":"a.py"}},'
+            '{"type":"missing","loc":["violations",0,"confidence"],"msg":"Field required",'
+            '"input":{"file":"a.py"}}]\n'
+            "</validation_errors>"
+        ) in feedback.content
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
