@@ -109,4 +109,4 @@ A case is kept only while it is clear, tests something no other case does, and c
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
 miss, then reword the convention until the case passes, reading the judge's reason on
-each run; never add the code to the skill. The bar stays 20 runs of 20.
+each run; never add the code to the skill. The bar is 3 runs of 3.
