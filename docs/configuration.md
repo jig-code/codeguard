@@ -49,7 +49,7 @@ A package entry's `rulesets` lists the rulesets to run, or maps each to its sett
 - An unknown ruleset or rule id is an error.
 
 Diagnostics name a packaged rule by package, ruleset and id:
-`betterwithranch/python/no-del-param`.
+`jig-code/python/no-del-param`.
 
 ## Environment variables
 

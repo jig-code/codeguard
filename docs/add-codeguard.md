@@ -93,7 +93,7 @@ rule in each:
 # .codeguard/config.yaml
 packages:
   - kind: git
-    git: https://github.com/betterwithranch/codeguard-rules.git
+    git: https://github.com/jig-code/codeguard-rules.git
     ref: <tag>
     rulesets: [general, python]
 ```

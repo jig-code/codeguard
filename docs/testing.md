@@ -2,7 +2,7 @@
 
 This guide tells you how to test a change before you merge it, whether you are working
 on codeguard itself, on a rule package such as
-[betterwithranch/codeguard-rules](https://github.com/betterwithranch/codeguard-rules), or
+[jig-code/codeguard-rules](https://github.com/jig-code/codeguard-rules), or
 on an app that uses codeguard. Find the section for the repository you are changing,
 then the row for the kind of change you made. Each row says what CI checks and which
 commands run the same checks on your machine, so you can find a failure before CI does.

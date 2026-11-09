@@ -11,7 +11,7 @@ A project's own rules live in `.codeguard/`. A rule package is a git repo with a
 `codeguard-package.yaml` at its root:
 
 ```yaml
-name: betterwithranch
+name: jig-code
 rulesets: [python]
 ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
@@ -84,7 +84,7 @@ A project tests the rules in its `.codeguard/` the same way a package does.
 
 Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset.
 Tag releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
-[betterwithranch/codeguard-rules](https://github.com/betterwithranch/codeguard-rules) is
+[jig-code/codeguard-rules](https://github.com/jig-code/codeguard-rules) is
 an example.
 
 ## Try a local package
