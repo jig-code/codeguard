@@ -40,7 +40,7 @@ model: gemini-3.1-pro-preview     # default: claude-sonnet-5-5; gemini and bedro
 A judge rule's id is its skill's directory name.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
-whose changed lines fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
+whose [changed lines](how-a-review-works.md#what-a-review-reports) fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
 triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
@@ -181,8 +181,8 @@ held to the same bar.
 - the judge call fails, such as a quota error that outlasts the provider's retries. The
   other cases still run, so a passing eval means every case was judged.
 
-A case counts only the violations a review would report: those on a changed or removed
-line of the case's file.
+A case counts only the violations a review would report: those a changed line of the
+case's file is part of ([What a review reports](how-a-review-works.md#what-a-review-reports)).
 
 `codeguard eval` also fails a judge rule with no `invalid` case, and a rule eval whose
 id matches no judge rule. `codeguard eval` prints a table per rule, then the judge's
