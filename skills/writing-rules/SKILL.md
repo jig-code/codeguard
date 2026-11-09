@@ -27,8 +27,9 @@ the convention or breaks it: that is the rule's one yes/no test. The rule is tha
 statement, at most one sentence fixing the meaning of a term in it a reader could take
 two ways, and why it exists, and nothing else: no examples, no list in its text of the
 shapes a violation takes, no list of what isn't one, no sentence or clause that
-restates the statement, gives its purpose (that is the Why) or says what it ignores, and
-no supplement per language. The statement alone decides each piece of code; the judge
+restates the statement (such as one requirement said once as what code does and again as
+what it never does), gives its purpose (that is the Why) or says what it ignores, and no
+supplement per language. The statement alone decides each piece of code; the judge
 reads it as a reviewer would, and says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
