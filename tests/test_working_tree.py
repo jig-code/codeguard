@@ -230,7 +230,7 @@ class TestWorkingTree:
             base=git_repo.head(),
         )
 
-    def test_diff_holds_the_function_around_each_change_and_marks_the_gaps(self, tmp_path):
+    def test_diff_is_from_the_base_with_the_function_around_each_change(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write(
             "a.py",
@@ -269,19 +269,28 @@ class TestWorkingTree:
             " def g():\n"
         )
 
-    def test_diff_is_the_same_whatever_the_git_config(self, tmp_path):
+    def test_diff_ignores_the_git_config(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "def f():\n    a = 1\n    return a\n")
         git_repo.commit("Add a")
         git_repo.write("a.py", "def f():\n    a = 2\n    return a\n")
         changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
-        default = changed.diff(git_repo.root, "a.py")
         for setting in ("diff.noprefix", "diff.mnemonicPrefix", "color.diff", "diff.relative"):
             git_repo.git("config", setting, "true")
         git_repo.git("config", "diff.context", "0")
         git_repo.git("config", "diff.algorithm", "patience")
 
-        assert changed.diff(git_repo.root, "a.py") == default
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "index 8d5afc4..937b5e7 100644\n"
+            "--- a/a.py\n"
+            "+++ b/a.py\n"
+            "@@ -1,3 +1,3 @@\n"
+            " def f():\n"
+            "-    a = 1\n"
+            "+    a = 2\n"
+            "     return a\n"
+        )
 
     def test_diff_of_a_renamed_file_is_from_its_base_path(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -333,7 +342,15 @@ class TestWorkingTree:
 
         changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
 
-        assert changed.diff(git_repo.root, "a.py").endswith("+a = '\ufffd'\n")
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "new file mode 100644\n"
+            "index 0000000..0885fc8\n"
+            "--- /dev/null\n"
+            "+++ b/a.py\n"
+            "@@ -0,0 +1 @@\n"
+            "+a = '\ufffd'\n"
+        )
 
     def test_diff_of_all_lines_adds_a_tracked_file_whole(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
