@@ -1,35 +1,37 @@
 # Contributing
 
-## Working on codeguard
+[codeguard's architecture](architecture.md) describes how codeguard works and the
+invariants every change must keep, with [the review pipeline](review-pipeline.md) and
+[the judge](judge-design.md) in detail. Before changing the judge (its template, its
+prompt, its tools or what it's given), the review pipeline, or anything an invariant
+covers, read it and check the change against it.
 
-[docs/architecture.md](docs/architecture.md) describes codeguard's architecture: how it
-works, the invariants every change must keep, and what the judge is given. Before
-changing the judge (its template, its prompt, its tools or what it's given), the review
-pipeline, or anything an invariant covers, read it and check the change against it.
+[Testing](testing.md#changing-codeguard) says which checks a change to codeguard needs.
 
-[docs/testing.md](docs/testing.md) says how to test a change to codeguard, a rule
-package or an app.
-
-Tests:
+## Run the tests
 
 ```sh
 uv run pytest
 ```
 
-`uv run pytest` runs offline: it calls no model. The LLM tests check that the judge's
-instructions, request and tools still get the right verdicts from a real model. Each
-one reviews an edit in a scratch repository the way `codeguard review` does, with the
-fixture bindings' judge, `gemini-3.1-pro-preview` on Vertex AI, so they need Gemini
-credentials (Judge with Gemini on Google Cloud, above) and cost tokens. They are marked
-`llm`, which plain `pytest` deselects. CI signs in with the repository's
-`GOOGLE_CREDENTIALS` secret, a service account key with the Vertex AI User role, and
-its `GOOGLE_CLOUD_PROJECT` variable. `--judge-provider` and `--judge-model` judge them
-with another model, as `codeguard eval --provider` does: `--judge-provider bedrock` runs
-them on Haiku on Bedrock. CI runs them; run them after changing the judge's instructions, request or
-tools:
+`uv run pytest` runs offline: it calls no model.
+
+## LLM tests
+
+The LLM tests check that the judge's instructions, request and tools still get the right
+verdicts from a real model. Each one reviews an edit in a scratch repository the way
+`codeguard review` does, with the fixture bindings' judge, `gemini-3.1-pro-preview` on
+Vertex AI, so they need Gemini credentials
+([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)) and cost tokens. They are
+marked `llm`, which plain `pytest` deselects. `--judge-provider` and `--judge-model`
+judge them with another model, as `codeguard eval --provider` does:
+`--judge-provider bedrock` runs them on Haiku on Bedrock. CI runs them
+([`ci.yaml`](../.github/workflows/ci.yaml)); run them after changing the judge's
+instructions, request or tools, once to verify the change, then twice more:
 
 ```sh
-uv run pytest -m llm -n 4    # each case 3 times, as CI does
+uv run pytest -m llm -n 4 --llm-runs 1 -x
+uv run pytest -m llm -n 4 --llm-runs 2
 ```
 
 Local Codex checks use the same fixtures with
@@ -37,8 +39,7 @@ Local Codex checks use the same fixtures with
 
 `-n 4` runs four tests at once, each making up to 2 Gemini calls at once. It only saves
 time: any number gives the same result, though more may hit Gemini's tokens-per-minute
-limit. [docs/testing.md](docs/testing.md) says which to run for a
-change.
+limit.
 
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the skills and
 bindings beside them. When a case flips between runs or comes back uncertain, follow the
@@ -46,7 +47,9 @@ bindings beside them. When a case flips between runs or comes back uncertain, fo
 case's triggers.
 
 The `writing-rules` skill has its own evals in `evals/writing-rules/`;
-[docs/skill-evals.md](docs/skill-evals.md) says how to run and write them.
+[docs/skill-evals.md](skill-evals.md) says how to run and write them.
+
+## Run your clone in a project
 
 Run the CLI from this clone. `--editable` links the tool to the source, so edits
 apply on the next run; reinstall only after changing dependencies:
@@ -58,7 +61,8 @@ uv tool install --editable .
 Point a project's hooks at this clone.
 
 - Claude Code: in the project's `.claude/settings.local.json`, declare the marketplace
-  as a directory. It replaces the GitHub entry by name, for you only.
+  as a directory, which replaces the GitHub entry for you only
+  ([Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)).
   ```json
   {
     "extraKnownMarketplaces": {
@@ -84,7 +88,8 @@ Point a project's hooks at this clone.
 
 Release when a change on `main` should reach the projects using codeguard, or when a
 rule package needs it (a package's `codeguard` range is checked against the CLI's
-version). Engineers get only released versions; see [Upgrade](#upgrade).
+version). Engineers get only released versions; see [Keep the plugin up to
+date](using-codeguard.md#keep-the-plugin-up-to-date).
 
 1. Bump the version to the same `<version>` in all three files, in the PR with the
    change or in a PR of its own:

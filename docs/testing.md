@@ -10,28 +10,14 @@ The rows list every check a change needs: a change needs no check its row doesn'
 
 ## Words
 
-A codeguard rule is one of two kinds. Its files sit in a rule directory: `.codeguard/` in
-an app, or each ruleset's directory in a rule package. The paths below are relative to
-that directory, and the layout is fixed.
+A codeguard rule is a pattern rule or a judge rule ([Rules](architecture.md#rules)). Its
+files sit in a rule directory: `.codeguard/` in an app, or each ruleset's directory in a
+rule package. [Where rules live](write-rules.md#where-rules-live) has the layout, and
+[Rule formats](rule-formats.md) the format of each file: bindings, triggers and gates,
+and rule eval cases with the `valid`, `invalid` and `skipped` they expect.
 
-- A pattern rule is an ast-grep rule that matches code exactly, in
-  `rules/pattern/<id>.yml`. Its rule tests, `rule-tests/<id>-test.yml`, list code it
-  must and must not match.
-- A judge rule is a requirement a model checks. Its skill, `skills/<id>/SKILL.md`, is the
-  requirement's text, which codeguard puts in the judge's prompt; it isn't a Claude Code
-  skill. A supplement beside it gives one language's forms of the requirement.
-  Its rule eval, `rule-evals/<id>.yaml`, lists cases: each is an edit and the review it
-  should get.
-- A rule's binding, `bindings/<id>.yaml`, sets the paths it reviews. A judge rule's
-  binding also sets its triggers: the code a change must touch for the judge to check
-  it. A trigger is a built-in change kind or a gate, an ast-grep rule in
-  `gates/<id>.yml`, tested like a pattern rule.
-- The judge is the code in codeguard that sends a judge rule and a change to the model
-  and turns its reply into a review.
-
-`valid`, `invalid` and `skipped` are what a rule eval case expects. `invalid`: the
-triggers fire and the judge reports a violation. `valid`: the triggers fire and the
-judge reports none. `skipped`: the triggers don't fire.
+The judge is the code in codeguard that sends a judge rule and a change to the model and
+turns its reply into a review.
 
 codeguard ships no rules of its own. Its fixtures, in `evals/judge/`, are a small rule
 package that exists only to test the judge. A fixture rule is a judge rule there, and a
@@ -65,7 +51,7 @@ CI runs a rule's eval only for a change that can change its verdicts:
 
 | You change | Each case of the rule passes |
 |---|---|
-| The rule: its skill or a language supplement, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 3 runs of 3 |
+| The rule: its skill directory, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 3 runs of 3 |
 | The judge: codeguard's judge prompt, request, tools or harness, or the codeguard version a package or app tests with | 3 runs of 3 |
 
 Three clean runs catch a rule that a judge change has broken. No other change runs a
@@ -104,7 +90,7 @@ rules codeguard reviews itself with are tested in their package's CI.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | A pattern rule, a gate or their tests | Each rule and gate matches its `invalid` snippets and none of its `valid` ones | `codeguard rules test` | Same |
-| A judge rule's skill, supplement, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
+| A judge rule's skill directory, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
 | The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts, 3 runs | `codeguard rules test`, `codeguard rules eval --repeat 3` | Same |
 
 Run both commands at the package root; they cover every ruleset.

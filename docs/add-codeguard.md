@@ -1,8 +1,10 @@
 # Add codeguard to a project
 
-## Add codeguard to a project
+The one-time setup for a repository: the plugin settings, the CI job, the rule packages,
+and the formatters. Each engineer then installs the plugin
+([Use codeguard](using-codeguard.md)).
 
-### Claude Code
+## Claude Code
 
 In the project's `.claude/settings.json`:
 
@@ -23,7 +25,7 @@ In the project's `.claude/settings.json`:
 }
 ```
 
-### Codex
+## Codex
 
 List the plugin in the project's `.agents/plugins/marketplace.json`:
 
@@ -43,40 +45,7 @@ List the plugin in the project's `.agents/plugins/marketplace.json`:
 }
 ```
 
-### CI
-
-```yaml
-on: pull_request
-
-jobs:
-  codeguard:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: jig-code/codeguard@v0.9.1
-        with:
-          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-```
-
-The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. The judge needs the token; create it with `claude setup-token`
-and store it as a repository secret.
-
-A judge call that couldn't complete fails the review, and no setting turns that off
-([why](#configuration-reference)). To merge the PR anyway, add the
-`codeguard-allow-judge-errors` label to it, so each bypass is chosen for one PR and
-shows in its history. The action then passes
-`--judge-errors-as-warnings` to the review, so those calls print as warnings, and rule
-violations still fail. The label doesn't cover the `eval` input's `codeguard eval`,
-which still fails on them.
-
-Re-running the job doesn't pick up the label: a re-run reuses the event that started
-the workflow, with the PR's labels at that time. For adding the label to start a new
-review, and removing it to start a strict one, trigger on `labeled` and `unlabeled` for
-that label only. Without the `if`, every label added to a PR re-runs the whole review and
-its judge calls.
+## CI
 
 ```yaml
 on:
@@ -88,40 +57,35 @@ jobs:
     if: >-
       (github.event.action != 'labeled' && github.event.action != 'unlabeled')
       || github.event.label.name == 'codeguard-allow-judge-errors'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: jig-code/codeguard@v0.11.0
+        with:
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 
-Pin the action to a release tag, as above, and adopt each codeguard release in its own
-PR ([Upgrade](#upgrade)), so a new release never changes a review without a change in
-the project.
+The action reviews the files changed since the merge base with the PR's base branch,
+then runs the rule tests. [GitHub Action inputs](configuration.md#github-action-inputs)
+lists what else it takes.
 
-### Run formatters first
+A judge rule bound to the `claude` CLI, the default, needs the token: create it with
+`claude setup-token` and store it as a repository secret. A rule bound to Gemini or
+Bedrock needs that provider's credentials in the job instead
+([Choose a judge](judges.md)).
 
-Format code before codeguard reviews it. A formatter that runs after the review changes
-code that was never reviewed, and it changes the file, so the next review can't reuse
-the cached verdict: it calls the model again and can reach a different verdict.
+The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
+the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call
+that couldn't complete ([Merge a PR despite a judge
+error](using-codeguard.md#merge-a-pr-despite-a-judge-error)). The `if` keeps other
+labels from re-running the review and its judge calls.
 
-- In Claude Code, format each file when it's edited, in a `PostToolUse` hook on `Edit`
-  and `Write`, not in a `Stop` hook: hooks on the same event run in parallel, so a
-  formatter there can run after codeguard's review.
-- In CI, run the format check before the codeguard step.
-- Format an unformatted codebase in a commit of its own. Reformatted lines are changed
-  lines, so formatting inside a feature change sends every one of them to the judge.
+## Opt into a rule package
 
-codeguard ignores added and removed blank lines, which change nothing in any language.
-Other whitespace can change meaning, such as indentation in Python, so codeguard
-leaves it to the formatter.
-
-### Rules
-
-A project's own rules live under `.codeguard/`. To write or change one, use the
-plugin's `writing-rules` skill: it says which kind of rule fits a convention, how to
-state the rule, and how to test it. This README documents the files and commands the
-skill works with.
-
-A rule is one of two kinds:
-
-- A **pattern rule** is an ast-grep rule. It matches code by its syntax tree.
-- A **judge rule** is a skill that Claude judges each change to a file against.
+A project's own rules live under `.codeguard/` ([Write rules](write-rules.md)). The two
+kinds of rule are in [Rules](architecture.md#rules).
 
 A project can also opt into rulesets from rule packages. List the rulesets to run every
 rule in each:
@@ -135,7 +99,8 @@ packages:
     rulesets: [general, python]
 ```
 
-To choose a ruleset's rules or change how they run, give it settings instead:
+To choose a ruleset's rules or change how they run, give it settings instead
+([Rule package keys](configuration.md#rule-package-keys) says what each does):
 
 ```yaml
     rulesets:
@@ -147,23 +112,39 @@ To choose a ruleset's rules or change how they run, give it settings instead:
             severity: warning
 ```
 
-A git package's `ref` is a tag or commit. Local and CI reviews use the rules at that
-`ref`, so a commit gets the same rules everywhere, and a package release changes nothing
-until a project moves its `ref`. To try a release, change `ref` locally, or point a
-`kind: path` package at a checkout of it.
+A git package's `ref` is a tag or commit. codeguard fetches each `ref` once into
+`~/.cache/codeguard/packages` and reuses it, so a `ref` must not be a branch. A private
+package needs a token in CI ([A private package](write-rules.md#a-private-package)).
 
-codeguard fetches each `ref` once into `~/.cache/codeguard/packages` and reuses it, so a
-`ref` must not be a branch.
+## Pin codeguard and rule packages
 
-### Upgrade
+Local and CI reviews use the rules at a package's `ref`, so a commit gets the same rules
+everywhere, and a package release changes nothing until the project moves its `ref`.
+Pin the action to a release tag, as above, for the same reason.
 
-Pin in CI, auto-update in your dev environment. A commit on `main` reaches no one until
-it is released.
+Adopt each codeguard release and each rule package tag in its own PR, so whatever the
+upgrade changes in reviews and rule tests shows up there and nowhere else:
 
-**Pin in CI.** A project adopts each codeguard release and each rule package tag in its
-own PR, so whatever the upgrade changes in reviews and rule tests shows up there and
-nowhere else:
-
-- Move the action's tag (`jig-code/codeguard@v<version>`, and `jig-code/codeguard/test@v<version>`
-  if the project defines rules) to the new release.
+- Move the action's tag (`jig-code/codeguard@v<version>`) to the new release.
 - Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.
+
+To try a package release first, change `ref` locally, or point a `kind: path` package at
+a checkout of it ([Try a local package](write-rules.md#try-a-local-package)).
+
+## Run formatters first
+
+Format code before codeguard reviews it. A formatter that runs after the review changes
+code that was never reviewed, and it changes the file, so the next review can't reuse
+the cached verdict: it calls the model again and can reach a different verdict.
+
+- In Claude Code, format each file when it's edited, in a `PostToolUse` hook on `Edit`
+  and `Write`, not in a `Stop` hook, where it can run after codeguard's review
+  ([Hooks](https://code.claude.com/docs/en/hooks)).
+- In CI, run the format check before the codeguard step.
+- Format an unformatted codebase in a commit of its own. Reformatted lines are changed
+  lines, so formatting inside a feature change sends every one of them to the judge.
+
+## Tell your team
+
+Each engineer installs the plugin, and Codex users trust its hooks, as
+[Use codeguard](using-codeguard.md) shows. Point them there.

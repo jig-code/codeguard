@@ -1,8 +1,14 @@
 # The judge
 
-**The judge** grades one rule against one file's change and returns violations, never
-fixes. The providers include Claude (the `claude` CLI in safe mode), Codex (the `codex`
-CLI in a read-only sandbox) and Gemini (pydantic-ai, with equivalent tools).
+The judge grades one rule against one file's change. [codeguard's
+architecture](architecture.md) has the overview and the invariants it keeps; [Choose a
+judge](judges.md) says how to set each provider up.
+
+## What the judge does
+
+The judge returns violations, never fixes. The providers are the `claude` CLI in safe
+mode, the `codex` CLI in a read-only sandbox, and Gemini on Vertex AI and Claude or GPT on
+Amazon Bedrock (both pydantic-ai, with equivalent tools).
 
 - Its input: the judge template, which holds the instructions; the skill text; the
   `changes` element, an excerpt of the changed code with `+`, space and `-` marks and the
@@ -17,6 +23,15 @@ CLI in a read-only sandbox) and Gemini (pydantic-ai, with equivalent tools).
   keeps the rule or breaks it, as context for whoever troubleshoots the verdict;
   and violations, each with a file, line, message and confidence (1.0, 0.9, 0.7 or 0.5).
   A violation is reported only where the changed code is part of it.
+
+## How the model is chosen
+
+A judge rule is judged with its binding's provider and model, the ones its rule eval
+passed on; a binding that sets neither is judged with `claude-sonnet-5-5` through the
+`claude` CLI. A project can't switch a rule to another model
+([No setting on purpose](configuration.md#no-setting-on-purpose)).
+`codeguard eval --provider` and `--model` judge an eval with another model, and change
+nothing a review judges with.
 
 ## Judge input
 
@@ -48,8 +63,9 @@ onto its API.
   the rule needs more.
 - **Isolation (#6).** The Claude provider runs `claude --safe-mode`, which loads no
   CLAUDE.md, skills, plugins, hooks, MCP servers or memory. Its tools are read-only and
-  rooted at the repository. It runs no subagents. The Gemini provider has equivalent
-  read-only tools.
+  rooted at the repository. It runs no subagents. The Codex provider runs `codex exec`
+  in a read-only sandbox with project instructions, hooks, plugins, memories and web
+  search off. The Gemini and Bedrock providers have equivalent read-only tools.
 - **Model.** A full model id, never an alias, so a model change is visible to the cache.
 - **Output.** Validated against the verdict schema; output that fails validation fails
   the run loudly.
@@ -62,3 +78,27 @@ onto its API.
   none.
 - **Determinism (#5).** Claude Code adds the date, the account and the working directory
   to the message. Those are the only inputs codeguard doesn't control.
+
+## How each provider runs
+
+The `codex` CLI judge runs `codex exec` with ephemeral sessions and the shared verdict
+schema, and uses Codex's native repository tools in the read-only sandbox. Temporary
+files hold the shared judge instructions, verdict schema and final response; they are
+removed after each call. The provider uses `high` reasoning effort and the review
+deadline. Authentication failures, capacity errors and other process errors fail
+immediately, without retries or a separate per-call time limit. Codex uses the verdict
+cache keyed on the judge inputs and reviewed source. Native events do not provide
+complete file-read tracking, so Codex does not populate `loaded_files` for context-file
+invalidation. Concurrency follows the CLI limit, one call per CPU.
+
+Gemini reads the working directory through read-only `read_file`, `grep` and `glob`
+tools, limited to the repository, thinks at the `LOW` level, and returns its verdict as
+structured output with the same verdict schema as Claude. A judgement that makes 10
+requests without a verdict is reported as not judged. Bedrock runs through the same
+tools.
+
+Gemini's pay-as-you-go capacity is shared and limited by tokens per minute, so the
+gemini provider makes 2 calls at once (`judge.calls_at_once`). Each provider has its own
+limit, so Claude and Gemini rules in one review don't wait on each other. A request that
+Gemini turns away (408, 429 or a 5xx) or whose connection breaks is sent again for about
+15 seconds, and then the rule is reported as not judged.
