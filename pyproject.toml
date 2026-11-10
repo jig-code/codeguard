@@ -94,6 +94,7 @@ layers = [
     "syntax",
     "ast_grep",
     "config | working_tree | file_lock",
+    "line_range",
 ]
 
 [[tool.importlinter.contracts]]
@@ -113,6 +114,7 @@ source_modules = [
     "codeguard.ast_grep",
     "codeguard.config",
     "codeguard.working_tree",
+    "codeguard.line_range",
     "codeguard.file_lock",
 ]
 forbidden_modules = ["pydantic_evals"]

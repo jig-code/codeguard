@@ -30,6 +30,12 @@ REQUIRED_FIXES = (
 )
 
 
+def _lines(lines: dict[str, object]) -> str:
+    """A range as codeguard shows it: `9` for one line, `9-11` for several."""
+    start, end = lines["start"], lines["end"]
+    return str(start) if start == end else f"{start}-{end}"
+
+
 def main() -> None:
     host = sys.argv[1]
     sys.stdin.read()
@@ -79,9 +85,9 @@ class Diagnostic:
 
     @classmethod
     def from_json(cls, raw: dict[str, object]) -> "Diagnostic":
-        file, line, note = raw["file"], raw["line"], raw["note"]
+        file, lines, note = raw["file"], raw["lines"], raw["note"]
         return cls(
-            location=str(file) if line is None else f"{file}:{line}",
+            location=f"{file}:{_lines(lines)}" if isinstance(lines, dict) else str(file),
             severity=str(raw["severity"]),
             rule=str(raw["rule"]),
             message=str(raw["message"]),

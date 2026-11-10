@@ -36,7 +36,7 @@ class TestPatternRuleCheck:
 
         diagnostics = PatternRuleCheck(repo.root, ruleset).check(["checked.py"])
 
-        assert diagnostics == [make_diagnostic(file="checked.py", line=2)]
+        assert diagnostics == [make_diagnostic(file="checked.py", lines__start=2, lines__end=2)]
 
     def test_check_with_no_files_reports_nothing(self, repo):
         repo.write("unchecked.py", "print(1)\n")

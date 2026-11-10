@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Self
 
 from codeguard.config import ChangeKind
+from codeguard.line_range import LineRange
 from codeguard.syntax.syntax_node import SyntaxNode
 from codeguard.syntax.syntax_table import NodeKind
 
@@ -68,10 +69,12 @@ class ParsedFile:
             kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
         return frozenset(kinds)
 
-    def kinds_on(self, line: int) -> frozenset[str]:
-        kinds = self._kinds_spanning(line)
-        if any(node.spans(line) for node in self.of_kind(NodeKind.SCOPE_NAME)):
-            kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
+    def kinds_on(self, lines: LineRange) -> frozenset[str]:
+        kinds: set[str] = set()
+        for number in lines.numbers:
+            kinds |= self._kinds_spanning(number)
+            if any(node.spans(number) for node in self.of_kind(NodeKind.SCOPE_NAME)):
+                kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
         return frozenset(kinds)
 
     def of_kind(self, kind: NodeKind | str) -> list[SyntaxNode]:

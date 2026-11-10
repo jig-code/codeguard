@@ -306,14 +306,14 @@ class TestChangedLines:
     def test_all_lines_judges_the_whole_file(self):
         assert AllLines(("a.py",)).judged_lines("a.py") is None
 
-    def test_covers_a_changed_line(self):
-        assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", 2)
+    def test_covers_a_changed_line(self, make_line_range):
+        assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=2))
 
-    def test_does_not_cover_an_unchanged_line(self):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("a.py", 1)
+    def test_does_not_cover_an_unchanged_line(self, make_line_range):
+        assert not ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=1))
 
-    def test_does_not_cover_an_unchanged_file(self):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", 2)
+    def test_does_not_cover_an_unchanged_file(self, make_line_range):
+        assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", make_line_range(start=2))
 
     def test_covers_the_whole_of_a_changed_file(self):
         assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", None)
@@ -321,18 +321,22 @@ class TestChangedLines:
     def test_does_not_cover_the_whole_of_an_unchanged_file(self):
         assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", None)
 
-    def test_covers_a_range_that_contains_a_changed_line(self):
-        assert ChangedLines({"a.py": frozenset({3})}).covers("a.py", 2, end_line=4)
+    def test_covers_a_range_that_contains_a_changed_line(self, make_line_range):
+        assert ChangedLines({"a.py": frozenset({3})}).covers(
+            "a.py", make_line_range(start=2, end=4)
+        )
 
-    def test_does_not_cover_a_range_without_a_changed_line(self):
-        assert not ChangedLines({"a.py": frozenset({5})}).covers("a.py", 2, end_line=4)
+    def test_does_not_cover_a_range_without_a_changed_line(self, make_line_range):
+        assert not ChangedLines({"a.py": frozenset({5})}).covers(
+            "a.py", make_line_range(start=2, end=4)
+        )
 
-    def test_covers_a_range_that_contains_a_deletion_point(self):
+    def test_covers_a_range_that_contains_a_deletion_point(self, make_line_range):
         changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
 
-        assert changed.covers("a.py", 2, end_line=4)
+        assert changed.covers("a.py", make_line_range(start=2, end=4))
 
-    def test_covers_a_deletion_point(self):
+    def test_covers_a_deletion_point(self, make_line_range):
         changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
 
-        assert changed.covers("a.py", 3)
+        assert changed.covers("a.py", make_line_range(start=3))

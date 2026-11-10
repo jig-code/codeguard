@@ -169,7 +169,7 @@ class TestViolation:
             Violation.model_validate(
                 {
                     "file": "a.py",
-                    "line": 1,
+                    "lines": {"start": 1, "end": 1},
                     "message": "Move it.",
                     "note": "Fix it.",
                     "confidence": 1,

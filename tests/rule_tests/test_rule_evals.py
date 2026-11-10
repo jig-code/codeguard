@@ -19,6 +19,31 @@ class TestRuleEvals:
             (tmp_path / "rule-evals/enum-usage.yaml", RuleEval(name="enum-usage", cases=(case,)))
         ]
 
+    def test_eval_file_violation_gives_its_lines_as_a_range(
+        self, tmp_path, make_edit_review, make_judged_violation
+    ):
+        (tmp_path / "rule-evals").mkdir()
+        (tmp_path / "rule-evals/enum-usage.yaml").write_text(
+            "cases:\n"
+            "  - name: a string\n"
+            "    inputs:\n"
+            "      file: module.py\n"
+            "      after: |\n"
+            "        ship(status='shipped')\n"
+            "    expected_output:\n"
+            "      outcome: invalid\n"
+            "      violations:\n"
+            "        - lines: {start: 1, end: 2}\n"
+            "          confidence: 0.9\n"
+            "          message: Pass the member.\n"
+        )
+
+        [(_, rule_eval)] = rule_evals(tmp_path)
+
+        assert rule_eval.cases[0].expected_output == make_edit_review(
+            violations=(make_judged_violation(lines__start=1, lines__end=2),)
+        )
+
     def test_eval_file_ending_in_yml_is_loaded(self, tmp_path, make_rule_eval_case):
         case = make_rule_eval_case()
         (tmp_path / "rule-evals").mkdir()
@@ -167,3 +192,23 @@ class TestRuleEvals:
             rule_evals(tmp_path)
 
         assert str(raised.value) == f"{tmp_path}/rule-evals/enum-usage.yaml is invalid:\n  {error}"
+
+
+class TestEditReview:
+    def test_listing_gives_a_violation_on_one_line_its_line(
+        self, make_edit_review, make_judged_violation
+    ):
+        review = make_edit_review(
+            reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=2),)
+        )
+
+        assert review.listing == "\n  reason: Judged.\n  line 2 (0.90): Pass the member."
+
+    def test_listing_gives_a_violation_over_several_lines_its_first_and_last_line(
+        self, make_edit_review, make_judged_violation
+    ):
+        review = make_edit_review(
+            reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=4),)
+        )
+
+        assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
