@@ -16,7 +16,7 @@ agent loads before it edits. It holds, in this order, and nothing else:
    or a clause joined to the convention's sentence, that restates the convention, gives
    its purpose or says what it doesn't cover is a second statement: the judge checks it as
    well, and it can drift from the first. The purpose goes under `## Why`.
-3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
+3. `## Why`: the harm the rule prevents, not its fix, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
 

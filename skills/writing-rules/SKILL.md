@@ -69,9 +69,9 @@ reads it as a reviewer would, and says on what ground the code keeps or breaks i
 
 ## Why it exists
 
-Every rule states the harm it prevents, in one or two sentences, so it can be reviewed
-when the code or the design around it changes. A rule nobody can trace to a reason can
-only be kept or dropped blind.
+Every rule states the harm it prevents, not its fix, in one or two sentences, so it can
+be reviewed when the code or the design around it changes. A rule nobody can trace to a
+reason can only be kept or dropped blind.
 
 - A judge rule: a `## Why` section in its skill (`references/judge-rules.md`).
 - A pattern rule: `metadata.why` in its rule file.
