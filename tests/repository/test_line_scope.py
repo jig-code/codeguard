@@ -1,4 +1,3 @@
-import pytest
 from git_repo import GitRepo
 
 from codeguard.repository import AllLines, ChangedLines, Edit, LineScopes, Removal, WorkingTree
@@ -17,7 +16,7 @@ class TestLineScopes:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "d = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.files == ("staged.py", "unstaged.py", "untracked.py")
 
@@ -32,7 +31,7 @@ class TestLineScopes:
         git_repo.git("switch", "feature")
         git_repo.write("untracked.py", "c = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("main")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("main")
 
         assert changed.files == ("committed.py", "untracked.py")
 
@@ -42,7 +41,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nb = 2\nc = 1\nd = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
@@ -57,7 +56,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "class A:\n    x = 1\n\n    def y(self):\n        pass\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({4, 5})}, edits={"a.py": (Edit(2, 0, 3, 3),)}, base=git_repo.head()
@@ -72,7 +71,7 @@ class TestLineScopes:
         git_repo.write("b.py", "a = 1\n\nb = 1\n")
         git_repo.write("c.py", "\n\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -84,7 +83,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nc = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -100,7 +99,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -110,7 +109,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "\nb = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -126,7 +125,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\x0cdef f():\n    s = 'p\u2028+q\r+r'\n    return 2\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 3, 4})},
@@ -143,7 +142,7 @@ class TestLineScopes:
         git_repo.write("a.py", "a = 1\n\u00a0\n")
         git_repo.write("b.py", "\u00a0\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2}), "b.py": frozenset({1})},
@@ -157,7 +156,7 @@ class TestLineScopes:
         git_repo.commit("Add x y")
         git_repo.write("x y.py", "a = 2\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
@@ -174,163 +173,10 @@ class TestLineScopes:
         git_repo.git("mv", "a.py", "b.py")
         git_repo.write("b.py", source.replace("x9 = 9", "x9 = 10"))
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.sources == {"b.py": "a.py"}
         assert changed.base_path("b.py") == "a.py"
-
-    def test_renamed_file_keeps_its_base_path_when_git_config_turns_off_renames(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        source = "".join(f"x{i} = {i}\n" for i in range(10))
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.git("mv", "a.py", "b.py")
-        git_repo.write("b.py", source.replace("x9 = 9", "x9 = 10"))
-        git_repo.git("config", "diff.renames", "false")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed.base_path("b.py") == "a.py"
-
-    def test_copied_file_is_new_when_git_config_finds_copies(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        source = "".join(f"x{i} = {i}\n" for i in range(30))
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", f"{source}y = 1\n")
-        git_repo.write("b.py", f"{source}y = 1\n")
-        git_repo.git("add", "b.py")
-        git_repo.git("config", "diff.renames", "copies")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert (changed.sources, changed.lines["b.py"]) == ({}, frozenset(range(1, 32)))
-
-    def test_renamed_files_keep_their_base_paths_when_git_config_lowers_the_rename_limit(
-        self, tmp_path
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        for name in ("a", "b", "c"):
-            git_repo.write(f"{name}.py", "".join(f"{name}{i} = {i}\n" for i in range(20)))
-        git_repo.commit("Add modules")
-        for name in ("a", "b", "c"):
-            git_repo.git("mv", f"{name}.py", f"{name}2.py")
-            git_repo.write(
-                f"{name}2.py", "".join(f"{name}{i} = {i}\n" for i in range(20)) + "z = 1\n"
-            )
-        git_repo.git("config", "diff.renameLimit", "1")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed.sources == {"a2.py": "a.py", "b2.py": "b.py", "c2.py": "c.py"}
-
-    def test_added_lines_are_placed_by_the_indent_heuristic_whatever_git_config_sets(
-        self, tmp_path
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "def f():\ndef f():\n    x = 1\ndef f():\ndef f():\ndef f():\n")
-        git_repo.commit("Add a")
-        git_repo.write(
-            "a.py",
-            "def f():\ndef f():\ndef f():\ndef f():\n    x = 1\ndef f():\ndef f():\ndef f():\n",
-        )
-        git_repo.git("config", "diff.indentHeuristic", "false")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"a.py": frozenset({2, 3})},
-            edits={"a.py": (Edit(1, 0, 2, 2),)},
-            base=git_repo.head(),
-        )
-
-    def test_nearby_changes_stay_apart_when_git_config_joins_their_hunks(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 2\nb = 1\nc = 2\n")
-        git_repo.git("config", "diff.interHunkContext", "1")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"a.py": frozenset({1, 3})},
-            removals={
-                "a.py": (
-                    Removal(before=1, line=1, rows=("a = 1",), base_lines=(1,)),
-                    Removal(before=3, line=3, rows=("c = 1",), base_lines=(3,)),
-                )
-            },
-            edits={"a.py": (Edit(1, 1, 1, 1), Edit(3, 1, 3, 1))},
-            base=git_repo.head(),
-        )
-
-    def test_changed_lines_are_the_file_lines_when_git_config_converts_its_text(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\nb = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 1\nb = 2\n")
-        git_repo.write(".git/info/attributes", "*.py diff=headed\n")
-        git_repo.git("config", "diff.headed.textconv", "sh -c 'echo header; cat \"$0\"'")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"a.py": frozenset({2})},
-            removals={"a.py": (Removal(before=2, line=2, rows=("b = 1",), base_lines=(2,)),)},
-            edits={"a.py": (Edit(2, 1, 2, 1),)},
-            base=git_repo.head(),
-        )
-
-    @pytest.mark.parametrize(
-        ("setting", "value"), [("diff.submodule", "diff"), ("diff.ignoreSubmodules", "all")]
-    )
-    def test_moved_submodule_is_one_changed_file_whatever_git_config_sets(
-        self, tmp_path, setting, value
-    ):
-        (tmp_path / "source").mkdir()
-        (tmp_path / "repo").mkdir()
-        source = GitRepo.init((tmp_path / "source").resolve())
-        source.write("a.py", "a = 1\n")
-        source.commit("Add a")
-        git_repo = GitRepo.init((tmp_path / "repo").resolve())
-        git_repo.git(
-            "-c", "protocol.file.allow=always", "submodule", "add", str(source.root), "sub"
-        )
-        git_repo.commit("Add sub")
-        submodule = GitRepo(git_repo.root / "sub")
-        submodule.write("a.py", "a = 2\n")
-        submodule.commit("Change a")
-        git_repo.git("config", setting, value)
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed.files == ("sub",)
-
-    def test_changed_lines_are_those_of_the_default_diff_algorithm_whatever_git_config_sets(
-        self, tmp_path
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "x = f()\n}\nreturn x\nreturn x\nb = 2\nreturn x\npass\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "x = f()\n}\npass\n}\na = 1\nreturn x\nreturn x\n")
-        git_repo.git("config", "diff.algorithm", "patience")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"a.py": frozenset({3, 4, 5})},
-            deletions={"a.py": frozenset({7})},
-            removals={
-                "a.py": (
-                    Removal(
-                        before=8, line=7, rows=("b = 2", "return x", "pass"), base_lines=(5, 6, 7)
-                    ),
-                )
-            },
-            edits={"a.py": (Edit(2, 0, 3, 3), Edit(5, 3, 7, 0))},
-            base=git_repo.head(),
-        )
 
     def test_untracked_file_has_no_base_path(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -339,7 +185,7 @@ class TestLineScopes:
         git_repo.write("b.py", "b = 1\n")
 
         assert (
-            LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
+            LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
             is None
         )
 
@@ -347,7 +193,7 @@ class TestLineScopes:
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"a.py": frozenset({1, 3})}, base=git_repo.head())
 
@@ -359,7 +205,7 @@ class TestLineScopes:
         nested_repo.write("module.py", "value = 1\n")
         git_repo.write("new/module.py", "value = 2\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"new/module.py": frozenset({1})}, base=git_repo.head())
 
@@ -369,7 +215,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nc = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -385,7 +231,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
         assert removal.rows == ("b = '\ufffd'",)
@@ -397,7 +243,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\r\n")
 
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
         assert removal.rows == ("b = 1",)
@@ -418,7 +264,7 @@ class TestLineScopes:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "")
 
-        scope = LineScopes(WorkingTree.at(git_repo.root)).all_lines()
+        scope = LineScopes.of(WorkingTree.at(git_repo.root)).all_lines()
 
         assert scope == AllLines(("tracked.py", "untracked.py"))
 

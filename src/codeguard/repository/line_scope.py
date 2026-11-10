@@ -3,34 +3,12 @@ from dataclasses import dataclass, field, replace
 from typing import Self
 
 from codeguard.line_range import LineRange
-from codeguard.repository.unified_diff import Hunk, parse
+from codeguard.repository.pinned_diff import PinnedDiff
+from codeguard.repository.unified_diff import Hunk
 from codeguard.repository.working_tree import WorkingTree
 
 # ASCII whitespace, the same set git treats as blank.
 _BLANK = " \t\r\f\v"
-# Every git setting that changes a diff's hunks or paths is pinned, so a
-# user's git config doesn't change which lines count as changed.
-_CHANGED_LINES_DIFF = (
-    "-c",
-    "core.quotePath=false",
-    "-c",
-    "diff.renames=true",
-    "-c",
-    "diff.renameLimit=1000",
-    "-c",
-    "diff.interHunkContext=0",
-    "diff",
-    "-U0",
-    "--no-color",
-    "--no-ext-diff",
-    "--no-textconv",
-    "--no-prefix",
-    "--diff-algorithm=myers",
-    "--indent-heuristic",
-    "--submodule=short",
-    "--ignore-submodules=untracked",
-    "--diff-filter=d",
-)
 
 
 @dataclass(frozen=True)
@@ -197,15 +175,19 @@ class LineScopes:
     """The changed-line scopes a review checks in a working tree."""
 
     working_tree: WorkingTree
+    diff: PinnedDiff
+
+    @classmethod
+    def of(cls, working_tree: WorkingTree) -> Self:
+        return cls(working_tree, PinnedDiff(working_tree.git))
 
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
-        diff = self.working_tree.git.text(*_CHANGED_LINES_DIFF, merge_base)
         untracked = {
             file: _code_lines((self.working_tree.root / file).read_bytes())
             for file in self.working_tree.untracked_files()
         }
-        return ChangedLines.of(parse(diff), untracked, merge_base)
+        return ChangedLines.of(self.diff.hunks(merge_base), untracked, merge_base)
 
     def all_lines(self) -> AllLines:
         return AllLines(tuple(sorted(self.working_tree.files())))

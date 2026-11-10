@@ -11,13 +11,13 @@ def classified_kinds(
 ) -> frozenset[str] | None:
     working_tree = WorkingTree.at(git_repo.root)
     classifier = ChangeClassifier(SyntaxScanner(AstGrep(), gates or {}), working_tree)
-    return classifier.classify(LineScopes(working_tree).changed_lines("HEAD")).kinds_of(file)
+    return classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD")).kinds_of(file)
 
 
 def classified_judged_lines(git_repo: GitRepo, file: str) -> frozenset[int] | None:
     working_tree = WorkingTree.at(git_repo.root)
     classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-    return classifier.classify(LineScopes(working_tree).changed_lines("HEAD")).judged_lines(file)
+    return classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD")).judged_lines(file)
 
 
 class TestChangeClassifier:
@@ -130,7 +130,7 @@ class TestChangeClassifier:
         ruleset = Ruleset(name="example/python", root=git_repo.root / "python")
         classifier = ChangeClassifier.for_rulesets(AstGrep(), [ruleset], working_tree)
 
-        changed = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        changed = classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD"))
 
         kinds = changed.kinds_of("a.py")
         assert kinds is not None
@@ -230,7 +230,7 @@ class TestChangeClassifier:
         working_tree = WorkingTree.at(git_repo.root)
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        scope = classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD"))
 
         assert scope.covers("a.py", make_line_range(start=3))
         assert not scope.covers("a.py", make_line_range(start=1))
@@ -245,7 +245,7 @@ class TestChangeClassifier:
         working_tree = WorkingTree.at(git_repo.root)
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        scope = classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD"))
 
         assert scope.judged_lines("a.py") == {3, 4}
         assert scope.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {1, 2, 3, 4}
@@ -444,7 +444,7 @@ class TestChangeClassifier:
         working_tree = WorkingTree.at(git_repo.root)
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        scope = classifier.classify(LineScopes.of(working_tree).changed_lines("HEAD"))
 
         assert scope.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {2}
 
