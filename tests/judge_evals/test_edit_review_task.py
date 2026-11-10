@@ -68,7 +68,9 @@ class TestEditReviewTask:
             outcome=Outcome.INVALID,
             reason="The code breaks the convention.",
             violations=(
-                make_judged_violation(kinds=("call", "code", "module-statement", "string-literal")),
+                make_judged_violation(
+                    lines__end=1, kinds=("call", "code", "module-statement", "string-literal")
+                ),
             ),
         )
 
@@ -90,7 +92,9 @@ class TestEditReviewTask:
             reason="The code breaks the convention.",
             violations=(
                 make_judged_violation(
-                    confidence=0.7, kinds=("call", "code", "module-statement", "string-literal")
+                    lines__end=1,
+                    confidence=0.7,
+                    kinds=("call", "code", "module-statement", "string-literal"),
                 ),
             ),
         )
@@ -109,10 +113,10 @@ class TestEditReviewTask:
 
         assert review == EditReview(outcome=Outcome.VALID, reason="The code keeps the convention.")
 
-    def test_violation_on_an_unchanged_line_is_dropped(
-        self, make_binding, make_edit_case, make_verdict, make_violation
+    def test_violation_whose_lines_take_in_a_changed_line_is_kept_with_their_kinds(
+        self, make_binding, make_edit_case, make_verdict, make_violation, make_judged_violation
     ):
-        violation = make_violation(file="module.py", line=1, confidence=0.9)
+        violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
@@ -122,8 +126,45 @@ class TestEditReviewTask:
 
         review = task(
             make_edit_case(
-                before="ship(status=Status.SHIPPED)\ncancel(status=Status.CANCELLED)\n",
-                after="ship(status=Status.SHIPPED)\ncancel(status='cancelled')\n",
+                before="ship(status=Status.SHIPPED)\nRATE = 2\n",
+                after="ship(status='shipped')\nRATE = 2\n",
+            )
+        )
+
+        assert review == EditReview(
+            outcome=Outcome.INVALID,
+            reason="The code breaks the convention.",
+            violations=(
+                make_judged_violation(
+                    message=violation.message,
+                    lines__start=1,
+                    lines__end=2,
+                    kinds=("call", "code", "module-statement", "number-literal", "string-literal"),
+                ),
+            ),
+        )
+
+    def test_violation_on_an_unchanged_line_is_dropped(
+        self, make_binding, make_edit_case, make_verdict, make_violation
+    ):
+        violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
+        task = EditReviewTask(
+            make_binding(paths=("**/*.py",)),
+            RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
+            0.9,
+            SyntaxScanner(AstGrep(), {}),
+        )
+
+        review = task(
+            make_edit_case(
+                before=(
+                    "ship(status=Status.SHIPPED)\nhold(status=Status.HELD)\n"
+                    "cancel(status=Status.CANCELLED)\n"
+                ),
+                after=(
+                    "ship(status=Status.SHIPPED)\nhold(status=Status.HELD)\n"
+                    "cancel(status='cancelled')\n"
+                ),
             )
         )
 

@@ -2,6 +2,7 @@ import factory
 
 from codeguard.review import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.judge import Violation
+from factories.line_range import MakeLineRange
 from factories.skill import MakeSkill
 
 
@@ -20,12 +21,11 @@ class MakeDiagnostic(factory.Factory):
             rule=factory.LazyFunction(lambda: MakeSkill().name),
             note=None,
             category=Category.JUDGED,
-            end_line=None,
             confidence=1.0,
         )
         judge_error = factory.Trait(
             rule=factory.LazyFunction(lambda: MakeSkill().name),
-            line=None,
+            lines=None,
             message="The judge call failed, so this rule was not checked.",
             note="claude exited with 1.",
             category=Category.JUDGE_ERROR,
@@ -35,14 +35,13 @@ class MakeDiagnostic(factory.Factory):
 
     rule = "no-print"
     file = "a.py"
-    line = 1
+    lines = factory.SubFactory(MakeLineRange)
     message = "Use logging, not print."
     severity = Severity.ERROR
     note = "print bypasses log levels.\nCall logger.info instead.\n"
     category = Category.PATTERN
     confidence = 1.0
     error_type = None
-    end_line = factory.SelfAttribute("line")
 
 
 class MakeViolation(factory.Factory):
@@ -50,6 +49,6 @@ class MakeViolation(factory.Factory):
         model = Violation
 
     file = "a.py"
-    line = 1
+    lines = factory.SubFactory(MakeLineRange)
     message = "Use logging, not print."
     confidence = 1.0

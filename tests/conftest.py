@@ -6,6 +6,7 @@ import pytest
 from diskcache import Cache
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
+from factories.line_range import MakeLineRange
 from factories.rule_eval import (
     MakeEditCase,
     MakeEditReview,
@@ -21,6 +22,7 @@ from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
 
+register(MakeLineRange)
 register(MakeDiagnostic)
 register(MakeViolation)
 register(MakeSkill)

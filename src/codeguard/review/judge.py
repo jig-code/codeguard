@@ -8,6 +8,7 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
+from codeguard.line_range import LineRange
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
@@ -88,7 +89,12 @@ class Violation(BaseModel):
     file: str = Field(
         description="The file under review's path, exactly as the `changes` element gives it."
     )
-    line: int = Field(description="The number of a `+` or `-` line that is part of the violation.")
+    lines: LineRange = Field(
+        description=(
+            "The first and last line of the code that breaks the rule, numbered as the "
+            "`changes` element numbers them."
+        )
+    )
     message: str = Field(description="What breaks the rule, in one plain sentence.")
     confidence: Confidence = Field(
         description=(
@@ -125,7 +131,7 @@ class Verdict(BaseModel):
             Diagnostic(
                 rule=binding.rule,
                 file=violation.file,
-                line=violation.line,
+                lines=violation.lines,
                 message=violation.message,
                 severity=violation.severity(binding.severity, threshold),
                 note=None,

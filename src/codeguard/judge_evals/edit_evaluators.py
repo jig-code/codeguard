@@ -39,18 +39,20 @@ class ViolationsOnTriggers(Evaluator[EditCase, EditReview, None]):
         ):
             return {}
         kinds = {
-            violation.line: violation.kinds
+            violation.lines: violation.kinds
             for violation in ctx.output.violations
             if violation.confidence >= self.confidence_threshold and violation.kinds is not None
         }
         if not kinds or any(set(self.triggers) & set(found) for found in kinds.values()):
             return EvaluationReason(value=True)
-        lines = ", ".join(map(str, sorted(kinds)))
+        lines = ", ".join(
+            lines.described for lines in sorted(kinds, key=lambda lines: (lines.start, lines.end))
+        )
         on_lines = ", ".join(sorted({kind for found in kinds.values() for kind in found}))
         return EvaluationReason(
             value=False,
-            reason=f"violation on line {lines} is outside the triggers {', '.join(self.triggers)}\n"
-            f"  Add one of the kinds on that line to triggers in its binding: {on_lines}",
+            reason=f"violation on {lines} is outside the triggers {', '.join(self.triggers)}\n"
+            f"  Add one of the kinds on those lines to triggers in its binding: {on_lines}",
         )
 
 

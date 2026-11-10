@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from codeguard.line_range import LineRange
 from codeguard.review import Category, Diagnostic, Severity
 
 
@@ -30,8 +31,7 @@ class AstGrepMatch(BaseModel):
         return Diagnostic(
             rule=rule,
             file=self.file,
-            line=self.range.start.line + 1,
-            end_line=self.range.end.line + 1,
+            lines=LineRange(start=self.range.start.line + 1, end=self.range.end.line + 1),
             message=self.message,
             severity=self.severity,
             note=self.note,
