@@ -28,20 +28,7 @@ class JudgeRequest:
     def of_change(
         cls, binding: Binding, root: Path, file: str, scope: ChangedLines | AllLines
     ) -> Self:
-        raw = (root / file).read_bytes().splitlines()
-        content = [line.decode(errors="replace") for line in raw]
-        lines = scope.judged_lines(file, binding.triggers)
-        shown = set(range(1, len(content) + 1) if lines is None else lines)
-        added = scope.added_lines(file)
-        removals = {removal.before: removal for removal in scope.removals_in(file)}
-        rows: list[str] = []
-        for number in sorted(shown | set(removals)):
-            if removal := removals.get(number):
-                rows.extend(f"-{removal.line:>6}\t{text}\n" for text in removal.rows)
-            if number in shown and number <= len(content):
-                mark = "+" if added is None or number in added else " "
-                rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
-        return cls(binding.skill_for(file), file, "".join(rows))
+        return cls(binding.skill_for(file), file, scope.diff(root, file))
 
     @property
     def instructions(self) -> str:
@@ -90,10 +77,7 @@ class Violation(BaseModel):
         description="The file under review's path, exactly as the `changes` element gives it."
     )
     lines: LineRange = Field(
-        description=(
-            "The first and last line of the code that breaks the rule, numbered as the "
-            "`changes` element numbers them."
-        )
+        description="The first and last line in the file of the code that breaks the rule."
     )
     message: str = Field(description="What breaks the rule, in one plain sentence.")
     confidence: Confidence = Field(

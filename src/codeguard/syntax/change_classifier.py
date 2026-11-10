@@ -26,27 +26,10 @@ class ChangeClassifier:
         head = self.scanner.scan_files(self.working_tree.root, scope.files)
         base = self._base(scope)
         kinds: dict[str, frozenset[str]] = {}
-        judged: dict[str, frozenset[int]] = {}
-        kind_lines: dict[str, dict[str, frozenset[int]]] = {}
         for file, parsed in head.items():
             added = scope.lines.get(file, frozenset())
-            removed = frozenset(
-                line for removal in scope.removals_in(file) for line in removal.base_lines
-            )
-            before = base.get(file)
-            kinds[file] = parsed.touched_kinds(added, before, removed)
-            judged[file] = parsed.judged_lines(added)
-            kind_lines[file] = parsed.kind_lines(added)
-            if before is None:
-                continue
-            # A removal shows the code around it that the change kept, not the code beside it.
-            gone = scope.removed_base_lines(file)
-            judged[file] |= _in_head(scope, file, before.judged_lines(removed, gone))
-            for kind, lines in before.kind_lines(removed, gone).items():
-                kind_lines[file][kind] = kind_lines[file].get(kind, frozenset()) | _in_head(
-                    scope, file, lines
-                )
-        return scope.with_kinds(kinds).with_judged_lines(judged).with_kind_lines(kind_lines)
+            kinds[file] = parsed.touched_kinds(added, base.get(file), scope.removed_lines(file))
+        return scope.with_kinds(kinds)
 
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:
@@ -61,9 +44,3 @@ class ChangeClassifier:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(contents[paths[file]])
             return self.scanner.scan_files(Path(directory), found)
-
-
-def _in_head(scope: ChangedLines, file: str, base_lines: Iterable[int]) -> frozenset[int]:
-    return frozenset(
-        line for base_line in base_lines if (line := scope.head_line(file, base_line)) is not None
-    )

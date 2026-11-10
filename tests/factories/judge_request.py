@@ -10,4 +10,12 @@ class MakeJudgeRequest(factory.Factory):
 
     skill = factory.SubFactory(MakeSkill)
     file = "a.py"
-    changes = "+     1\tprint(1)\n"
+    changes = (
+        "diff --git a/a.py b/a.py\n"
+        "new file mode 100644\n"
+        "index 0000000..b917a72\n"
+        "--- /dev/null\n"
+        "+++ b/a.py\n"
+        "@@ -0,0 +1 @@\n"
+        "+print(1)\n"
+    )

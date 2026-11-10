@@ -17,56 +17,11 @@ names:
         - inside: {kind: relative_import}
         - inside: {kind: import_statement}
         - inside: {kind: aliased_import, inside: {kind: import_statement}}
-scopes:
-  any:
-    - kind: decorated_definition
-    - kind: function_definition
-      not: {inside: {kind: decorated_definition, field: definition}}
-    - kind: class_definition
-      not: {inside: {kind: decorated_definition, field: definition}}
 scope_names:
   kind: identifier
   any:
     - inside: {kind: function_definition, field: name}
     - inside: {kind: class_definition, field: name}
-member_lists:
-  kind: block
-  inside: {kind: class_definition, field: body}
-statements:
-  any:
-    - kind: expression_statement
-    - kind: return_statement
-    - kind: assert_statement
-    - kind: raise_statement
-    - kind: delete_statement
-    - kind: pass_statement
-    - kind: import_statement
-    - kind: import_from_statement
-    - kind: future_import_statement
-    - kind: global_statement
-    - kind: nonlocal_statement
-    - kind: type_alias_statement
-    - kind: if_statement
-    - kind: for_statement
-    - kind: while_statement
-    - kind: try_statement
-    - kind: with_statement
-    - kind: match_statement
-    - kind: elif_clause
-    - kind: else_clause
-    - kind: except_clause
-    - kind: finally_clause
-    - kind: case_clause
-    - kind: decorated_definition
-    - kind: function_definition
-    - kind: class_definition
-handlers:
-  kind: except_clause
-guarded_blocks:
-  kind: block
-  inside: {kind: try_statement, field: body}
-blocks:
-  kind: block
 change_kinds:
   comment:
     kind: comment

@@ -1,6 +1,6 @@
 from git_repo import GitRepo
 
-from codeguard.working_tree import AllLines, ChangedLines, Edit, Removal, WorkingTree
+from codeguard.working_tree import AllLines, ChangedLines, Edit, WorkingTree
 
 
 class TestWorkingTree:
@@ -53,7 +53,7 @@ class TestWorkingTree:
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
-            removals={"a.py": (Removal(before=2, line=2, rows=("b = 1",), base_lines=(2,)),)},
+            removed={"a.py": frozenset({2})},
             edits={"a.py": (Edit(2, 1, 2, 1), Edit(3, 0, 4, 1))},
             base=git_repo.head(),
         )
@@ -96,7 +96,7 @@ class TestWorkingTree:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removed={"a.py": frozenset({2})},
             edits={"a.py": (Edit(2, 1, 2, 1),)},
             base=git_repo.head(),
         )
@@ -122,7 +122,7 @@ class TestWorkingTree:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=1, line=1, rows=("import os",), base_lines=(1,)),)},
+            removed={"a.py": frozenset({1})},
             edits={"a.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -168,7 +168,7 @@ class TestWorkingTree:
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
-            removals={"x y.py": (Removal(before=1, line=1, rows=("a = 1",), base_lines=(1,)),)},
+            removed={"x y.py": frozenset({1})},
             edits={"x y.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -225,41 +225,184 @@ class TestWorkingTree:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removed={"a.py": frozenset({2})},
             edits={"a.py": (Edit(2, 1, 1, 0),)},
             base=git_repo.head(),
         )
 
-    def test_removed_row_that_is_not_utf_8_is_replace_decoded(self, tmp_path):
+    def test_diff_is_from_the_base_with_the_function_around_each_change(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
-        (git_repo.root / "a.py").write_bytes(b"a = 1\nb = '\xff'\n")
+        git_repo.write(
+            "a.py",
+            "import os\nimport sys\n\n\ndef f():\n    a = 1\n    b = 2\n    c = 3\n"
+            "    d = 4\n    return a\n\n\ndef g():\n    return 2\n",
+        )
         git_repo.commit("Add a")
-        (git_repo.root / "a.py").write_bytes(b"a = 1\n")
-
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
-
-        [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = '\ufffd'",)
-        assert removal.rows[0].encode()
-
-    def test_removed_row_ending_in_crlf_drops_the_carriage_return(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        (git_repo.root / "a.py").write_bytes(b"a = 1\r\nb = 1\r\n")
-        git_repo.commit("Add a")
-        (git_repo.root / "a.py").write_bytes(b"a = 1\r\n")
-
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
-
-        [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = 1",)
-
-    def test_head_line_follows_the_edits_before_a_base_line(self):
-        changed = ChangedLines(
-            {"a.py": frozenset({2, 3})},
-            edits={"a.py": (Edit(1, 0, 2, 2), Edit(3, 1, 5, 0))},
+        git_repo.write(
+            "a.py",
+            "import re\nimport os\nimport sys\n\n\ndef f():\n    a = 1\n    b = 2\n"
+            "    c = 3\n    d = 4\n    return d\n\n\ndef g():\n    return 2\n",
         )
 
-        assert [changed.head_line("a.py", line) for line in (1, 2, 3, 4)] == [1, 4, None, 5]
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "index cf58f90..96c80e9 100644\n"
+            "--- a/a.py\n"
+            "+++ b/a.py\n"
+            "@@ -1,3 +1,4 @@\n"
+            "+import re\n"
+            " import os\n"
+            " import sys\n"
+            " \n"
+            "@@ -5,9 +6,9 @@\n"
+            " def f():\n"
+            "     a = 1\n"
+            "     b = 2\n"
+            "     c = 3\n"
+            "     d = 4\n"
+            "-    return a\n"
+            "+    return d\n"
+            " \n"
+            " \n"
+            " def g():\n"
+        )
+
+    def test_diff_of_a_method_edit_holds_the_method_not_its_class(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        source = (
+            "class Order:\n"
+            "    def total(self):\n"
+            "        return 1\n"
+            "\n"
+            "    def tax(self):\n"
+            "        rate = 2\n"
+            "        base = 3\n"
+            "        extra = 4\n"
+            "        return rate * base + extra\n"
+            "\n"
+            "    def fee(self):\n"
+            "        return 5\n"
+        )
+        git_repo.write("a.py", source)
+        git_repo.commit("Add a")
+        git_repo.write("a.py", source.replace("rate * base + extra", "rate * base"))
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "index 4cab5d4..4f585fb 100644\n"
+            "--- a/a.py\n"
+            "+++ b/a.py\n"
+            "@@ -5,8 +5,8 @@ def total(self):\n"
+            "     def tax(self):\n"
+            "         rate = 2\n"
+            "         base = 3\n"
+            "         extra = 4\n"
+            "-        return rate * base + extra\n"
+            "+        return rate * base\n"
+            " \n"
+            "     def fee(self):\n"
+            "         return 5\n"
+        )
+
+    def test_diff_ignores_the_git_config(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.py", "def f():\n    a = 1\n    return a\n")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", "def f():\n    a = 2\n    return a\n")
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        for setting in ("diff.noprefix", "diff.mnemonicPrefix", "color.diff", "diff.relative"):
+            git_repo.git("config", setting, "true")
+        git_repo.git("config", "diff.context", "0")
+        git_repo.git("config", "diff.algorithm", "patience")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "index 8d5afc4..937b5e7 100644\n"
+            "--- a/a.py\n"
+            "+++ b/a.py\n"
+            "@@ -1,3 +1,3 @@\n"
+            " def f():\n"
+            "-    a = 1\n"
+            "+    a = 2\n"
+            "     return a\n"
+        )
+
+    def test_diff_of_a_renamed_file_is_from_its_base_path(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        source = "".join(f"x{i} = {i}\n" for i in range(10))
+        git_repo.write("a.py", source)
+        git_repo.commit("Add a")
+        git_repo.git("mv", "a.py", "b.py")
+        git_repo.write("b.py", source.replace("x9 = 9", "x9 = 10"))
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "b.py") == (
+            "diff --git a/a.py b/b.py\n"
+            "similarity index 88%\n"
+            "rename from a.py\n"
+            "rename to b.py\n"
+            "index bf7f0c9..4754884 100644\n"
+            "--- a/a.py\n"
+            "+++ b/b.py\n"
+            "@@ -1,10 +1,10 @@\n" + "".join(f" x{i} = {i}\n" for i in range(9)) + "-x9 = 9\n"
+            "+x9 = 10\n"
+        )
+
+    def test_diff_of_an_untracked_file_adds_it_whole(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.py", "a = 1\n\nb = 1\n")
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "new file mode 100644\n"
+            "index 0000000..be1afea\n"
+            "--- /dev/null\n"
+            "+++ b/a.py\n"
+            "@@ -0,0 +1,3 @@\n"
+            "+a = 1\n"
+            "+\n"
+            "+b = 1\n"
+        )
+
+    def test_diff_replaces_bytes_that_are_not_utf_8(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        (git_repo.root / "a.py").write_bytes(b"a = '\xff'\n")
+
+        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+
+        assert changed.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "new file mode 100644\n"
+            "index 0000000..0885fc8\n"
+            "--- /dev/null\n"
+            "+++ b/a.py\n"
+            "@@ -0,0 +1 @@\n"
+            "+a = '\ufffd'\n"
+        )
+
+    def test_diff_of_all_lines_adds_a_tracked_file_whole(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.py", "a = 1\n")
+        git_repo.commit("Add a")
+
+        scope = WorkingTree(root=git_repo.root).all_lines()
+
+        assert scope.diff(git_repo.root, "a.py") == (
+            "diff --git a/a.py b/a.py\n"
+            "new file mode 100644\n"
+            "index 0000000..1337a53\n"
+            "--- /dev/null\n"
+            "+++ b/a.py\n"
+            "@@ -0,0 +1 @@\n"
+            "+a = 1\n"
+        )
 
     def test_base_contents_are_the_files_that_exist_in_the_base(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -288,32 +431,20 @@ class TestWorkingTree:
 
 
 class TestChangedLines:
-    def test_judged_lines_take_in_the_lines_of_the_triggers_kinds(self):
-        changed = (
-            ChangedLines({"a.py": frozenset({3})})
-            .with_judged_lines({"a.py": frozenset({2, 3})})
-            .with_kind_lines({"a.py": {"control-flow": frozenset({1, 2, 3, 4})}})
+    def test_covers_a_changed_line(self, make_line_range):
+        assert ChangedLines({"a.py": frozenset({2})}).covers(
+            "a.py", make_line_range(start=2, end=2)
         )
 
-        assert changed.judged_lines("a.py", frozenset({"control-flow"})) == {1, 2, 3, 4}
-        assert changed.judged_lines("a.py", frozenset({"call"})) == {2, 3}
-
-    def test_unclassified_file_judges_its_changed_points(self):
-        changed = ChangedLines({"a.py": frozenset({3})}, deletions={"a.py": frozenset({7})})
-
-        assert changed.judged_lines("a.py") == {3, 7}
-
-    def test_all_lines_judges_the_whole_file(self):
-        assert AllLines(("a.py",)).judged_lines("a.py") is None
-
-    def test_covers_a_changed_line(self, make_line_range):
-        assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=2))
-
     def test_does_not_cover_an_unchanged_line(self, make_line_range):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=1))
+        assert not ChangedLines({"a.py": frozenset({2})}).covers(
+            "a.py", make_line_range(start=1, end=1)
+        )
 
     def test_does_not_cover_an_unchanged_file(self, make_line_range):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", make_line_range(start=2))
+        assert not ChangedLines({"a.py": frozenset({2})}).covers(
+            "b.py", make_line_range(start=2, end=2)
+        )
 
     def test_covers_the_whole_of_a_changed_file(self):
         assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", None)
@@ -339,4 +470,4 @@ class TestChangedLines:
     def test_covers_a_deletion_point(self, make_line_range):
         changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
 
-        assert changed.covers("a.py", make_line_range(start=3))
+        assert changed.covers("a.py", make_line_range(start=3, end=3))
