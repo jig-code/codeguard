@@ -35,9 +35,10 @@ subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (i
 changes an existing rule) or `declines`. A grader's file is its number, then what
 the agent's output does.
 
-A grader checks whatever a pattern can decide with a `regex` or another deterministic
-type, and an `llm` grader judges only meaning: a pattern gives the same answer every
-run, while a judge votes.
+A `regex` grader matches a fixed marker, such as a heading, a key or the start of a
+line, with a pattern a reader can check at a glance. A check that has to read prose, such
+as counting its sentences, is an `llm` grader: a pattern that parses prose is too long for
+a reviewer to tell what it checks, and it breaks on wording that does what the skill asks.
 
 ## Running them
 
