@@ -167,3 +167,23 @@ class TestRuleEvals:
             rule_evals(tmp_path)
 
         assert str(raised.value) == f"{tmp_path}/rule-evals/enum-usage.yaml is invalid:\n  {error}"
+
+
+class TestEditReview:
+    def test_listing_gives_a_violation_on_one_line_its_line(
+        self, make_edit_review, make_judged_violation
+    ):
+        review = make_edit_review(
+            reason="Judged.", violations=(make_judged_violation(line=2, end_line=2),)
+        )
+
+        assert review.listing == "\n  reason: Judged.\n  line 2 (0.90): Pass the member."
+
+    def test_listing_gives_a_violation_over_several_lines_its_first_and_last_line(
+        self, make_edit_review, make_judged_violation
+    ):
+        review = make_edit_review(
+            reason="Judged.", violations=(make_judged_violation(line=2, end_line=4),)
+        )
+
+        assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."

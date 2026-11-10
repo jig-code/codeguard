@@ -65,7 +65,7 @@ class TestDiagnostic:
             "rule": diagnostic.rule,
             "file": "a.py",
             "line": 1,
-            "end_line": None,
+            "end_line": 1,
             "message": "Use logging, not print.",
             "severity": "error",
             "category": "judged",

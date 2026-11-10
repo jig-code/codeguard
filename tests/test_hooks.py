@@ -239,7 +239,7 @@ class TestStopHook:
     ):
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
-        violation = {"file": "a.py", "line": 1, "message": "Move it."}
+        violation = {"file": "a.py", "line": 1, "end_line": 1, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
         finding = make_diagnostic(
             judged=True,

@@ -3,7 +3,7 @@ from enum import ReprEnum
 from pathlib import Path
 from typing import ClassVar, Protocol, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
@@ -88,7 +88,8 @@ class Violation(BaseModel):
     file: str = Field(
         description="The file under review's path, exactly as the `changes` element gives it."
     )
-    line: int = Field(description="The number of a `+` or `-` line that is part of the violation.")
+    line: int = Field(description="The first line of the code that breaks the rule.")
+    end_line: int = Field(description="The last line of the code that breaks the rule.")
     message: str = Field(description="What breaks the rule, in one plain sentence.")
     confidence: Confidence = Field(
         description=(
@@ -96,6 +97,12 @@ class Violation(BaseModel):
             "one between them. Below 0.5 the code probably follows the rule: don't report it."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_end_line_is_not_before_line(self) -> Self:
+        if self.end_line < self.line:
+            raise ValueError(f"end_line {self.end_line} is before line {self.line}")
+        return self
 
     def severity(self, severity: Severity, threshold: float) -> Severity:
         if severity is Severity.ERROR and self.confidence < threshold:
@@ -126,6 +133,7 @@ class Verdict(BaseModel):
                 rule=binding.rule,
                 file=violation.file,
                 line=violation.line,
+                end_line=violation.end_line,
                 message=violation.message,
                 severity=violation.severity(binding.severity, threshold),
                 note=None,

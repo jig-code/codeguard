@@ -29,12 +29,16 @@ class EditReviewTask:
         violations = tuple(
             JudgedViolation(
                 line=violation.line,
+                end_line=violation.end_line,
                 confidence=violation.confidence,
                 message=violation.message,
-                kinds=None if parsed is None else tuple(sorted(parsed.kinds_on(violation.line))),
+                kinds=None
+                if parsed is None
+                else tuple(sorted(parsed.kinds_on(violation.line, violation.end_line))),
             )
             for violation in verdict.violations
-            if changed.covers(violation.file, violation.line) and violation.file == inputs.file
+            if changed.covers(violation.file, violation.line, violation.end_line)
+            and violation.file == inputs.file
         )
         return EditReview(
             outcome=self._outcome(violations), reason=verdict.reason, violations=violations

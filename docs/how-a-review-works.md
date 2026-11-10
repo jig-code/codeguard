@@ -7,8 +7,9 @@ stops, in CI ([CI](add-codeguard.md#ci)), and when you run `codeguard review`
 ## What a review reports
 
 A review reports only violations that a line the change adds, edits or removes is part
-of: on that line, or for a removed line, where it was. These are the change's changed
-lines. What the line held before doesn't matter: editing a line that already broke a rule reports it,
+of: one of the lines of the code that breaks the rule, a removed line counting where it
+was. These are the change's changed lines.
+What the line held before doesn't matter: editing a line that already broke a rule reports it,
 so code a change touches is left better than it was found. Untouched code isn't reported,
 even in the function or class around the change: adding a line to a method doesn't
 report the method's name, and renaming a variable doesn't report the class's design. A

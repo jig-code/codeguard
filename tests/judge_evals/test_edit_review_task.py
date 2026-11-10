@@ -68,7 +68,9 @@ class TestEditReviewTask:
             outcome=Outcome.INVALID,
             reason="The code breaks the convention.",
             violations=(
-                make_judged_violation(kinds=("call", "code", "module-statement", "string-literal")),
+                make_judged_violation(
+                    end_line=1, kinds=("call", "code", "module-statement", "string-literal")
+                ),
             ),
         )
 
@@ -90,7 +92,9 @@ class TestEditReviewTask:
             reason="The code breaks the convention.",
             violations=(
                 make_judged_violation(
-                    confidence=0.7, kinds=("call", "code", "module-statement", "string-literal")
+                    end_line=1,
+                    confidence=0.7,
+                    kinds=("call", "code", "module-statement", "string-literal"),
                 ),
             ),
         )
@@ -108,6 +112,36 @@ class TestEditReviewTask:
         review = task(make_edit_case())
 
         assert review == EditReview(outcome=Outcome.VALID, reason="The code keeps the convention.")
+
+    def test_violation_whose_lines_take_in_a_changed_line_is_kept_with_their_kinds(
+        self, make_binding, make_edit_case, make_verdict, make_violation, make_judged_violation
+    ):
+        violation = make_violation(file="module.py", line=1, end_line=2, confidence=0.9)
+        task = EditReviewTask(
+            make_binding(paths=("**/*.py",)),
+            RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
+            0.9,
+            SyntaxScanner(AstGrep(), {}),
+        )
+
+        review = task(
+            make_edit_case(
+                before="RATE = 2\nship(status=Status.SHIPPED)\n",
+                after="RATE = 2\nship(status='shipped')\n",
+            )
+        )
+
+        assert review == EditReview(
+            outcome=Outcome.INVALID,
+            reason="The code breaks the convention.",
+            violations=(
+                make_judged_violation(
+                    message=violation.message,
+                    end_line=2,
+                    kinds=("call", "code", "module-statement", "number-literal", "string-literal"),
+                ),
+            ),
+        )
 
     def test_violation_on_an_unchanged_line_is_dropped(
         self, make_binding, make_edit_case, make_verdict, make_violation

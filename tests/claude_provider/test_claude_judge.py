@@ -46,6 +46,7 @@ def fake_claude_executable(tmp_path, arguments) -> str:
                     {
                         "file": "a.py",
                         "line": 1,
+                        "end_line": 1,
                         "message": "Move it.",
                         "confidence": 0.5,
                     }

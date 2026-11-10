@@ -53,9 +53,16 @@ class JudgedViolation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     line: int
+    end_line: int | None = None
     confidence: float
     message: str
     kinds: tuple[str, ...] | None = None
+
+    @property
+    def lines(self) -> str:
+        if self.end_line in (None, self.line):
+            return f"line {self.line}"
+        return f"lines {self.line}-{self.end_line}"
 
 
 class EditReview(BaseModel):
@@ -70,7 +77,7 @@ class EditReview(BaseModel):
     def listing(self) -> str:
         reason = "" if self.reason is None else f"\n  reason: {self.reason}"
         return reason + "".join(
-            f"\n  line {violation.line} ({violation.confidence:.2f}): {violation.message}"
+            f"\n  {violation.lines} ({violation.confidence:.2f}): {violation.message}"
             for violation in self.violations
         )
 

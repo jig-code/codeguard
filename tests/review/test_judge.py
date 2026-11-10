@@ -164,12 +164,17 @@ class TestViolation:
         described = [option["const"] for option in options if option.get("description")]
         assert described == [member.value for member in Confidence]
 
+    def test_end_line_before_line_is_invalid(self, make_violation):
+        with pytest.raises(ValidationError):
+            make_violation(line=3, end_line=2)
+
     def test_note_is_invalid(self):
         with pytest.raises(ValidationError):
             Violation.model_validate(
                 {
                     "file": "a.py",
                     "line": 1,
+                    "end_line": 1,
                     "message": "Move it.",
                     "note": "Fix it.",
                     "confidence": 1,

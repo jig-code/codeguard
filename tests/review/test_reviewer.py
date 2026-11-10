@@ -47,6 +47,21 @@ class TestReviewer:
 
         assert result == Review(diagnostics=())
 
+    def test_violation_whose_lines_take_in_a_changed_line_is_reported(
+        self, repo, make_diagnostic, make_violation, make_binding
+    ):
+        repo.write("a.py", "print(1)\nx = 1\n")
+        judge = RecordingJudge(
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(line=1, end_line=2),),
+            )
+        )
+
+        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
+
+        assert result == Review(diagnostics=(make_diagnostic(judged=True, line=1, end_line=2),))
+
     def test_unchanged_line_error_does_not_block_the_judge(
         self, repo, make_diagnostic, make_violation, make_judge_request, make_binding
     ):

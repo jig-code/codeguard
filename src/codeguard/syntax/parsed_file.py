@@ -68,10 +68,12 @@ class ParsedFile:
             kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
         return frozenset(kinds)
 
-    def kinds_on(self, line: int) -> frozenset[str]:
-        kinds = self._kinds_spanning(line)
-        if any(node.spans(line) for node in self.of_kind(NodeKind.SCOPE_NAME)):
-            kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
+    def kinds_on(self, line: int, end_line: int) -> frozenset[str]:
+        kinds: set[str] = set()
+        for number in range(line, end_line + 1):
+            kinds |= self._kinds_spanning(number)
+            if any(node.spans(number) for node in self.of_kind(NodeKind.SCOPE_NAME)):
+                kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
         return frozenset(kinds)
 
     def of_kind(self, kind: NodeKind | str) -> list[SyntaxNode]:

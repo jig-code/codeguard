@@ -34,6 +34,7 @@ MODEL = "gemini-3.1-pro-preview"
 VIOLATION = {
     "file": "a.py",
     "line": 1,
+    "end_line": 1,
     "message": "Move it.",
     "confidence": 0.5,
 }
@@ -277,6 +278,8 @@ class TestGeminiJudge:
             '[{"type":"missing","loc":["reason"],"msg":"Field required",'
             '"input":{"violations":[{"file":"a.py"}]}},'
             '{"type":"missing","loc":["violations",0,"line"],"msg":"Field required",'
+            '"input":{"file":"a.py"}},'
+            '{"type":"missing","loc":["violations",0,"end_line"],"msg":"Field required",'
             '"input":{"file":"a.py"}},'
             '{"type":"missing","loc":["violations",0,"message"],"msg":"Field required",'
             '"input":{"file":"a.py"}},'

@@ -352,8 +352,13 @@ class TestReviewOfDeletedCode:
             {
                 "stdout": claude_stream(
                     [
-                        {**violation, "line": 1, "message": "The class lost its entry point."},
-                        {**violation, "line": 2, "message": "Untouched method."},
+                        {
+                            **violation,
+                            "line": 1,
+                            "end_line": 1,
+                            "message": "The class lost its entry point.",
+                        },
+                        {**violation, "line": 2, "end_line": 2, "message": "Untouched method."},
                     ]
                 )
             }
@@ -449,7 +454,7 @@ class TestReviewJsonFormat:
         self, repo, tmp_path, make_skill, make_diagnostic
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
-        violation = {"file": "a.py", "line": 1, "message": "Move it."}
+        violation = {"file": "a.py", "line": 1, "end_line": 1, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
@@ -704,7 +709,7 @@ class TestEvalCommand:
             "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
+        violation = {"file": "invoice.py", "line": 1, "end_line": 1, "message": "Move it."}
         bin_dir = FAKE_CLAUDE.parent
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
@@ -737,7 +742,13 @@ class TestEvalCommand:
         )
         bin_dir = FAKE_CLAUDE.parent
         calls = tmp_path / "calls"
-        violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
+        violation = {
+            "file": "invoice.py",
+            "line": 1,
+            "end_line": 1,
+            "message": "Move it.",
+            "confidence": 1.0,
+        }
         configure_fake_cli_response({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
@@ -784,7 +795,8 @@ class TestEvalCommand:
     def test_judges_the_selected_rule_and_case(self, tmp_path, tmp_path_factory):
         package = invoice_package(tmp_path_factory)
         bin_dir = recording_claude(
-            tmp_path, [{"file": "invoice.py", "line": 3, "message": "M.", "confidence": 1.0}]
+            tmp_path,
+            [{"file": "invoice.py", "line": 3, "end_line": 3, "message": "M.", "confidence": 1.0}],
         )
 
         result = subprocess.run(
@@ -933,7 +945,7 @@ class TestEvalMatchesReview:
     ):
         package = invoice_package(tmp_path_factory)
         verdict = [
-            {"file": "invoice.py", "line": 3, "message": "Move it.", **violation}
+            {"file": "invoice.py", "line": 3, "end_line": 3, "message": "Move it.", **violation}
             for violation in violations
         ]
         bin_dir = recording_claude(tmp_path, verdict)
