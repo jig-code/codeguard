@@ -20,7 +20,7 @@ codeguard review              # uncommitted changes
 codeguard review --base main  # changes since the merge base with main
 codeguard review --all        # every file
 codeguard review --dry-run    # pattern rules, then list the judge calls; calls no model
-codeguard review --format json  # one JSON object with every diagnostic
+codeguard review --format json  # one JSON object with every diagnostic, its lines as {start, end}
 codeguard review --judge-errors-as-warnings  # judge calls that couldn't complete don't fail
 codeguard review --skip-ci-only  # skip ci_only rules, as the Stop hook does
 codeguard review --host codex   # name the caller in telemetry; changes nothing else

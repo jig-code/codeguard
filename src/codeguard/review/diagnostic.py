@@ -42,12 +42,8 @@ class Diagnostic(BaseModel):
 
     @property
     def id(self) -> str:
-        key = f"{self.rule}:{self.file}:{self.line}"
+        key = f"{self.rule}:{self.file}:{None if self.lines is None else self.lines.start}"
         return hashlib.sha256(key.encode()).hexdigest()[:12]
-
-    @property
-    def line(self) -> int | None:
-        return None if self.lines is None else self.lines.start
 
     @property
     def blocks(self) -> bool:
@@ -61,8 +57,7 @@ class Diagnostic(BaseModel):
             "id": self.id,
             "rule": self.rule,
             "file": self.file,
-            "line": self.line,
-            "end_line": None if self.lines is None else self.lines.end,
+            "lines": None if self.lines is None else self.lines.model_dump(),
             "message": self.message,
             "severity": self.severity,
             "category": self.category,
@@ -73,7 +68,7 @@ class Diagnostic(BaseModel):
         }
 
     def __str__(self) -> str:
-        location = self.file if self.line is None else f"{self.file}:{self.line}"
+        location = self.file if self.lines is None else f"{self.file}:{self.lines.start}"
         confidence = (
             f" (confidence {self.confidence:.2f})" if self.category is Category.JUDGED else ""
         )

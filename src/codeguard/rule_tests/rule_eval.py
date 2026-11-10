@@ -3,15 +3,7 @@ from pathlib import Path, PurePosixPath
 from typing import Self
 
 import yaml
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    SerializerFunctionWrapHandler,
-    ValidationError,
-    field_validator,
-    model_serializer,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
 from codeguard.config import JUDGE_EVAL_DIR, ConfigError, language_of
 from codeguard.line_range import LineRange
@@ -59,32 +51,12 @@ class EditCase(BaseModel):
 
 
 class JudgedViolation(BaseModel):
-    """A violation a case expects or a review found. An eval file gives its lines as `line`
-    and an optional `end_line`, which defaults to `line`."""
-
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     lines: LineRange
     confidence: float
     message: str
     kinds: tuple[str, ...] | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def read_line_and_end_line(cls, data: object) -> object:
-        if not isinstance(data, dict) or "line" not in data:
-            return data
-        fields = {str(key): value for key, value in data.items()}
-        line = fields.pop("line")
-        end_line = fields.pop("end_line", line)
-        return {**fields, "lines": {"start": line, "end": end_line}}
-
-    @model_serializer(mode="wrap")
-    def write_line_and_end_line(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        fields: dict[str, object] = handler(self)
-        if fields.pop("lines", None) is None:
-            return fields
-        return {"line": self.lines.start, "end_line": self.lines.end, **fields}
 
 
 class EditReview(BaseModel):

@@ -2,7 +2,7 @@ import pytest
 import yaml
 
 from codeguard.config import ConfigError
-from codeguard.rule_tests import JudgedViolation, RuleEval, rule_evals
+from codeguard.rule_tests import RuleEval, rule_evals
 
 
 class TestRuleEvals:
@@ -18,6 +18,31 @@ class TestRuleEvals:
         assert evals == [
             (tmp_path / "rule-evals/enum-usage.yaml", RuleEval(name="enum-usage", cases=(case,)))
         ]
+
+    def test_eval_file_violation_gives_its_lines_as_a_range(
+        self, tmp_path, make_edit_review, make_judged_violation
+    ):
+        (tmp_path / "rule-evals").mkdir()
+        (tmp_path / "rule-evals/enum-usage.yaml").write_text(
+            "cases:\n"
+            "  - name: a string\n"
+            "    inputs:\n"
+            "      file: module.py\n"
+            "      after: |\n"
+            "        ship(status='shipped')\n"
+            "    expected_output:\n"
+            "      outcome: invalid\n"
+            "      violations:\n"
+            "        - lines: {start: 1, end: 2}\n"
+            "          confidence: 0.9\n"
+            "          message: Pass the member.\n"
+        )
+
+        [(_, rule_eval)] = rule_evals(tmp_path)
+
+        assert rule_eval.cases[0].expected_output == make_edit_review(
+            violations=(make_judged_violation(lines__start=1, lines__end=2),)
+        )
 
     def test_eval_file_ending_in_yml_is_loaded(self, tmp_path, make_rule_eval_case):
         case = make_rule_eval_case()
@@ -187,30 +212,3 @@ class TestEditReview:
         )
 
         assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
-
-
-class TestJudgedViolation:
-    def test_eval_file_line_and_end_line_are_its_lines(self, make_judged_violation):
-        violation = JudgedViolation.model_validate(
-            {"line": 2, "end_line": 4, "confidence": 0.9, "message": "Pass the member."}
-        )
-
-        assert violation == make_judged_violation(lines__start=2, lines__end=4)
-
-    def test_eval_file_line_without_end_line_is_one_line(self, make_judged_violation):
-        violation = JudgedViolation.model_validate(
-            {"line": 2, "confidence": 0.9, "message": "Pass the member."}
-        )
-
-        assert violation == make_judged_violation(lines__start=2)
-
-    def test_dump_gives_its_lines_as_line_and_end_line(self, make_judged_violation):
-        violation = make_judged_violation(lines__start=2, lines__end=4)
-
-        assert violation.model_dump(mode="json") == {
-            "line": 2,
-            "end_line": 4,
-            "confidence": 0.9,
-            "message": "Pass the member.",
-            "kinds": None,
-        }
