@@ -2,7 +2,7 @@ import pytest
 import yaml
 
 from codeguard.config import ConfigError
-from codeguard.rule_tests import RuleEval, rule_evals
+from codeguard.rule_tests import JudgedViolation, RuleEval, rule_evals
 
 
 class TestRuleEvals:
@@ -174,7 +174,7 @@ class TestEditReview:
         self, make_edit_review, make_judged_violation
     ):
         review = make_edit_review(
-            reason="Judged.", violations=(make_judged_violation(line=2, end_line=2),)
+            reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=2),)
         )
 
         assert review.listing == "\n  reason: Judged.\n  line 2 (0.90): Pass the member."
@@ -183,7 +183,34 @@ class TestEditReview:
         self, make_edit_review, make_judged_violation
     ):
         review = make_edit_review(
-            reason="Judged.", violations=(make_judged_violation(line=2, end_line=4),)
+            reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=4),)
         )
 
         assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
+
+
+class TestJudgedViolation:
+    def test_eval_file_line_and_end_line_are_its_lines(self, make_judged_violation):
+        violation = JudgedViolation.model_validate(
+            {"line": 2, "end_line": 4, "confidence": 0.9, "message": "Pass the member."}
+        )
+
+        assert violation == make_judged_violation(lines__start=2, lines__end=4)
+
+    def test_eval_file_line_without_end_line_is_one_line(self, make_judged_violation):
+        violation = JudgedViolation.model_validate(
+            {"line": 2, "confidence": 0.9, "message": "Pass the member."}
+        )
+
+        assert violation == make_judged_violation(lines__start=2)
+
+    def test_dump_gives_its_lines_as_line_and_end_line(self, make_judged_violation):
+        violation = make_judged_violation(lines__start=2, lines__end=4)
+
+        assert violation.model_dump(mode="json") == {
+            "line": 2,
+            "end_line": 4,
+            "confidence": 0.9,
+            "message": "Pass the member.",
+            "kinds": None,
+        }

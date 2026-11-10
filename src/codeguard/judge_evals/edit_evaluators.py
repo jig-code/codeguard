@@ -39,7 +39,7 @@ class ViolationsOnTriggers(Evaluator[EditCase, EditReview, None]):
         ):
             return {}
         kinds = {
-            violation.line: violation.kinds
+            violation.lines.start: violation.kinds
             for violation in ctx.output.violations
             if violation.confidence >= self.confidence_threshold and violation.kinds is not None
         }

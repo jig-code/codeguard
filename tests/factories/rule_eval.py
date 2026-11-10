@@ -4,6 +4,7 @@ from pydantic_evals.otel import SpanTree
 
 from codeguard.review import Verdict
 from codeguard.rule_tests import EditCase, EditReview, JudgedViolation, Outcome, RuleEvalCase
+from factories.line_range import MakeLineRange
 
 
 class MakeVerdict(factory.Factory):
@@ -29,7 +30,7 @@ class MakeJudgedViolation(factory.Factory):
     class Meta:
         model = JudgedViolation
 
-    line = 1
+    lines = factory.SubFactory(MakeLineRange)
     confidence = 0.9
     message = "Pass the member."
 

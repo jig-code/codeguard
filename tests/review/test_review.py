@@ -8,7 +8,9 @@ from codeguard.review import ErrorType, Review, Severity
 
 class TestReview:
     def test_error_diagnostic_blocks(self, make_diagnostic):
-        result = Review(diagnostics=(make_diagnostic(warning=True), make_diagnostic(line=2)))
+        result = Review(
+            diagnostics=(make_diagnostic(warning=True), make_diagnostic(lines__start=2))
+        )
 
         assert result.blocks is True
 
@@ -19,7 +21,7 @@ class TestReview:
 
     def test_write_lists_each_diagnostic(self, make_diagnostic):
         warning = make_diagnostic(warning=True)
-        error = make_diagnostic(line=2)
+        error = make_diagnostic(lines__start=2)
         out = StringIO()
 
         Review(diagnostics=(warning, error)).write(out)
@@ -28,7 +30,7 @@ class TestReview:
 
     def test_write_json_prints_one_object(self, make_diagnostic):
         warning = make_diagnostic(warning=True)
-        error = make_diagnostic(line=2)
+        error = make_diagnostic(lines__start=2)
         out = StringIO()
 
         Review(diagnostics=(warning, error)).write_json(out)
@@ -48,6 +50,8 @@ class TestReview:
         )
 
     def test_judge_errors_as_warnings_keeps_rule_violations(self, make_diagnostic):
-        review = Review(diagnostics=(make_diagnostic(), make_diagnostic(judged=True, line=2)))
+        review = Review(
+            diagnostics=(make_diagnostic(), make_diagnostic(judged=True, lines__start=2))
+        )
 
         assert review.with_judge_errors_as_warnings() == review

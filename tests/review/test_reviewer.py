@@ -40,7 +40,10 @@ class TestReviewer:
     ):
         repo.write("a.py", "print(1)\nx = 1\n")
         judge = RecordingJudge(
-            Verdict(reason="The code breaks the convention.", violations=(make_violation(line=1),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(lines__start=1),),
+            )
         )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
@@ -54,23 +57,28 @@ class TestReviewer:
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
-                violations=(make_violation(line=1, end_line=2),),
+                violations=(make_violation(lines__start=1, lines__end=2),),
             )
         )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 
-        assert result == Review(diagnostics=(make_diagnostic(judged=True, line=1, end_line=2),))
+        assert result == Review(
+            diagnostics=(make_diagnostic(judged=True, lines__start=1, lines__end=2),)
+        )
 
     def test_unchanged_line_error_does_not_block_the_judge(
         self, repo, make_diagnostic, make_violation, make_judge_request, make_binding
     ):
         repo.write("a.py", "print(1)\nx = 1\n")
         judge = RecordingJudge(
-            Verdict(reason="The code breaks the convention.", violations=(make_violation(line=2),))
+            Verdict(
+                reason="The code breaks the convention.",
+                violations=(make_violation(lines__start=2),),
+            )
         )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 
-        assert result == Review(diagnostics=(make_diagnostic(judged=True, line=2),))
+        assert result == Review(diagnostics=(make_diagnostic(judged=True, lines__start=2),))
         assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]

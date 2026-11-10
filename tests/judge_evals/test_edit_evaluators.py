@@ -69,7 +69,9 @@ class TestViolationsOnTriggers:
     ):
         context = make_evaluator_context(
             output=make_edit_review(
-                violations=(make_judged_violation(line=2, kinds=("code", "number-literal")),)
+                violations=(
+                    make_judged_violation(lines__start=2, kinds=("code", "number-literal")),
+                )
             )
         )
 

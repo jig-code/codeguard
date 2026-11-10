@@ -224,8 +224,8 @@ class TestReviewWithPackages:
         repo.write("a.py", "x = 1\n")
         repo.commit("Opt in")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(line=2)
-        packaged = make_diagnostic(line=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2)
+        packaged = make_diagnostic(lines__start=2, rule="example/python/no-print", note=None)
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
@@ -354,11 +354,14 @@ class TestReviewOfDeletedCode:
                     [
                         {
                             **violation,
-                            "line": 1,
-                            "end_line": 1,
+                            "lines": {"start": 1, "end": 1},
                             "message": "The class lost its entry point.",
                         },
-                        {**violation, "line": 2, "end_line": 2, "message": "Untouched method."},
+                        {
+                            **violation,
+                            "lines": {"start": 2, "end": 2},
+                            "message": "Untouched method.",
+                        },
                     ]
                 )
             }
@@ -454,7 +457,7 @@ class TestReviewJsonFormat:
         self, repo, tmp_path, make_skill, make_diagnostic
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
-        violation = {"file": "a.py", "line": 1, "end_line": 1, "message": "Move it."}
+        violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
@@ -671,8 +674,8 @@ class TestReviewWithGitPackages:
         released_package.commit("Remove no-print")
         released_package.git("tag", "v1.1.0")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(line=2)
-        packaged = make_diagnostic(line=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2)
+        packaged = make_diagnostic(lines__start=2, rule="example/python/no-print", note=None)
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
@@ -709,7 +712,7 @@ class TestEvalCommand:
             "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        violation = {"file": "invoice.py", "line": 1, "end_line": 1, "message": "Move it."}
+        violation = {"file": "invoice.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         bin_dir = FAKE_CLAUDE.parent
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
@@ -744,8 +747,7 @@ class TestEvalCommand:
         calls = tmp_path / "calls"
         violation = {
             "file": "invoice.py",
-            "line": 1,
-            "end_line": 1,
+            "lines": {"start": 1, "end": 1},
             "message": "Move it.",
             "confidence": 1.0,
         }
@@ -796,7 +798,14 @@ class TestEvalCommand:
         package = invoice_package(tmp_path_factory)
         bin_dir = recording_claude(
             tmp_path,
-            [{"file": "invoice.py", "line": 3, "end_line": 3, "message": "M.", "confidence": 1.0}],
+            [
+                {
+                    "file": "invoice.py",
+                    "lines": {"start": 3, "end": 3},
+                    "message": "M.",
+                    "confidence": 1.0,
+                }
+            ],
         )
 
         result = subprocess.run(
@@ -945,7 +954,12 @@ class TestEvalMatchesReview:
     ):
         package = invoice_package(tmp_path_factory)
         verdict = [
-            {"file": "invoice.py", "line": 3, "end_line": 3, "message": "Move it.", **violation}
+            {
+                "file": "invoice.py",
+                "lines": {"start": 3, "end": 3},
+                "message": "Move it.",
+                **violation,
+            }
             for violation in violations
         ]
         bin_dir = recording_claude(tmp_path, verdict)

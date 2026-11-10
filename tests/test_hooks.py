@@ -228,10 +228,11 @@ class TestStopHook:
 
         response = run_stop_hook(repo, stop())
 
+        warning = make_diagnostic(warning=True, lines__start=2)
         assert response == {
             "decision": "block",
             "reason": f"{make_diagnostic()}\n{REQUIRED_FIXES}",
-            "systemMessage": f"codeguard warnings:\n{make_diagnostic(warning=True, line=2)}",
+            "systemMessage": f"codeguard warnings:\n{warning}",
         }
 
     def test_low_confidence_finding_goes_to_the_user(
@@ -239,7 +240,7 @@ class TestStopHook:
     ):
         bind_skill(repo, make_skill)
         repo.write("a.py", "x = 1\n")
-        violation = {"file": "a.py", "line": 1, "end_line": 1, "message": "Move it."}
+        violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
         finding = make_diagnostic(
             judged=True,

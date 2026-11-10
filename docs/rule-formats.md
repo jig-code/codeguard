@@ -152,8 +152,9 @@ cases:
 ```
 
 `expected_output` can also list the `violations`, each with a `line`, `confidence` and
-`message`, and optionally the `end_line` of the code that breaks the rule and the `kinds`
-on its lines; a violation without `kinds` isn't checked on them.
+`message`, and optionally the `end_line` of the code that breaks the rule, which defaults
+to its `line`, and the `kinds` on its lines; a violation without `kinds` isn't checked on
+them.
 A case that leaves them out checks only the outcome. Besides `cases`, the file may set
 `name`, the rule id, which defaults to the file name; a rule has one eval file. The file
 holds nothing else: codeguard decides how a case is judged and checked, so every rule is

@@ -14,8 +14,8 @@ class TestDiagnostic:
         assert diagnostic.id == reworded.id
 
     def test_id_differs_by_line(self, make_diagnostic):
-        diagnostic = make_diagnostic(line=2)
-        moved = make_diagnostic(line=3)
+        diagnostic = make_diagnostic(lines__start=2)
+        moved = make_diagnostic(lines__start=3)
 
         assert diagnostic.id != moved.id
 
@@ -29,7 +29,7 @@ class TestDiagnostic:
         )
 
     def test_str_without_a_line_names_only_the_file(self, make_diagnostic):
-        diagnostic = make_diagnostic(warning=True, line=None)
+        diagnostic = make_diagnostic(warning=True, lines=None)
 
         assert str(diagnostic) == (
             f"a.py: warning no-breakpoint: Remove breakpoint(). [{diagnostic.id}]"

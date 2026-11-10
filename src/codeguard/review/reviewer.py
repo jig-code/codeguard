@@ -24,6 +24,6 @@ class Reviewer:
             diagnostics = tuple(
                 diagnostic
                 for diagnostic in found
-                if scope.covers(diagnostic.file, diagnostic.line, diagnostic.end_line)
+                if scope.covers(diagnostic.file, diagnostic.lines)
             )
         return Review(diagnostics=diagnostics)

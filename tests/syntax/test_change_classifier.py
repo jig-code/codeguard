@@ -220,7 +220,9 @@ class TestChangeClassifier:
 
         assert classified_judged_lines(git_repo, "a.py") == {1, 4, 5}
 
-    def test_body_edit_does_not_cover_the_untouched_first_line_of_its_function(self, tmp_path):
+    def test_body_edit_does_not_cover_the_untouched_first_line_of_its_function(
+        self, make_line_range, tmp_path
+    ):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "class Order:\n    def total(self):\n        return 1\n")
         git_repo.commit("Add a")
@@ -230,9 +232,9 @@ class TestChangeClassifier:
 
         scope = classifier.classify(working_tree.changed_lines("HEAD"))
 
-        assert scope.covers("a.py", 3)
-        assert not scope.covers("a.py", 1)
-        assert not scope.covers("a.py", 2)
+        assert scope.covers("a.py", make_line_range(start=3))
+        assert not scope.covers("a.py", make_line_range(start=1))
+        assert not scope.covers("a.py", make_line_range(start=2))
 
     def test_judged_lines_for_a_trigger_take_in_its_node_around_the_change(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
