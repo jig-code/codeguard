@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 from diskcache import Cache
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
+from factories.line_range import MakeLineRange
 from factories.rule_eval import (
     MakeEditCase,
     MakeEditReview,
@@ -13,16 +15,20 @@ from factories.rule_eval import (
     MakeRuleEvalCase,
     MakeVerdict,
 )
+from factories.ruleset import MakeBindingConfig, MakeRuleset
 from factories.skill import MakeBinding, MakeSkill
 from git_repo import GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
 
+register(MakeLineRange)
 register(MakeDiagnostic)
 register(MakeViolation)
 register(MakeSkill)
 register(MakeBinding)
+register(MakeBindingConfig)
+register(MakeRuleset)
 register(MakeJudgeRequest)
 register(MakeVerdict)
 register(MakeEditCase)
@@ -47,7 +53,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addoption(
         "--judge-model",
-        help="The model --judge-provider judges with. Default: the provider's default model.",
+        help="The model --judge-provider judges with. Default: the provider's default model; "
+        "none for claude-cli, so the claude CLI runs its own default.",
     )
 
 
@@ -60,6 +67,9 @@ def no_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CODEGUARD_CONFIG", raising=False)
+    for name in list(os.environ):
+        if name.startswith("CODEGUARD_JUDGE__"):
+            monkeypatch.delenv(name)
 
 
 @pytest.fixture

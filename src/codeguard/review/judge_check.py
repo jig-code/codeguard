@@ -37,7 +37,7 @@ class JudgeCheck:
                 Diagnostic(
                     rule=self.binding.rule,
                     file=file,
-                    line=None,
+                    lines=None,
                     message="The judge call failed, so this rule was not checked.",
                     severity=self.binding.severity,
                     note=str(error),

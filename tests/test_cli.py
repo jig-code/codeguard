@@ -224,8 +224,10 @@ class TestReviewWithPackages:
         repo.write("a.py", "x = 1\n")
         repo.commit("Opt in")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(line=2)
-        packaged = make_diagnostic(line=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2, lines__end=2)
+        packaged = make_diagnostic(
+            lines__start=2, lines__end=2, rule="example/python/no-print", note=None
+        )
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
@@ -352,8 +354,16 @@ class TestReviewOfDeletedCode:
             {
                 "stdout": claude_stream(
                     [
-                        {**violation, "line": 1, "message": "The class lost its entry point."},
-                        {**violation, "line": 2, "message": "Untouched method."},
+                        {
+                            **violation,
+                            "lines": {"start": 1, "end": 1},
+                            "message": "The class lost its entry point.",
+                        },
+                        {
+                            **violation,
+                            "lines": {"start": 2, "end": 2},
+                            "message": "Untouched method.",
+                        },
                     ]
                 )
             }
@@ -449,7 +459,7 @@ class TestReviewJsonFormat:
         self, repo, tmp_path, make_skill, make_diagnostic
     ):
         bin_dir = judged_repo(repo, tmp_path, make_skill)
-        violation = {"file": "a.py", "line": 1, "message": "Move it."}
+        violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
@@ -666,8 +676,10 @@ class TestReviewWithGitPackages:
         released_package.commit("Remove no-print")
         released_package.git("tag", "v1.1.0")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(line=2)
-        packaged = make_diagnostic(line=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2, lines__end=2)
+        packaged = make_diagnostic(
+            lines__start=2, lines__end=2, rule="example/python/no-print", note=None
+        )
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
@@ -704,7 +716,7 @@ class TestEvalCommand:
             "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        violation = {"file": "invoice.py", "line": 1, "message": "Move it."}
+        violation = {"file": "invoice.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         bin_dir = FAKE_CLAUDE.parent
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
@@ -716,7 +728,10 @@ class TestEvalCommand:
             env={**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.stdout.endswith(
             "responsibility-placement an assignment in the invoice: expected outcome "
             "invalid, got outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
@@ -734,7 +749,12 @@ class TestEvalCommand:
         )
         bin_dir = FAKE_CLAUDE.parent
         calls = tmp_path / "calls"
-        violation = {"file": "invoice.py", "line": 1, "message": "Move it.", "confidence": 1.0}
+        violation = {
+            "file": "invoice.py",
+            "lines": {"start": 1, "end": 1},
+            "message": "Move it.",
+            "confidence": 1.0,
+        }
         configure_fake_cli_response({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
 
@@ -781,7 +801,15 @@ class TestEvalCommand:
     def test_judges_the_selected_rule_and_case(self, tmp_path, tmp_path_factory):
         package = invoice_package(tmp_path_factory)
         bin_dir = recording_claude(
-            tmp_path, [{"file": "invoice.py", "line": 3, "message": "M.", "confidence": 1.0}]
+            tmp_path,
+            [
+                {
+                    "file": "invoice.py",
+                    "lines": {"start": 3, "end": 3},
+                    "message": "M.",
+                    "confidence": 1.0,
+                }
+            ],
         )
 
         result = subprocess.run(
@@ -799,19 +827,26 @@ class TestEvalCommand:
             text=True,
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.returncode == 0
 
     @pytest.mark.parametrize(
-        ("options", "model"),
+        ("options", "model", "label"),
         [
-            (["--provider", "claude-cli"], "claude-sonnet-5-5"),
-            (["--provider", "claude-cli", "--model", "claude-haiku-5-5"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli"], None, "claude-cli's default model"),
+            (
+                ["--provider", "claude-cli", "--model", "claude-haiku-5-5"],
+                "claude-haiku-5-5",
+                "claude-haiku-5-5",
+            ),
         ],
         ids=["default-model", "given-model"],
     )
     def test_judges_with_the_given_provider_and_model(
-        self, tmp_path, tmp_path_factory, options, model
+        self, tmp_path, tmp_path_factory, options, model, label
     ):
         package = invoice_package(tmp_path_factory)
         package.write(
@@ -830,7 +865,7 @@ class TestEvalCommand:
         )
 
         assert recorded_call(tmp_path / "eval")["model"] == model
-        assert f"Evaluation Summary: responsibility-placement on {model}" in result.stdout
+        assert f"Evaluation Summary: responsibility-placement on {label}" in result.stdout
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(
@@ -923,7 +958,12 @@ class TestEvalMatchesReview:
     ):
         package = invoice_package(tmp_path_factory)
         verdict = [
-            {"file": "invoice.py", "line": 3, "message": "Move it.", **violation}
+            {
+                "file": "invoice.py",
+                "lines": {"start": 3, "end": 3},
+                "message": "Move it.",
+                **violation,
+            }
             for violation in violations
         ]
         bin_dir = recording_claude(tmp_path, verdict)
@@ -980,13 +1020,13 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
     }
 
 
-def recorded_call(record: Path) -> dict[str, str]:
+def recorded_call(record: Path) -> dict[str, str | None]:
     captured = json.loads((record / "request.json").read_text())
     arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
         "prompt": captured["prompt"],
-        **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
+        **{name: values.get(option) for option, name in RECORDED_OPTIONS.items()},
     }
 
 

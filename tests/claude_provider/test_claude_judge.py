@@ -45,7 +45,7 @@ def fake_claude_executable(tmp_path, arguments) -> str:
                 [
                     {
                         "file": "a.py",
-                        "line": 1,
+                        "lines": {"start": 1, "end": 1},
                         "message": "Move it.",
                         "confidence": 0.5,
                     }
@@ -384,6 +384,17 @@ class TestClaudeJudge:
         argv = json.loads(arguments.read_text())["arguments"]
         assert argv[argv.index("--model") + 1] == "claude-opus-5-5"
 
+    def test_claude_without_a_model_runs_with_no_model_flag(
+        self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request
+    ):
+        judge = ClaudeJudge(
+            tmp_path, model=None, processes=processes, executable=fake_claude_executable
+        )
+
+        judge.judge(make_judge_request())
+
+        assert "--model" not in json.loads(arguments.read_text())["arguments"]
+
     def test_claude_is_given_the_described_confidence_scale(
         self, tmp_path, processes, arguments, make_judge_request
     ):
@@ -453,6 +464,12 @@ class TestClaudeJudge:
         opus = ClaudeJudge(tmp_path, model="claude-opus-5-5", processes=processes)
 
         assert sonnet.identity != opus.identity
+
+    def test_identity_without_a_model_differs_from_a_named_one(self, tmp_path, processes):
+        default = ClaudeJudge(tmp_path, model=None, processes=processes)
+        sonnet = ClaudeJudge(tmp_path, model="claude-sonnet-5-5", processes=processes)
+
+        assert default.identity != sonnet.identity
 
 
 def judge_answering(tmp_path, processes, *messages: dict) -> ClaudeJudge:

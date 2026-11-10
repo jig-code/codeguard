@@ -141,7 +141,9 @@ class TestChangeClassifier:
         assert ChangeKind.HELPER_FUNCTION not in kinds
         assert ChangeKind.TEST_FUNCTION not in kinds
 
-    def test_body_edit_does_not_cover_the_untouched_first_line_of_its_function(self, tmp_path):
+    def test_body_edit_does_not_cover_the_untouched_first_line_of_its_function(
+        self, tmp_path, make_line_range
+    ):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "class Order:\n    def total(self):\n        return 1\n")
         git_repo.commit("Add a")
@@ -151,9 +153,9 @@ class TestChangeClassifier:
 
         scope = classifier.classify(working_tree.changed_lines("HEAD"))
 
-        assert scope.covers("a.py", 3)
-        assert not scope.covers("a.py", 1)
-        assert not scope.covers("a.py", 2)
+        assert scope.covers("a.py", make_line_range(start=3, end=3))
+        assert not scope.covers("a.py", make_line_range(start=1, end=1))
+        assert not scope.covers("a.py", make_line_range(start=2, end=2))
 
     def test_removal_in_a_renamed_file_is_classified_against_its_base(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())

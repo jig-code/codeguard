@@ -7,8 +7,9 @@ stops, in CI ([CI](add-codeguard.md#ci)), and when you run `codeguard review`
 ## What a review reports
 
 A review reports only violations that a line the change adds, edits or removes is part
-of: on that line, or for a removed line, where it was. These are the change's changed
-lines. What the line held before doesn't matter: editing a line that already broke a rule reports it,
+of: one of the lines of the code that breaks the rule, a removed line counting where it
+was. These are the change's changed lines.
+What the line held before doesn't matter: editing a line that already broke a rule reports it,
 so code a change touches is left better than it was found. Untouched code isn't reported,
 even in the function or class around the change: adding a line to a method doesn't
 report the method's name, and renaming a variable doesn't report the class's design. A
@@ -31,6 +32,10 @@ and doesn't block, so a warning shows how far it fell short:
 ```
 app/orders.py:12: warning no-pre-derived-arguments: The call passes both lines and the context they come from. (confidence 0.70) [3f1c9a2b7d40]
 ```
+
+A diagnostic's location is its file and lines: `app/orders.py:12` for one line,
+`app/orders.py:12-15` for several. Its id stays the same while the rule, the file and
+those lines do.
 
 A review stops judging after `review_time_limit_minutes`
 ([Settings](configuration.md#settings)). Each rule and file it didn't judge is reported

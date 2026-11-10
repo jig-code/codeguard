@@ -15,6 +15,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-ai-slim[bedrock,google]~=2.66.0",
     "pydantic-evals~=2.66.0",
+    "pydantic-settings>=2.12",
     "pyyaml>=6.0.3",
 ]
 
@@ -57,7 +58,11 @@ select = [
 ]
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["codeguard.config.RulesetConfig", "codeguard.judge_evals.EvalSelection"]
+extend-immutable-calls = [
+    "codeguard.config.JudgeChoice",
+    "codeguard.config.RulesetConfig",
+    "codeguard.judge_evals.EvalSelection",
+]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.TYPE_CHECKING".msg = "Do not use TYPE_CHECKING. Fix the import cycle."
@@ -89,6 +94,7 @@ layers = [
     "syntax",
     "ast_grep",
     "config | working_tree | file_lock",
+    "line_range",
 ]
 
 [[tool.importlinter.contracts]]
@@ -108,6 +114,7 @@ source_modules = [
     "codeguard.ast_grep",
     "codeguard.config",
     "codeguard.working_tree",
+    "codeguard.line_range",
     "codeguard.file_lock",
 ]
 forbidden_modules = ["pydantic_evals"]

@@ -6,6 +6,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from codeguard.config import Severity
+from codeguard.line_range import LineRange
 
 
 class Category(StrEnum):
@@ -25,14 +26,13 @@ class Diagnostic(BaseModel):
 
     rule: str
     file: str
-    line: int | None
+    lines: LineRange | None
     message: str
     severity: Severity
     note: str | None
     category: Category
     confidence: float = Field(ge=0, le=1)
     error_type: ErrorType | None = None
-    end_line: int | None = None
 
     @model_validator(mode="after")
     def _error_type_only_on_judge_errors(self) -> Self:
@@ -42,7 +42,7 @@ class Diagnostic(BaseModel):
 
     @property
     def id(self) -> str:
-        key = f"{self.rule}:{self.file}:{self.line}"
+        key = f"{self.rule}:{self.file}:{self.lines}"
         return hashlib.sha256(key.encode()).hexdigest()[:12]
 
     @property
@@ -57,8 +57,7 @@ class Diagnostic(BaseModel):
             "id": self.id,
             "rule": self.rule,
             "file": self.file,
-            "line": self.line,
-            "end_line": self.end_line,
+            "lines": None if self.lines is None else self.lines.model_dump(),
             "message": self.message,
             "severity": self.severity,
             "category": self.category,
@@ -69,7 +68,7 @@ class Diagnostic(BaseModel):
         }
 
     def __str__(self) -> str:
-        location = self.file if self.line is None else f"{self.file}:{self.line}"
+        location = self.file if self.lines is None else f"{self.file}:{self.lines}"
         confidence = (
             f" (confidence {self.confidence:.2f})" if self.category is Category.JUDGED else ""
         )

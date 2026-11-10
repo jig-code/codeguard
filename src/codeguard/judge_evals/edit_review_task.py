@@ -28,13 +28,13 @@ class EditReviewTask:
             parsed = self.scanner.scan_files(repo.root, [inputs.file]).get(inputs.file)
         violations = tuple(
             JudgedViolation(
-                line=violation.line,
+                lines=violation.lines,
                 confidence=violation.confidence,
                 message=violation.message,
-                kinds=None if parsed is None else tuple(sorted(parsed.kinds_on(violation.line))),
+                kinds=None if parsed is None else tuple(sorted(parsed.kinds_on(violation.lines))),
             )
             for violation in verdict.violations
-            if changed.covers(violation.file, violation.line) and violation.file == inputs.file
+            if changed.covers(violation.file, violation.lines) and violation.file == inputs.file
         )
         return EditReview(
             outcome=self._outcome(violations), reason=verdict.reason, violations=violations

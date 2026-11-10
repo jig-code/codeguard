@@ -10,7 +10,7 @@ class FakeClaudeCLI(FakeCLI):
         parser = ArgumentParser(allow_abbrev=False)
         parser.add_argument("--safe-mode", action="store_true")
         parser.add_argument("-p", action="store_true")
-        parser.add_argument("--model", required=True)
+        parser.add_argument("--model")
         parser.add_argument("--output-format", choices=["stream-json"], required=True)
         parser.add_argument("--verbose", action="store_true")
         parser.add_argument("--json-schema", type=json.loads, required=True)

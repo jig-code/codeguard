@@ -5,6 +5,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Self
 
+from codeguard.line_range import LineRange
+
 _HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # ASCII whitespace, the same set git treats as blank.
 _BLANK = " \t\r\f\v"
@@ -92,21 +94,19 @@ class ChangedLines:
             return WorkingTree(root).new_file_diff(file)
         return WorkingTree(root).diff(self.base, base_path, file)
 
-    def covers(self, file: str, line: int | None, end_line: int | None = None) -> bool:
+    def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.files:
             return False
-        if line is None:
+        if lines is None:
             return True
-        if end_line is not None:
-            return any(line <= point <= end_line for point in self.points(file))
-        return line in self.points(file)
+        return any(point in lines for point in self.points(file))
 
 
 @dataclass(frozen=True)
 class AllLines:
     files: tuple[str, ...]
 
-    def covers(self, file: str, line: int | None, end_line: int | None = None) -> bool:
+    def covers(self, file: str, lines: LineRange | None) -> bool:
         return True
 
     def kinds_of(self, file: str) -> frozenset[str] | None:

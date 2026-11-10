@@ -6,6 +6,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
 from codeguard.config import JUDGE_EVAL_DIR, ConfigError, language_of
+from codeguard.line_range import LineRange
 
 _EVAL_FILE_SUFFIXES = (".yaml", ".yml")
 
@@ -52,7 +53,7 @@ class EditCase(BaseModel):
 class JudgedViolation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    line: int
+    lines: LineRange
     confidence: float
     message: str
     kinds: tuple[str, ...] | None = None
@@ -70,7 +71,7 @@ class EditReview(BaseModel):
     def listing(self) -> str:
         reason = "" if self.reason is None else f"\n  reason: {self.reason}"
         return reason + "".join(
-            f"\n  line {violation.line} ({violation.confidence:.2f}): {violation.message}"
+            f"\n  {violation.lines.described} ({violation.confidence:.2f}): {violation.message}"
             for violation in self.violations
         )
 
