@@ -17,13 +17,16 @@ class LineRange(BaseModel):
             raise ValueError(f"end {self.end} is before start {self.start}")
         return self
 
-    @classmethod
-    def of_line(cls, line: int) -> Self:
-        return cls(start=line, end=line)
-
     @property
     def numbers(self) -> range:
         return range(self.start, self.end + 1)
 
+    @property
+    def described(self) -> str:
+        return f"line {self}" if self.start == self.end else f"lines {self}"
+
     def __contains__(self, line: int) -> bool:
         return self.start <= line <= self.end
+
+    def __str__(self) -> str:
+        return str(self.start) if self.start == self.end else f"{self.start}-{self.end}"

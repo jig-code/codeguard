@@ -64,13 +64,15 @@ class TestViolationsOnTriggers:
 
         assert result == EvaluationReason(value=True)
 
-    def test_violation_outside_the_triggers_fails_with_the_kinds_on_its_line(
+    def test_violation_outside_the_triggers_fails_with_the_kinds_on_its_lines(
         self, make_evaluator_context, make_edit_review, make_judged_violation
     ):
         context = make_evaluator_context(
             output=make_edit_review(
                 violations=(
-                    make_judged_violation(lines__start=2, kinds=("code", "number-literal")),
+                    make_judged_violation(
+                        lines__start=2, lines__end=4, kinds=("code", "number-literal")
+                    ),
                 )
             )
         )
@@ -79,10 +81,28 @@ class TestViolationsOnTriggers:
 
         assert result == EvaluationReason(
             value=False,
-            reason="violation on line 2 is outside the triggers class-header, string-literal\n"
-            "  Add one of the kinds on that line to triggers in its binding: "
+            reason="violation on lines 2-4 is outside the triggers class-header, string-literal\n"
+            "  Add one of the kinds on those lines to triggers in its binding: "
             "code, number-literal",
         )
+
+    def test_violation_whose_later_lines_hold_a_trigger_passes_beside_one_sharing_its_first(
+        self, make_evaluator_context, make_edit_review, make_judged_violation
+    ):
+        context = make_evaluator_context(
+            output=make_edit_review(
+                violations=(
+                    make_judged_violation(
+                        lines__start=2, lines__end=4, kinds=("code", "string-literal")
+                    ),
+                    make_judged_violation(lines__start=2, lines__end=2, kinds=("code",)),
+                )
+            )
+        )
+
+        result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)
+
+        assert result == EvaluationReason(value=True)
 
     def test_violation_below_the_threshold_passes(
         self, make_evaluator_context, make_edit_review, make_judged_violation

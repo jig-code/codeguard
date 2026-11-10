@@ -38,15 +38,15 @@ class TestReviewer:
     def test_violations_on_unchanged_lines_are_not_reported(
         self, repo, make_violation, make_binding
     ):
-        repo.write("a.py", "print(1)\nx = 1\n")
+        repo.write("a.py", "print(1)\nx = 1\ny = 2\n")
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
-                violations=(make_violation(lines__start=1),),
+                violations=(make_violation(lines__start=1, lines__end=2),),
             )
         )
 
-        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
+        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({3})}))
 
         assert result == Review(diagnostics=())
 
@@ -74,11 +74,13 @@ class TestReviewer:
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
-                violations=(make_violation(lines__start=2),),
+                violations=(make_violation(lines__start=2, lines__end=2),),
             )
         )
 
         result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
 
-        assert result == Review(diagnostics=(make_diagnostic(judged=True, lines__start=2),))
+        assert result == Review(
+            diagnostics=(make_diagnostic(judged=True, lines__start=2, lines__end=2),)
+        )
         assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]

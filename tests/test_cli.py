@@ -224,8 +224,10 @@ class TestReviewWithPackages:
         repo.write("a.py", "x = 1\n")
         repo.commit("Opt in")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(lines__start=2)
-        packaged = make_diagnostic(lines__start=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2, lines__end=2)
+        packaged = make_diagnostic(
+            lines__start=2, lines__end=2, rule="example/python/no-print", note=None
+        )
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
@@ -674,8 +676,10 @@ class TestReviewWithGitPackages:
         released_package.commit("Remove no-print")
         released_package.git("tag", "v1.1.0")
         repo.write("a.py", "x = 1\nprint(x)\n")
-        local = make_diagnostic(lines__start=2)
-        packaged = make_diagnostic(lines__start=2, rule="example/python/no-print", note=None)
+        local = make_diagnostic(lines__start=2, lines__end=2)
+        packaged = make_diagnostic(
+            lines__start=2, lines__end=2, rule="example/python/no-print", note=None
+        )
 
         result = subprocess.run(
             [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True

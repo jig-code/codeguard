@@ -126,8 +126,8 @@ class TestEditReviewTask:
 
         review = task(
             make_edit_case(
-                before="RATE = 2\nship(status=Status.SHIPPED)\n",
-                after="RATE = 2\nship(status='shipped')\n",
+                before="ship(status=Status.SHIPPED)\nRATE = 2\n",
+                after="ship(status='shipped')\nRATE = 2\n",
             )
         )
 
@@ -137,6 +137,7 @@ class TestEditReviewTask:
             violations=(
                 make_judged_violation(
                     message=violation.message,
+                    lines__start=1,
                     lines__end=2,
                     kinds=("call", "code", "module-statement", "number-literal", "string-literal"),
                 ),
@@ -146,7 +147,7 @@ class TestEditReviewTask:
     def test_violation_on_an_unchanged_line_is_dropped(
         self, make_binding, make_edit_case, make_verdict, make_violation
     ):
-        violation = make_violation(file="module.py", lines__start=1, confidence=0.9)
+        violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
@@ -156,8 +157,14 @@ class TestEditReviewTask:
 
         review = task(
             make_edit_case(
-                before="ship(status=Status.SHIPPED)\ncancel(status=Status.CANCELLED)\n",
-                after="ship(status=Status.SHIPPED)\ncancel(status='cancelled')\n",
+                before=(
+                    "ship(status=Status.SHIPPED)\nhold(status=Status.HELD)\n"
+                    "cancel(status=Status.CANCELLED)\n"
+                ),
+                after=(
+                    "ship(status=Status.SHIPPED)\nhold(status=Status.HELD)\n"
+                    "cancel(status='cancelled')\n"
+                ),
             )
         )
 

@@ -13,11 +13,26 @@ class TestDiagnostic:
 
         assert diagnostic.id == reworded.id
 
-    def test_id_differs_by_line(self, make_diagnostic):
-        diagnostic = make_diagnostic(lines__start=2)
-        moved = make_diagnostic(lines__start=3)
+    def test_id_differs_by_first_line(self, make_diagnostic):
+        diagnostic = make_diagnostic(lines__start=2, lines__end=4)
+        moved = make_diagnostic(lines__start=3, lines__end=4)
 
         assert diagnostic.id != moved.id
+
+    def test_id_differs_by_last_line(self, make_diagnostic):
+        diagnostic = make_diagnostic(lines__start=2, lines__end=4)
+        longer = make_diagnostic(lines__start=2, lines__end=5)
+
+        assert diagnostic.id != longer.id
+
+    def test_str_gives_a_violation_over_several_lines_its_first_and_last_line(
+        self, make_diagnostic
+    ):
+        diagnostic = make_diagnostic(lines__start=2, lines__end=4, note=None)
+
+        assert str(diagnostic) == (
+            f"a.py:2-4: error no-print: Use logging, not print. [{diagnostic.id}]"
+        )
 
     def test_str_indents_note_under_summary(self, make_diagnostic):
         diagnostic = make_diagnostic()

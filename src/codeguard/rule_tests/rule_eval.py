@@ -71,7 +71,7 @@ class EditReview(BaseModel):
     def listing(self) -> str:
         reason = "" if self.reason is None else f"\n  reason: {self.reason}"
         return reason + "".join(
-            f"\n  {_described(violation.lines)} ({violation.confidence:.2f}): {violation.message}"
+            f"\n  {violation.lines.described} ({violation.confidence:.2f}): {violation.message}"
             for violation in self.violations
         )
 
@@ -171,9 +171,3 @@ def _load(file: Path) -> tuple[Path, RuleEval]:
         return file, RuleEval.model_validate(data)
     except ValidationError as error:
         raise ConfigError.invalid(file, error) from error
-
-
-def _described(lines: LineRange) -> str:
-    if lines.start == lines.end:
-        return f"line {lines.start}"
-    return f"lines {lines.start}-{lines.end}"
