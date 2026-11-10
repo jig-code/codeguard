@@ -8,18 +8,27 @@ from codeguard.working_tree import WorkingTree
 
 # ASCII whitespace, the same set git treats as blank.
 _BLANK = " \t\r\f\v"
-# The diff algorithm, rename detection and path quoting are pinned, so a user's git config
-# doesn't change which lines count as changed.
+# Every git setting that changes a diff's hunks or paths is pinned, so a
+# user's git config doesn't change which lines count as changed.
 _CHANGED_LINES_DIFF = (
     "-c",
     "core.quotePath=false",
+    "-c",
+    "diff.renames=true",
+    "-c",
+    "diff.renameLimit=1000",
+    "-c",
+    "diff.interHunkContext=0",
     "diff",
     "-U0",
     "--no-color",
     "--no-ext-diff",
+    "--no-textconv",
     "--no-prefix",
     "--diff-algorithm=myers",
-    "--find-renames",
+    "--indent-heuristic",
+    "--submodule=short",
+    "--ignore-submodules=untracked",
     "--diff-filter=d",
 )
 
