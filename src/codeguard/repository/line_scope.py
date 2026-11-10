@@ -3,8 +3,8 @@ from dataclasses import dataclass, field, replace
 from typing import Self
 
 from codeguard.line_range import LineRange
-from codeguard.unified_diff import Hunk, parse
-from codeguard.working_tree import WorkingTree
+from codeguard.repository.unified_diff import Hunk, parse
+from codeguard.repository.working_tree import WorkingTree
 
 # ASCII whitespace, the same set git treats as blank.
 _BLANK = " \t\r\f\v"

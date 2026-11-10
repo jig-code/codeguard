@@ -1,4 +1,4 @@
-from codeguard.unified_diff import Hunk, parse
+from codeguard.repository.unified_diff import Hunk, parse
 
 
 class TestParse:

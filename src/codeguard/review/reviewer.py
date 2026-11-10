@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from codeguard.line_scope import AllLines, ChangedLines
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.diagnostic import Diagnostic
 from codeguard.review.review import Review
 

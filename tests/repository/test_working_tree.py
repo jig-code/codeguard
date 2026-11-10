@@ -1,6 +1,6 @@
 from git_repo import GitRepo
 
-from codeguard.working_tree import WorkingTree
+from codeguard.repository import WorkingTree
 
 
 class TestWorkingTree:

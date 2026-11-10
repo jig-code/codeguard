@@ -6,10 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
-from codeguard.line_scope import ChangedLines, LineScopes
+from codeguard.repository import ChangedLines, LineScopes, WorkingTree
 from codeguard.rule_tests.rule_eval import EditCase
 from codeguard.syntax import ChangeClassifier, SyntaxScanner
-from codeguard.working_tree import WorkingTree
 
 
 @dataclass(frozen=True)

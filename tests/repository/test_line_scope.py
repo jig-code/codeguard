@@ -1,8 +1,7 @@
 import pytest
 from git_repo import GitRepo
 
-from codeguard.line_scope import AllLines, ChangedLines, Edit, LineScopes, Removal
-from codeguard.working_tree import WorkingTree
+from codeguard.repository import AllLines, ChangedLines, Edit, LineScopes, Removal, WorkingTree
 
 
 class TestLineScopes:

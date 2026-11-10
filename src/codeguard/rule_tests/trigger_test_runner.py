@@ -4,7 +4,7 @@ from pathlib import Path
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, ConfigError, Ruleset, RulesetLoader
-from codeguard.line_scope import ChangedLines
+from codeguard.repository import ChangedLines
 from codeguard.review import Binding, Bindings
 from codeguard.rule_tests.edit_repo import EditRepo
 from codeguard.rule_tests.rule_eval import Outcome, RuleEvalCase, rule_evals

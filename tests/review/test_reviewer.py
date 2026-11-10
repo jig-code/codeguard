@@ -1,8 +1,8 @@
 from recording_judge import RecordingJudge
 
 from codeguard.config import Ruleset
-from codeguard.line_scope import AllLines, ChangedLines
 from codeguard.pattern_rules import PatternRuleCheck
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
 
 

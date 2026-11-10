@@ -5,7 +5,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
-from codeguard.line_scope import AllLines, ChangedLines
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import (
     ErrorType,
     JudgeCheck,

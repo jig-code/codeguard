@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
-from codeguard.git import Git
+from codeguard.repository.git import Git
 
 
 @dataclass(frozen=True)

@@ -2,9 +2,8 @@ from git_repo import GitRepo
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, GateRule, Ruleset
-from codeguard.line_scope import LineScopes
+from codeguard.repository import LineScopes, WorkingTree
 from codeguard.syntax import ChangeClassifier, SyntaxScanner
-from codeguard.working_tree import WorkingTree
 
 
 def classified_kinds(

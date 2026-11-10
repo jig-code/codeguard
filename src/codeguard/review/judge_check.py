@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from codeguard.line_scope import AllLines, ChangedLines
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic
 from codeguard.review.judge import Judge, JudgeError, JudgeRequest

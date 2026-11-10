@@ -8,11 +8,10 @@ import yaml
 from spans import finished_span_attributes
 
 from codeguard.config import JudgeProvider
-from codeguard.line_scope import LineScopes
+from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Category, Review
 from codeguard.rule_tests import EditCase, EditRepo, Outcome, RuleEvalCase, rule_evals
 from codeguard.rules import Rules, judges
-from codeguard.working_tree import WorkingTree
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 CASES = [

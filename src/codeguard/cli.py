@@ -10,10 +10,9 @@ import pydantic_ai
 
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
-from codeguard.line_scope import AllLines, ChangedLines, LineScopes
+from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
-from codeguard.working_tree import WorkingTree
 
 _EXIT_PASSED = 0
 _EXIT_FAILED = 1

@@ -93,10 +93,26 @@ layers = [
     "review | packages",
     "syntax",
     "ast_grep",
-    "config | line_scope | file_lock",
-    "working_tree | unified_diff",
-    "git | line_range",
+    "config | repository | file_lock",
+    "line_range",
 ]
+
+[[tool.importlinter.contracts]]
+name = "the repository package depends one way"
+type = "layers"
+containers = ["codeguard.repository"]
+exhaustive = true
+layers = [
+    "line_scope",
+    "working_tree | unified_diff",
+    "git",
+]
+
+[[tool.importlinter.contracts]]
+name = "only the repository package runs git and parses diffs"
+type = "protected"
+protected_modules = ["codeguard.repository.git", "codeguard.repository.unified_diff"]
+allowed_importers = ["codeguard.repository"]
 
 [[tool.importlinter.contracts]]
 name = "only judge_evals runs pydantic-evals"
@@ -114,11 +130,8 @@ source_modules = [
     "codeguard.syntax",
     "codeguard.ast_grep",
     "codeguard.config",
-    "codeguard.working_tree",
+    "codeguard.repository",
     "codeguard.line_range",
-    "codeguard.line_scope",
-    "codeguard.unified_diff",
-    "codeguard.git",
     "codeguard.file_lock",
 ]
 forbidden_modules = ["pydantic_evals"]

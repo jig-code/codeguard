@@ -6,10 +6,9 @@ from typing import Self
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
-from codeguard.line_scope import ChangedLines
+from codeguard.repository import ChangedLines, WorkingTree
 from codeguard.syntax.parsed_file import ParsedFile
 from codeguard.syntax.syntax_scanner import SyntaxScanner
-from codeguard.working_tree import WorkingTree
 
 
 @dataclass(frozen=True)

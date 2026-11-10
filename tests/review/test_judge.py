@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from codeguard.line_scope import AllLines, ChangedLines, Removal
+from codeguard.repository import AllLines, ChangedLines, Removal
 from codeguard.review import JudgeRequest, Severity, Verdict
 from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
 
