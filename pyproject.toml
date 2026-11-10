@@ -93,8 +93,9 @@ layers = [
     "review | packages",
     "syntax",
     "ast_grep",
-    "config | working_tree | file_lock",
-    "line_range",
+    "config | line_scope | file_lock",
+    "working_tree | unified_diff",
+    "git | line_range",
 ]
 
 [[tool.importlinter.contracts]]
@@ -115,6 +116,9 @@ source_modules = [
     "codeguard.config",
     "codeguard.working_tree",
     "codeguard.line_range",
+    "codeguard.line_scope",
+    "codeguard.unified_diff",
+    "codeguard.git",
     "codeguard.file_lock",
 ]
 forbidden_modules = ["pydantic_evals"]

@@ -16,8 +16,8 @@ from codeguard.config import (
     language_of,
     named_languages,
 )
+from codeguard.line_scope import AllLines, ChangedLines
 from codeguard.review.skill import Skill
-from codeguard.working_tree import AllLines, ChangedLines
 
 
 @dataclass(frozen=True)

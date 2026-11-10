@@ -3,6 +3,7 @@ from functools import cached_property
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigLoader, Ruleset
+from codeguard.line_scope import AllLines, ChangedLines
 from codeguard.pattern_rules import Layout, PatternRuleCheck, PatternRuleTestRunner
 from codeguard.review import (
     Bindings,
@@ -25,7 +26,7 @@ from codeguard.rule_tests import (
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
 from codeguard.syntax import ChangeClassifier
-from codeguard.working_tree import AllLines, ChangedLines, WorkingTree
+from codeguard.working_tree import WorkingTree
 
 
 @dataclass(frozen=True)

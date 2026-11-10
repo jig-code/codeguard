@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
+from codeguard.line_scope import ChangedLines, LineScopes
 from codeguard.rule_tests.rule_eval import EditCase
 from codeguard.syntax import ChangeClassifier, SyntaxScanner
-from codeguard.working_tree import ChangedLines, WorkingTree
+from codeguard.working_tree import WorkingTree
 
 
 @dataclass(frozen=True)
@@ -30,8 +31,10 @@ class EditRepo:
             yield repo
 
     def classified(self, scanner: SyntaxScanner) -> ChangedLines:
-        working_tree = WorkingTree(self.root)
-        return ChangeClassifier(scanner, working_tree).classify(working_tree.changed_lines("HEAD"))
+        working_tree = WorkingTree.at(self.root)
+        return ChangeClassifier(scanner, working_tree).classify(
+            LineScopes(working_tree).changed_lines("HEAD")
+        )
 
     def _write(self, files: Mapping[str, str]) -> None:
         for path, text in files.items():

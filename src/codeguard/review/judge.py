@@ -9,10 +9,10 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
+from codeguard.line_scope import AllLines, ChangedLines
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
-from codeguard.working_tree import AllLines, ChangedLines
 
 DEFAULT_MODEL_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
