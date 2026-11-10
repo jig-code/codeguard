@@ -35,10 +35,12 @@ subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (i
 changes an existing rule) or `declines`. A grader's file is its number, then what
 the agent's output does.
 
-A `regex` grader matches a fixed marker, such as a heading, a key or the start of a
-line, with a pattern a reader can check at a glance. A check that has to read prose, such
-as counting its sentences, is an `llm` grader: a pattern that parses prose is too long for
-a reviewer to tell what it checks, and it breaks on wording that does what the skill asks.
+Only a case's graders check what its runs produce. A check of a fixed marker in a file
+the agent wrote, such as a heading, a key or the start of a line, is a `regex` grader
+whose pattern a reader can check at a glance. A check that has to read prose, such as
+counting its sentences, is an `llm` grader focused on the short text it judges: a
+pattern that parses prose is too long for a reviewer to tell what it checks, and it
+breaks on wording that does what the skill asks.
 
 ## Running them
 
