@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the text between this SKILL.md's title and its first `##` section is at most two sentences: the convention, and at most one sentence after it that fixes the meaning of a term in it.
-FAIL if not: for example that text holds three sentences or more, or a list.
+FAIL if that text holds more than two sentences, holds a list or other text that isn't a sentence, or holds a second sentence that does something other than fix the meaning of a term in the convention.

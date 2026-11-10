@@ -42,6 +42,10 @@ counting its sentences, is an `llm` grader focused on the short text it judges: 
 pattern that parses prose is too long for a reviewer to tell what it checks, and it
 breaks on wording that does what the skill asks.
 
+An `llm` grader's rubric is a `PASS if` line and a `FAIL if` line. The `FAIL if` line
+states the conditions that fail the grader directly, one for each way the `PASS if`
+condition can be missed, so a judge never has to guess which other cases count.
+
 ## Running them
 
 A case passes when every grader passes in all 3 runs. With Bedrock credentials in the
