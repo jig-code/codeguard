@@ -15,7 +15,7 @@ does against what the skill says. A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check | Example |
 |---|---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule's skill holds only its statement and `## Why` |
 | A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `declines-unused-functions` asks for a judge rule that flags a function nobody calls any more, which takes a lookup across the whole repository |
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
@@ -24,11 +24,15 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A grader reads one file the agent wrote, checks that it wrote no rule file, or, in a
-  case that declines a rule, reads the agent's final reply.
+- A grader reads one file the agent wrote, checks that it wrote no rule file or that it
+  loaded the skill, or, in a case that declines a rule, reads the agent's final reply.
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
+  A grader checks the instruction or the ask, never the answer the fixture's domain has,
+  such as which code the rule should flag.
+- Every case has a `tool_used` grader that passes when the agent loads the writing-rules
+  skill.
 
 Cases are named like tests. A case's directory is its expected outcome, then its
 subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
