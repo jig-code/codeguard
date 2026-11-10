@@ -13,6 +13,9 @@ name: codeguard
 rulesets: [python]
 ast-grep: ">=0.45"         # the ast-grep versions its pattern rules work with
 codeguard: ">=0.2"         # the codeguard versions that can load it
+judge:                     # optional: see Choose a judge (judges.md)
+  provider: bedrock
+  model: us.anthropic.claude-haiku-5-5
 ```
 
 A project's config never names the package: it picks it by git URL and ref, and its

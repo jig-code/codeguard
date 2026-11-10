@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from git_repo import GitRepo
 from packaging.version import Version
@@ -7,6 +9,8 @@ from codeguard.config import (
     BindingConfig,
     BindingsConfig,
     ConfigError,
+    JudgeChoice,
+    JudgeProvider,
     PathPackageConfig,
     RuleOverride,
     Ruleset,
@@ -47,6 +51,69 @@ class TestPackages:
                     {
                         "responsibility-placement.yaml": BindingConfig(
                             triggers=frozenset({"any"}), skill=skill, paths=("**/*.py",)
+                        )
+                    }
+                ),
+            ),
+        )
+
+    def test_ruleset_has_the_package_judge_default(self, repo, package, fetch, make_binding_config):
+        package.write(
+            "codeguard-package.yaml",
+            "name: example\nrulesets: [python]\njudge:\n  provider: bedrock\n  model: a-model\n",
+        )
+        config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
+
+        rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
+
+        skill = package.root / "python/skills/responsibility-placement"
+        assert rulesets == (
+            Ruleset(
+                name="example/python",
+                root=package.root / "python",
+                bindings=BindingsConfig(
+                    {
+                        "responsibility-placement.yaml": make_binding_config(
+                            skill=skill, paths=("**/*.py",)
+                        )
+                    }
+                ),
+                package_judge=JudgeChoice(provider=JudgeProvider.BEDROCK, model="a-model"),
+            ),
+        )
+
+    def test_package_judge_default_with_another_key_is_an_error(self, repo, package, fetch):
+        package.write(
+            "codeguard-package.yaml",
+            "name: example\nrulesets: [python]\njudge:\n  calls_at_once: 1\n",
+        )
+        config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
+
+        with pytest.raises(ConfigError) as error:
+            Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
+
+        assert str(error.value) == (
+            f"{package.root}/codeguard-package.yaml is invalid:\n"
+            "  judge.calls_at_once: Extra inputs are not permitted"
+        )
+
+    def test_relative_path_package_is_under_the_working_tree(
+        self, repo, fetch, make_binding_config
+    ):
+        write_package(repo, "rules/")
+        config = PathPackageConfig(path=Path("rules"), rulesets={"python": RulesetConfig()})
+
+        rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
+
+        skill = repo.root / "rules/python/skills/responsibility-placement"
+        assert rulesets == (
+            Ruleset(
+                name="example/python",
+                root=repo.root / "rules/python",
+                bindings=BindingsConfig(
+                    {
+                        "responsibility-placement.yaml": make_binding_config(
+                            skill=skill, paths=("**/*.py",)
                         )
                     }
                 ),

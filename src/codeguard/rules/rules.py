@@ -79,7 +79,7 @@ class Rules:
                     ),
                     triggered=binding.is_triggered(classified, file),
                 )
-                for binding in Bindings.from_rulesets(self.rulesets)
+                for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
                 for file in binding.files(classified.files)
             )
         )
@@ -133,5 +133,5 @@ class Rules:
             JudgeCheck(
                 root, binding, self.judges.cached(root, binding.model, deadline), threshold, scope
             )
-            for binding in Bindings.from_rulesets(self.rulesets)
+            for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
         )

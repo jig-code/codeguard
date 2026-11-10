@@ -8,7 +8,7 @@ from pathlib import Path
 import logfire
 import pydantic_ai
 
-from codeguard.config import ConfigLoader, JudgeModel, JudgeProvider
+from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
@@ -138,8 +138,8 @@ def main() -> int:
     )
     eval_command.add_argument(
         "--model",
-        help="The model --provider judges with. Default: claude-sonnet-5-5 for claude-cli, "
-        "gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
+        help="The model --provider judges with. Default: none for claude-cli, so the claude "
+        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
         "us.anthropic.claude-haiku-5-5 for bedrock.",
     )
     eval_command.set_defaults(run=_eval)
@@ -242,12 +242,14 @@ def _eval(args: argparse.Namespace) -> int:
     from codeguard.rules.rule_evaluation import RuleEvaluation  # noqa: PLC0415
 
     selection = EvalSelection(frozenset(args.rule), tuple(args.case))
-    model = (
-        JudgeModel(provider=args.provider, name=args.model or args.provider.default_model)
+    override = (
+        JudgeChoice(provider=args.provider, model=args.model or args.provider.default_model)
         if args.provider
-        else None
+        else JudgeChoice()
     )
-    result = RuleEvaluation(Rules(_working_tree(args.package))).run(args.repeat, selection, model)
+    result = RuleEvaluation(Rules(_working_tree(args.package))).run(
+        args.repeat, selection, override
+    )
     result.write(sys.stdout)
     return _EXIT_PASSED if result.passed else _EXIT_FAILED
 

@@ -8,6 +8,7 @@ from codeguard.config.binding_config import BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.gate_rule import GateRule
+from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.path_scope import PathScope
 from codeguard.config.pattern_binding_config import PatternBindingsConfig
 from codeguard.config.ruleset_config import RulesetConfig
@@ -42,6 +43,7 @@ class Ruleset:
     pattern_bindings: PatternBindingsConfig = PatternBindingsConfig({})
     # Outside CI, as in the agent's Stop hook, the rules the selection marks `ci_only` are off.
     skip_ci_only: bool = False
+    package_judge: JudgeChoice = JudgeChoice()
 
     def excludes(self, rule: str) -> bool:
         return self.selection.excludes(rule) or (

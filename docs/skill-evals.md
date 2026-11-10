@@ -33,7 +33,18 @@ don't check what it says about the other tool or whether it sets that tool up. S
 Cases are named like tests. A case's directory is its expected outcome, then its
 subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
 changes an existing rule) or `declines`. A grader's file is its number, then what
-the agent's output does. A grader that checks names is a `regex`, never an `llm` grader.
+the agent's output does.
+
+Only a case's graders check what its runs produce. A check of a fixed marker in a file
+the agent wrote, such as a heading, a key or the start of a line, is a `regex` grader
+whose pattern a reader can check at a glance. A check that has to read prose, such as
+counting its sentences, is an `llm` grader focused on the short text it judges: a
+pattern that parses prose is too long for a reviewer to tell what it checks, and it
+breaks on wording that does what the skill asks.
+
+An `llm` grader's rubric is a `PASS if` line and a `FAIL if` line. The `FAIL if` line
+states the conditions that fail the grader directly, one for each way the `PASS if`
+condition can be missed, so a judge never has to guess which other cases count.
 
 ## Running them
 

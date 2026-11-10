@@ -20,7 +20,11 @@ class ConfigLoader:
     def load(self) -> Config:
         config_file = self.root / os.environ.get(CONFIG_ENV_VAR, CONFIG_FILE)
         settings = yaml.safe_load(config_file.read_text()) if config_file.is_file() else {}
+        if not isinstance(settings, dict):
+            raise ConfigError(
+                f"{self.root / CONFIG_DIR} is invalid:\n  {config_file.name} holds no settings"
+            )
         try:
-            return Config.model_validate(settings, context={"working_tree": self.root})
+            return Config(**settings)
         except ValidationError as error:
             raise ConfigError.invalid(self.root / CONFIG_DIR, error) from error

@@ -7,7 +7,7 @@ from packaging.version import Version
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigError, Ruleset, RulesetLoader
-from codeguard.packages import MANIFEST_FILE, GitFetch, Manifest, Packages
+from codeguard.packages import MANIFEST_FILE, GitFetch, Package, Packages
 
 _PACKAGE_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "packages"
 _CODEGUARD_VERSION = Version(version("codeguard"))
@@ -28,19 +28,13 @@ class RulesetResolver:
 
     @cached_property
     def own_rulesets(self) -> list[RulesetLoader]:
-        manifest = Manifest.in_repo(self.root)
+        package = Package.in_repo(self.root)
         loaders = [RulesetLoader.local(self.root)]
-        if manifest:
-            for problem in (
-                manifest.codeguard_problem(_CODEGUARD_VERSION),
-                manifest.ast_grep_problem(self.ast_grep.version),
-            ):
-                if problem:
-                    raise ConfigError(f"{self.root / MANIFEST_FILE} is invalid:\n  {problem}")
-            loaders.extend(
-                RulesetLoader(repo=self.root, root=self.root / name, name=f"{manifest.name}/{name}")
-                for name in manifest.rulesets
-            )
+        if package:
+            problem = package.version_problem(_CODEGUARD_VERSION, self.ast_grep.version)
+            if problem:
+                raise ConfigError(f"{self.root / MANIFEST_FILE} is invalid:\n  {problem}")
+            loaders.extend(package.ruleset_loader(name) for name in package.manifest.rulesets)
         for loader in loaders:
             loader.check()
         return loaders

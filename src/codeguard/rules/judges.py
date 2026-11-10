@@ -39,14 +39,14 @@ class Judges:
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]
         if model.provider is JudgeProvider.CODEX_CLI:
-            return CodexJudge(root, model.name, processes, deadline=deadline)
+            return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
             models = VertexGemini(self.config.project, self.config.location)
-            return GeminiJudge(root, model.name, models, processes, deadline=deadline)
+            return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(
                 root,
-                model.name,
+                model.required_name,
                 BedrockClaude(),
                 processes,
                 deadline=deadline,

@@ -12,7 +12,7 @@ from pydantic import (
 )
 
 from codeguard.config.change_kind import ChangeKind
-from codeguard.config.judge_config import JudgeModel, JudgeProvider
+from codeguard.config.judge_config import JudgeChoice, JudgeProvider
 from codeguard.config.languages import LANGUAGES, covers_language
 from codeguard.config.severity import Severity
 
@@ -30,23 +30,13 @@ class BindingConfig(BaseModel):
     paths: tuple[str, ...] = Field(min_length=1)
     exclude_paths: tuple[str, ...] = ()
     severity: Severity = Severity.ERROR
-    provider: JudgeProvider = JudgeProvider.CLAUDE_CLI
-    model: str = JudgeProvider.CLAUDE_CLI.default_model
+    provider: JudgeProvider | None = None
+    model: str | None = None
     triggers: frozenset[str] = Field(frozenset({ChangeKind.ANY}), min_length=1)
 
-    @model_validator(mode="before")
-    @classmethod
-    def require_a_model_off_claude_cli(cls, data: object) -> object:
-        if not isinstance(data, dict):
-            return data
-        provider = data.get("provider", JudgeProvider.CLAUDE_CLI)
-        if provider != JudgeProvider.CLAUDE_CLI and "model" not in data:
-            raise ValueError(f"provider {provider} needs a model")
-        return data
-
     @property
-    def judge_model(self) -> JudgeModel:
-        return JudgeModel(provider=self.provider, name=self.model)
+    def judge(self) -> JudgeChoice:
+        return JudgeChoice(provider=self.provider, model=self.model)
 
     @model_validator(mode="before")
     @classmethod

@@ -66,8 +66,8 @@ class TestGeneralRuleEvals:
         result = self.run(repo, RecordingJudge())
 
         assert sorted(report.name for report in result.reports) == [
-            f"{RULE} (python) on claude-sonnet-5-5",
-            f"{RULE} (typescript) on claude-sonnet-5-5",
+            f"{RULE} (python) on claude-cli's default model",
+            f"{RULE} (typescript) on claude-cli's default model",
         ]
 
     def test_each_case_is_judged_with_its_language_supplement(self, repo):
@@ -88,7 +88,9 @@ class TestGeneralRuleEvals:
 
         result = self.run(repo, RecordingJudge())
 
-        assert [report.name for report in result.reports] == [f"{RULE} on claude-sonnet-5-5"]
+        assert [report.name for report in result.reports] == [
+            f"{RULE} on claude-cli's default model"
+        ]
 
 
 class TestGeneralRuleCoverage:

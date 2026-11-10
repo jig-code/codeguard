@@ -716,7 +716,10 @@ class TestEvalCommand:
             env={**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.stdout.endswith(
             "responsibility-placement an assignment in the invoice: expected outcome "
             "invalid, got outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
@@ -799,19 +802,26 @@ class TestEvalCommand:
             text=True,
         )
 
-        assert "Evaluation Summary: responsibility-placement on claude-sonnet-5-5" in result.stdout
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
         assert result.returncode == 0
 
     @pytest.mark.parametrize(
-        ("options", "model"),
+        ("options", "model", "label"),
         [
-            (["--provider", "claude-cli"], "claude-sonnet-5-5"),
-            (["--provider", "claude-cli", "--model", "claude-haiku-5-5"], "claude-haiku-5-5"),
+            (["--provider", "claude-cli"], None, "claude-cli's default model"),
+            (
+                ["--provider", "claude-cli", "--model", "claude-haiku-5-5"],
+                "claude-haiku-5-5",
+                "claude-haiku-5-5",
+            ),
         ],
         ids=["default-model", "given-model"],
     )
     def test_judges_with_the_given_provider_and_model(
-        self, tmp_path, tmp_path_factory, options, model
+        self, tmp_path, tmp_path_factory, options, model, label
     ):
         package = invoice_package(tmp_path_factory)
         package.write(
@@ -830,7 +840,7 @@ class TestEvalCommand:
         )
 
         assert recorded_call(tmp_path / "eval")["model"] == model
-        assert f"Evaluation Summary: responsibility-placement on {model}" in result.stdout
+        assert f"Evaluation Summary: responsibility-placement on {label}" in result.stdout
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(
@@ -980,13 +990,13 @@ def recording_env(home: Path, bin_dir: Path, record: Path) -> dict[str, str]:
     }
 
 
-def recorded_call(record: Path) -> dict[str, str]:
+def recorded_call(record: Path) -> dict[str, str | None]:
     captured = json.loads((record / "request.json").read_text())
     arguments = captured["arguments"]
     values = dict(zip(arguments, arguments[1:], strict=False))
     return {
         "prompt": captured["prompt"],
-        **{name: values[option] for option, name in RECORDED_OPTIONS.items()},
+        **{name: values.get(option) for option, name in RECORDED_OPTIONS.items()},
     }
 
 
