@@ -1,8 +1,7 @@
 import re
 from dataclasses import dataclass
 
-_HEADER = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-_COUNT_WHEN_OMITTED = 1
+_HEADER = re.compile(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 
 @dataclass(frozen=True)
@@ -10,11 +9,17 @@ class Hunk:
     file: str
     base_file: str | None
     base_start: int
-    base_count: int
     start: int
-    count: int
     added: tuple[str, ...]
     removed: tuple[str, ...]
+
+    @property
+    def base_count(self) -> int:
+        return len(self.removed)
+
+    @property
+    def count(self) -> int:
+        return len(self.added)
 
     @property
     def line_before(self) -> int:
@@ -22,7 +27,7 @@ class Hunk:
         return self.start if self.count == 0 else self.start - 1
 
 
-def parse(unprefixed_diff: str) -> tuple[Hunk, ...]:
+def parse_zero_context(unprefixed_diff: str) -> tuple[Hunk, ...]:
     hunks: list[Hunk] = []
     file = ""
     base_file: str | None = None
@@ -47,24 +52,20 @@ def parse(unprefixed_diff: str) -> tuple[Hunk, ...]:
             removed.append(row[1:])
         elif header and row.startswith("+"):
             added.append(row[1:])
+        elif header and row.startswith(" "):
+            raise ValueError(f"{file} has a context row, but only a zero-context diff is parsed")
     return tuple(hunks)
 
 
 def _hunk(
     file: str, base_file: str | None, header: re.Match[str], added: list[str], removed: list[str]
 ) -> Hunk:
-    base_start, base_count, start, count = header.groups()
+    base_start, start = header.groups()
     return Hunk(
         file=file,
         base_file=base_file,
         base_start=int(base_start),
-        base_count=_count(base_count),
         start=int(start),
-        count=_count(count),
         added=tuple(added),
         removed=tuple(removed),
     )
-
-
-def _count(group: str | None) -> int:
-    return _COUNT_WHEN_OMITTED if group is None else int(group)

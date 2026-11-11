@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from codeguard.repository.git import Git
-from codeguard.repository.unified_diff import Hunk, parse
+from codeguard.repository.unified_diff import Hunk, parse_zero_context
 
 _PINNED_CONFIG = (
     "core.quotePath=false",
@@ -28,7 +28,9 @@ class PinnedDiff:
     git: Git
 
     def hunks(self, base: str) -> tuple[Hunk, ...]:
-        return parse(self._run(*_CHANGED_ROWS_ONLY, *_KEPT_FILES_ONLY, *_UNPREFIXED_PATHS, base))
+        return parse_zero_context(
+            self._run(*_CHANGED_ROWS_ONLY, *_KEPT_FILES_ONLY, *_UNPREFIXED_PATHS, base)
+        )
 
     def _run(self, *args: str) -> str:
         config = [option for setting in _PINNED_CONFIG for option in ("-c", setting)]
