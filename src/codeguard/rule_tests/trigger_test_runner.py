@@ -1,4 +1,3 @@
-from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +21,10 @@ class _CaseCheck:
     @property
     def path(self) -> str:
         return f"{self.prefix}{self.case.inputs.file}"
+
+    @property
+    def edits(self) -> dict[str, EditCase]:
+        return self.case.inputs.edits(self.prefix)
 
     def problem(self, changed: ChangedLines, classification: Classification) -> str | None:
         rule = self.binding.skill.name
@@ -75,7 +78,8 @@ class TriggerTestRunner:
             if dataset.name in bindings
             for number, case in enumerate(dataset.cases, start=1)
         ]
-        with EditRepo.of(_edits(checks)) as repo:
+        edits = {path: edit for check in checks for path, edit in check.edits.items()}
+        with EditRepo.of(edits) as repo:
             changed = repo.changed_lines()
             scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
             classification = repo.classification(scanner, changed)
@@ -83,11 +87,3 @@ class TriggerTestRunner:
             problem for check in checks if (problem := check.problem(changed, classification))
         ]
         return RuleTestResult(problems=(*unknown, *failed))
-
-
-def _edits(checks: Sequence[_CaseCheck]) -> Mapping[str, EditCase]:
-    return {
-        path: edit
-        for check in checks
-        for path, edit in check.case.inputs.edits(check.prefix).items()
-    }
