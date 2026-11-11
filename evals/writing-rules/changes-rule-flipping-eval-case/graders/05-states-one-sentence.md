@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the text between this SKILL.md's title and its first `##` section is one sentence.
-FAIL if that text holds more than one sentence, or holds a list or other text that isn't a sentence.
+FAIL if that text runs to a second sentence or is a list.

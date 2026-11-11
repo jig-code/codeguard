@@ -46,9 +46,8 @@ counting its sentences, is an `llm` grader focused on the short text it judges: 
 pattern that parses prose is too long for a reviewer to tell what it checks, and it
 breaks on wording that does what the skill asks.
 
-An `llm` grader's rubric is a `PASS if` line and a `FAIL if` line. The `FAIL if` line
-states the conditions that fail the grader directly, one for each way the `PASS if`
-condition can be missed, so a judge never has to guess which other cases count.
+An `llm` grader's rubric is one `PASS if` line stating what a correct output contains and
+one `FAIL if` line naming what a wrong or missing output looks like.
 
 ## Running them
 
