@@ -5,7 +5,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
-from codeguard.repository import AllLines
+from codeguard.repository import AddedRow, AllLines, KeptRow, RowText, WorkingTree
 from codeguard.review import (
     ErrorType,
     JudgeCheck,
@@ -50,7 +50,12 @@ class TestJudgeCheck:
         self, tmp_path, make_binding, make_diagnostic
     ):
         check = JudgeCheck(
-            tmp_path, make_binding(), FailingJudge(), THRESHOLD, AllLines(()), Classification()
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [make_diagnostic(judge_error=True)]
@@ -59,7 +64,7 @@ class TestJudgeCheck:
         self, tmp_path, make_binding, make_diagnostic
     ):
         check = JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(severity=Severity.WARNING),
             FailingJudge(),
             THRESHOLD,
@@ -74,7 +79,12 @@ class TestJudgeCheck:
     def test_judge_call_past_the_time_limit_is_a_timeout(self, tmp_path, make_binding):
         error = JudgeTimeout("The review reached its 5-minute time limit.")
         check = JudgeCheck(
-            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), Classification()
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(error),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         [diagnostic] = check.check(["a.py"])
@@ -84,7 +94,12 @@ class TestJudgeCheck:
     def test_judge_call_without_a_verdict_is_no_verdict(self, tmp_path, make_binding):
         error = JudgeNoVerdict("claude returned no verdict.")
         check = JudgeCheck(
-            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), Classification()
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(error),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         [diagnostic] = check.check(["a.py"])
@@ -98,7 +113,7 @@ class TestJudgeCheck:
         barrier = Barrier(len(files), timeout=5)
 
         JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(),
             WaitingJudge(barrier),
             THRESHOLD,
@@ -110,7 +125,7 @@ class TestJudgeCheck:
 
     def test_no_matching_files_is_no_diagnostics(self, tmp_path, make_binding):
         check = JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(paths=("app/**",)),
             RecordingJudge(),
             THRESHOLD,
@@ -125,7 +140,12 @@ class TestJudgeCheck:
         judge = RecordingJudge()
 
         JudgeCheck(
-            tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), Classification()
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         ).check(["a.py", "b.py"])
 
         assert set(judge.received) == {
@@ -141,18 +161,28 @@ class TestJudgeCheck:
         make_binding,
         make_judge_request,
     ):
-        (tmp_path / "pricing.py").write_text(
-            "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
+        returned = b"    return total - DISCOUNT"
+        (tmp_path / "pricing.py").write_bytes(
+            b"DISCOUNT = 5\n\n\ndef discounted(total):\n" + returned + b"\n"
         )
         judge = RecordingJudge()
-        scope = make_changed_lines(return_line_added=True)
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[
+                KeptRow(1, 1),
+                KeptRow(2, 2),
+                KeptRow(3, 3),
+                KeptRow(4, 4),
+                AddedRow(5, RowText(returned)),
+            ],
+        )
         classification = Classification(
             {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
         )
 
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope, classification).check(
-            ["pricing.py"]
-        )
+        JudgeCheck(
+            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
+        ).check(["pricing.py"])
 
         assert judge.received == [
             make_judge_request(
@@ -165,7 +195,7 @@ class TestJudgeCheck:
         judge = RecordingJudge()
 
         JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(paths=("app/**",)),
             judge,
             THRESHOLD,
@@ -189,7 +219,9 @@ class TestJudgeCheck:
         )
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, classification).check(["a.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == []
 
@@ -212,19 +244,24 @@ class TestJudgeCheck:
         )
         binding = make_binding(triggers=frozenset({ChangeKind.COMMENT, ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, classification).check(["a.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == [make_judge_request()]
 
     def test_file_without_change_kinds_is_judged(
         self, make_new_file_changed_lines, tmp_path, make_binding, make_judge_request
     ):
-        (tmp_path / "a.md").write_text("# A\n")
+        content = b"# A\n"
+        (tmp_path / "a.md").write_bytes(content)
         judge = RecordingJudge()
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
-        scope = make_new_file_changed_lines(file="a.md", content=b"# A\n")
+        scope = make_new_file_changed_lines(file="a.md", content=content)
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, Classification()).check(["a.md"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, Classification()
+        ).check(["a.md"])
 
         assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
 
@@ -246,9 +283,9 @@ class TestJudgeCheck:
             }
         )
 
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope, classification).check(
-            ["a.py"]
-        )
+        JudgeCheck(
+            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == [make_judge_request()]
 
@@ -259,7 +296,7 @@ class TestJudgeCheck:
             Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
         )
         check = JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(severity=Severity.WARNING),
             judge,
             THRESHOLD,
@@ -279,7 +316,12 @@ class TestJudgeCheck:
             )
         )
         check = JudgeCheck(
-            tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), Classification()
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [

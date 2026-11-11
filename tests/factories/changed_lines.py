@@ -1,29 +1,13 @@
 import factory
 
-from codeguard.repository import AddedRow, ChangedLines, FileDiff, KeptRow, RowText
+from codeguard.repository import AddedRow, ChangedLines, FileDiff, RowText
 
 
-class MakeAnyChangedLines(factory.Factory):
+class MakeChangedLines(factory.Factory):
     class Meta:
         model = ChangedLines
-        abstract = True
 
     file = "a.py"
-
-
-class MakeChangedLines(MakeAnyChangedLines):
-    class Params:
-        return_line_added = factory.Trait(
-            file="pricing.py",
-            rows=(
-                KeptRow(1, 1),
-                KeptRow(2, 2),
-                KeptRow(3, 3),
-                KeptRow(4, 4),
-                AddedRow(5, RowText(b"    return total - DISCOUNT")),
-            ),
-        )
-
     rows = (AddedRow(1, RowText(b"print(1)")),)
 
     @classmethod
@@ -32,7 +16,11 @@ class MakeChangedLines(MakeAnyChangedLines):
         return model_class({file: FileDiff.from_whole_file_rows(file, kwargs["rows"])})
 
 
-class MakeNewFileChangedLines(MakeAnyChangedLines):
+class MakeNewFileChangedLines(factory.Factory):
+    class Meta:
+        model = ChangedLines
+
+    file = "a.py"
     content = b"print(1)\n"
 
     @classmethod

@@ -29,12 +29,12 @@ class JudgeRequest:
     def of_change(
         cls,
         binding: Binding,
-        root: Path,
+        working_tree: WorkingTree,
         file: str,
         scope: LineScope,
         classification: Classification,
     ) -> Self:
-        raw = WorkingTree.at(root).contents(file).splitlines()
+        raw = working_tree.contents(file).splitlines()
         content = [_decoded_for_judge(line) for line in raw]
         lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)

@@ -1,6 +1,5 @@
 from codeguard.repository.file_diff import (
     AddedRow,
-    DiffRow,
     FileDiff,
     KeptRow,
     Removal,
@@ -19,7 +18,6 @@ __all__ = [
     "AddedRow",
     "AllLines",
     "ChangedLines",
-    "DiffRow",
     "FileDiff",
     "KeptRow",
     "LineScope",

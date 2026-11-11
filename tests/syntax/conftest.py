@@ -10,4 +10,4 @@ def working_tree(git_repo) -> WorkingTree:
 
 @pytest.fixture
 def line_scopes(working_tree) -> LineScopes:
-    return LineScopes(working_tree)
+    return LineScopes.at(working_tree)

@@ -30,7 +30,7 @@ class EditRepo:
             yield repo
 
     def changed_lines(self) -> ChangedLines:
-        return LineScopes(WorkingTree.at(self.root)).changed_lines("HEAD")
+        return LineScopes.at(WorkingTree.at(self.root)).changed_lines("HEAD")
 
     def classification(self, scanner: SyntaxScanner, changed: ChangedLines) -> Classification:
         return ChangeClassifier(scanner, WorkingTree.at(self.root)).classify(changed)

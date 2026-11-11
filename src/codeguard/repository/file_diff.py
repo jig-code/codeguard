@@ -7,12 +7,6 @@ _GIT_BLANK = b" \t\r\f\v"
 
 
 @dataclass(frozen=True)
-class KeptRow:
-    base_line: int
-    head_line: int
-
-
-@dataclass(frozen=True)
 class RowText:
     content: bytes
 
@@ -23,6 +17,12 @@ class RowText:
     @property
     def holds_code(self) -> bool:
         return bool(self.content.strip(_GIT_BLANK))
+
+
+@dataclass(frozen=True)
+class KeptRow:
+    base_line: int
+    head_line: int
 
 
 @dataclass(frozen=True)

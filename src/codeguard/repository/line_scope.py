@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, Self
 
 from codeguard.line_range import LineRange
 from codeguard.repository.file_diff import FileDiff, Removal
@@ -59,11 +59,16 @@ class AllLines:
 @dataclass(frozen=True)
 class LineScopes:
     working_tree: WorkingTree
+    libgit2: Libgit2
+
+    @classmethod
+    def at(cls, working_tree: WorkingTree) -> Self:
+        return cls(working_tree, Libgit2(working_tree.root))
 
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
         diffs = {
-            **Libgit2(self.working_tree.root).tracked_diffs(merge_base),
+            **self.libgit2.tracked_diffs(merge_base),
             **{
                 file: FileDiff.of_new_file(self.working_tree.contents(file))
                 for file in self.working_tree.untracked_files()

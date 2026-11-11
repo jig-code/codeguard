@@ -27,7 +27,14 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, Classification()),
+                        JudgeCheck(
+                            WorkingTree.at(repo.root),
+                            make_binding(),
+                            judge,
+                            0.9,
+                            scope,
+                            Classification(),
+                        ),
                     )
                 ),
             )
@@ -47,7 +54,7 @@ class TestReviewer:
         repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\ny = 2\n")
         working_tree = WorkingTree.at(repo.root)
-        scope = LineScopes(working_tree).changed_lines("HEAD")
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
         classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
             scope
         )
@@ -64,7 +71,7 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )
@@ -81,7 +88,7 @@ class TestReviewer:
         repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\n")
         working_tree = WorkingTree.at(repo.root)
-        scope = LineScopes(working_tree).changed_lines("HEAD")
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
         classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
             scope
         )
@@ -98,7 +105,7 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )
@@ -117,7 +124,7 @@ class TestReviewer:
         repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\n")
         working_tree = WorkingTree.at(repo.root)
-        scope = LineScopes(working_tree).changed_lines("HEAD")
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
         classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
             scope
         )
@@ -134,7 +141,7 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )
