@@ -115,7 +115,6 @@ class Rules:
 
     @cached_property
     def rulesets(self) -> tuple[Ruleset, ...]:
-        """The rulesets a review runs."""
         return tuple(
             replace(ruleset, skip_ci_only=self.skip_ci_only) for ruleset in self.resolver.rulesets
         )

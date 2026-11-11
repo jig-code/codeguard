@@ -38,15 +38,16 @@ class ChangeClassifier:
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:
             return {}
-        paths = {file: base_path for file in scope.files if (base_path := scope.base_path(file))}
-        contents = self.working_tree.base_contents(scope.base, sorted(set(paths.values())))
-        found = [file for file, base_path in paths.items() if base_path in contents]
+        base_paths = {
+            file: base_path for file in scope.files if (base_path := scope.base_path(file))
+        }
+        contents = self.working_tree.base_contents(scope.base, sorted(set(base_paths.values())))
+        found = [file for file, base_path in base_paths.items() if base_path in contents]
         with tempfile.TemporaryDirectory() as directory:
-            # A renamed file's base is parsed under its new name, to be found by it.
             for file in found:
-                path = Path(directory) / file
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(contents[paths[file]])
+                head_path = Path(directory) / file
+                head_path.parent.mkdir(parents=True, exist_ok=True)
+                head_path.write_bytes(contents[base_paths[file]])
             return self.scanner.scan_files(Path(directory), found)
 
 
@@ -60,9 +61,9 @@ def _classify_file(
     if before is not None:
         replaced_rows = scope.replaced_base_rows(file)
         context_lines |= _in_head(
-            scope, file, before.kept_judged_lines(removed_code, replaced_rows)
+            scope, file, before.judged_lines(removed_code, replaced=replaced_rows)
         )
-        for kind, lines in before.kept_kind_lines(removed_code, replaced_rows).items():
+        for kind, lines in before.kind_lines(removed_code, replaced=replaced_rows).items():
             kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(scope, file, lines)
     return FileClassification(
         parsed.touched_kinds(added, before, removed_code), context_lines, kind_lines

@@ -27,7 +27,6 @@ class Binding:
     triggers: frozenset[str]
     judge: JudgeChoice = JudgeChoice()
     exclude_paths: tuple[str, ...] = ()
-    # The skill's supplement for each language, which the judge reads after the skill.
     supplements: Mapping[str, Skill] = field(default_factory=dict, hash=False)
 
     @classmethod
@@ -52,17 +51,13 @@ class Binding:
 
     @property
     def languages(self) -> frozenset[str]:
-        """The languages the rule's paths name by extension."""
         return named_languages(self.paths)
 
     def skill_for(self, file: str) -> Skill:
-        """The convention the judge gets for a file: the skill, then the supplement for the
-        file's language."""
         return self._skill_in(language_of(file))
 
     def version_for(self, language: str | None) -> str:
-        """Identify what decides the rule's verdicts in a language, other than its model. With
-        no language, as for a rule whose paths name none, every supplement counts."""
+        """Identify what decides the rule's verdicts in a language, other than its model."""
         texts = (
             [self._skill_in(language).text]
             if language

@@ -66,7 +66,9 @@ class TestJudgeRequest:
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (Removal(before=2, line=1, rows=("FEE = 1",), base_lines=(2,)),)
+                "pricing.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("FEE = 1",), base_lines=(2,)),
+                )
             },
         )
         classified = make_file_classification(context_lines=frozenset({1, 2}))
@@ -93,7 +95,9 @@ class TestJudgeRequest:
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (Removal(before=2, line=1, rows=("TAX = 2",), base_lines=(2,)),)
+                "pricing.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("TAX = 2",), base_lines=(2,)),
+                )
             },
         )
         classified = make_file_classification(context_lines=frozenset({1}))
