@@ -4,14 +4,7 @@ from pathlib import Path
 import pygit2
 from pygit2.enums import DeltaStatus, DiffFind, DiffOption
 
-from codeguard.repository.file_diff import (
-    AddedRow,
-    DiffRow,
-    FileDiff,
-    KeptRow,
-    RemovedRow,
-    line_text,
-)
+from codeguard.repository.file_diff import AddedRow, DiffRow, FileDiff, KeptRow, RemovedRow
 
 _GIT_RENAME_LIMIT = 1000
 _WHOLE_FILE_CONTEXT = 2**31 - 1
@@ -30,7 +23,9 @@ class Libgit2:
         diff.merge(repository.index.diff_to_workdir(_TRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT))
         diff.find_similar(flags=DiffFind.FIND_RENAMES, rename_limit=_GIT_RENAME_LIMIT)
         return {
-            patch.delta.new_file.path: FileDiff.from_rows(_base_path(patch.delta), _rows(patch))
+            patch.delta.new_file.path: FileDiff.from_whole_file_rows(
+                _base_path(patch.delta), _rows(patch)
+            )
             for patch in diff
             if patch is not None and patch.delta.status != DeltaStatus.DELETED
         }
@@ -50,9 +45,9 @@ def _row(line: pygit2.DiffLine) -> DiffRow:
         case " ":
             return KeptRow(line.old_lineno, line.new_lineno)
         case "+":
-            return AddedRow(line.new_lineno, line_text(line.raw_content))
+            return AddedRow.of_content(line.new_lineno, line.raw_content)
         case "-":
-            return RemovedRow(line.old_lineno, line_text(line.raw_content))
+            return RemovedRow.of_content(line.old_lineno, line.raw_content)
         case origin:
             raise ValueError(f"libgit2 gave a diff line with origin {origin!r}")
 

@@ -35,7 +35,7 @@ class JudgeRequest:
         classification: Classification,
     ) -> Self:
         raw = (root / file).read_bytes().splitlines()
-        content = [_shown(line) for line in raw]
+        content = [_decoded_for_judge(line) for line in raw]
         lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
@@ -43,7 +43,10 @@ class JudgeRequest:
         rows: list[str] = []
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
-                rows.extend(f"-{removal.reported_line:>6}\t{_shown(row)}\n" for row in removal.rows)
+                rows.extend(
+                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text)}\n"
+                    for row in removal.rows
+                )
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
@@ -61,7 +64,7 @@ class JudgeRequest:
         )
 
 
-def _shown(row: bytes) -> str:
+def _decoded_for_judge(row: bytes) -> str:
     return row.decode(errors="replace")
 
 

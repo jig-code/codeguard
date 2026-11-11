@@ -1,13 +1,9 @@
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import groupby
 from typing import Self
 
 _GIT_BLANK = b" \t\r\f\v"
-
-
-def line_text(content: bytes) -> bytes:
-    return content.removesuffix(b"\n").removesuffix(b"\r")
 
 
 @dataclass(frozen=True)
@@ -16,24 +12,35 @@ class KeptRow:
     head_line: int
 
 
+@dataclass(frozen=True, kw_only=True)
+class _TextRow:
+    text: bytes
+
+    @property
+    def holds_code(self) -> bool:
+        return bool(self.text.strip(_GIT_BLANK))
+
+    @staticmethod
+    def _without_line_ending(content: bytes) -> bytes:
+        return content.removesuffix(b"\n").removesuffix(b"\r")
+
+
 @dataclass(frozen=True)
-class AddedRow:
+class AddedRow(_TextRow):
     head_line: int
-    text: bytes
 
-    @property
-    def holds_code(self) -> bool:
-        return bool(self.text.strip(_GIT_BLANK))
+    @classmethod
+    def of_content(cls, head_line: int, content: bytes) -> Self:
+        return cls(head_line, text=cls._without_line_ending(content))
 
 
 @dataclass(frozen=True)
-class RemovedRow:
+class RemovedRow(_TextRow):
     base_line: int
-    text: bytes
 
-    @property
-    def holds_code(self) -> bool:
-        return bool(self.text.strip(_GIT_BLANK))
+    @classmethod
+    def of_content(cls, base_line: int, content: bytes) -> Self:
+        return cls(base_line, text=cls._without_line_ending(content))
 
 
 type DiffRow = KeptRow | AddedRow | RemovedRow
@@ -43,21 +50,20 @@ type DiffRow = KeptRow | AddedRow | RemovedRow
 class Removal:
     shown_before: int
     reported_line: int
-    rows: tuple[bytes, ...]
-    base_lines: tuple[int, ...]
+    rows: tuple[RemovedRow, ...]
 
 
 @dataclass(frozen=True)
 class FileDiff:
-    base_path: str | None = None
-    added_lines: frozenset[int] = frozenset()
-    deletion_points: frozenset[int] = frozenset()
-    removals: tuple[Removal, ...] = ()
-    head_lines_by_base_line: Mapping[int, int] = field(default_factory=dict)
-    removed_base_lines: frozenset[int] = frozenset()
+    base_path: str | None
+    added_lines: frozenset[int]
+    deletion_points: frozenset[int]
+    removals: tuple[Removal, ...]
+    head_lines_by_base_line: Mapping[int, int]
+    removed_base_lines: frozenset[int]
 
     @classmethod
-    def from_rows(cls, base_path: str | None, rows: Iterable[DiffRow]) -> Self:
+    def from_whole_file_rows(cls, base_path: str | None, rows: Iterable[DiffRow]) -> Self:
         rows = tuple(rows)
         runs = _ChangeRun.split(rows)
         return cls(
@@ -80,8 +86,8 @@ class FileDiff:
         lines = content.split(b"\n")
         if lines[-1] == b"":
             lines.pop()
-        return cls.from_rows(
-            None, (AddedRow(number, line_text(text)) for number, text in enumerate(lines, 1))
+        return cls.from_whole_file_rows(
+            None, (AddedRow.of_content(number, text) for number, text in enumerate(lines, 1))
         )
 
     @property
@@ -94,13 +100,13 @@ class FileDiff:
 
     @property
     def removed_code_lines(self) -> frozenset[int]:
-        return frozenset(line for removal in self.removals for line in removal.base_lines)
+        return frozenset(row.base_line for removal in self.removals for row in removal.rows)
 
     def kept_head_lines(self, base_lines: Iterable[int]) -> frozenset[int]:
         return frozenset(
             self.head_lines_by_base_line[line]
             for line in base_lines
-            if line in self.head_lines_by_base_line
+            if line not in self.removed_base_lines
         )
 
 
@@ -134,14 +140,13 @@ class _ChangeRun:
 
     @property
     def removal(self) -> Removal | None:
-        removed_code = [row for row in self.removed if row.holds_code]
+        removed_code = tuple(row for row in self.removed if row.holds_code)
         if not removed_code:
             return None
         return Removal(
             shown_before=self.head_before + 1,
             reported_line=min(self.added_lines, default=self._line_before),
-            rows=tuple(row.text for row in removed_code),
-            base_lines=tuple(row.base_line for row in removed_code),
+            rows=removed_code,
         )
 
     @property

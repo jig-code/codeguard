@@ -4,6 +4,7 @@ from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
 from codeguard.repository import AllLines, ChangedLines, FileDiff, LineScopes, WorkingTree
+from codeguard.repository.file_diff import AddedRow, KeptRow
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
@@ -51,7 +52,8 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({3}))})
+        rows = [KeptRow(1, 1), KeptRow(2, 2), AddedRow(3, text=b"y = 2")]
+        scope = ChangedLines({"a.py": FileDiff.from_whole_file_rows("a.py", rows)})
         classification = Classification(
             {"a.py": make_file_classification(context_lines=frozenset({3}))}
         )
@@ -82,7 +84,8 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))})
+        rows = [KeptRow(1, 1), AddedRow(2, text=b"x = 1")]
+        scope = ChangedLines({"a.py": FileDiff.from_whole_file_rows("a.py", rows)})
         classification = Classification(
             {"a.py": make_file_classification(context_lines=frozenset({2}))}
         )

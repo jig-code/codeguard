@@ -2,7 +2,8 @@ import pytest
 from pydantic import ValidationError
 
 from codeguard.config import ChangeKind
-from codeguard.repository import AllLines, ChangedLines, FileDiff, Removal
+from codeguard.repository import AllLines, ChangedLines, FileDiff
+from codeguard.repository.file_diff import AddedRow, KeptRow, RemovedRow
 from codeguard.review import JudgeRequest, Severity, Verdict
 from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
 from codeguard.syntax import Classification
@@ -29,7 +30,7 @@ class TestJudgeRequest:
         skill = make_skill()
         supplement = make_skill(text="## In Python\n\nA module constant is a home.\n")
         binding = make_binding(skill=skill, supplements={"python": supplement})
-        scope = ChangedLines({"orders.py": FileDiff(added_lines=frozenset({1}))})
+        scope = ChangedLines({"orders.py": FileDiff.of_new_file(b'STATUS = "shipped"\n')})
 
         request = JudgeRequest.of_change(binding, tmp_path, "orders.py", scope, Classification())
 
@@ -41,7 +42,14 @@ class TestJudgeRequest:
         (tmp_path / "pricing.py").write_text(
             "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
         )
-        scope = ChangedLines({"pricing.py": FileDiff(added_lines=frozenset({5}))})
+        rows = [
+            KeptRow(1, 1),
+            KeptRow(2, 2),
+            KeptRow(3, 3),
+            KeptRow(4, 4),
+            AddedRow(5, text=b"    return total - DISCOUNT"),
+        ]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(context_lines=frozenset({4, 5}))
 
         request = JudgeRequest.of_change(
@@ -62,17 +70,8 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2\n")
-        scope = ChangedLines(
-            {
-                "pricing.py": FileDiff(
-                    removals=(
-                        Removal(
-                            shown_before=2, reported_line=1, rows=(b"FEE = 1",), base_lines=(2,)
-                        ),
-                    ),
-                )
-            }
-        )
+        rows = [KeptRow(1, 1), RemovedRow(2, text=b"FEE = 1"), KeptRow(3, 2)]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(context_lines=frozenset({1, 2}))
 
         request = JudgeRequest.of_change(
@@ -93,20 +92,8 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
-        scope = ChangedLines(
-            {
-                "pricing.py": FileDiff(
-                    removals=(
-                        Removal(
-                            shown_before=2,
-                            reported_line=1,
-                            rows=(b"FEE = '\xff'",),
-                            base_lines=(2,),
-                        ),
-                    ),
-                )
-            }
-        )
+        rows = [KeptRow(1, 1), RemovedRow(2, text=b"FEE = '\xff'")]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(context_lines=frozenset({1}))
 
         request = JudgeRequest.of_change(
@@ -125,17 +112,8 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
-        scope = ChangedLines(
-            {
-                "pricing.py": FileDiff(
-                    removals=(
-                        Removal(
-                            shown_before=2, reported_line=1, rows=(b"TAX = 2",), base_lines=(2,)
-                        ),
-                    ),
-                )
-            }
-        )
+        rows = [KeptRow(1, 1), RemovedRow(2, text=b"TAX = 2")]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(context_lines=frozenset({1}))
 
         request = JudgeRequest.of_change(
@@ -154,7 +132,8 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("try:\n    x = 1\nexcept:\n    pass\n")
-        scope = ChangedLines({"pricing.py": FileDiff(added_lines=frozenset({2}))})
+        rows = [KeptRow(1, 1), AddedRow(2, text=b"    x = 1"), KeptRow(2, 3), KeptRow(3, 4)]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(
             context_lines=frozenset({2}),
             kind_lines={ChangeKind.CONTROL_FLOW: frozenset({1, 2, 3, 4})},
@@ -186,7 +165,7 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
-        scope = ChangedLines({"pricing.py": FileDiff(added_lines=frozenset({1, 2}))})
+        scope = ChangedLines({"pricing.py": FileDiff.of_new_file(b"DISCOUNT = 5\nTAX = 2\n")})
         classified = make_file_classification(context_lines=frozenset({1, 2}))
 
         request = JudgeRequest.of_change(
@@ -203,7 +182,8 @@ class TestJudgeRequest:
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\f\nTAX = 2\n")
-        scope = ChangedLines({"pricing.py": FileDiff(added_lines=frozenset({2}))})
+        rows = [KeptRow(1, 1), AddedRow(2, text=b"TAX = 2")]
+        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
         classified = make_file_classification(context_lines=frozenset({2}))
 
         request = JudgeRequest.of_change(

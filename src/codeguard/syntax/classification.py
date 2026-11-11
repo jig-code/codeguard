@@ -14,7 +14,11 @@ class FileClassification:
     kind_lines: Mapping[str, frozenset[int]] = field(default_factory=dict)
 
     @classmethod
-    def of_change(cls, diff: FileDiff, parsed: ParsedFile, before: ParsedFile | None) -> Self:
+    def of_change(
+        cls, diff: FileDiff, parsed: ParsedFile | None, before: ParsedFile | None
+    ) -> Self:
+        if parsed is None:
+            return cls(touched_kinds=None, context_lines=diff.points)
         added = diff.added_lines
         removed_code = diff.removed_code_lines
         context_lines = parsed.judged_lines(added)

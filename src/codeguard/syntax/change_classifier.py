@@ -28,9 +28,7 @@ class ChangeClassifier:
         base = self._base(scope)
         return Classification(
             {
-                file: FileClassification.of_change(diff, head[file], base.get(file))
-                if file in head
-                else FileClassification(touched_kinds=None, context_lines=diff.points)
+                file: FileClassification.of_change(diff, head.get(file), base.get(file))
                 for file, diff in scope.diffs.items()
             }
         )
