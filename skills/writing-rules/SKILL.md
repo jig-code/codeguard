@@ -45,9 +45,8 @@ ground the code keeps or breaks it.
   rules. Split it into one rule per convention, or find the one statement they share.
   A shape the statement doesn't decide is dropped from the rule, or moved to a rule of
   its own; it is never kept as an extra violation beside the statement.
-- **Plain language.** Write it the way a reviewer would say it in a code review. No
-  invented terms: if the rule needs a word nobody uses, it isn't clear yet. A judge
-  reads an unfamiliar term as loosely as a person does.
+- **Common terms.** The statement uses only common terms, never a term the author
+  invents: the judge reads an invented term as loosely as a person does.
 - **Scoped to the change.** A rule and its cases ask for only as much as decides pass or
   fail: the code the change adds or edits, and the definitions of the names it uses. A
   judge that has to read the rest of the repository to decide is slower, costs more, and
