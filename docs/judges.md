@@ -98,8 +98,9 @@ Where a proxy adds credentials to requests, as Claude Code cloud environments' n
 secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
 to the service account instead, restricted to the Agent Platform API: have the proxy send
 it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
-`GOOGLE_API_KEY=proxy-injected` with `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`,
-`project` and `location` unset. The key identifies the project.
+`GOOGLE_API_KEY=proxy-injected`. codeguard sends the key with the project and location
+set above, the location defaulting to `global` as it does with Application Default
+Credentials.
 
 ## Bedrock
 
