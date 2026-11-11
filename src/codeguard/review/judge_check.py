@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from codeguard.repository import AllLines, ChangedLines
+from codeguard.repository import LineScope
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic
 from codeguard.review.judge import Judge, JudgeError, JudgeRequest
@@ -16,7 +16,7 @@ class JudgeCheck:
     binding: Binding
     judge: Judge
     confidence_threshold: float
-    scope: ChangedLines | AllLines
+    scope: LineScope
     classification: Classification
 
     def check(self, files: Sequence[str]) -> list[Diagnostic]:

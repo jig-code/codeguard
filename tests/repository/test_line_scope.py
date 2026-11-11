@@ -324,3 +324,15 @@ class TestChangedLines:
         changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
 
         assert changed.covers("a.py", make_line_range(start=3))
+
+    def test_changed_lines_are_classified_by_the_classifier(self):
+        changed = ChangedLines({"a.py": frozenset({2})})
+
+        assert changed.classified(lambda classified: classified.files, ()) == ("a.py",)
+
+
+class TestAllLines:
+    def test_all_lines_are_unclassified(self):
+        all_lines = AllLines(("a.py",))
+
+        assert all_lines.classified(lambda classified: classified.files, ()) == ()
