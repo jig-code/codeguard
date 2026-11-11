@@ -24,13 +24,10 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
 the convention or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else: no sentence defining a term in it, no
-examples, no list in its text of the shapes a violation takes, no list of what isn't
-one, no sentence or clause that restates the statement (such as one requirement said
-once as what code does and again as what it never does), gives its purpose (that is the
-Why) or says what it ignores, and no supplement per language. The statement alone
-decides each piece of code; the judge reads it as a reviewer would, and says on what
-ground the code keeps or breaks it.
+statement and why it exists, and nothing else. The judge reads any other sentence or
+clause in a rule as a test of its own, so code that meets that text's letter passes
+though it breaks the statement. The statement alone decides each piece of code; the
+judge reads it as a reviewer would, and says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
@@ -45,10 +42,6 @@ ground the code keeps or breaks it.
 - **Plain language.** Write it the way a reviewer would say it in a code review. No
   invented terms: if the rule needs a word nobody uses, it isn't clear yet. A judge
   reads an unfamiliar term as loosely as a person does.
-- **No definition of what it forbids.** The statement names what it forbids in words a
-  reviewer already uses, with no sentence defining that term. The judge reads a
-  definition as a test of its own, and code that meets the definition's letter passes
-  though it breaks the statement.
 - **Scoped to the change.** A rule and its cases ask for only as much as decides pass or
   fail: the code the change adds or edits, and the definitions of the names it uses. A
   judge that has to read the rest of the repository to decide is slower, costs more, and

@@ -11,24 +11,18 @@ agent loads before it edits. It holds, in this order, and nothing else:
 
 1. A title.
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
-   words a reviewer would use, never a question, and nothing beside it: a sentence, or a
-   clause joined to the convention's sentence, that defines a term in it, restates the
-   convention, gives its purpose or says what it doesn't cover is a second statement:
-   the judge checks it as well, and it can drift from the first. The purpose goes under
-   `## Why`.
+   words a reviewer would use, never a question, and nothing beside it. The judge reads
+   any other sentence or clause as a test of its own, so code that meets that text's
+   letter passes though it breaks the statement. The purpose goes under `## Why`.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
 
-No examples. No `## Violation` list of the shapes a violation takes, no `## Not a
-violation` list of code near the boundary, and no other section: each shape is decided
-by the statement, or the statement is unclear. A shape that contradicts the statement
-(a shape that the statement says keeps the convention) is dropped from the rule or moved
-to a rule of its own; its mention in the skill, even as a non-violation, is a second
-convention. No shapes of the convention in any language or library, and no supplement
-per language: a rule in several languages is one skill, in no language's names, syntax
-or libraries. Leave out the fix, and anything telling the judge how to answer: the
-judge's own prompt sets its output and its confidence scale.
+Nothing else goes in the skill, in any section or for any language: each piece of code
+is decided by the statement, or the statement is unclear. A rule in several languages is
+one skill, in no language's names, syntax or libraries. Leave out the fix, and anything
+telling the judge how to answer: the judge's own prompt sets its output and its
+confidence scale.
 
 ## Gate every form of the violation
 
