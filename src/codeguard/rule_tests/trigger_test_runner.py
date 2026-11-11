@@ -4,12 +4,12 @@ from pathlib import Path
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, ConfigError, Ruleset, RulesetLoader
+from codeguard.repository import ChangedLines
 from codeguard.review import Binding, Bindings
 from codeguard.rule_tests.edit_repo import EditRepo
 from codeguard.rule_tests.rule_eval import Outcome, RuleEvalCase, rule_evals
 from codeguard.rule_tests.rule_test_result import RuleTestResult
 from codeguard.syntax import SyntaxScanner
-from codeguard.working_tree import ChangedLines
 
 
 @dataclass(frozen=True)

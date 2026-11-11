@@ -2,8 +2,8 @@ from recording_judge import RecordingJudge
 
 from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
-from codeguard.working_tree import AllLines, ChangedLines
 
 
 def review(repo, judge, binding, scope) -> Review:

@@ -1,17 +1,9 @@
 from git_repo import GitRepo
 
-from codeguard.working_tree import AllLines, ChangedLines, Edit, Removal, WorkingTree
+from codeguard.repository import AllLines, ChangedLines, Edit, LineScopes, Removal, WorkingTree
 
 
-class TestWorkingTree:
-    def test_containing_resolves_top_level_from_subdirectory(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("pkg/module.py", "")
-
-        working_tree = WorkingTree.containing(git_repo.root / "pkg")
-
-        assert working_tree == WorkingTree(root=git_repo.root)
-
+class TestLineScopes:
     def test_changed_files_from_head_are_uncommitted_and_untracked_files(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("unstaged.py", "a = 1\n")
@@ -24,7 +16,7 @@ class TestWorkingTree:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "d = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.files == ("staged.py", "unstaged.py", "untracked.py")
 
@@ -39,7 +31,7 @@ class TestWorkingTree:
         git_repo.git("switch", "feature")
         git_repo.write("untracked.py", "c = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("main")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("main")
 
         assert changed.files == ("committed.py", "untracked.py")
 
@@ -49,7 +41,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nb = 2\nc = 1\nd = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
@@ -64,7 +56,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "class A:\n    x = 1\n\n    def y(self):\n        pass\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({4, 5})}, edits={"a.py": (Edit(2, 0, 3, 3),)}, base=git_repo.head()
@@ -79,7 +71,7 @@ class TestWorkingTree:
         git_repo.write("b.py", "a = 1\n\nb = 1\n")
         git_repo.write("c.py", "\n\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -91,7 +83,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nc = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -107,7 +99,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -117,7 +109,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "\nb = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -133,7 +125,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\x0cdef f():\n    s = 'p\u2028+q\r+r'\n    return 2\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 3, 4})},
@@ -150,7 +142,7 @@ class TestWorkingTree:
         git_repo.write("a.py", "a = 1\n\u00a0\n")
         git_repo.write("b.py", "\u00a0\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2}), "b.py": frozenset({1})},
@@ -164,7 +156,7 @@ class TestWorkingTree:
         git_repo.commit("Add x y")
         git_repo.write("x y.py", "a = 2\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
@@ -181,7 +173,7 @@ class TestWorkingTree:
         git_repo.git("mv", "a.py", "b.py")
         git_repo.write("b.py", source.replace("x9 = 9", "x9 = 10"))
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.sources == {"b.py": "a.py"}
         assert changed.base_path("b.py") == "a.py"
@@ -192,13 +184,16 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("b.py", "b = 1\n")
 
-        assert WorkingTree(root=git_repo.root).changed_lines("HEAD").base_path("b.py") is None
+        assert (
+            LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
+            is None
+        )
 
     def test_untracked_file_has_every_line_with_code_changed(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"a.py": frozenset({1, 3})}, base=git_repo.head())
 
@@ -210,7 +205,7 @@ class TestWorkingTree:
         nested_repo.write("module.py", "value = 1\n")
         git_repo.write("new/module.py", "value = 2\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"new/module.py": frozenset({1})}, base=git_repo.head())
 
@@ -220,7 +215,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nc = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
@@ -236,7 +231,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
         assert removal.rows == ("b = '\ufffd'",)
@@ -248,7 +243,7 @@ class TestWorkingTree:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\r\n")
 
-        changed = WorkingTree(root=git_repo.root).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
         assert removal.rows == ("b = 1",)
@@ -261,19 +256,6 @@ class TestWorkingTree:
 
         assert [changed.head_line("a.py", line) for line in (1, 2, 3, 4)] == [1, 4, None, 5]
 
-    def test_base_contents_are_the_files_that_exist_in_the_base(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 2\n")
-        git_repo.write("new.py", "b = 1\n")
-
-        contents = WorkingTree(root=git_repo.root).base_contents(
-            git_repo.head(), ["a.py", "new.py"]
-        )
-
-        assert contents == {"a.py": b"a = 1\n"}
-
     def test_all_lines_has_tracked_and_untracked_files(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("tracked.py", "")
@@ -282,7 +264,7 @@ class TestWorkingTree:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "")
 
-        scope = WorkingTree(root=git_repo.root).all_lines()
+        scope = LineScopes(WorkingTree.at(git_repo.root)).all_lines()
 
         assert scope == AllLines(("tracked.py", "untracked.py"))
 
