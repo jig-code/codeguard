@@ -4,7 +4,14 @@ from pathlib import Path
 import pygit2
 from pygit2.enums import DeltaStatus, DiffFind, DiffOption
 
-from codeguard.repository.file_diff import AddedRow, DiffRow, FileDiff, KeptRow, RemovedRow
+from codeguard.repository.file_diff import (
+    AddedRow,
+    DiffRow,
+    FileDiff,
+    KeptRow,
+    RemovedRow,
+    RowText,
+)
 
 _GIT_RENAME_LIMIT = 1000
 _WHOLE_FILE_CONTEXT = 2**31 - 1
@@ -45,9 +52,9 @@ def _row(line: pygit2.DiffLine) -> DiffRow:
         case " ":
             return KeptRow(line.old_lineno, line.new_lineno)
         case "+":
-            return AddedRow.of_content(line.new_lineno, line.raw_content)
+            return AddedRow(line.new_lineno, RowText.of_line(line.raw_content))
         case "-":
-            return RemovedRow.of_content(line.old_lineno, line.raw_content)
+            return RemovedRow(line.old_lineno, RowText.of_line(line.raw_content))
         case origin:
             raise ValueError(f"libgit2 gave a diff line with origin {origin!r}")
 

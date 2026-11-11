@@ -9,7 +9,7 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
-from codeguard.repository import LineScope
+from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
@@ -34,7 +34,7 @@ class JudgeRequest:
         scope: LineScope,
         classification: Classification,
     ) -> Self:
-        raw = (root / file).read_bytes().splitlines()
+        raw = WorkingTree.at(root).contents(file).splitlines()
         content = [_decoded_for_judge(line) for line in raw]
         lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
@@ -44,7 +44,7 @@ class JudgeRequest:
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
                 rows.extend(
-                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text)}\n"
+                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text.content)}\n"
                     for row in removal.rows
                 )
             if number in shown and number <= len(content):

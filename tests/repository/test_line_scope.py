@@ -1,7 +1,16 @@
 from git_repo import GitRepo
 
-from codeguard.repository import AllLines, ChangedLines, FileDiff, LineScopes, Removal, WorkingTree
-from codeguard.repository.file_diff import KeptRow, RemovedRow
+from codeguard.repository import (
+    AllLines,
+    ChangedLines,
+    FileDiff,
+    KeptRow,
+    LineScopes,
+    Removal,
+    RemovedRow,
+    RowText,
+    WorkingTree,
+)
 
 
 class TestLineScopes:
@@ -27,7 +36,9 @@ class TestLineScopes:
                     deletion_points=frozenset(),
                     removals=(
                         Removal(
-                            shown_before=1, reported_line=1, rows=(RemovedRow(1, text=b"b = 1"),)
+                            shown_before=1,
+                            reported_line=1,
+                            rows=(RemovedRow(1, RowText(b"b = 1")),),
                         ),
                     ),
                     head_lines_by_base_line={},
@@ -39,7 +50,9 @@ class TestLineScopes:
                     deletion_points=frozenset(),
                     removals=(
                         Removal(
-                            shown_before=1, reported_line=1, rows=(RemovedRow(1, text=b"a = 1"),)
+                            shown_before=1,
+                            reported_line=1,
+                            rows=(RemovedRow(1, RowText(b"a = 1")),),
                         ),
                     ),
                     head_lines_by_base_line={},
@@ -115,7 +128,7 @@ class TestLineScopes:
                         Removal(
                             shown_before=10,
                             reported_line=10,
-                            rows=(RemovedRow(10, text=b"x10 = 10"),),
+                            rows=(RemovedRow(10, RowText(b"x10 = 10")),),
                         ),
                     ),
                     head_lines_by_base_line={line: line for line in range(1, 10)},
@@ -141,7 +154,9 @@ class TestLineScopes:
                     deletion_points=frozenset(),
                     removals=(
                         Removal(
-                            shown_before=2, reported_line=2, rows=(RemovedRow(2, text=b"b = 1"),)
+                            shown_before=2,
+                            reported_line=2,
+                            rows=(RemovedRow(2, RowText(b"b = 1")),),
                         ),
                     ),
                     head_lines_by_base_line={1: 1, 3: 3},
@@ -235,7 +250,9 @@ class TestLineScopes:
                     deletion_points=frozenset(),
                     removals=(
                         Removal(
-                            shown_before=1, reported_line=1, rows=(RemovedRow(1, text=b"a = 1"),)
+                            shown_before=1,
+                            reported_line=1,
+                            rows=(RemovedRow(1, RowText(b"a = 1")),),
                         ),
                     ),
                     head_lines_by_base_line={},
@@ -265,7 +282,7 @@ class TestLineScopes:
                         Removal(
                             shown_before=10,
                             reported_line=10,
-                            rows=(RemovedRow(10, text=b"x9 = 9"),),
+                            rows=(RemovedRow(10, RowText(b"x9 = 9")),),
                         ),
                     ),
                     head_lines_by_base_line={line: line for line in range(1, 10)},
@@ -313,7 +330,7 @@ class TestLineScopes:
                         Removal(
                             shown_before=2,
                             reported_line=1,
-                            rows=(RemovedRow(2, text=b"b = '\xff'"),),
+                            rows=(RemovedRow(2, RowText(b"b = '\xff'")),),
                         ),
                     ),
                     head_lines_by_base_line={1: 1},
@@ -339,7 +356,9 @@ class TestLineScopes:
                     deletion_points=frozenset({1}),
                     removals=(
                         Removal(
-                            shown_before=2, reported_line=1, rows=(RemovedRow(2, text=b"b = 1"),)
+                            shown_before=2,
+                            reported_line=1,
+                            rows=(RemovedRow(2, RowText(b"b = 1")),),
                         ),
                     ),
                     head_lines_by_base_line={1: 1},
@@ -363,49 +382,57 @@ class TestLineScopes:
 
 
 class TestChangedLines:
-    def test_covers_a_changed_line(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\na = 1\n")})
+    def test_covers_a_changed_line(self, make_new_file_changed_lines, make_line_range):
+        changed = make_new_file_changed_lines(content=b"\na = 1\n")
 
         assert changed.covers("a.py", make_line_range(start=2))
 
-    def test_does_not_cover_an_unchanged_line(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\na = 1\n")})
+    def test_does_not_cover_an_unchanged_line(self, make_new_file_changed_lines, make_line_range):
+        changed = make_new_file_changed_lines(content=b"\na = 1\n")
 
         assert not changed.covers("a.py", make_line_range(start=1))
 
-    def test_does_not_cover_an_unchanged_file(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\na = 1\n")})
+    def test_does_not_cover_an_unchanged_file(self, make_new_file_changed_lines, make_line_range):
+        changed = make_new_file_changed_lines(content=b"\na = 1\n")
 
         assert not changed.covers("b.py", make_line_range(start=2))
 
-    def test_covers_the_whole_of_a_changed_file(self):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\na = 1\n")})
+    def test_covers_the_whole_of_a_changed_file(self, make_new_file_changed_lines):
+        changed = make_new_file_changed_lines(content=b"\na = 1\n")
 
         assert changed.covers("a.py", None)
 
-    def test_does_not_cover_the_whole_of_an_unchanged_file(self):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\na = 1\n")})
+    def test_does_not_cover_the_whole_of_an_unchanged_file(self, make_new_file_changed_lines):
+        changed = make_new_file_changed_lines(content=b"\na = 1\n")
 
         assert not changed.covers("b.py", None)
 
-    def test_covers_a_range_that_contains_a_changed_line(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\n\na = 1\n")})
+    def test_covers_a_range_that_contains_a_changed_line(
+        self, make_new_file_changed_lines, make_line_range
+    ):
+        changed = make_new_file_changed_lines(content=b"\n\na = 1\n")
 
         assert changed.covers("a.py", make_line_range(start=2, end=4))
 
-    def test_does_not_cover_a_range_without_a_changed_line(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff.of_new_file(b"\n\n\n\na = 1\n")})
+    def test_does_not_cover_a_range_without_a_changed_line(
+        self, make_new_file_changed_lines, make_line_range
+    ):
+        changed = make_new_file_changed_lines(content=b"\n\n\n\na = 1\n")
 
         assert not changed.covers("a.py", make_line_range(start=2, end=4))
 
-    def test_covers_a_range_that_contains_a_deletion_point(self, make_line_range):
-        rows = [KeptRow(1, 1), KeptRow(2, 2), KeptRow(3, 3), RemovedRow(4, text=b"d = 1")]
-        changed = ChangedLines({"a.py": FileDiff.from_whole_file_rows("a.py", rows)})
+    def test_covers_a_range_that_contains_a_deletion_point(
+        self, make_changed_lines, make_line_range
+    ):
+        changed = make_changed_lines(
+            rows=[KeptRow(1, 1), KeptRow(2, 2), KeptRow(3, 3), RemovedRow(4, RowText(b"d = 1"))]
+        )
 
         assert changed.covers("a.py", make_line_range(start=2, end=4))
 
-    def test_covers_a_deletion_point(self, make_line_range):
-        rows = [KeptRow(1, 1), KeptRow(2, 2), KeptRow(3, 3), RemovedRow(4, text=b"d = 1")]
-        changed = ChangedLines({"a.py": FileDiff.from_whole_file_rows("a.py", rows)})
+    def test_covers_a_deletion_point(self, make_changed_lines, make_line_range):
+        changed = make_changed_lines(
+            rows=[KeptRow(1, 1), KeptRow(2, 2), KeptRow(3, 3), RemovedRow(4, RowText(b"d = 1"))]
+        )
 
         assert changed.covers("a.py", make_line_range(start=3))

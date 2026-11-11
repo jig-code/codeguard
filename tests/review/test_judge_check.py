@@ -5,8 +5,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
-from codeguard.repository import AllLines, ChangedLines, FileDiff
-from codeguard.repository.file_diff import AddedRow, KeptRow
+from codeguard.repository import AllLines
 from codeguard.review import (
     ErrorType,
     JudgeCheck,
@@ -135,20 +134,18 @@ class TestJudgeCheck:
         }
 
     def test_judge_gets_the_changed_function_of_the_file(
-        self, make_file_classification, tmp_path, make_binding, make_judge_request
+        self,
+        make_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
     ):
         (tmp_path / "pricing.py").write_text(
             "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
         )
         judge = RecordingJudge()
-        rows = [
-            KeptRow(1, 1),
-            KeptRow(2, 2),
-            KeptRow(3, 3),
-            KeptRow(4, 4),
-            AddedRow(5, text=b"    return total - DISCOUNT"),
-        ]
-        scope = ChangedLines({"pricing.py": FileDiff.from_whole_file_rows("pricing.py", rows)})
+        scope = make_changed_lines(return_line_added=True)
         classification = Classification(
             {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
         )
@@ -179,10 +176,10 @@ class TestJudgeCheck:
         assert judge.received == []
 
     def test_file_whose_changes_miss_the_triggers_is_not_judged(
-        self, make_file_classification, tmp_path, make_binding
+        self, make_new_file_changed_lines, make_file_classification, tmp_path, make_binding
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": FileDiff.of_new_file(b"print(1)\n")})
+        scope = make_new_file_changed_lines()
         classification = Classification(
             {
                 "a.py": make_file_classification(
@@ -197,10 +194,15 @@ class TestJudgeCheck:
         assert judge.received == []
 
     def test_file_whose_changes_touch_a_trigger_is_judged(
-        self, make_file_classification, tmp_path, make_binding, make_judge_request
+        self,
+        make_new_file_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": FileDiff.of_new_file(b"print(1)\n")})
+        scope = make_new_file_changed_lines()
         classification = Classification(
             {
                 "a.py": make_file_classification(
@@ -214,21 +216,28 @@ class TestJudgeCheck:
 
         assert judge.received == [make_judge_request()]
 
-    def test_file_without_change_kinds_is_judged(self, tmp_path, make_binding, make_judge_request):
+    def test_file_without_change_kinds_is_judged(
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_judge_request
+    ):
         (tmp_path / "a.md").write_text("# A\n")
         judge = RecordingJudge()
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
-        scope = ChangedLines({"a.md": FileDiff.of_new_file(b"# A\n")})
+        scope = make_new_file_changed_lines(file="a.md", content=b"# A\n")
 
         JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, Classification()).check(["a.md"])
 
         assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
 
     def test_binding_without_triggers_judges_every_changed_file(
-        self, make_file_classification, tmp_path, make_binding, make_judge_request
+        self,
+        make_new_file_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": FileDiff.of_new_file(b"print(1)\n")})
+        scope = make_new_file_changed_lines()
         classification = Classification(
             {
                 "a.py": make_file_classification(

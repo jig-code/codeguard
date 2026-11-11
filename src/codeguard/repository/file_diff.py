@@ -12,35 +12,29 @@ class KeptRow:
     head_line: int
 
 
-@dataclass(frozen=True, kw_only=True)
-class _TextRow:
-    text: bytes
+@dataclass(frozen=True)
+class RowText:
+    content: bytes
+
+    @classmethod
+    def of_line(cls, line: bytes) -> Self:
+        return cls(line.removesuffix(b"\n").removesuffix(b"\r"))
 
     @property
     def holds_code(self) -> bool:
-        return bool(self.text.strip(_GIT_BLANK))
-
-    @staticmethod
-    def _without_line_ending(content: bytes) -> bytes:
-        return content.removesuffix(b"\n").removesuffix(b"\r")
+        return bool(self.content.strip(_GIT_BLANK))
 
 
 @dataclass(frozen=True)
-class AddedRow(_TextRow):
+class AddedRow:
     head_line: int
-
-    @classmethod
-    def of_content(cls, head_line: int, content: bytes) -> Self:
-        return cls(head_line, text=cls._without_line_ending(content))
+    text: RowText
 
 
 @dataclass(frozen=True)
-class RemovedRow(_TextRow):
+class RemovedRow:
     base_line: int
-
-    @classmethod
-    def of_content(cls, base_line: int, content: bytes) -> Self:
-        return cls(base_line, text=cls._without_line_ending(content))
+    text: RowText
 
 
 type DiffRow = KeptRow | AddedRow | RemovedRow
@@ -87,7 +81,7 @@ class FileDiff:
         if lines[-1] == b"":
             lines.pop()
         return cls.from_whole_file_rows(
-            None, (AddedRow.of_content(number, text) for number, text in enumerate(lines, 1))
+            None, (AddedRow(number, RowText.of_line(line)) for number, line in enumerate(lines, 1))
         )
 
     @property
@@ -120,11 +114,11 @@ class _ChangeRun:
     def split(cls, rows: tuple[DiffRow, ...]) -> tuple[Self, ...]:
         runs: list[Self] = []
         head_before = 0
-        for kept, group in groupby(rows, key=lambda row: isinstance(row, KeptRow)):
-            changed = tuple(group)
-            if kept:
-                head_before = max(row.head_line for row in changed if isinstance(row, KeptRow))
+        for kept_head_line, group in groupby(rows, key=_kept_head_line):
+            if kept_head_line is not None:
+                head_before = kept_head_line
                 continue
+            changed = tuple(group)
             runs.append(
                 cls(
                     head_before,
@@ -136,11 +130,11 @@ class _ChangeRun:
 
     @property
     def added_lines(self) -> frozenset[int]:
-        return frozenset(row.head_line for row in self.added if row.holds_code)
+        return frozenset(row.head_line for row in self.added if row.text.holds_code)
 
     @property
     def removal(self) -> Removal | None:
-        removed_code = tuple(row for row in self.removed if row.holds_code)
+        removed_code = tuple(row for row in self.removed if row.text.holds_code)
         if not removed_code:
             return None
         return Removal(
@@ -158,3 +152,7 @@ class _ChangeRun:
     @property
     def _line_before(self) -> int:
         return max(self.head_before, 1)
+
+
+def _kept_head_line(row: DiffRow) -> int | None:
+    return row.head_line if isinstance(row, KeptRow) else None

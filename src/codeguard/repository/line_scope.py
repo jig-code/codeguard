@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 from codeguard.line_range import LineRange
@@ -21,7 +21,7 @@ class LineScope(Protocol):
 
 @dataclass(frozen=True)
 class ChangedLines:
-    diffs: Mapping[str, FileDiff] = field(default_factory=dict)
+    diffs: Mapping[str, FileDiff]
     base: str | None = None
 
     @property
