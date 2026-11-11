@@ -1,15 +1,15 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import ChangeKind, ConfigError, Ruleset, RulesetLoader
+from codeguard.config import ChangeKind, ConfigError, RulesetLoader
 from codeguard.repository import ChangedLines
 from codeguard.review import Binding, Bindings
 from codeguard.rule_tests.edit_repo import EditRepo
-from codeguard.rule_tests.rule_eval import Outcome, RuleEvalCase, rule_evals
+from codeguard.rule_tests.rule_eval import EditCase, Outcome, RuleEvalCase, rule_evals
 from codeguard.rule_tests.rule_test_result import RuleTestResult
-from codeguard.syntax import SyntaxScanner
+from codeguard.syntax import Classification, SyntaxScanner
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ class _CaseCheck:
     def path(self) -> str:
         return f"{self.prefix}{self.case.inputs.file}"
 
-    def problem(self, changed: ChangedLines) -> str | None:
+    def problem(self, changed: ChangedLines, classification: Classification) -> str | None:
         rule = self.binding.skill.name
         file = self.case.inputs.file
         expected = self.case.expected_output
@@ -32,9 +32,9 @@ class _CaseCheck:
         if self.path not in changed.files:
             return f"{self.name}: the case changes no code in {file}"
         should_fire = expected.outcome is not Outcome.SKIPPED
-        if self.binding.is_triggered(changed, self.path) == should_fire:
+        if self.binding.is_triggered(classification, self.path) == should_fire:
             return None
-        kinds = changed.kinds_of(self.path)
+        kinds = classification.kinds_of(self.path)
         if kinds is None:
             # As in a review, a change in a language without change kinds fires every trigger.
             return f"{self.name}: {file} has no change kinds, so every {rule} trigger fires on it"
@@ -76,18 +76,19 @@ class TriggerTestRunner:
             if dataset.name in bindings
             for number, case in enumerate(dataset.cases, start=1)
         ]
-        changed = _classify_changes(checks, self.ast_grep, ruleset)
-        failed = [problem for check in checks if (problem := check.problem(changed))]
+        with EditRepo.of(_edits(checks)) as repo:
+            changed = repo.changed_lines()
+            scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
+            classification = repo.classification(scanner, changed)
+        failed = [
+            problem for check in checks if (problem := check.problem(changed, classification))
+        ]
         return RuleTestResult(problems=(*unknown, *failed))
 
 
-def _classify_changes(
-    checks: Sequence[_CaseCheck], ast_grep: AstGrep, ruleset: Ruleset
-) -> ChangedLines:
-    edits = {
+def _edits(checks: Sequence[_CaseCheck]) -> Mapping[str, EditCase]:
+    return {
         path: edit
         for check in checks
         for path, edit in check.case.inputs.edits(check.prefix).items()
     }
-    with EditRepo.of(edits) as repo:
-        return repo.classified(SyntaxScanner.for_rulesets(ast_grep, [ruleset]))

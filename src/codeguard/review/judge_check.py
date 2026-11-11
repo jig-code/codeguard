@@ -7,6 +7,7 @@ from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic
 from codeguard.review.judge import Judge, JudgeError, JudgeRequest
+from codeguard.syntax import Classification
 
 
 @dataclass(frozen=True)
@@ -16,12 +17,13 @@ class JudgeCheck:
     judge: Judge
     confidence_threshold: float
     scope: ChangedLines | AllLines
+    classification: Classification
 
     def check(self, files: Sequence[str]) -> list[Diagnostic]:
         matched = [
             file
             for file in self.binding.files(files)
-            if self.binding.is_triggered(self.scope, file)
+            if self.binding.is_triggered(self.classification, file)
         ]
         if not matched:
             return []
@@ -49,4 +51,6 @@ class JudgeCheck:
         return verdict.diagnostics_for(self.binding, file, self.confidence_threshold)
 
     def _request(self, file: str) -> JudgeRequest:
-        return JudgeRequest.of_change(self.binding, self.root, file, self.scope)
+        return JudgeRequest.of_change(
+            self.binding, self.root, file, self.scope, self.classification
+        )

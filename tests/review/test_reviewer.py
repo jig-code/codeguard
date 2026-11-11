@@ -4,14 +4,15 @@ from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
 from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
+from codeguard.syntax import Classification
 
 
-def review(repo, judge, binding, scope) -> Review:
+def review(repo, judge, binding, scope, classification) -> Review:
     local = Ruleset(name=None, root=repo.root / ".codeguard")
     return Reviewer(
         steps=(
             CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
-            CheckStep(checks=(JudgeCheck(repo.root, binding, judge, 0.9, scope),)),
+            CheckStep(checks=(JudgeCheck(repo.root, binding, judge, 0.9, scope, classification),)),
         )
     ).run(scope)
 
@@ -28,7 +29,7 @@ class TestReviewer:
             )
         )
 
-        result = review(repo, judge, make_binding(), AllLines(("a.py", "b.py")))
+        result = review(repo, judge, make_binding(), AllLines(("a.py", "b.py")), Classification())
 
         assert result == Review(
             diagnostics=(make_diagnostic(), make_diagnostic(judged=True, file="b.py"))
@@ -46,7 +47,13 @@ class TestReviewer:
             )
         )
 
-        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({3})}))
+        result = review(
+            repo,
+            judge,
+            make_binding(),
+            ChangedLines({"a.py": frozenset({3})}),
+            Classification(judged={"a.py": frozenset({3})}),
+        )
 
         assert result == Review(diagnostics=())
 
@@ -61,7 +68,13 @@ class TestReviewer:
             )
         )
 
-        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
+        result = review(
+            repo,
+            judge,
+            make_binding(),
+            ChangedLines({"a.py": frozenset({2})}),
+            Classification(judged={"a.py": frozenset({2})}),
+        )
 
         assert result == Review(
             diagnostics=(make_diagnostic(judged=True, lines__start=1, lines__end=2),)
@@ -78,7 +91,13 @@ class TestReviewer:
             )
         )
 
-        result = review(repo, judge, make_binding(), ChangedLines({"a.py": frozenset({2})}))
+        result = review(
+            repo,
+            judge,
+            make_binding(),
+            ChangedLines({"a.py": frozenset({2})}),
+            Classification(judged={"a.py": frozenset({2})}),
+        )
 
         assert result == Review(
             diagnostics=(make_diagnostic(judged=True, lines__start=2, lines__end=2),)

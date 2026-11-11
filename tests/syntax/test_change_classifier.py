@@ -130,9 +130,9 @@ class TestChangeClassifier:
         ruleset = Ruleset(name="example/python", root=git_repo.root / "python")
         classifier = ChangeClassifier.for_rulesets(AstGrep(), [ruleset], working_tree)
 
-        changed = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        kinds = changed.kinds_of("a.py")
+        kinds = classification.kinds_of("a.py")
         assert kinds is not None
         assert "gate:example/python/enum-value" in kinds
 
@@ -220,22 +220,6 @@ class TestChangeClassifier:
 
         assert classified_judged_lines(git_repo, "a.py") == {1, 4, 5}
 
-    def test_body_edit_does_not_cover_the_untouched_first_line_of_its_function(
-        self, make_line_range, tmp_path
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "class Order:\n    def total(self):\n        return 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "class Order:\n    def total(self):\n        return 2\n")
-        working_tree = WorkingTree.at(git_repo.root)
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
-
-        assert scope.covers("a.py", make_line_range(start=3))
-        assert not scope.covers("a.py", make_line_range(start=1))
-        assert not scope.covers("a.py", make_line_range(start=2))
-
     def test_judged_lines_for_a_trigger_take_in_its_node_around_the_change(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         source = "try:\n    import fast\nexcept ImportError:\n    fast = None\n"
@@ -245,10 +229,15 @@ class TestChangeClassifier:
         working_tree = WorkingTree.at(git_repo.root)
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        assert scope.judged_lines("a.py") == {3, 4}
-        assert scope.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {1, 2, 3, 4}
+        assert classification.judged_lines("a.py") == {3, 4}
+        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {
+            1,
+            2,
+            3,
+            4,
+        }
 
     def test_decorator_edit_judges_the_decorated_method(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -444,9 +433,9 @@ class TestChangeClassifier:
         working_tree = WorkingTree.at(git_repo.root)
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        scope = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+        classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        assert scope.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {2}
+        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {2}
 
     def test_removed_statement_in_a_module_level_block_judges_the_block_header(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -525,3 +514,11 @@ class TestChangeClassifier:
         git_repo.write("a.py", source.replace("    y = 2\n", "    y =\n"))
 
         assert classified_judged_lines(git_repo, "a.py") == {1, 3}
+
+    def test_file_without_change_kinds_judges_its_changed_points(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.md", "one\ntwo\nthree\nfour\nfive\n")
+        git_repo.commit("Add a")
+        git_repo.write("a.md", "ONE\ntwo\nthree\nfive\n")
+
+        assert classified_judged_lines(git_repo, "a.md") == {1, 3}

@@ -7,6 +7,7 @@ from typing import Self
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.repository import ChangedLines, WorkingTree
+from codeguard.syntax.classification import Classification
 from codeguard.syntax.parsed_file import ParsedFile
 from codeguard.syntax.syntax_scanner import SyntaxScanner
 
@@ -22,11 +23,11 @@ class ChangeClassifier:
     ) -> Self:
         return cls(SyntaxScanner.for_rulesets(ast_grep, rulesets), working_tree)
 
-    def classify(self, scope: ChangedLines) -> ChangedLines:
+    def classify(self, scope: ChangedLines) -> Classification:
         head = self.scanner.scan_files(self.working_tree.root, scope.files)
         base = self._base(scope)
         kinds: dict[str, frozenset[str]] = {}
-        judged: dict[str, frozenset[int]] = {}
+        judged = {file: scope.points(file) for file in scope.files}
         kind_lines: dict[str, dict[str, frozenset[int]]] = {}
         for file, parsed in head.items():
             added = scope.lines.get(file, frozenset())
@@ -46,7 +47,7 @@ class ChangeClassifier:
                 kind_lines[file][kind] = kind_lines[file].get(kind, frozenset()) | _in_head(
                     scope, file, lines
                 )
-        return scope.with_kinds(kinds).with_judged_lines(judged).with_kind_lines(kind_lines)
+        return Classification(kinds, judged, kind_lines)
 
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:

@@ -45,9 +45,6 @@ class Edit:
 class ChangedLines:
     lines: Mapping[str, frozenset[int]]
     deletions: Mapping[str, frozenset[int]] = field(default_factory=dict)
-    kinds: Mapping[str, frozenset[str]] = field(default_factory=dict)
-    judged: Mapping[str, frozenset[int]] = field(default_factory=dict)
-    kind_lines: Mapping[str, Mapping[str, frozenset[int]]] = field(default_factory=dict)
     removals: Mapping[str, tuple[Removal, ...]] = field(default_factory=dict)
     edits: Mapping[str, tuple[Edit, ...]] = field(default_factory=dict)
     sources: Mapping[str, str] = field(default_factory=dict)
@@ -66,30 +63,11 @@ class ChangedLines:
     def with_sources(self, sources: Mapping[str, str]) -> Self:
         return replace(self, sources=sources)
 
-    def with_kinds(self, kinds: Mapping[str, frozenset[str]]) -> Self:
-        return replace(self, kinds=kinds)
-
-    def with_judged_lines(self, judged: Mapping[str, frozenset[int]]) -> Self:
-        return replace(self, judged=judged)
-
-    def with_kind_lines(self, kind_lines: Mapping[str, Mapping[str, frozenset[int]]]) -> Self:
-        return replace(self, kind_lines=kind_lines)
-
-    def judged_lines(
-        self, file: str, triggers: frozenset[str] = frozenset()
-    ) -> frozenset[int] | None:
-        spans = self.kind_lines.get(file, {})
-        triggered = (spans.get(kind, frozenset()) for kind in triggers)
-        return self.judged.get(file, self.points(file)).union(*triggered)
-
     def added_lines(self, file: str) -> frozenset[int] | None:
         return self.lines.get(file, frozenset())
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
         return self.removals.get(file, ())
-
-    def kinds_of(self, file: str) -> frozenset[str] | None:
-        return self.kinds.get(file)
 
     def base_path(self, file: str) -> str | None:
         """The file's path in the base, which a rename changes; None for a file git's diff
@@ -125,14 +103,6 @@ class AllLines:
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         return True
-
-    def kinds_of(self, file: str) -> frozenset[str] | None:
-        return None
-
-    def judged_lines(
-        self, file: str, triggers: frozenset[str] = frozenset()
-    ) -> frozenset[int] | None:
-        return None
 
     def added_lines(self, file: str) -> frozenset[int] | None:
         return None

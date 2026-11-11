@@ -25,7 +25,7 @@ from codeguard.rule_tests import (
 )
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
-from codeguard.syntax import ChangeClassifier
+from codeguard.syntax import ChangeClassifier, Classification
 
 
 @dataclass(frozen=True)
@@ -39,14 +39,14 @@ class Rules:
 
     def review(self, scope: ChangedLines | AllLines) -> Review:
         deadline = Deadline(self.config.review_time_limit_minutes)
-        classified = self._classified(scope)
+        classification = self._classification(scope)
         reviewer = Reviewer(
             steps=(
                 self._pattern_step,
-                CheckStep(checks=self._judge_checks(classified, deadline)),
+                CheckStep(checks=self._judge_checks(scope, classification, deadline)),
             )
         )
-        return reviewer.run(classified)
+        return reviewer.run(scope)
 
     def check_patterns(self, scope: ChangedLines | AllLines) -> Review:
         return Reviewer(steps=(self._pattern_step,)).run(scope)
@@ -60,27 +60,27 @@ class Rules:
             )
         )
 
-    def _classified(self, scope: ChangedLines | AllLines) -> ChangedLines | AllLines:
+    def _classification(self, scope: ChangedLines | AllLines) -> Classification:
         if isinstance(scope, AllLines):
-            return scope
+            return Classification()
         classifier = ChangeClassifier.for_rulesets(self.ast_grep, self.rulesets, self.working_tree)
         return classifier.classify(scope)
 
     def plan(self, scope: ChangedLines | AllLines) -> JudgePlan:
         root = self.working_tree.root
-        classified = self._classified(scope)
+        classification = self._classification(scope)
         return JudgePlan(
             calls=tuple(
                 PlannedCall(
                     rule=binding.rule,
                     file=file,
                     cached=self.judges.cached(root, binding.model).has(
-                        JudgeRequest.of_change(binding, root, file, classified)
+                        JudgeRequest.of_change(binding, root, file, scope, classification)
                     ),
-                    triggered=binding.is_triggered(classified, file),
+                    triggered=binding.is_triggered(classification, file),
                 )
                 for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
-                for file in binding.files(classified.files)
+                for file in binding.files(scope.files)
             )
         )
 
@@ -125,13 +125,18 @@ class Rules:
         return Judges(self.config.judge)
 
     def _judge_checks(
-        self, scope: ChangedLines | AllLines, deadline: Deadline
+        self, scope: ChangedLines | AllLines, classification: Classification, deadline: Deadline
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
         threshold = self.config.confidence_threshold
         return tuple(
             JudgeCheck(
-                root, binding, self.judges.cached(root, binding.model, deadline), threshold, scope
+                root,
+                binding,
+                self.judges.cached(root, binding.model, deadline),
+                threshold,
+                scope,
+                classification,
             )
             for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
         )

@@ -16,8 +16,8 @@ from codeguard.config import (
     language_of,
     named_languages,
 )
-from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.skill import Skill
+from codeguard.syntax import Classification
 
 
 @dataclass(frozen=True)
@@ -85,8 +85,8 @@ class Binding:
     def files(self, changed: Sequence[str]) -> list[str]:
         return [file for file in changed if self._matches(file)]
 
-    def is_triggered(self, scope: ChangedLines | AllLines, file: str) -> bool:
-        kinds = scope.kinds_of(file)
+    def is_triggered(self, classification: Classification, file: str) -> bool:
+        kinds = classification.kinds_of(file)
         return (
             kinds is None or ChangeKind.ANY in self.triggers or not self.triggers.isdisjoint(kinds)
         )
