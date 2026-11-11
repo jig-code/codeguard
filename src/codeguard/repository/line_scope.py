@@ -1,7 +1,7 @@
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Self
+from typing import Protocol, Self
 
 from codeguard.line_range import LineRange
 from codeguard.repository.working_tree import WorkingTree
@@ -34,6 +34,17 @@ class Edit:
     @property
     def last_base_line(self) -> int:
         return self.base_start + self.base_count - 1 if self.base_count else self.base_start
+
+
+class LineScope(Protocol):
+    @property
+    def files(self) -> tuple[str, ...]: ...
+
+    def covers(self, file: str, lines: LineRange | None) -> bool: ...
+
+    def added_lines(self, file: str) -> frozenset[int] | None: ...
+
+    def removals_in(self, file: str) -> tuple[Removal, ...]: ...
 
 
 @dataclass(frozen=True)
