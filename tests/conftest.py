@@ -80,6 +80,11 @@ def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def git_repo(tmp_path: Path) -> GitRepo:
+    return GitRepo.init(tmp_path.resolve())
+
+
+@pytest.fixture
 def repo(tmp_path: Path) -> GitRepo:
     git_repo = GitRepo.init(tmp_path.resolve())
     git_repo.write(
