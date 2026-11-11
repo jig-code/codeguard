@@ -3,8 +3,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from codeguard.line_range import LineRange
-from codeguard.repository.file_diff import FileDiff
-from codeguard.repository.removal import Removal
+from codeguard.repository.file_diff import FileDiff, Removal
 from codeguard.repository.working_tree import WorkingTree
 
 _UNCHANGED = FileDiff()
@@ -46,7 +45,7 @@ class ChangedLines:
         return self._diff(file).removed_code_lines
 
     def replaced_base_rows(self, file: str) -> frozenset[int]:
-        return self._diff(file).replaced
+        return self._diff(file).replaced_base_rows
 
     def head_lines(self, file: str, base_lines: Iterable[int]) -> frozenset[int]:
         kept = self._diff(file).kept

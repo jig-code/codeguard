@@ -18,9 +18,32 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        assert changed.files == ("staged.py", "unstaged.py", "untracked.py")
+        assert changed == ChangedLines(
+            {
+                "staged.py": FileDiff(
+                    base_path="staged.py",
+                    added_lines=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=1, reported_line=1, rows=("b = 1",), base_lines=(1,)),
+                    ),
+                    replaced_base_rows=frozenset({1}),
+                ),
+                "unstaged.py": FileDiff(
+                    base_path="unstaged.py",
+                    added_lines=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+                    ),
+                    replaced_base_rows=frozenset({1}),
+                ),
+                "untracked.py": FileDiff(added_lines=frozenset({1})),
+            },
+            base=git_repo.head(),
+        )
 
-    def test_changes_since_the_merge_base_have_no_base_path_when_added_since_it(self, tmp_path):
+    def test_changes_since_the_merge_base_leave_out_the_base_branch_and_have_no_base_path(
+        self, tmp_path
+    ):
         git_repo = GitRepo.init(tmp_path.resolve())
         merge_base = git_repo.head()
         git_repo.git("switch", "--create", "feature")
@@ -42,6 +65,33 @@ class TestLineScopes:
             base=merge_base,
         )
 
+    def test_staged_edit_keeps_the_head_line_of_every_unchanged_base_line(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        source = "".join(f"x{i} = {i}\n" for i in range(1, 11))
+        git_repo.write("a.py", source)
+        git_repo.commit("Add a")
+        git_repo.write("a.py", source.replace("x10 = 10", "x10 = 0"))
+        git_repo.git("add", "a.py")
+
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+
+        assert changed == ChangedLines(
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({10}),
+                    removals=(
+                        Removal(
+                            shown_before=10, reported_line=10, rows=("x10 = 10",), base_lines=(10,)
+                        ),
+                    ),
+                    kept={line: line for line in range(1, 10)},
+                    replaced_base_rows=frozenset({10}),
+                )
+            },
+            base=git_repo.head(),
+        )
+
     def test_changed_lines_are_the_added_and_modified_lines(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")
@@ -59,7 +109,7 @@ class TestLineScopes:
                         Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 3},
-                    replaced=frozenset({2}),
+                    replaced_base_rows=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -110,7 +160,7 @@ class TestLineScopes:
                         Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 3},
-                    replaced=frozenset({2}),
+                    replaced_base_rows=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -145,7 +195,7 @@ class TestLineScopes:
                         ),
                     ),
                     kept={2: 2},
-                    replaced=frozenset({1}),
+                    replaced_base_rows=frozenset({1}),
                 )
             },
             base=git_repo.head(),
@@ -199,7 +249,7 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
                     ),
-                    replaced=frozenset({1}),
+                    replaced_base_rows=frozenset({1}),
                 )
             },
             base=git_repo.head(),
@@ -226,7 +276,7 @@ class TestLineScopes:
                         ),
                     ),
                     kept={line: line for line in range(1, 10)},
-                    replaced=frozenset({10}),
+                    replaced_base_rows=frozenset({10}),
                 )
             },
             base=git_repo.head(),
@@ -285,7 +335,7 @@ class TestLineScopes:
                         Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 2},
-                    replaced=frozenset({2}),
+                    replaced_base_rows=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -310,7 +360,7 @@ class TestLineScopes:
                         ),
                     ),
                     kept={1: 1},
-                    replaced=frozenset({2}),
+                    replaced_base_rows=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -333,7 +383,7 @@ class TestLineScopes:
                         Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1},
-                    replaced=frozenset({2}),
+                    replaced_base_rows=frozenset({2}),
                 )
             },
             base=git_repo.head(),

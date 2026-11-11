@@ -106,7 +106,7 @@ exhaustive = true
 layers = [
     "line_scope",
     "file_diff | working_tree",
-    "removal | git",
+    "git",
 ]
 
 [[tool.importlinter.contracts]]

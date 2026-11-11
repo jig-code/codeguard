@@ -5,9 +5,15 @@ from typing import Self
 import pygit2
 from pygit2.enums import DeltaStatus
 
-from codeguard.repository.removal import Removal
-
 _GIT_BLANK = b" \t\r\f\v"
+
+
+@dataclass(frozen=True)
+class Removal:
+    shown_before: int
+    reported_line: int
+    rows: tuple[str, ...]
+    base_lines: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -17,7 +23,7 @@ class FileDiff:
     deletions: frozenset[int] = frozenset()
     removals: tuple[Removal, ...] = ()
     kept: Mapping[int, int] = field(default_factory=dict)
-    replaced: frozenset[int] = frozenset()
+    replaced_base_rows: frozenset[int] = frozenset()
 
     @classmethod
     def of(cls, patch: pygit2.Patch) -> Self:
@@ -32,7 +38,7 @@ class FileDiff:
             deletions=frozenset(reader.deletions),
             removals=tuple(reader.removals),
             kept=dict(reader.kept),
-            replaced=frozenset(reader.replaced),
+            replaced_base_rows=frozenset(reader.replaced_base_rows),
         )
 
     @property
@@ -54,7 +60,7 @@ class _Reader:
     deletions: set[int] = field(init=False, default_factory=set)
     removals: list[Removal] = field(init=False, default_factory=list)
     kept: dict[int, int] = field(init=False, default_factory=dict)
-    replaced: set[int] = field(init=False, default_factory=set)
+    replaced_base_rows: set[int] = field(init=False, default_factory=set)
     head_before_run: int = field(init=False, default=0)
     run_added: list[int] = field(init=False, default_factory=list)
     run_removed: list[pygit2.DiffLine] = field(init=False, default_factory=list)
@@ -67,7 +73,7 @@ class _Reader:
         elif line.origin == "+" and _holds_code(line.raw_content):
             self.run_added.append(line.new_lineno)
         elif line.origin == "-":
-            self.replaced.add(line.old_lineno)
+            self.replaced_base_rows.add(line.old_lineno)
             if _holds_code(line.raw_content):
                 self.run_removed.append(line)
 
