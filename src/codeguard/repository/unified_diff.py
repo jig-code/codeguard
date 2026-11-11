@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 
 _HEADER = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-_COUNT_GIT_LEAVES_OUT = 1
+_COUNT_WHEN_OMITTED = 1
 
 
 @dataclass(frozen=True)
@@ -67,4 +67,4 @@ def _hunk(
 
 
 def _count(group: str | None) -> int:
-    return _COUNT_GIT_LEAVES_OUT if group is None else int(group)
+    return _COUNT_WHEN_OMITTED if group is None else int(group)
