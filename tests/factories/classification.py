@@ -10,4 +10,3 @@ class MakeFileClassification(factory.Factory):
 
     kinds = frozenset({ChangeKind.ANY})
     judged = frozenset({1})
-    kind_lines = factory.LazyFunction(dict)

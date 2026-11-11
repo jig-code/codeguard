@@ -57,6 +57,20 @@ class ParsedFile:
                 spans.setdefault(node.kind, set()).update(node.lines)
         return {kind: frozenset(lines) for kind, lines in spans.items()}
 
+    def kept_judged_lines(
+        self, removed_code: frozenset[int], replaced_rows: frozenset[int]
+    ) -> frozenset[int]:
+        """The lines the judge is shown around removed code, from the nodes the change kept:
+        a node every row of which the change replaced is left out."""
+        return self.judged_lines(removed_code, replaced_rows)
+
+    def kept_kind_lines(
+        self, removed_code: frozenset[int], replaced_rows: frozenset[int]
+    ) -> dict[str, frozenset[int]]:
+        """The lines of each kind's nodes around removed code, from the nodes the change kept:
+        a node every row of which the change replaced is left out."""
+        return self.kind_lines(removed_code, replaced_rows)
+
     def touched_kinds(
         self, points: frozenset[int], base: Self | None, removed: frozenset[int] = frozenset()
     ) -> frozenset[str]:

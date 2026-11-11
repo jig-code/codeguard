@@ -31,22 +31,23 @@ class ChangeClassifier:
         }
         for file, parsed in head.items():
             added = scope.lines.get(file, frozenset())
-            removed = frozenset(
+            removed_code = frozenset(
                 line for removal in scope.removals_in(file) for line in removal.base_lines
             )
             before = base.get(file)
             judged = parsed.judged_lines(added)
             kind_lines = parsed.kind_lines(added)
             if before is not None:
-                # A removal shows the code around it that the change kept, not the code beside it.
-                gone = scope.removed_base_lines(file)
-                judged |= _in_head(scope, file, before.judged_lines(removed, gone))
-                for kind, lines in before.kind_lines(removed, gone).items():
+                replaced_rows = scope.removed_base_lines(file)
+                judged |= _in_head(
+                    scope, file, before.kept_judged_lines(removed_code, replaced_rows)
+                )
+                for kind, lines in before.kept_kind_lines(removed_code, replaced_rows).items():
                     kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(
                         scope, file, lines
                     )
             classification[file] = FileClassification(
-                parsed.touched_kinds(added, before, removed), judged, kind_lines
+                parsed.touched_kinds(added, before, removed_code), judged, kind_lines
             )
         return classification
 
