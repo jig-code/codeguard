@@ -105,7 +105,7 @@ containers = ["codeguard.repository"]
 exhaustive = true
 layers = [
     "line_scope",
-    "patch_reader | working_tree",
+    "working_tree_diff | working_tree",
     "file_diff | git",
 ]
 

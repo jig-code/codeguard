@@ -1,11 +1,11 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from codeguard.line_range import LineRange
 from codeguard.repository.file_diff import FileDiff, Removal
-from codeguard.repository.patch_reader import read_patch
 from codeguard.repository.working_tree import WorkingTree
+from codeguard.repository.working_tree_diff import diff_since
 
 _UNCHANGED = FileDiff()
 
@@ -30,27 +30,17 @@ class ChangedLines:
     def files(self) -> tuple[str, ...]:
         return tuple(sorted(self.diffs))
 
+    def diff(self, file: str) -> FileDiff:
+        return self.diffs.get(file, _UNCHANGED)
+
     def points(self, file: str) -> frozenset[int]:
-        return self._diff(file).points
+        return self.diff(file).points
 
     def added_lines(self, file: str) -> frozenset[int]:
-        return self._diff(file).added_lines
+        return self.diff(file).added_lines
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
-        return self._diff(file).removals
-
-    def base_path(self, file: str) -> str | None:
-        return self._diff(file).base_path
-
-    def removed_code_lines(self, file: str) -> frozenset[int]:
-        return self._diff(file).removed_code_lines
-
-    def replaced_base_rows(self, file: str) -> frozenset[int]:
-        return self._diff(file).replaced_base_rows
-
-    def head_lines(self, file: str, base_lines: Iterable[int]) -> frozenset[int]:
-        kept = self._diff(file).kept
-        return frozenset(kept[line] for line in base_lines if line in kept)
+        return self.diff(file).removals
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.diffs:
@@ -58,9 +48,6 @@ class ChangedLines:
         if lines is None:
             return True
         return any(point in lines for point in self.points(file))
-
-    def _diff(self, file: str) -> FileDiff:
-        return self.diffs.get(file, _UNCHANGED)
 
 
 @dataclass(frozen=True)
@@ -83,10 +70,7 @@ class LineScopes:
 
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
-        diffs = {
-            patch.delta.new_file.path: read_patch(patch)
-            for patch in self.working_tree.patches_since(merge_base)
-        }
+        diffs = diff_since(self.working_tree.root, merge_base)
         return ChangedLines(
             {file: diff for file, diff in diffs.items() if diff.changes_code}, base=merge_base
         )

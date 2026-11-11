@@ -35,7 +35,7 @@ class JudgeRequest:
         classification: Classification,
     ) -> Self:
         raw = (root / file).read_bytes().splitlines()
-        content = [line.decode(errors="replace") for line in raw]
+        content = [_shown(line) for line in raw]
         lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
@@ -43,7 +43,7 @@ class JudgeRequest:
         rows: list[str] = []
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
-                rows.extend(f"-{removal.reported_line:>6}\t{text}\n" for text in removal.rows)
+                rows.extend(f"-{removal.reported_line:>6}\t{_shown(row)}\n" for row in removal.rows)
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
@@ -59,6 +59,10 @@ class JudgeRequest:
             f'<rule name="{self.skill.name}">\n{self.skill.text}</rule>\n\n'
             f'<changes path="{self.file}">\n{self.changes}</changes>\n'
         )
+
+
+def _shown(row: bytes) -> str:
+    return row.decode(errors="replace")
 
 
 # The likelihood levels the judge rates a violation with. The schema gives the model only these

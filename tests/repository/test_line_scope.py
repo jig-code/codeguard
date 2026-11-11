@@ -24,7 +24,7 @@ class TestLineScopes:
                     base_path="staged.py",
                     added_lines=frozenset({1}),
                     removals=(
-                        Removal(shown_before=1, reported_line=1, rows=("b = 1",), base_lines=(1,)),
+                        Removal(shown_before=1, reported_line=1, rows=(b"b = 1",), base_lines=(1,)),
                     ),
                     replaced_base_rows=frozenset({1}),
                 ),
@@ -32,7 +32,7 @@ class TestLineScopes:
                     base_path="unstaged.py",
                     added_lines=frozenset({1}),
                     removals=(
-                        Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+                        Removal(shown_before=1, reported_line=1, rows=(b"a = 1",), base_lines=(1,)),
                     ),
                     replaced_base_rows=frozenset({1}),
                 ),
@@ -82,7 +82,7 @@ class TestLineScopes:
                     added_lines=frozenset({10}),
                     removals=(
                         Removal(
-                            shown_before=10, reported_line=10, rows=("x10 = 10",), base_lines=(10,)
+                            shown_before=10, reported_line=10, rows=(b"x10 = 10",), base_lines=(10,)
                         ),
                     ),
                     kept={line: line for line in range(1, 10)},
@@ -106,7 +106,7 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({2, 4}),
                     removals=(
-                        Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
+                        Removal(shown_before=2, reported_line=2, rows=(b"b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 3},
                     replaced_base_rows=frozenset({2}),
@@ -155,9 +155,9 @@ class TestLineScopes:
             {
                 "a.py": FileDiff(
                     base_path="a.py",
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
-                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                        Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 3},
                     replaced_base_rows=frozenset({2}),
@@ -188,10 +188,10 @@ class TestLineScopes:
             {
                 "a.py": FileDiff(
                     base_path="a.py",
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
-                            shown_before=1, reported_line=1, rows=("import os",), base_lines=(1,)
+                            shown_before=1, reported_line=1, rows=(b"import os",), base_lines=(1,)
                         ),
                     ),
                     kept={2: 2},
@@ -247,7 +247,7 @@ class TestLineScopes:
                     base_path="x y.py",
                     added_lines=frozenset({1}),
                     removals=(
-                        Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+                        Removal(shown_before=1, reported_line=1, rows=(b"a = 1",), base_lines=(1,)),
                     ),
                     replaced_base_rows=frozenset({1}),
                 )
@@ -272,7 +272,7 @@ class TestLineScopes:
                     added_lines=frozenset({10}),
                     removals=(
                         Removal(
-                            shown_before=10, reported_line=10, rows=("x9 = 9",), base_lines=(10,)
+                            shown_before=10, reported_line=10, rows=(b"x9 = 9",), base_lines=(10,)
                         ),
                     ),
                     kept={line: line for line in range(1, 10)},
@@ -330,9 +330,9 @@ class TestLineScopes:
             {
                 "a.py": FileDiff(
                     base_path="a.py",
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
-                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                        Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1, 3: 2},
                     replaced_base_rows=frozenset({2}),
@@ -341,7 +341,7 @@ class TestLineScopes:
             base=git_repo.head(),
         )
 
-    def test_removed_row_that_is_not_utf_8_is_replace_decoded(self, tmp_path):
+    def test_removed_row_that_is_not_utf_8_keeps_its_bytes(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         (git_repo.root / "a.py").write_bytes(b"a = 1\nb = '\xff'\n")
         git_repo.commit("Add a")
@@ -353,10 +353,10 @@ class TestLineScopes:
             {
                 "a.py": FileDiff(
                     base_path="a.py",
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
-                            shown_before=2, reported_line=1, rows=("b = '\ufffd'",), base_lines=(2,)
+                            shown_before=2, reported_line=1, rows=(b"b = '\xff'",), base_lines=(2,)
                         ),
                     ),
                     kept={1: 1},
@@ -378,9 +378,9 @@ class TestLineScopes:
             {
                 "a.py": FileDiff(
                     base_path="a.py",
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
-                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                        Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
                     ),
                     kept={1: 1},
                     replaced_base_rows=frozenset({2}),
@@ -435,11 +435,11 @@ class TestChangedLines:
         )
 
     def test_covers_a_range_that_contains_a_deletion_point(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff(deletions=frozenset({3}))})
+        changed = ChangedLines({"a.py": FileDiff(deletion_points=frozenset({3}))})
 
         assert changed.covers("a.py", make_line_range(start=2, end=4))
 
     def test_covers_a_deletion_point(self, make_line_range):
-        changed = ChangedLines({"a.py": FileDiff(deletions=frozenset({3}))})
+        changed = ChangedLines({"a.py": FileDiff(deletion_points=frozenset({3}))})
 
         assert changed.covers("a.py", make_line_range(start=3))

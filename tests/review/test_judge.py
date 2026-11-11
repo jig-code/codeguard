@@ -65,10 +65,10 @@ class TestJudgeRequest:
         scope = ChangedLines(
             {
                 "pricing.py": FileDiff(
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
-                            shown_before=2, reported_line=1, rows=("FEE = 1",), base_lines=(2,)
+                            shown_before=2, reported_line=1, rows=(b"FEE = 1",), base_lines=(2,)
                         ),
                     ),
                 )
@@ -90,6 +90,39 @@ class TestJudgeRequest:
             "      1\tDISCOUNT = 5\n-     1\tFEE = 1\n      2\tTAX = 2\n",
         )
 
+    def test_removed_row_that_is_not_utf_8_is_shown_replace_decoded(
+        self, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
+        scope = ChangedLines(
+            {
+                "pricing.py": FileDiff(
+                    deletion_points=frozenset({1}),
+                    removals=(
+                        Removal(
+                            shown_before=2,
+                            reported_line=1,
+                            rows=(b"FEE = '\xff'",),
+                            base_lines=(2,),
+                        ),
+                    ),
+                )
+            }
+        )
+        classified = make_file_classification(context_lines=frozenset({1}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tFEE = '\ufffd'\n"
+        )
+
     def test_rows_removed_from_the_end_of_the_file_come_last(
         self, make_file_classification, tmp_path, make_binding, make_skill
     ):
@@ -97,10 +130,10 @@ class TestJudgeRequest:
         scope = ChangedLines(
             {
                 "pricing.py": FileDiff(
-                    deletions=frozenset({1}),
+                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
-                            shown_before=2, reported_line=1, rows=("TAX = 2",), base_lines=(2,)
+                            shown_before=2, reported_line=1, rows=(b"TAX = 2",), base_lines=(2,)
                         ),
                     ),
                 )
