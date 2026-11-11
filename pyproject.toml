@@ -105,8 +105,8 @@ containers = ["codeguard.repository"]
 exhaustive = true
 layers = [
     "line_scope",
-    "working_tree",
-    "git",
+    "patch_reader | working_tree",
+    "removal | git",
 ]
 
 [[tool.importlinter.contracts]]

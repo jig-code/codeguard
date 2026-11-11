@@ -3,8 +3,8 @@ from codeguard.repository.line_scope import (
     ChangedLines,
     LineScope,
     LineScopes,
-    Removal,
 )
+from codeguard.repository.removal import Removal
 from codeguard.repository.working_tree import WorkingTree
 
 __all__ = [
