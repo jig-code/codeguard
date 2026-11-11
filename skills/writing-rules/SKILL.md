@@ -23,17 +23,19 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 
 A rule is one convention, stated as one declarative sentence at the level of intent, in
 words that don't depend on the language. Each piece of code the rule reads either keeps
-the convention or breaks it: that is the rule's one yes/no test. The statement says what
-code must do or never do, once, and nothing about how code does it or why. The rule is
-that statement and why it exists, and nothing else. The judge reads any other text in a
-rule, a clause in the statement's own sentence included, as a test of its own, so code
-that meets that text's letter passes though it breaks the statement. The statement alone
+the convention or breaks it: that is the rule's one yes/no test. The rule is that
+statement and why it exists, and nothing else. The judge reads any other text in a rule,
+a clause in the statement's own sentence included, as a test of its own, so code that
+meets that text's letter passes though it breaks the statement. The statement alone
 decides each piece of code; the judge reads it as a reviewer would, and says on what
 ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
+- **What code must do, once.** The statement says what code must do or never do, once,
+  and nothing about how code does it or why: a clause about how or why is text beside
+  the statement, and the judge reads it as a test of its own.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
