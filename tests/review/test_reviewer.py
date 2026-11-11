@@ -1,9 +1,11 @@
 from recording_judge import RecordingJudge
 
+from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
-from codeguard.repository import AllLines, ChangedLines
+from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
+from codeguard.syntax import ChangeClassifier, SyntaxScanner
 
 
 def review(repo, judge, binding, scope, classification) -> Review:
@@ -82,7 +84,14 @@ class TestReviewer:
     def test_unchanged_line_error_does_not_block_the_judge(
         self, repo, make_diagnostic, make_violation, make_judge_request, make_binding
     ):
+        repo.write("a.py", "print(1)\n")
+        repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\n")
+        working_tree = WorkingTree.at(repo.root)
+        scope = LineScopes(working_tree).changed_lines("HEAD")
+        classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
+            scope
+        )
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
@@ -90,15 +99,9 @@ class TestReviewer:
             )
         )
 
-        result = review(
-            repo,
-            judge,
-            make_binding(),
-            ChangedLines({"a.py": frozenset({2})}),
-            {},
-        )
+        result = review(repo, judge, make_binding(), scope, classification)
 
         assert result == Review(
             diagnostics=(make_diagnostic(judged=True, lines__start=2, lines__end=2),)
         )
-        assert judge.received == [make_judge_request(changes="      1\tprint(1)\n+     2\tx = 1\n")]
+        assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]
