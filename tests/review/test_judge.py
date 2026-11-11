@@ -1,9 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
+from codeguard.config import ChangeKind
 from codeguard.repository import AllLines, ChangedLines, Removal
 from codeguard.review import JudgeRequest, Severity, Verdict
 from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
+from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
 
@@ -29,21 +31,26 @@ class TestJudgeRequest:
         binding = make_binding(skill=skill, supplements={"python": supplement})
         scope = ChangedLines({"orders.py": frozenset({1})})
 
-        request = JudgeRequest.of_change(binding, tmp_path, "orders.py", scope)
+        request = JudgeRequest.of_change(binding, tmp_path, "orders.py", scope, Classification())
 
         assert request.skill.text == f"{skill.text}\n{supplement.text}"
 
     def test_judged_lines_are_numbered_with_their_file_line_numbers(
-        self, tmp_path, make_binding, make_skill
+        self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text(
             "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
         )
-        scope = ChangedLines({"pricing.py": frozenset({5})}).with_judged_lines(
-            {"pricing.py": frozenset({4, 5})}
-        )
+        scope = ChangedLines({"pricing.py": frozenset({5})})
+        classified = make_file_classification(context_lines=frozenset({4, 5}))
 
-        request = JudgeRequest.of_change(make_binding(), tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(
             make_skill(),
@@ -52,18 +59,27 @@ class TestJudgeRequest:
         )
 
     def test_removed_rows_come_before_the_line_after_them_with_their_reported_line(
-        self, tmp_path, make_binding, make_skill
+        self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2\n")
         scope = ChangedLines(
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (Removal(before=2, line=1, rows=("FEE = 1",), base_lines=(2,)),)
+                "pricing.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("FEE = 1",), base_lines=(2,)),
+                )
             },
-        ).with_judged_lines({"pricing.py": frozenset({1, 2})})
+        )
+        classified = make_file_classification(context_lines=frozenset({1, 2}))
 
-        request = JudgeRequest.of_change(make_binding(), tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(
             make_skill(),
@@ -72,35 +88,46 @@ class TestJudgeRequest:
         )
 
     def test_rows_removed_from_the_end_of_the_file_come_last(
-        self, tmp_path, make_binding, make_skill
+        self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
         scope = ChangedLines(
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (Removal(before=2, line=1, rows=("TAX = 2",), base_lines=(2,)),)
+                "pricing.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("TAX = 2",), base_lines=(2,)),
+                )
             },
         )
+        classified = make_file_classification(context_lines=frozenset({1}))
 
-        request = JudgeRequest.of_change(make_binding(), tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(
             make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tTAX = 2\n"
         )
 
     def test_shown_lines_take_in_the_nodes_of_the_rule_triggers(
-        self, tmp_path, make_binding, make_skill
+        self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("try:\n    x = 1\nexcept:\n    pass\n")
-        scope = (
-            ChangedLines({"pricing.py": frozenset({2})})
-            .with_judged_lines({"pricing.py": frozenset({2})})
-            .with_kind_lines({"pricing.py": {"control-flow": frozenset({1, 2, 3, 4})}})
+        scope = ChangedLines({"pricing.py": frozenset({2})})
+        classified = make_file_classification(
+            context_lines=frozenset({2}),
+            kind_lines={ChangeKind.CONTROL_FLOW: frozenset({1, 2, 3, 4})},
         )
-        binding = make_binding(triggers=frozenset({"control-flow"}))
+        binding = make_binding(triggers=frozenset({ChangeKind.CONTROL_FLOW}))
 
-        request = JudgeRequest.of_change(binding, tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            binding, tmp_path, "pricing.py", scope, Classification({"pricing.py": classified})
+        )
 
         assert request == JudgeRequest(
             make_skill(),
@@ -112,7 +139,7 @@ class TestJudgeRequest:
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2")
 
         request = JudgeRequest.of_change(
-            make_binding(), tmp_path, "pricing.py", AllLines(("pricing.py",))
+            make_binding(), tmp_path, "pricing.py", AllLines(("pricing.py",)), Classification()
         )
 
         assert request == JudgeRequest(
@@ -120,20 +147,36 @@ class TestJudgeRequest:
         )
 
     def test_changed_point_past_the_end_of_the_file_is_left_out(
-        self, tmp_path, make_binding, make_skill
+        self, make_file_classification, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
         scope = ChangedLines({"pricing.py": frozenset({1, 2})})
+        classified = make_file_classification(context_lines=frozenset({1, 2}))
 
-        request = JudgeRequest.of_change(make_binding(), tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(make_skill(), "pricing.py", "+     1\tDISCOUNT = 5\n")
 
-    def test_lines_are_numbered_as_git_numbers_them(self, tmp_path, make_binding, make_skill):
+    def test_lines_are_numbered_as_git_numbers_them(
+        self, make_file_classification, tmp_path, make_binding, make_skill
+    ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\f\nTAX = 2\n")
         scope = ChangedLines({"pricing.py": frozenset({2})})
+        classified = make_file_classification(context_lines=frozenset({2}))
 
-        request = JudgeRequest.of_change(make_binding(), tmp_path, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            tmp_path,
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(make_skill(), "pricing.py", "+     2\tTAX = 2\n")
 

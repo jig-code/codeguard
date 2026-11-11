@@ -17,13 +17,16 @@ class EditReviewTask:
         if not self.binding.files([inputs.file]):
             return EditReview(outcome=Outcome.SKIPPED)
         with EditRepo.of(inputs.edits()) as repo:
-            changed = repo.classified(self.scanner)
-            if inputs.file not in changed.files or not self.binding.is_triggered(
-                changed, inputs.file
+            changed = repo.changed_lines()
+            classification = repo.classification(self.scanner, changed)
+            if inputs.file not in changed.files or not classification.is_triggered(
+                inputs.file, self.binding.triggers
             ):
                 return EditReview(outcome=Outcome.SKIPPED)
             judge = self.judges(repo.root, self.binding.model)
-            request = JudgeRequest.of_change(self.binding, repo.root, inputs.file, changed)
+            request = JudgeRequest.of_change(
+                self.binding, repo.root, inputs.file, changed, classification
+            )
             verdict = judge.judge(request).verdict
             parsed = self.scanner.scan_files(repo.root, [inputs.file]).get(inputs.file)
         violations = tuple(

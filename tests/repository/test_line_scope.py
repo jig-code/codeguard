@@ -45,7 +45,11 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
-            removals={"a.py": (Removal(before=2, line=2, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 2, 1), Edit(3, 0, 4, 1))},
             base=git_repo.head(),
         )
@@ -88,7 +92,11 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 2, 1),)},
             base=git_repo.head(),
         )
@@ -114,7 +122,11 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=1, line=1, rows=("import os",), base_lines=(1,)),)},
+            removals={
+                "a.py": (
+                    Removal(shown_before=1, reported_line=1, rows=("import os",), base_lines=(1,)),
+                )
+            },
             edits={"a.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -160,7 +172,11 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
-            removals={"x y.py": (Removal(before=1, line=1, rows=("a = 1",), base_lines=(1,)),)},
+            removals={
+                "x y.py": (
+                    Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+                )
+            },
             edits={"x y.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -220,7 +236,11 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 1, 0),)},
             base=git_repo.head(),
         )
@@ -270,24 +290,6 @@ class TestLineScopes:
 
 
 class TestChangedLines:
-    def test_judged_lines_take_in_the_lines_of_the_triggers_kinds(self):
-        changed = (
-            ChangedLines({"a.py": frozenset({3})})
-            .with_judged_lines({"a.py": frozenset({2, 3})})
-            .with_kind_lines({"a.py": {"control-flow": frozenset({1, 2, 3, 4})}})
-        )
-
-        assert changed.judged_lines("a.py", frozenset({"control-flow"})) == {1, 2, 3, 4}
-        assert changed.judged_lines("a.py", frozenset({"call"})) == {2, 3}
-
-    def test_unclassified_file_judges_its_changed_points(self):
-        changed = ChangedLines({"a.py": frozenset({3})}, deletions={"a.py": frozenset({7})})
-
-        assert changed.judged_lines("a.py") == {3, 7}
-
-    def test_all_lines_judges_the_whole_file(self):
-        assert AllLines(("a.py",)).judged_lines("a.py") is None
-
     def test_covers_a_changed_line(self, make_line_range):
         assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=2))
 

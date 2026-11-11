@@ -7,25 +7,20 @@ from codeguard.line_range import LineRange
 from codeguard.repository.working_tree import WorkingTree
 
 _HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-# ASCII whitespace, the same set git treats as blank.
-_BLANK = " \t\r\f\v"
+_GIT_BLANK = " \t\r\f\v"
 
 
 @dataclass(frozen=True)
 class Removal:
-    """Rows a change removed, shown before the new line `before`; a violation in them is
-    reported on `line`. `base_lines` are the rows' lines in the base."""
-
-    before: int
-    line: int
+    shown_before: int
+    reported_line: int
     rows: tuple[str, ...]
     base_lines: tuple[int, ...]
 
 
 @dataclass(frozen=True)
 class Edit:
-    """A hunk: `base_count` rows from line `base_start` of the base replaced by `count` rows
-    from line `start`. git numbers an empty side by the line before it."""
+    """git numbers an empty side by the line before it."""
 
     base_start: int
     base_count: int
@@ -45,9 +40,6 @@ class Edit:
 class ChangedLines:
     lines: Mapping[str, frozenset[int]]
     deletions: Mapping[str, frozenset[int]] = field(default_factory=dict)
-    kinds: Mapping[str, frozenset[str]] = field(default_factory=dict)
-    judged: Mapping[str, frozenset[int]] = field(default_factory=dict)
-    kind_lines: Mapping[str, Mapping[str, frozenset[int]]] = field(default_factory=dict)
     removals: Mapping[str, tuple[Removal, ...]] = field(default_factory=dict)
     edits: Mapping[str, tuple[Edit, ...]] = field(default_factory=dict)
     sources: Mapping[str, str] = field(default_factory=dict)
@@ -66,43 +58,24 @@ class ChangedLines:
     def with_sources(self, sources: Mapping[str, str]) -> Self:
         return replace(self, sources=sources)
 
-    def with_kinds(self, kinds: Mapping[str, frozenset[str]]) -> Self:
-        return replace(self, kinds=kinds)
-
-    def with_judged_lines(self, judged: Mapping[str, frozenset[int]]) -> Self:
-        return replace(self, judged=judged)
-
-    def with_kind_lines(self, kind_lines: Mapping[str, Mapping[str, frozenset[int]]]) -> Self:
-        return replace(self, kind_lines=kind_lines)
-
-    def judged_lines(
-        self, file: str, triggers: frozenset[str] = frozenset()
-    ) -> frozenset[int] | None:
-        spans = self.kind_lines.get(file, {})
-        triggered = (spans.get(kind, frozenset()) for kind in triggers)
-        return self.judged.get(file, self.points(file)).union(*triggered)
-
     def added_lines(self, file: str) -> frozenset[int] | None:
         return self.lines.get(file, frozenset())
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
         return self.removals.get(file, ())
 
-    def kinds_of(self, file: str) -> frozenset[str] | None:
-        return self.kinds.get(file)
-
     def base_path(self, file: str) -> str | None:
-        """The file's path in the base, which a rename changes; None for a file git's diff
-        doesn't hold, which is untracked, so new."""
-        if file not in self.edits:
+        if self._is_untracked(file):
             return None
         return self.sources.get(file, file)
 
-    def removed_base_lines(self, file: str) -> frozenset[int]:
+    def removed_code_lines(self, file: str) -> frozenset[int]:
+        return frozenset(line for removal in self.removals_in(file) for line in removal.base_lines)
+
+    def replaced_base_rows(self, file: str) -> frozenset[int]:
         return frozenset(line for edit in self.edits.get(file, ()) for line in edit.base_rows)
 
     def head_line(self, file: str, base_line: int) -> int | None:
-        """The line a base line is in the working tree, or None when the change removed it."""
         line = base_line
         for edit in self.edits.get(file, ()):
             if base_line in edit.base_rows:
@@ -110,6 +83,9 @@ class ChangedLines:
             if base_line > edit.last_base_line:
                 line += edit.count - edit.base_count
         return line
+
+    def _is_untracked(self, file: str) -> bool:
+        return file not in self.edits
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.files:
@@ -125,14 +101,6 @@ class AllLines:
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         return True
-
-    def kinds_of(self, file: str) -> frozenset[str] | None:
-        return None
-
-    def judged_lines(
-        self, file: str, triggers: frozenset[str] = frozenset()
-    ) -> frozenset[int] | None:
-        return None
 
     def added_lines(self, file: str) -> frozenset[int] | None:
         return None
@@ -240,21 +208,18 @@ class _Hunk:
     @property
     def removal(self) -> Removal:
         # git numbers a hunk that only removes rows by the line before them.
-        before = self.start if self.added_rows else self.start + 1
-        line = min(self.points) if self.points else self.deletion_point
-        return Removal(before, line, tuple(self.removed), tuple(self.removed_lines))
+        shown_before = self.start if self.added_rows else self.start + 1
+        reported_line = min(self.points) if self.points else self.deletion_point
+        return Removal(shown_before, reported_line, tuple(self.removed), tuple(self.removed_lines))
 
     def add(self, text: str) -> None:
-        # A blank line changes nothing in any language, so only lines holding code count.
         if _holds_code(text):
             self.points.add(self.start + self.added_rows)
         self.added_rows += 1
 
     def remove(self, text: str) -> None:
         if _holds_code(text):
-            # Shown to the judge, so a byte that isn't UTF-8 becomes U+FFFD, as in the file.
-            row = text.removesuffix("\r").encode(errors="surrogateescape")
-            self.removed.append(row.decode(errors="replace"))
+            self.removed.append(_as_shown_to_judge(text))
             self.removed_lines.append(self.base_start + self.removed_rows)
         self.removed_rows += 1
 
@@ -303,8 +268,13 @@ def _rows(text: str | bytes) -> list[str]:
     return decoded.split("\n")
 
 
+def _as_shown_to_judge(text: str) -> str:
+    row = text.removesuffix("\r").encode(errors="surrogateescape")
+    return row.decode(errors="replace")
+
+
 def _holds_code(text: str) -> bool:
-    return bool(text.strip(_BLANK))
+    return bool(text.strip(_GIT_BLANK))
 
 
 def _frozen(points: dict[str, set[int]]) -> dict[str, frozenset[int]]:
