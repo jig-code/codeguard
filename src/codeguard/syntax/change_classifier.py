@@ -60,17 +60,11 @@ def _classify_file(
     kind_lines = parsed.kind_lines(added)
     if before is not None:
         replaced_rows = scope.replaced_base_rows(file)
-        context_lines |= _in_head(
-            scope, file, before.judged_lines(removed_code, replaced=replaced_rows)
+        context_lines |= scope.head_lines(
+            file, before.judged_lines(removed_code, replaced=replaced_rows)
         )
         for kind, lines in before.kind_lines(removed_code, replaced=replaced_rows).items():
-            kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(scope, file, lines)
+            kind_lines[kind] = kind_lines.get(kind, frozenset()) | scope.head_lines(file, lines)
     return FileClassification(
         parsed.touched_kinds(added, before, removed_code), context_lines, kind_lines
-    )
-
-
-def _in_head(scope: ChangedLines, file: str, base_lines: Iterable[int]) -> frozenset[int]:
-    return frozenset(
-        line for base_line in base_lines if (line := scope.head_line(file, base_line)) is not None
     )

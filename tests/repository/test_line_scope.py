@@ -1,6 +1,6 @@
 from git_repo import GitRepo
 
-from codeguard.repository import AllLines, ChangedLines, Edit, LineScopes, Removal, WorkingTree
+from codeguard.repository import AllLines, ChangedLines, LineScopes, Removal, WorkingTree
 
 
 class TestLineScopes:
@@ -50,7 +50,9 @@ class TestLineScopes:
                     Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
                 )
             },
-            edits={"a.py": (Edit(2, 1, 2, 1), Edit(3, 0, 4, 1))},
+            kept={"a.py": {1: 1, 3: 3}},
+            replaced={"a.py": frozenset({2})},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -63,7 +65,10 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": frozenset({4, 5})}, edits={"a.py": (Edit(2, 0, 3, 3),)}, base=git_repo.head()
+            {"a.py": frozenset({4, 5})},
+            kept={"a.py": {1: 1, 2: 2}},
+            base_paths={"a.py": "a.py"},
+            base=git_repo.head(),
         )
 
     def test_change_of_only_blank_lines_changes_no_file(self, tmp_path):
@@ -97,7 +102,9 @@ class TestLineScopes:
                     Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
                 )
             },
-            edits={"a.py": (Edit(2, 1, 2, 1),)},
+            kept={"a.py": {1: 1, 3: 3}},
+            replaced={"a.py": frozenset({2})},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -127,7 +134,9 @@ class TestLineScopes:
                     Removal(shown_before=1, reported_line=1, rows=("import os",), base_lines=(1,)),
                 )
             },
-            edits={"a.py": (Edit(1, 1, 1, 1),)},
+            kept={"a.py": {2: 2}},
+            replaced={"a.py": frozenset({1})},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -141,7 +150,8 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 3, 4})},
-            edits={"a.py": (Edit(1, 0, 2, 3),)},
+            kept={"a.py": {1: 1}},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -158,7 +168,8 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2}), "b.py": frozenset({1})},
-            edits={"a.py": (Edit(1, 0, 2, 1),)},
+            kept={"a.py": {1: 1}},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -177,7 +188,8 @@ class TestLineScopes:
                     Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
                 )
             },
-            edits={"x y.py": (Edit(1, 1, 1, 1),)},
+            replaced={"x y.py": frozenset({1})},
+            base_paths={"x y.py": "x y.py"},
             base=git_repo.head(),
         )
 
@@ -191,7 +203,6 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        assert changed.sources == {"b.py": "a.py"}
         assert changed.base_path("b.py") == "a.py"
 
     def test_untracked_file_has_no_base_path(self, tmp_path):
@@ -241,7 +252,9 @@ class TestLineScopes:
                     Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
                 )
             },
-            edits={"a.py": (Edit(2, 1, 1, 0),)},
+            kept={"a.py": {1: 1, 3: 2}},
+            replaced={"a.py": frozenset({2})},
+            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -267,14 +280,6 @@ class TestLineScopes:
 
         [removal] = changed.removals_in("a.py")
         assert removal.rows == ("b = 1",)
-
-    def test_head_line_follows_the_edits_before_a_base_line(self):
-        changed = ChangedLines(
-            {"a.py": frozenset({2, 3})},
-            edits={"a.py": (Edit(1, 0, 2, 2), Edit(3, 1, 5, 0))},
-        )
-
-        assert [changed.head_line("a.py", line) for line in (1, 2, 3, 4)] == [1, 4, None, 5]
 
     def test_all_lines_has_tracked_and_untracked_files(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())

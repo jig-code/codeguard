@@ -1,13 +1,23 @@
-import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from typing import Protocol, Self
+
+import pygit2
+from pygit2.enums import DeltaStatus, DiffFind, DiffOption
 
 from codeguard.line_range import LineRange
 from codeguard.repository.working_tree import WorkingTree
 
-_HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-_GIT_BLANK = " \t\r\f\v"
+_GIT_BLANK = b" \t\r\f\v"
+_GIT_RENAME_LIMIT = 1000
+_WHOLE_FILE_CONTEXT = 2**31 - 1
+_TRACKED = DiffOption.INDENT_HEURISTIC
+_UNTRACKED = (
+    DiffOption.INCLUDE_UNTRACKED
+    | DiffOption.RECURSE_UNTRACKED_DIRS
+    | DiffOption.SHOW_UNTRACKED_CONTENT
+    | DiffOption.FORCE_TEXT
+)
 
 
 @dataclass(frozen=True)
@@ -16,24 +26,6 @@ class Removal:
     reported_line: int
     rows: tuple[str, ...]
     base_lines: tuple[int, ...]
-
-
-@dataclass(frozen=True)
-class Edit:
-    """git numbers an empty side by the line before it."""
-
-    base_start: int
-    base_count: int
-    start: int
-    count: int
-
-    @property
-    def base_rows(self) -> range:
-        return range(self.base_start, self.base_start + self.base_count)
-
-    @property
-    def last_base_line(self) -> int:
-        return self.base_start + self.base_count - 1 if self.base_count else self.base_start
 
 
 class LineScope(Protocol):
@@ -52,8 +44,9 @@ class ChangedLines:
     lines: Mapping[str, frozenset[int]]
     deletions: Mapping[str, frozenset[int]] = field(default_factory=dict)
     removals: Mapping[str, tuple[Removal, ...]] = field(default_factory=dict)
-    edits: Mapping[str, tuple[Edit, ...]] = field(default_factory=dict)
-    sources: Mapping[str, str] = field(default_factory=dict)
+    kept: Mapping[str, Mapping[int, int]] = field(default_factory=dict)
+    replaced: Mapping[str, frozenset[int]] = field(default_factory=dict)
+    base_paths: Mapping[str, str] = field(default_factory=dict)
     base: str | None = None
 
     @property
@@ -63,12 +56,6 @@ class ChangedLines:
     def points(self, file: str) -> frozenset[int]:
         return self.lines.get(file, frozenset()) | self.deletions.get(file, frozenset())
 
-    def with_edits(self, edits: Mapping[str, tuple[Edit, ...]]) -> Self:
-        return replace(self, edits=edits)
-
-    def with_sources(self, sources: Mapping[str, str]) -> Self:
-        return replace(self, sources=sources)
-
     def added_lines(self, file: str) -> frozenset[int] | None:
         return self.lines.get(file, frozenset())
 
@@ -76,27 +63,17 @@ class ChangedLines:
         return self.removals.get(file, ())
 
     def base_path(self, file: str) -> str | None:
-        if self._is_untracked(file):
-            return None
-        return self.sources.get(file, file)
+        return self.base_paths.get(file)
 
     def removed_code_lines(self, file: str) -> frozenset[int]:
         return frozenset(line for removal in self.removals_in(file) for line in removal.base_lines)
 
     def replaced_base_rows(self, file: str) -> frozenset[int]:
-        return frozenset(line for edit in self.edits.get(file, ()) for line in edit.base_rows)
+        return self.replaced.get(file, frozenset())
 
-    def head_line(self, file: str, base_line: int) -> int | None:
-        line = base_line
-        for edit in self.edits.get(file, ()):
-            if base_line in edit.base_rows:
-                return None
-            if base_line > edit.last_base_line:
-                line += edit.count - edit.base_count
-        return line
-
-    def _is_untracked(self, file: str) -> bool:
-        return file not in self.edits
+    def head_lines(self, file: str, base_lines: Iterable[int]) -> frozenset[int]:
+        kept = self.kept.get(file, {})
+        return frozenset(kept[line] for line in base_lines if line in kept)
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.files:
@@ -126,167 +103,139 @@ class LineScopes:
 
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
-        # Decoded without newline translation, so only "\n" ends a row, as it does for git.
-        diff = self.working_tree.git.bytes(
-            "-c",
-            "core.quotePath=false",
-            "diff",
-            "-U0",
-            "--no-color",
-            "--no-ext-diff",
-            "--no-prefix",
-            "--diff-filter=d",
-            merge_base,
-        ).decode(errors="surrogateescape")
-        untracked = self.working_tree.untracked_files()
-        hunks = _hunks(diff)
-        added, deletions = _changed_points(hunks)
-        lines = {**added, **{file: self._code_lines(file) for file in untracked}}
-        changed = ChangedLines(
-            lines={file: numbers for file, numbers in lines.items() if numbers},
-            deletions={file: numbers for file, numbers in deletions.items() if numbers},
-            removals=_removals(hunks),
+        repository = pygit2.Repository(str(self.working_tree.root))
+        files = {
+            **{
+                patch.delta.new_file.path: _FileChange.of(patch, base_path=_base_path(patch))
+                for patch in self._tracked_patches(repository, merge_base)
+            },
+            **{
+                patch.delta.new_file.path: _FileChange.of(patch, base_path=None)
+                for patch in self._untracked_patches(repository)
+            },
+        }
+        changed = {file: change for file, change in files.items() if change.changes_code}
+        return ChangedLines(
+            lines={
+                file: frozenset(change.added) for file, change in changed.items() if change.added
+            },
+            deletions={
+                file: frozenset(change.deletions)
+                for file, change in changed.items()
+                if change.deletions
+            },
+            removals={
+                file: tuple(change.removals) for file, change in changed.items() if change.removals
+            },
+            kept={file: change.kept for file, change in changed.items() if change.kept},
+            replaced={
+                file: frozenset(change.replaced)
+                for file, change in changed.items()
+                if change.replaced
+            },
+            base_paths={
+                file: change.base_path
+                for file, change in changed.items()
+                if change.base_path is not None
+            },
             base=merge_base,
         )
-        edits = _edits(hunks)
-        sources = _sources(hunks)
-        return changed.with_edits(
-            {file: edits[file] for file in changed.files if file in edits}
-        ).with_sources({file: sources[file] for file in changed.files if file in sources})
 
     def all_lines(self) -> AllLines:
         return AllLines(tuple(sorted(self.working_tree.tracked_and_untracked_files())))
 
-    def _code_lines(self, file: str) -> frozenset[int]:
-        lines = _rows((self.working_tree.root / file).read_bytes())
-        return frozenset(number for number, text in enumerate(lines, 1) if _holds_code(text))
+    def _tracked_patches(
+        self, repository: pygit2.Repository, merge_base: str
+    ) -> list[pygit2.Patch]:
+        tree = repository.revparse_single(merge_base).peel(pygit2.Tree)
+        diff = tree.diff_to_index(
+            repository.index, flags=_TRACKED, context_lines=_WHOLE_FILE_CONTEXT
+        )
+        diff.merge(
+            repository.index.diff_to_workdir(flags=_TRACKED, context_lines=_WHOLE_FILE_CONTEXT)
+        )
+        diff.find_similar(flags=DiffFind.FIND_RENAMES, rename_limit=_GIT_RENAME_LIMIT)
+        return [
+            patch
+            for patch in diff
+            if patch is not None and patch.delta.status != DeltaStatus.DELETED
+        ]
 
-
-def _changed_points(
-    hunks: Sequence["_Hunk"],
-) -> tuple[dict[str, frozenset[int]], dict[str, frozenset[int]]]:
-    added: dict[str, set[int]] = {}
-    deletions: dict[str, set[int]] = {}
-    for hunk in hunks:
-        added.setdefault(hunk.file, set()).update(hunk.points)
-        deletions.setdefault(hunk.file, set())
-        if not hunk.points and hunk.removed:
-            deletions[hunk.file].add(hunk.deletion_point)
-    return _frozen(added), _frozen(deletions)
-
-
-def _removals(hunks: Sequence["_Hunk"]) -> dict[str, tuple[Removal, ...]]:
-    removals: dict[str, list[Removal]] = {}
-    for hunk in hunks:
-        if hunk.removed:
-            removals.setdefault(hunk.file, []).append(hunk.removal)
-    return {file: tuple(found) for file, found in removals.items()}
-
-
-def _sources(hunks: Sequence["_Hunk"]) -> dict[str, str]:
-    return {hunk.file: hunk.base_file for hunk in hunks if hunk.base_file not in {hunk.file, ""}}
-
-
-def _edits(hunks: Sequence["_Hunk"]) -> dict[str, tuple[Edit, ...]]:
-    edits: dict[str, list[Edit]] = {}
-    for hunk in hunks:
-        edits.setdefault(hunk.file, []).append(hunk.edit)
-    return {file: tuple(found) for file, found in edits.items()}
+    def _untracked_patches(self, repository: pygit2.Repository) -> list[pygit2.Patch]:
+        diff = repository.index.diff_to_workdir(flags=_UNTRACKED, context_lines=_WHOLE_FILE_CONTEXT)
+        return [
+            patch
+            for patch in diff
+            if patch is not None
+            and patch.delta.status == DeltaStatus.UNTRACKED
+            and (self.working_tree.root / patch.delta.new_file.path).is_file()
+        ]
 
 
 @dataclass
-class _Hunk:
-    file: str
-    base_file: str
-    base_start: int
-    base_count: int
-    start: int
-    count: int
-    points: set[int] = field(default_factory=set)
-    added_rows: int = 0
-    removed_rows: int = 0
-    removed: list[str] = field(default_factory=list)
-    removed_lines: list[int] = field(default_factory=list)
+class _FileChange:
+    base_path: str | None
+    added: set[int] = field(default_factory=set)
+    deletions: set[int] = field(default_factory=set)
+    removals: list[Removal] = field(default_factory=list)
+    kept: dict[int, int] = field(default_factory=dict)
+    replaced: set[int] = field(default_factory=set)
+    _head_before_run: int = 0
+    _run_added: list[int] = field(default_factory=list)
+    _run_removed: list[pygit2.DiffLine] = field(default_factory=list)
+
+    @classmethod
+    def of(cls, patch: pygit2.Patch, base_path: str | None) -> Self:
+        change = cls(base_path)
+        for hunk in patch.hunks:
+            for line in hunk.lines:
+                change._read(line)
+        change._end_run()
+        return change
 
     @property
-    def edit(self) -> Edit:
-        return Edit(self.base_start, self.base_count, self.start, self.count)
+    def changes_code(self) -> bool:
+        return bool(self.added or self.deletions)
 
-    @property
-    def deletion_point(self) -> int:
-        return max(self.start - 1 if self.added_rows else self.start, 1)
+    def _read(self, line: pygit2.DiffLine) -> None:
+        if line.origin == " ":
+            self._end_run()
+            self.kept[line.old_lineno] = line.new_lineno
+            self._head_before_run = line.new_lineno
+        elif line.origin == "+" and _holds_code(line.raw_content):
+            self._run_added.append(line.new_lineno)
+        elif line.origin == "-":
+            self.replaced.add(line.old_lineno)
+            if _holds_code(line.raw_content):
+                self._run_removed.append(line)
 
-    @property
-    def removal(self) -> Removal:
-        # git numbers a hunk that only removes rows by the line before them.
-        shown_before = self.start if self.added_rows else self.start + 1
-        reported_line = min(self.points) if self.points else self.deletion_point
-        return Removal(shown_before, reported_line, tuple(self.removed), tuple(self.removed_lines))
-
-    def add(self, text: str) -> None:
-        if _holds_code(text):
-            self.points.add(self.start + self.added_rows)
-        self.added_rows += 1
-
-    def remove(self, text: str) -> None:
-        if _holds_code(text):
-            self.removed.append(_as_shown_to_judge(text))
-            self.removed_lines.append(self.base_start + self.removed_rows)
-        self.removed_rows += 1
-
-
-def _hunks(diff: str) -> list[_Hunk]:
-    hunks: list[_Hunk] = []
-    file = ""
-    base_file = ""
-    in_header = False
-    for row in _rows(diff):
-        if row.startswith("diff --git "):
-            in_header = True
-        elif in_header and row.startswith("--- "):
-            # git ends the name with a tab when it holds a space.
-            name = row.removeprefix("--- ").removesuffix("\t")
-            base_file = "" if name == "/dev/null" else name
-        elif in_header and row.startswith("+++ "):
-            file = row.removeprefix("+++ ").removesuffix("\t")
-        elif match := _HUNK.match(row):
-            in_header = False
-            base_start, base_count, start, count = match.groups()
-            hunks.append(
-                _Hunk(
-                    file,
-                    base_file,
-                    int(base_start),
-                    _count(base_count),
-                    int(start),
-                    _count(count),
+    def _end_run(self) -> None:
+        line_before = max(self._head_before_run, 1)
+        if self._run_removed:
+            self.removals.append(
+                Removal(
+                    shown_before=self._head_before_run + 1,
+                    reported_line=min(self._run_added, default=line_before),
+                    rows=tuple(_as_shown_to_judge(line.raw_content) for line in self._run_removed),
+                    base_lines=tuple(line.old_lineno for line in self._run_removed),
                 )
             )
-        elif not in_header and hunks and row.startswith("-"):
-            hunks[-1].remove(row[1:])
-        elif not in_header and hunks and row.startswith("+"):
-            hunks[-1].add(row[1:])
-    return hunks
+            if not self._run_added:
+                self.deletions.add(line_before)
+        self.added.update(self._run_added)
+        self._run_added = []
+        self._run_removed = []
 
 
-def _count(group: str | None) -> int:
-    # git leaves out a count of 1.
-    return 1 if group is None else int(group)
+def _base_path(patch: pygit2.Patch) -> str | None:
+    if patch.delta.status == DeltaStatus.ADDED:
+        return None
+    return patch.delta.old_file.path
 
 
-def _rows(text: str | bytes) -> list[str]:
-    decoded = text if isinstance(text, str) else text.decode(errors="surrogateescape")
-    return decoded.split("\n")
+def _as_shown_to_judge(row: bytes) -> str:
+    return row.removesuffix(b"\n").removesuffix(b"\r").decode(errors="replace")
 
 
-def _as_shown_to_judge(text: str) -> str:
-    row = text.removesuffix("\r").encode(errors="surrogateescape")
-    return row.decode(errors="replace")
-
-
-def _holds_code(text: str) -> bool:
-    return bool(text.strip(_GIT_BLANK))
-
-
-def _frozen(points: dict[str, set[int]]) -> dict[str, frozenset[int]]:
-    return {file: frozenset(numbers) for file, numbers in points.items()}
+def _holds_code(row: bytes) -> bool:
+    return bool(row.removesuffix(b"\n").strip(_GIT_BLANK))
