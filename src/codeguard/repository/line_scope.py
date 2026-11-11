@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Protocol, Self
 
@@ -46,8 +46,6 @@ class LineScope(Protocol):
 
     def removals_in(self, file: str) -> tuple[Removal, ...]: ...
 
-    def classified[T](self, classify: Callable[["ChangedLines"], T], unclassified: T) -> T: ...
-
 
 @dataclass(frozen=True)
 class ChangedLines:
@@ -76,9 +74,6 @@ class ChangedLines:
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
         return self.removals.get(file, ())
-
-    def classified[T](self, classify: Callable[["ChangedLines"], T], unclassified: T) -> T:
-        return classify(self)
 
     def base_path(self, file: str) -> str | None:
         if self._is_untracked(file):
@@ -123,9 +118,6 @@ class AllLines:
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
         return ()
-
-    def classified[T](self, classify: Callable[[ChangedLines], T], unclassified: T) -> T:
-        return unclassified
 
 
 @dataclass(frozen=True)

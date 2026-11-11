@@ -61,11 +61,10 @@ class Rules:
         )
 
     def _classification(self, scope: LineScope) -> Classification:
-        return scope.classified(self._classify, Classification())
-
-    def _classify(self, changed: ChangedLines) -> Classification:
+        if not isinstance(scope, ChangedLines):
+            return Classification()
         classifier = ChangeClassifier.for_rulesets(self.ast_grep, self.rulesets, self.working_tree)
-        return classifier.classify(changed)
+        return classifier.classify(scope)
 
     def plan(self, scope: LineScope) -> JudgePlan:
         root = self.working_tree.root
