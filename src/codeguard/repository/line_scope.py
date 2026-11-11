@@ -4,10 +4,8 @@ from typing import Protocol
 
 from codeguard.line_range import LineRange
 from codeguard.repository.file_diff import FileDiff, Removal
+from codeguard.repository.libgit2 import Libgit2
 from codeguard.repository.working_tree import WorkingTree
-from codeguard.repository.working_tree_diff import diff_since
-
-_UNCHANGED = FileDiff()
 
 
 class LineScope(Protocol):
@@ -30,24 +28,18 @@ class ChangedLines:
     def files(self) -> tuple[str, ...]:
         return tuple(sorted(self.diffs))
 
-    def diff(self, file: str) -> FileDiff:
-        return self.diffs.get(file, _UNCHANGED)
-
-    def points(self, file: str) -> frozenset[int]:
-        return self.diff(file).points
-
     def added_lines(self, file: str) -> frozenset[int]:
-        return self.diff(file).added_lines
+        return self.diffs[file].added_lines
 
     def removals_in(self, file: str) -> tuple[Removal, ...]:
-        return self.diff(file).removals
+        return self.diffs[file].removals
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.diffs:
             return False
         if lines is None:
             return True
-        return any(point in lines for point in self.points(file))
+        return any(point in lines for point in self.diffs[file].points)
 
 
 @dataclass(frozen=True)
@@ -70,7 +62,13 @@ class LineScopes:
 
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
-        diffs = diff_since(self.working_tree.root, merge_base)
+        diffs = {
+            **Libgit2(self.working_tree.root).tracked_diffs(merge_base),
+            **{
+                file: FileDiff.of_new_file(self.working_tree.contents(file))
+                for file in self.working_tree.untracked_files()
+            },
+        }
         return ChangedLines(
             {file: diff for file, diff in diffs.items() if diff.changes_code}, base=merge_base
         )

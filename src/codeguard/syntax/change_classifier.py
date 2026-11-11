@@ -6,7 +6,7 @@ from typing import Self
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
-from codeguard.repository import ChangedLines, FileDiff, WorkingTree
+from codeguard.repository import ChangedLines, WorkingTree
 from codeguard.syntax.classification import Classification, FileClassification
 from codeguard.syntax.parsed_file import ParsedFile
 from codeguard.syntax.syntax_scanner import SyntaxScanner
@@ -28,19 +28,17 @@ class ChangeClassifier:
         base = self._base(scope)
         return Classification(
             {
-                file: _classify_file(scope.diff(file), head[file], base.get(file))
+                file: FileClassification.of_change(diff, head[file], base.get(file))
                 if file in head
-                else FileClassification(touched_kinds=None, context_lines=scope.points(file))
-                for file in scope.files
+                else FileClassification(touched_kinds=None, context_lines=diff.points)
+                for file, diff in scope.diffs.items()
             }
         )
 
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:
             return {}
-        base_paths = {
-            file: base_path for file in scope.files if (base_path := scope.diff(file).base_path)
-        }
+        base_paths = {file: diff.base_path for file, diff in scope.diffs.items() if diff.base_path}
         contents = self.working_tree.base_contents(scope.base, sorted(set(base_paths.values())))
         found = [file for file, base_path in base_paths.items() if base_path in contents]
         with tempfile.TemporaryDirectory() as directory:
@@ -49,22 +47,3 @@ class ChangeClassifier:
                 head_path.parent.mkdir(parents=True, exist_ok=True)
                 head_path.write_bytes(contents[base_paths[file]])
             return self.scanner.scan_files(Path(directory), found)
-
-
-def _classify_file(
-    diff: FileDiff, parsed: ParsedFile, before: ParsedFile | None
-) -> FileClassification:
-    added = diff.added_lines
-    removed_code = diff.removed_code_lines
-    context_lines = parsed.judged_lines(added)
-    kind_lines = parsed.kind_lines(added)
-    if before is not None:
-        replaced_rows = diff.replaced_base_rows
-        context_lines |= diff.kept_head_lines(
-            before.judged_lines(removed_code, replaced=replaced_rows)
-        )
-        for kind, lines in before.kind_lines(removed_code, replaced=replaced_rows).items():
-            kind_lines[kind] = kind_lines.get(kind, frozenset()) | diff.kept_head_lines(lines)
-    return FileClassification(
-        parsed.touched_kinds(added, before, removed_code), context_lines, kind_lines
-    )

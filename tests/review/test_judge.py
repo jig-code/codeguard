@@ -65,7 +65,6 @@ class TestJudgeRequest:
         scope = ChangedLines(
             {
                 "pricing.py": FileDiff(
-                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
                             shown_before=2, reported_line=1, rows=(b"FEE = 1",), base_lines=(2,)
@@ -97,7 +96,6 @@ class TestJudgeRequest:
         scope = ChangedLines(
             {
                 "pricing.py": FileDiff(
-                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
                             shown_before=2,
@@ -130,7 +128,6 @@ class TestJudgeRequest:
         scope = ChangedLines(
             {
                 "pricing.py": FileDiff(
-                    deletion_points=frozenset({1}),
                     removals=(
                         Removal(
                             shown_before=2, reported_line=1, rows=(b"TAX = 2",), base_lines=(2,)

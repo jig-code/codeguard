@@ -105,7 +105,7 @@ containers = ["codeguard.repository"]
 exhaustive = true
 layers = [
     "line_scope",
-    "working_tree_diff | working_tree",
+    "working_tree | libgit2",
     "file_diff | git",
 ]
 
@@ -139,27 +139,10 @@ forbidden_modules = ["pydantic_evals"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
-name = "only the repository package runs libgit2"
-type = "forbidden"
-source_modules = [
-    "codeguard.cli",
-    "codeguard.rules",
-    "codeguard.claude_provider",
-    "codeguard.codex_provider",
-    "codeguard.gemini_provider",
-    "codeguard.judge_evals",
-    "codeguard.pattern_rules",
-    "codeguard.rule_tests",
-    "codeguard.review",
-    "codeguard.packages",
-    "codeguard.syntax",
-    "codeguard.ast_grep",
-    "codeguard.config",
-    "codeguard.line_range",
-    "codeguard.file_lock",
-]
-forbidden_modules = ["pygit2"]
-allow_indirect_imports = true
+name = "only the libgit2 module runs libgit2"
+type = "protected"
+protected_modules = ["pygit2"]
+allowed_importers = ["codeguard.repository.libgit2"]
 
 [dependency-groups]
 dev = [

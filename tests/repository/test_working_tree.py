@@ -38,3 +38,31 @@ class TestWorkingTree:
         path = WorkingTree.at(git_repo.root).git_path("codeguard.lock")
 
         assert path == git_repo.root / ".git/codeguard.lock"
+
+    def test_untracked_files_leave_out_ignored_files(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write(".gitignore", "build.log\n")
+        git_repo.write("build.log", "done\n")
+
+        assert WorkingTree.at(git_repo.root).untracked_files() == {".gitignore"}
+
+    def test_untracked_files_leave_out_a_directory_that_is_not_a_file(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        nested = git_repo.root / "nested"
+        nested.mkdir()
+        GitRepo.init(nested)
+
+        assert WorkingTree.at(git_repo.root).untracked_files() == set()
+
+    def test_untracked_files_take_in_a_file_in_a_new_directory(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("pkg/module.py", "a = 1\n")
+
+        assert WorkingTree.at(git_repo.root).untracked_files() == {"pkg/module.py"}
+
+    def test_contents_of_a_symlink_are_its_link_text(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("target.py", "a = 1\n")
+        (git_repo.root / "link.py").symlink_to("target.py")
+
+        assert WorkingTree.at(git_repo.root).contents("link.py") == b"target.py"

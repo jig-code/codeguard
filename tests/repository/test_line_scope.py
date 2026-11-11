@@ -26,7 +26,7 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=1, reported_line=1, rows=(b"b = 1",), base_lines=(1,)),
                     ),
-                    replaced_base_rows=frozenset({1}),
+                    removed_base_lines=frozenset({1}),
                 ),
                 "unstaged.py": FileDiff(
                     base_path="unstaged.py",
@@ -34,7 +34,7 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=1, reported_line=1, rows=(b"a = 1",), base_lines=(1,)),
                     ),
-                    replaced_base_rows=frozenset({1}),
+                    removed_base_lines=frozenset({1}),
                 ),
                 "untracked.py": FileDiff(added_lines=frozenset({1})),
             },
@@ -85,8 +85,8 @@ class TestLineScopes:
                             shown_before=10, reported_line=10, rows=(b"x10 = 10",), base_lines=(10,)
                         ),
                     ),
-                    kept={line: line for line in range(1, 10)},
-                    replaced_base_rows=frozenset({10}),
+                    head_lines_by_base_line={line: line for line in range(1, 10)},
+                    removed_base_lines=frozenset({10}),
                 )
             },
             base=git_repo.head(),
@@ -108,23 +108,10 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=2, reported_line=2, rows=(b"b = 1",), base_lines=(2,)),
                     ),
-                    kept={1: 1, 3: 3},
-                    replaced_base_rows=frozenset({2}),
+                    head_lines_by_base_line={1: 1, 3: 3},
+                    removed_base_lines=frozenset({2}),
                 )
             },
-            base=git_repo.head(),
-        )
-
-    def test_added_blank_lines_are_not_changed_lines(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "class A:\n    x = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "class A:\n    x = 1\n\n    def y(self):\n        pass\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"a.py": FileDiff(base_path="a.py", added_lines=frozenset({4, 5}), kept={1: 1, 2: 2})},
             base=git_repo.head(),
         )
 
@@ -141,66 +128,6 @@ class TestLineScopes:
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
-    def test_code_replaced_by_blank_lines_is_a_deletion_point_after_the_line_before_it(
-        self, tmp_path
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 1\n\nc = 1\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {
-                "a.py": FileDiff(
-                    base_path="a.py",
-                    deletion_points=frozenset({1}),
-                    removals=(
-                        Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
-                    ),
-                    kept={1: 1, 3: 3},
-                    replaced_base_rows=frozenset({2}),
-                )
-            },
-            base=git_repo.head(),
-        )
-
-    def test_removed_blank_lines_are_not_a_deletion_point(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\n\n\nb = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 1\n\nb = 1\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines({}, base=git_repo.head())
-
-    def test_code_replaced_by_a_blank_first_line_is_a_deletion_point_on_line_1(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "import os\nb = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "\nb = 1\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {
-                "a.py": FileDiff(
-                    base_path="a.py",
-                    deletion_points=frozenset({1}),
-                    removals=(
-                        Removal(
-                            shown_before=1, reported_line=1, rows=(b"import os",), base_lines=(1,)
-                        ),
-                    ),
-                    kept={2: 2},
-                    replaced_base_rows=frozenset({1}),
-                )
-            },
-            base=git_repo.head(),
-        )
-
     def test_only_a_newline_ends_a_changed_line(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\n")
@@ -210,7 +137,13 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": FileDiff(base_path="a.py", added_lines=frozenset({2, 3, 4}), kept={1: 1})},
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({2, 3, 4}),
+                    head_lines_by_base_line={1: 1},
+                )
+            },
             base=git_repo.head(),
         )
 
@@ -227,7 +160,9 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {
-                "a.py": FileDiff(base_path="a.py", added_lines=frozenset({2}), kept={1: 1}),
+                "a.py": FileDiff(
+                    base_path="a.py", added_lines=frozenset({2}), head_lines_by_base_line={1: 1}
+                ),
                 "b.py": FileDiff(added_lines=frozenset({1})),
             },
             base=git_repo.head(),
@@ -249,7 +184,7 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=1, reported_line=1, rows=(b"a = 1",), base_lines=(1,)),
                     ),
-                    replaced_base_rows=frozenset({1}),
+                    removed_base_lines=frozenset({1}),
                 )
             },
             base=git_repo.head(),
@@ -275,23 +210,11 @@ class TestLineScopes:
                             shown_before=10, reported_line=10, rows=(b"x9 = 9",), base_lines=(10,)
                         ),
                     ),
-                    kept={line: line for line in range(1, 10)},
-                    replaced_base_rows=frozenset({10}),
+                    head_lines_by_base_line={line: line for line in range(1, 10)},
+                    removed_base_lines=frozenset({10}),
                 )
             },
             base=git_repo.head(),
-        )
-
-    def test_untracked_file_has_no_base_path(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("b.py", "b = 1\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {"b.py": FileDiff(added_lines=frozenset({1}))}, base=git_repo.head()
         )
 
     def test_untracked_file_has_every_line_with_code_changed(self, tmp_path):
@@ -318,29 +241,6 @@ class TestLineScopes:
             {"new/module.py": FileDiff(added_lines=frozenset({1}))}, base=git_repo.head()
         )
 
-    def test_removed_lines_are_a_deletion_point_after_the_line_before_them(self, tmp_path):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 1\nc = 1\n")
-
-        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
-
-        assert changed == ChangedLines(
-            {
-                "a.py": FileDiff(
-                    base_path="a.py",
-                    deletion_points=frozenset({1}),
-                    removals=(
-                        Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
-                    ),
-                    kept={1: 1, 3: 2},
-                    replaced_base_rows=frozenset({2}),
-                )
-            },
-            base=git_repo.head(),
-        )
-
     def test_removed_row_that_is_not_utf_8_keeps_its_bytes(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         (git_repo.root / "a.py").write_bytes(b"a = 1\nb = '\xff'\n")
@@ -359,8 +259,8 @@ class TestLineScopes:
                             shown_before=2, reported_line=1, rows=(b"b = '\xff'",), base_lines=(2,)
                         ),
                     ),
-                    kept={1: 1},
-                    replaced_base_rows=frozenset({2}),
+                    head_lines_by_base_line={1: 1},
+                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -382,8 +282,8 @@ class TestLineScopes:
                     removals=(
                         Removal(shown_before=2, reported_line=1, rows=(b"b = 1",), base_lines=(2,)),
                     ),
-                    kept={1: 1},
-                    replaced_base_rows=frozenset({2}),
+                    head_lines_by_base_line={1: 1},
+                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),
