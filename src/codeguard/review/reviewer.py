@@ -2,9 +2,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.diagnostic import Diagnostic
 from codeguard.review.review import Review
-from codeguard.working_tree import AllLines, ChangedLines
 
 
 class Step(Protocol):

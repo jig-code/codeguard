@@ -10,9 +10,9 @@ import pydantic_ai
 
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
+from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
-from codeguard.working_tree import AllLines, ChangedLines, WorkingTree
 
 _EXIT_PASSED = 0
 _EXIT_FAILED = 1
@@ -225,7 +225,11 @@ def _review(args: argparse.Namespace) -> int:
 
 
 def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> ChangedLines | AllLines:
-    return working_tree.all_lines() if args.all else working_tree.changed_lines(args.base)
+    return (
+        LineScopes(working_tree).all_lines()
+        if args.all
+        else LineScopes(working_tree).changed_lines(args.base)
+    )
 
 
 def _test(args: argparse.Namespace) -> int:
@@ -255,7 +259,7 @@ def _eval(args: argparse.Namespace) -> int:
 
 
 def _working_tree(package: Path | None) -> WorkingTree:
-    return WorkingTree(package.resolve()) if package else WorkingTree.containing(Path.cwd())
+    return WorkingTree.at(package.resolve()) if package else WorkingTree.containing(Path.cwd())
 
 
 def _config(args: argparse.Namespace) -> int:

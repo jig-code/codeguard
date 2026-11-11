@@ -93,9 +93,26 @@ layers = [
     "review | packages",
     "syntax",
     "ast_grep",
-    "config | working_tree | file_lock",
+    "config | repository | file_lock",
     "line_range",
 ]
+
+[[tool.importlinter.contracts]]
+name = "the repository package depends one way"
+type = "layers"
+containers = ["codeguard.repository"]
+exhaustive = true
+layers = [
+    "line_scope",
+    "working_tree",
+    "git",
+]
+
+[[tool.importlinter.contracts]]
+name = "only the repository package runs git"
+type = "protected"
+protected_modules = ["codeguard.repository.git"]
+allowed_importers = ["codeguard.repository"]
 
 [[tool.importlinter.contracts]]
 name = "only judge_evals runs pydantic-evals"
@@ -113,7 +130,7 @@ source_modules = [
     "codeguard.syntax",
     "codeguard.ast_grep",
     "codeguard.config",
-    "codeguard.working_tree",
+    "codeguard.repository",
     "codeguard.line_range",
     "codeguard.file_lock",
 ]

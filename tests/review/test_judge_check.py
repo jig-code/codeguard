@@ -5,6 +5,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
+from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import (
     ErrorType,
     JudgeCheck,
@@ -15,7 +16,6 @@ from codeguard.review import (
     Severity,
     Verdict,
 )
-from codeguard.working_tree import AllLines, ChangedLines
 
 THRESHOLD = 0.9
 

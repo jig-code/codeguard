@@ -1,11 +1,10 @@
 import re
-import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from pathlib import Path
 from typing import Self
 
 from codeguard.line_range import LineRange
+from codeguard.repository.working_tree import WorkingTree
 
 _HUNK = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # ASCII whitespace, the same set git treats as blank.
@@ -143,16 +142,13 @@ class AllLines:
 
 
 @dataclass(frozen=True)
-class WorkingTree:
-    root: Path
-
-    @classmethod
-    def containing(cls, path: Path) -> Self:
-        return cls(Path(_run_git(path, "rev-parse", "--show-toplevel").strip()))
+class LineScopes:
+    working_tree: WorkingTree
 
     def changed_lines(self, base: str) -> ChangedLines:
-        merge_base = self._git("merge-base", base, "HEAD").strip()
-        diff = self._git_text(
+        merge_base = self.working_tree.merge_base(base)
+        # Decoded without newline translation, so only "\n" ends a row, as it does for git.
+        diff = self.working_tree.git.bytes(
             "-c",
             "core.quotePath=false",
             "diff",
@@ -162,12 +158,8 @@ class WorkingTree:
             "--no-prefix",
             "--diff-filter=d",
             merge_base,
-        )
-        untracked = {
-            file
-            for file in self._git_paths("ls-files", "--others", "--exclude-standard")
-            if (self.root / file).is_file()
-        }
+        ).decode(errors="surrogateescape")
+        untracked = self.working_tree.untracked_files()
         hunks = _hunks(diff)
         added, deletions = _changed_points(hunks)
         lines = {**added, **{file: self._code_lines(file) for file in untracked}}
@@ -183,39 +175,12 @@ class WorkingTree:
             {file: edits[file] for file in changed.files if file in edits}
         ).with_sources({file: sources[file] for file in changed.files if file in sources})
 
-    def base_contents(self, base: str, files: Sequence[str]) -> dict[str, bytes]:
-        if not files:
-            return {}
-        in_base = self._git_paths("ls-tree", "-r", "--name-only", base, "--", *files)
-        return {
-            file: self._git_bytes("show", f"{base}:{file}") for file in files if file in in_base
-        }
-
     def all_lines(self) -> AllLines:
-        listed = self._git_paths("ls-files", "--cached", "--others", "--exclude-standard")
-        return AllLines(tuple(sorted(path for path in listed if (self.root / path).is_file())))
-
-    def git_path(self, name: str) -> Path:
-        return self.root / self._git("rev-parse", "--git-path", name).strip()
+        return AllLines(tuple(sorted(self.working_tree.tracked_and_untracked_files())))
 
     def _code_lines(self, file: str) -> frozenset[int]:
-        lines = _rows((self.root / file).read_bytes())
+        lines = _rows((self.working_tree.root / file).read_bytes())
         return frozenset(number for number, text in enumerate(lines, 1) if _holds_code(text))
-
-    def _git_paths(self, command: str, *args: str) -> set[str]:
-        return set(self._git(command, "-z", *args).split("\0")) - {""}
-
-    def _git(self, *args: str) -> str:
-        return _run_git(self.root, *args)
-
-    def _git_text(self, *args: str) -> str:
-        # Decoded without newline translation, so only "\n" ends a row, as it does for git.
-        return self._git_bytes(*args).decode(errors="surrogateescape")
-
-    def _git_bytes(self, *args: str) -> bytes:
-        return subprocess.run(
-            ["git", *args], cwd=self.root, stdout=subprocess.PIPE, check=True
-        ).stdout
 
 
 def _changed_points(
@@ -344,9 +309,3 @@ def _holds_code(text: str) -> bool:
 
 def _frozen(points: dict[str, set[int]]) -> dict[str, frozenset[int]]:
     return {file: frozenset(numbers) for file, numbers in points.items()}
-
-
-def _run_git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, stdout=subprocess.PIPE, text=True, check=True
-    ).stdout
