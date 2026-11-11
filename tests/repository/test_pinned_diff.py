@@ -113,7 +113,7 @@ class TestPinnedDiff:
         rows = (*(f"x{i} = {i}" for i in range(30)), "y = 1")
         assert hunks == (
             Hunk("a.py", "a.py", 30, 0, 31, 1, added=("y = 1",), removed=()),
-            Hunk("b.py", "", 0, 0, 1, 31, added=rows, removed=()),
+            Hunk("b.py", None, 0, 0, 1, 31, added=rows, removed=()),
         )
 
     def test_renamed_files_are_diffed_from_their_base_paths_when_git_config_lowers_the_limit(

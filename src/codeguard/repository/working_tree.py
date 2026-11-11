@@ -32,8 +32,7 @@ class WorkingTree:
             if (self.root / file).is_file()
         }
 
-    def files(self) -> set[str]:
-        """The tracked and untracked files, without the ones the working tree deleted."""
+    def tracked_and_untracked_files(self) -> set[str]:
         return {
             file
             for file in self.git.paths("ls-files", "--cached", "--others", "--exclude-standard")

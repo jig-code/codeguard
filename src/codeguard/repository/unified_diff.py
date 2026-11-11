@@ -2,16 +2,13 @@ import re
 from dataclasses import dataclass
 
 _HEADER = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+_COUNT_GIT_LEAVES_OUT = 1
 
 
 @dataclass(frozen=True)
 class Hunk:
-    """One hunk of a unified diff: `base_count` rows from line `base_start` of `base_file`
-    replaced by `count` rows from line `start` of `file`. git numbers an empty side by the
-    line before it. `base_file` is empty for a new file."""
-
     file: str
-    base_file: str
+    base_file: str | None
     base_start: int
     base_count: int
     start: int
@@ -19,25 +16,29 @@ class Hunk:
     added: tuple[str, ...]
     removed: tuple[str, ...]
 
+    @property
+    def line_before(self) -> int:
+        # git gives an empty side the number of the line before it.
+        return self.start if self.count == 0 else self.start - 1
 
-def parse(diff: str) -> tuple[Hunk, ...]:
-    """The hunks of a diff git wrote without prefixes, each with the rows it adds and
-    removes. Only "\\n" ends a row."""
+
+def parse(unprefixed_diff: str) -> tuple[Hunk, ...]:
     hunks: list[Hunk] = []
-    file = base_file = ""
+    file = ""
+    base_file: str | None = None
     header: re.Match[str] | None = None
     added: list[str] = []
     removed: list[str] = []
-    for row in [*diff.split("\n"), "diff --git "]:
+    for row in [*unprefixed_diff.split("\n"), "diff --git "]:
         if (row.startswith("diff --git ") or _HEADER.match(row)) and header:
             hunks.append(_hunk(file, base_file, header, added, removed))
             header, added, removed = None, [], []
         if row.startswith("diff --git "):
-            file = base_file = ""
+            file, base_file = "", None
         elif header is None and row.startswith("--- "):
-            # git ends the name with a tab when it holds a space.
+            # git ends a name holding a space with a tab.
             name = row.removeprefix("--- ").removesuffix("\t")
-            base_file = "" if name == "/dev/null" else name
+            base_file = None if name == "/dev/null" else name
         elif header is None and row.startswith("+++ "):
             file = row.removeprefix("+++ ").removesuffix("\t")
         elif match := _HEADER.match(row):
@@ -50,7 +51,7 @@ def parse(diff: str) -> tuple[Hunk, ...]:
 
 
 def _hunk(
-    file: str, base_file: str, header: re.Match[str], added: list[str], removed: list[str]
+    file: str, base_file: str | None, header: re.Match[str], added: list[str], removed: list[str]
 ) -> Hunk:
     base_start, base_count, start, count = header.groups()
     return Hunk(
@@ -66,5 +67,4 @@ def _hunk(
 
 
 def _count(group: str | None) -> int:
-    # git leaves out a count of 1.
-    return 1 if group is None else int(group)
+    return _COUNT_GIT_LEAVES_OUT if group is None else int(group)

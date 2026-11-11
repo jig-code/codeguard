@@ -45,7 +45,13 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
-            removals={"a.py": (Removal(before=2, line=2, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(
+                        shown_before_line=2, reported_line=2, shown_rows=("b = 1",), base_lines=(2,)
+                    ),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 2, 1), Edit(3, 0, 4, 1))},
             base=git_repo.head(),
         )
@@ -88,7 +94,13 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(
+                        shown_before_line=2, reported_line=1, shown_rows=("b = 1",), base_lines=(2,)
+                    ),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 2, 1),)},
             base=git_repo.head(),
         )
@@ -114,7 +126,16 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=1, line=1, rows=("import os",), base_lines=(1,)),)},
+            removals={
+                "a.py": (
+                    Removal(
+                        shown_before_line=1,
+                        reported_line=1,
+                        shown_rows=("import os",),
+                        base_lines=(1,),
+                    ),
+                )
+            },
             edits={"a.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -160,7 +181,13 @@ class TestLineScopes:
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
-            removals={"x y.py": (Removal(before=1, line=1, rows=("a = 1",), base_lines=(1,)),)},
+            removals={
+                "x y.py": (
+                    Removal(
+                        shown_before_line=1, reported_line=1, shown_rows=("a = 1",), base_lines=(1,)
+                    ),
+                )
+            },
             edits={"x y.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -220,7 +247,13 @@ class TestLineScopes:
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
+            removals={
+                "a.py": (
+                    Removal(
+                        shown_before_line=2, reported_line=1, shown_rows=("b = 1",), base_lines=(2,)
+                    ),
+                )
+            },
             edits={"a.py": (Edit(2, 1, 1, 0),)},
             base=git_repo.head(),
         )
@@ -234,8 +267,8 @@ class TestLineScopes:
         changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = '\ufffd'",)
-        assert removal.rows[0].encode()
+        assert removal.shown_rows == ("b = '\ufffd'",)
+        assert removal.shown_rows[0].encode()
 
     def test_removed_row_ending_in_crlf_drops_the_carriage_return(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -246,7 +279,7 @@ class TestLineScopes:
         changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = 1",)
+        assert removal.shown_rows == ("b = 1",)
 
     def test_head_line_follows_the_edits_before_a_base_line(self):
         changed = ChangedLines(

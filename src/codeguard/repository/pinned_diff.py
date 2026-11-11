@@ -18,19 +18,17 @@ _PINNED_OPTIONS = (
     "--submodule=short",
     "--ignore-submodules=untracked",
 )
-_CHANGED_ROWS_ONLY = ("-U0", "--no-prefix", "--diff-filter=d")
+_CHANGED_ROWS_ONLY = ("-U0",)
+_KEPT_FILES_ONLY = ("--diff-filter=d",)
+_UNPREFIXED_PATHS = ("--no-prefix",)
 
 
 @dataclass(frozen=True)
 class PinnedDiff:
-    """git's diff of the working tree, the same whatever the user's git config sets."""
-
     git: Git
 
     def hunks(self, base: str) -> tuple[Hunk, ...]:
-        """The hunks the working tree changes since `base`, without context rows and
-        without the files it deletes."""
-        return parse(self._run(*_CHANGED_ROWS_ONLY, base))
+        return parse(self._run(*_CHANGED_ROWS_ONLY, *_KEPT_FILES_ONLY, *_UNPREFIXED_PATHS, base))
 
     def _run(self, *args: str) -> str:
         config = [option for setting in _PINNED_CONFIG for option in ("-c", setting)]

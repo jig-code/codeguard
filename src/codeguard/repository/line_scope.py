@@ -7,26 +7,19 @@ from codeguard.repository.pinned_diff import PinnedDiff
 from codeguard.repository.unified_diff import Hunk
 from codeguard.repository.working_tree import WorkingTree
 
-# ASCII whitespace, the same set git treats as blank.
-_BLANK = " \t\r\f\v"
+_WHITESPACE_GIT_TREATS_AS_BLANK = " \t\r\f\v"
 
 
 @dataclass(frozen=True)
 class Removal:
-    """Rows a change removed, shown before the new line `before`; a violation in them is
-    reported on `line`. `base_lines` are the rows' lines in the base."""
-
-    before: int
-    line: int
-    rows: tuple[str, ...]
+    shown_before_line: int
+    reported_line: int
+    shown_rows: tuple[str, ...]
     base_lines: tuple[int, ...]
 
 
 @dataclass(frozen=True)
 class Edit:
-    """A hunk: `base_count` rows from line `base_start` of the base replaced by `count` rows
-    from line `start`. git numbers an empty side by the line before it."""
-
     base_start: int
     base_count: int
     start: int
@@ -54,16 +47,16 @@ class ChangedLines:
     base: str | None = None
 
     @classmethod
-    def of(cls, hunks: Sequence[Hunk], untracked: Mapping[str, frozenset[int]], base: str) -> Self:
-        """The lines a diff's hunks change, and every line holding code of each untracked
-        file, against `base`."""
+    def of(
+        cls, hunks: Sequence[Hunk], untracked_code_lines: Mapping[str, frozenset[int]], base: str
+    ) -> Self:
         added: dict[str, set[int]] = {}
         deletions: dict[str, set[int]] = {}
         removals: dict[str, list[Removal]] = {}
         edits: dict[str, list[Edit]] = {}
         sources: dict[str, str] = {}
         for hunk in hunks:
-            points = _points(hunk)
+            points = _added_code_lines(hunk)
             removed = _removed_code(hunk)
             added.setdefault(hunk.file, set()).update(points)
             if removed and not points:
@@ -73,9 +66,9 @@ class ChangedLines:
             edits.setdefault(hunk.file, []).append(
                 Edit(hunk.base_start, hunk.base_count, hunk.start, hunk.count)
             )
-            if hunk.base_file not in {hunk.file, ""}:
+            if hunk.base_file is not None and hunk.base_file != hunk.file:
                 sources[hunk.file] = hunk.base_file
-        lines = {**_frozen(added), **untracked}
+        lines = {**_frozen(added), **untracked_code_lines}
         changed = {file for file, numbers in lines.items() if numbers} | {
             file for file, numbers in deletions.items() if numbers
         }
@@ -121,8 +114,6 @@ class ChangedLines:
         return self.kinds.get(file)
 
     def base_path(self, file: str) -> str | None:
-        """The file's path in the base, which a rename changes; None for a file git's diff
-        doesn't hold, which is untracked, so new."""
         if file not in self.edits:
             return None
         return self.sources.get(file, file)
@@ -131,7 +122,6 @@ class ChangedLines:
         return frozenset(line for edit in self.edits.get(file, ()) for line in edit.base_rows)
 
     def head_line(self, file: str, base_line: int) -> int | None:
-        """The line a base line is in the working tree, or None when the change removed it."""
         line = base_line
         for edit in self.edits.get(file, ()):
             if base_line in edit.base_rows:
@@ -172,8 +162,6 @@ class AllLines:
 
 @dataclass(frozen=True)
 class LineScopes:
-    """The changed-line scopes a review checks in a working tree."""
-
     working_tree: WorkingTree
     diff: PinnedDiff
 
@@ -190,11 +178,10 @@ class LineScopes:
         return ChangedLines.of(self.diff.hunks(merge_base), untracked, merge_base)
 
     def all_lines(self) -> AllLines:
-        return AllLines(tuple(sorted(self.working_tree.files())))
+        return AllLines(tuple(sorted(self.working_tree.tracked_and_untracked_files())))
 
 
-def _points(hunk: Hunk) -> set[int]:
-    # A blank line changes nothing in any language, so only lines holding code count.
+def _added_code_lines(hunk: Hunk) -> set[int]:
     return {hunk.start + row for row, text in enumerate(hunk.added) if _holds_code(text)}
 
 
@@ -205,23 +192,20 @@ def _removed_code(hunk: Hunk) -> list[tuple[int, str]]:
 
 
 def _deletion_point(hunk: Hunk) -> int:
-    return max(hunk.start - 1 if hunk.added else hunk.start, 1)
+    return max(hunk.line_before, 1)
 
 
 def _removal(hunk: Hunk, points: set[int], removed: list[tuple[int, str]]) -> Removal:
-    # git numbers a hunk that only removes rows by the line before them.
-    before = hunk.start if hunk.added else hunk.start + 1
-    line = min(points) if points else _deletion_point(hunk)
     return Removal(
-        before,
-        line,
-        # Shown to the judge, so a byte that isn't UTF-8 becomes U+FFFD, as in the file.
-        tuple(
-            text.removesuffix("\r").encode(errors="surrogateescape").decode(errors="replace")
-            for _, text in removed
-        ),
-        tuple(base_line for base_line, _ in removed),
+        shown_before_line=hunk.line_before + 1,
+        reported_line=min(points) if points else _deletion_point(hunk),
+        shown_rows=tuple(_shown_row(text) for _, text in removed),
+        base_lines=tuple(base_line for base_line, _ in removed),
     )
+
+
+def _shown_row(text: str) -> str:
+    return text.removesuffix("\r").encode(errors="surrogateescape").decode(errors="replace")
 
 
 def _code_lines(content: bytes) -> frozenset[int]:
@@ -230,7 +214,7 @@ def _code_lines(content: bytes) -> frozenset[int]:
 
 
 def _holds_code(text: str) -> bool:
-    return bool(text.strip(_BLANK))
+    return bool(text.strip(_WHITESPACE_GIT_TREATS_AS_BLANK))
 
 
 def _frozen(points: dict[str, set[int]]) -> dict[str, frozenset[int]]:

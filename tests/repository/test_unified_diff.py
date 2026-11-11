@@ -42,7 +42,7 @@ class TestParse:
 
         assert parse(diff) == (
             Hunk("b.py", "a.py", 1, 1, 1, 1, added=("x = 2",), removed=("x = 1",)),
-            Hunk("c.py", "", 0, 0, 1, 1, added=("y = 1",), removed=()),
+            Hunk("c.py", None, 0, 0, 1, 1, added=("y = 1",), removed=()),
         )
 
     def test_a_name_holding_a_space_drops_the_tab_git_ends_it_with(self):

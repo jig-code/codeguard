@@ -5,8 +5,6 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Git:
-    """Runs git in one directory."""
-
     root: Path
 
     def bytes(self, *args: str) -> bytes:
@@ -15,7 +13,6 @@ class Git:
         ).stdout
 
     def text(self, *args: str) -> str:
-        # Decoded without newline translation, so only "\n" ends a row, as it does for git.
         return self.bytes(*args).decode(errors="surrogateescape")
 
     def paths(self, command: str, *args: str) -> set[str]:
