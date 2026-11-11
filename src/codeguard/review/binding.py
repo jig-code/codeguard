@@ -7,7 +7,6 @@ from typing import Self
 from codeguard.config import (
     SKILL_FILE,
     BindingConfig,
-    ChangeKind,
     JudgeChoice,
     JudgeModel,
     PathScope,
@@ -16,7 +15,6 @@ from codeguard.config import (
     language_of,
     named_languages,
 )
-from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.skill import Skill
 
 
@@ -29,7 +27,6 @@ class Binding:
     triggers: frozenset[str]
     judge: JudgeChoice = JudgeChoice()
     exclude_paths: tuple[str, ...] = ()
-    # The skill's supplement for each language, which the judge reads after the skill.
     supplements: Mapping[str, Skill] = field(default_factory=dict, hash=False)
 
     @classmethod
@@ -54,17 +51,13 @@ class Binding:
 
     @property
     def languages(self) -> frozenset[str]:
-        """The languages the rule's paths name by extension."""
         return named_languages(self.paths)
 
     def skill_for(self, file: str) -> Skill:
-        """The convention the judge gets for a file: the skill, then the supplement for the
-        file's language."""
         return self._skill_in(language_of(file))
 
     def version_for(self, language: str | None) -> str:
-        """Identify what decides the rule's verdicts in a language, other than its model. With
-        no language, as for a rule whose paths name none, every supplement counts."""
+        """Identify what decides the rule's verdicts in a language, other than its model."""
         texts = (
             [self._skill_in(language).text]
             if language
@@ -84,12 +77,6 @@ class Binding:
 
     def files(self, changed: Sequence[str]) -> list[str]:
         return [file for file in changed if self._matches(file)]
-
-    def is_triggered(self, scope: ChangedLines | AllLines, file: str) -> bool:
-        kinds = scope.kinds_of(file)
-        return (
-            kinds is None or ChangeKind.ANY in self.triggers or not self.triggers.isdisjoint(kinds)
-        )
 
     def _matches(self, file: str) -> bool:
         return PathScope(self.paths, self.exclude_paths).matches(file)

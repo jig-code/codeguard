@@ -8,7 +8,7 @@ from typing import Self
 
 from codeguard.repository import ChangedLines, LineScopes, WorkingTree
 from codeguard.rule_tests.rule_eval import EditCase
-from codeguard.syntax import ChangeClassifier, SyntaxScanner
+from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
 
 @dataclass(frozen=True)
@@ -29,11 +29,11 @@ class EditRepo:
             repo._write({path: edit.after for path, edit in edits.items()})
             yield repo
 
-    def classified(self, scanner: SyntaxScanner) -> ChangedLines:
-        working_tree = WorkingTree.at(self.root)
-        return ChangeClassifier(scanner, working_tree).classify(
-            LineScopes(working_tree).changed_lines("HEAD")
-        )
+    def changed_lines(self) -> ChangedLines:
+        return LineScopes(WorkingTree.at(self.root)).changed_lines("HEAD")
+
+    def classification(self, scanner: SyntaxScanner, changed: ChangedLines) -> Classification:
+        return ChangeClassifier(scanner, WorkingTree.at(self.root)).classify(changed)
 
     def _write(self, files: Mapping[str, str]) -> None:
         for path, text in files.items():

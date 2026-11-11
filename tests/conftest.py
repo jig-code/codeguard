@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from diskcache import Cache
+from factories.classification import MakeFileClassification
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
 from factories.line_range import MakeLineRange
@@ -36,6 +37,7 @@ register(MakeJudgedViolation)
 register(MakeEditReview)
 register(MakeEvaluatorContext)
 register(MakeRuleEvalCase)
+register(MakeFileClassification)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -75,6 +77,11 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> GitRepo:
+    return GitRepo.init(tmp_path.resolve())
 
 
 @pytest.fixture

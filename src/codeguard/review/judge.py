@@ -13,6 +13,7 @@ from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
+from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
@@ -26,18 +27,23 @@ class JudgeRequest:
 
     @classmethod
     def of_change(
-        cls, binding: Binding, root: Path, file: str, scope: ChangedLines | AllLines
+        cls,
+        binding: Binding,
+        root: Path,
+        file: str,
+        scope: ChangedLines | AllLines,
+        classification: Classification,
     ) -> Self:
         raw = (root / file).read_bytes().splitlines()
         content = [line.decode(errors="replace") for line in raw]
-        lines = scope.judged_lines(file, binding.triggers)
+        lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
-        removals = {removal.before: removal for removal in scope.removals_in(file)}
+        removals = {removal.shown_before: removal for removal in scope.removals_in(file)}
         rows: list[str] = []
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
-                rows.extend(f"-{removal.line:>6}\t{text}\n" for text in removal.rows)
+                rows.extend(f"-{removal.reported_line:>6}\t{text}\n" for text in removal.rows)
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
@@ -144,9 +150,7 @@ class Verdict(BaseModel):
 
 
 def output_schema(output: type[BaseModel]) -> JsonSchemaValue:
-    """The schema of what the model answers with, as a provider sends it to the model.
-
-    pydantic-ai's generator describes each `Confidence` value by its docstring; Pydantic's own
+    """pydantic-ai's generator describes each `Confidence` value by its docstring; Pydantic's own
     `model_json_schema` leaves the docstrings out. The Gemini provider gets this schema from
     pydantic-ai itself, which uses the same generator.
     """
