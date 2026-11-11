@@ -3,7 +3,7 @@ from recording_judge import RecordingJudge
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
-from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
+from codeguard.repository import AllLines, ChangedLines, FileDiff, LineScopes, WorkingTree
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
@@ -51,7 +51,7 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": frozenset({3})})
+        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({3}))})
         classification = Classification(
             {"a.py": make_file_classification(context_lines=frozenset({3}))}
         )
@@ -82,7 +82,7 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": frozenset({2})})
+        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))})
         classification = Classification(
             {"a.py": make_file_classification(context_lines=frozenset({2}))}
         )

@@ -5,7 +5,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
-from codeguard.repository import AllLines, ChangedLines
+from codeguard.repository import AllLines, ChangedLines, FileDiff
 from codeguard.review import (
     ErrorType,
     JudgeCheck,
@@ -140,7 +140,7 @@ class TestJudgeCheck:
             "DISCOUNT = 5\n\n\ndef discounted(total):\n    return total - DISCOUNT\n"
         )
         judge = RecordingJudge()
-        scope = ChangedLines({"pricing.py": frozenset({5})})
+        scope = ChangedLines({"pricing.py": FileDiff(added_lines=frozenset({5}))})
         classification = Classification(
             {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
         )
@@ -174,7 +174,7 @@ class TestJudgeCheck:
         self, make_file_classification, tmp_path, make_binding
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})})
+        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({1}))})
         classification = Classification(
             {
                 "a.py": make_file_classification(
@@ -192,7 +192,7 @@ class TestJudgeCheck:
         self, make_file_classification, tmp_path, make_binding, make_judge_request
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})})
+        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({1}))})
         classification = Classification(
             {
                 "a.py": make_file_classification(
@@ -210,7 +210,7 @@ class TestJudgeCheck:
         (tmp_path / "a.md").write_text("# A\n")
         judge = RecordingJudge()
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
-        scope = ChangedLines({"a.md": frozenset({1})})
+        scope = ChangedLines({"a.md": FileDiff(added_lines=frozenset({1}))})
 
         JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, Classification()).check(["a.md"])
 
@@ -220,7 +220,7 @@ class TestJudgeCheck:
         self, make_file_classification, tmp_path, make_binding, make_judge_request
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})})
+        scope = ChangedLines({"a.py": FileDiff(added_lines=frozenset({1}))})
         classification = Classification(
             {
                 "a.py": make_file_classification(

@@ -1,6 +1,6 @@
 from git_repo import GitRepo
 
-from codeguard.repository import AllLines, ChangedLines, LineScopes, Removal, WorkingTree
+from codeguard.repository import AllLines, ChangedLines, FileDiff, LineScopes, Removal, WorkingTree
 
 
 class TestLineScopes:
@@ -20,8 +20,9 @@ class TestLineScopes:
 
         assert changed.files == ("staged.py", "unstaged.py", "untracked.py")
 
-    def test_changed_files_from_base_are_changes_since_merge_base(self, tmp_path):
+    def test_changes_since_the_merge_base_have_no_base_path_when_added_since_it(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
+        merge_base = git_repo.head()
         git_repo.git("switch", "--create", "feature")
         git_repo.write("committed.py", "a = 1\n")
         git_repo.commit("Add committed")
@@ -33,7 +34,13 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("main")
 
-        assert changed.files == ("committed.py", "untracked.py")
+        assert changed == ChangedLines(
+            {
+                "committed.py": FileDiff(added_lines=frozenset({1})),
+                "untracked.py": FileDiff(added_lines=frozenset({1})),
+            },
+            base=merge_base,
+        )
 
     def test_changed_lines_are_the_added_and_modified_lines(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -44,15 +51,17 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": frozenset({2, 4})},
-            removals={
-                "a.py": (
-                    Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({2, 4}),
+                    removals=(
+                        Removal(shown_before=2, reported_line=2, rows=("b = 1",), base_lines=(2,)),
+                    ),
+                    kept={1: 1, 3: 3},
+                    replaced=frozenset({2}),
                 )
             },
-            kept={"a.py": {1: 1, 3: 3}},
-            replaced={"a.py": frozenset({2})},
-            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -65,9 +74,7 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": frozenset({4, 5})},
-            kept={"a.py": {1: 1, 2: 2}},
-            base_paths={"a.py": "a.py"},
+            {"a.py": FileDiff(base_path="a.py", added_lines=frozenset({4, 5}), kept={1: 1, 2: 2})},
             base=git_repo.head(),
         )
 
@@ -95,16 +102,17 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            lines={},
-            deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    deletions=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                    ),
+                    kept={1: 1, 3: 3},
+                    replaced=frozenset({2}),
                 )
             },
-            kept={"a.py": {1: 1, 3: 3}},
-            replaced={"a.py": frozenset({2})},
-            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -127,16 +135,19 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            lines={},
-            deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(shown_before=1, reported_line=1, rows=("import os",), base_lines=(1,)),
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    deletions=frozenset({1}),
+                    removals=(
+                        Removal(
+                            shown_before=1, reported_line=1, rows=("import os",), base_lines=(1,)
+                        ),
+                    ),
+                    kept={2: 2},
+                    replaced=frozenset({1}),
                 )
             },
-            kept={"a.py": {2: 2}},
-            replaced={"a.py": frozenset({1})},
-            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -149,9 +160,7 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": frozenset({2, 3, 4})},
-            kept={"a.py": {1: 1}},
-            base_paths={"a.py": "a.py"},
+            {"a.py": FileDiff(base_path="a.py", added_lines=frozenset({2, 3, 4}), kept={1: 1})},
             base=git_repo.head(),
         )
 
@@ -167,9 +176,10 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"a.py": frozenset({2}), "b.py": frozenset({1})},
-            kept={"a.py": {1: 1}},
-            base_paths={"a.py": "a.py"},
+            {
+                "a.py": FileDiff(base_path="a.py", added_lines=frozenset({2}), kept={1: 1}),
+                "b.py": FileDiff(added_lines=frozenset({1})),
+            },
             base=git_repo.head(),
         )
 
@@ -182,14 +192,16 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            {"x y.py": frozenset({1})},
-            removals={
-                "x y.py": (
-                    Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+            {
+                "x y.py": FileDiff(
+                    base_path="x y.py",
+                    added_lines=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=1, reported_line=1, rows=("a = 1",), base_lines=(1,)),
+                    ),
+                    replaced=frozenset({1}),
                 )
             },
-            replaced={"x y.py": frozenset({1})},
-            base_paths={"x y.py": "x y.py"},
             base=git_repo.head(),
         )
 
@@ -203,7 +215,22 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        assert changed.base_path("b.py") == "a.py"
+        assert changed == ChangedLines(
+            {
+                "b.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({10}),
+                    removals=(
+                        Removal(
+                            shown_before=10, reported_line=10, rows=("x9 = 9",), base_lines=(10,)
+                        ),
+                    ),
+                    kept={line: line for line in range(1, 10)},
+                    replaced=frozenset({10}),
+                )
+            },
+            base=git_repo.head(),
+        )
 
     def test_untracked_file_has_no_base_path(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -211,9 +238,10 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("b.py", "b = 1\n")
 
-        assert (
-            LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
-            is None
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+
+        assert changed == ChangedLines(
+            {"b.py": FileDiff(added_lines=frozenset({1}))}, base=git_repo.head()
         )
 
     def test_untracked_file_has_every_line_with_code_changed(self, tmp_path):
@@ -222,7 +250,9 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        assert changed == ChangedLines({"a.py": frozenset({1, 3})}, base=git_repo.head())
+        assert changed == ChangedLines(
+            {"a.py": FileDiff(added_lines=frozenset({1, 3}))}, base=git_repo.head()
+        )
 
     def test_untracked_nested_repository_is_not_read_as_a_file(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -234,7 +264,9 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        assert changed == ChangedLines({"new/module.py": frozenset({1})}, base=git_repo.head())
+        assert changed == ChangedLines(
+            {"new/module.py": FileDiff(added_lines=frozenset({1}))}, base=git_repo.head()
+        )
 
     def test_removed_lines_are_a_deletion_point_after_the_line_before_them(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -245,16 +277,17 @@ class TestLineScopes:
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
-            lines={},
-            deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    deletions=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                    ),
+                    kept={1: 1, 3: 2},
+                    replaced=frozenset({2}),
                 )
             },
-            kept={"a.py": {1: 1, 3: 2}},
-            replaced={"a.py": frozenset({2})},
-            base_paths={"a.py": "a.py"},
             base=git_repo.head(),
         )
 
@@ -266,9 +299,22 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = '\ufffd'",)
-        assert removal.rows[0].encode()
+        assert changed == ChangedLines(
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    deletions=frozenset({1}),
+                    removals=(
+                        Removal(
+                            shown_before=2, reported_line=1, rows=("b = '\ufffd'",), base_lines=(2,)
+                        ),
+                    ),
+                    kept={1: 1},
+                    replaced=frozenset({2}),
+                )
+            },
+            base=git_repo.head(),
+        )
 
     def test_removed_row_ending_in_crlf_drops_the_carriage_return(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -278,8 +324,20 @@ class TestLineScopes:
 
         changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
-        [removal] = changed.removals_in("a.py")
-        assert removal.rows == ("b = 1",)
+        assert changed == ChangedLines(
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    deletions=frozenset({1}),
+                    removals=(
+                        Removal(shown_before=2, reported_line=1, rows=("b = 1",), base_lines=(2,)),
+                    ),
+                    kept={1: 1},
+                    replaced=frozenset({2}),
+                )
+            },
+            base=git_repo.head(),
+        )
 
     def test_all_lines_has_tracked_and_untracked_files(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -296,36 +354,42 @@ class TestLineScopes:
 
 class TestChangedLines:
     def test_covers_a_changed_line(self, make_line_range):
-        assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=2))
+        assert ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))}).covers(
+            "a.py", make_line_range(start=2)
+        )
 
     def test_does_not_cover_an_unchanged_line(self, make_line_range):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("a.py", make_line_range(start=1))
+        assert not ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))}).covers(
+            "a.py", make_line_range(start=1)
+        )
 
     def test_does_not_cover_an_unchanged_file(self, make_line_range):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", make_line_range(start=2))
+        assert not ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))}).covers(
+            "b.py", make_line_range(start=2)
+        )
 
     def test_covers_the_whole_of_a_changed_file(self):
-        assert ChangedLines({"a.py": frozenset({2})}).covers("a.py", None)
+        assert ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))}).covers("a.py", None)
 
     def test_does_not_cover_the_whole_of_an_unchanged_file(self):
-        assert not ChangedLines({"a.py": frozenset({2})}).covers("b.py", None)
+        assert not ChangedLines({"a.py": FileDiff(added_lines=frozenset({2}))}).covers("b.py", None)
 
     def test_covers_a_range_that_contains_a_changed_line(self, make_line_range):
-        assert ChangedLines({"a.py": frozenset({3})}).covers(
+        assert ChangedLines({"a.py": FileDiff(added_lines=frozenset({3}))}).covers(
             "a.py", make_line_range(start=2, end=4)
         )
 
     def test_does_not_cover_a_range_without_a_changed_line(self, make_line_range):
-        assert not ChangedLines({"a.py": frozenset({5})}).covers(
+        assert not ChangedLines({"a.py": FileDiff(added_lines=frozenset({5}))}).covers(
             "a.py", make_line_range(start=2, end=4)
         )
 
     def test_covers_a_range_that_contains_a_deletion_point(self, make_line_range):
-        changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
+        changed = ChangedLines({"a.py": FileDiff(deletions=frozenset({3}))})
 
         assert changed.covers("a.py", make_line_range(start=2, end=4))
 
     def test_covers_a_deletion_point(self, make_line_range):
-        changed = ChangedLines(lines={}, deletions={"a.py": frozenset({3})})
+        changed = ChangedLines({"a.py": FileDiff(deletions=frozenset({3}))})
 
         assert changed.covers("a.py", make_line_range(start=3))

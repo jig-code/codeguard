@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Self
 
 import pygit2
 from pygit2.enums import DeltaStatus
@@ -11,48 +12,56 @@ _GIT_BLANK = b" \t\r\f\v"
 
 @dataclass(frozen=True)
 class FileDiff:
-    file: str
-    base_path: str | None
-    added: frozenset[int]
-    deletions: frozenset[int]
-    removals: tuple[Removal, ...]
-    kept: Mapping[int, int]
-    replaced: frozenset[int]
+    base_path: str | None = None
+    added_lines: frozenset[int] = frozenset()
+    deletions: frozenset[int] = frozenset()
+    removals: tuple[Removal, ...] = ()
+    kept: Mapping[int, int] = field(default_factory=dict)
+    replaced: frozenset[int] = frozenset()
+
+    @classmethod
+    def of(cls, patch: pygit2.Patch) -> Self:
+        reader = _Reader()
+        for hunk in patch.hunks:
+            for line in hunk.lines:
+                reader.read(line)
+        reader.end_run()
+        return cls(
+            base_path=_base_path(patch.delta),
+            added_lines=frozenset(reader.added_lines),
+            deletions=frozenset(reader.deletions),
+            removals=tuple(reader.removals),
+            kept=dict(reader.kept),
+            replaced=frozenset(reader.replaced),
+        )
 
     @property
     def changes_code(self) -> bool:
-        return bool(self.added or self.deletions)
+        return bool(self.added_lines or self.deletions)
+
+    @property
+    def points(self) -> frozenset[int]:
+        return self.added_lines | self.deletions
+
+    @property
+    def removed_code_lines(self) -> frozenset[int]:
+        return frozenset(line for removal in self.removals for line in removal.base_lines)
 
 
 @dataclass
-class PatchReader:
-    added: set[int] = field(default_factory=set)
-    deletions: set[int] = field(default_factory=set)
-    removals: list[Removal] = field(default_factory=list)
-    kept: dict[int, int] = field(default_factory=dict)
-    replaced: set[int] = field(default_factory=set)
-    head_before_run: int = 0
-    run_added: list[int] = field(default_factory=list)
-    run_removed: list[pygit2.DiffLine] = field(default_factory=list)
+class _Reader:
+    added_lines: set[int] = field(init=False, default_factory=set)
+    deletions: set[int] = field(init=False, default_factory=set)
+    removals: list[Removal] = field(init=False, default_factory=list)
+    kept: dict[int, int] = field(init=False, default_factory=dict)
+    replaced: set[int] = field(init=False, default_factory=set)
+    head_before_run: int = field(init=False, default=0)
+    run_added: list[int] = field(init=False, default_factory=list)
+    run_removed: list[pygit2.DiffLine] = field(init=False, default_factory=list)
 
-    def read(self, patch: pygit2.Patch) -> FileDiff:
-        for hunk in patch.hunks:
-            for line in hunk.lines:
-                self._read_line(line)
-        self._end_run()
-        return FileDiff(
-            file=patch.delta.new_file.path,
-            base_path=_base_path(patch.delta),
-            added=frozenset(self.added),
-            deletions=frozenset(self.deletions),
-            removals=tuple(self.removals),
-            kept=self.kept,
-            replaced=frozenset(self.replaced),
-        )
-
-    def _read_line(self, line: pygit2.DiffLine) -> None:
+    def read(self, line: pygit2.DiffLine) -> None:
         if line.origin == " ":
-            self._end_run()
+            self.end_run()
             self.kept[line.old_lineno] = line.new_lineno
             self.head_before_run = line.new_lineno
         elif line.origin == "+" and _holds_code(line.raw_content):
@@ -62,7 +71,7 @@ class PatchReader:
             if _holds_code(line.raw_content):
                 self.run_removed.append(line)
 
-    def _end_run(self) -> None:
+    def end_run(self) -> None:
         line_before = max(self.head_before_run, 1)
         if self.run_removed:
             self.removals.append(
@@ -75,7 +84,7 @@ class PatchReader:
             )
             if not self.run_added:
                 self.deletions.add(line_before)
-        self.added.update(self.run_added)
+        self.added_lines.update(self.run_added)
         self.run_added = []
         self.run_removed = []
 

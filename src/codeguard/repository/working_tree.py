@@ -64,14 +64,8 @@ class WorkingTree:
     @staticmethod
     def _tracked_patches(repository: pygit2.Repository, merge_base: str) -> list[pygit2.Patch]:
         tree = repository.revparse_single(merge_base).peel(pygit2.Tree)
-        diff = tree.diff_to_index(
-            repository.index, flags=_TRACKED_DIFF_FLAGS, context_lines=_WHOLE_FILE_CONTEXT
-        )
-        diff.merge(
-            repository.index.diff_to_workdir(
-                flags=_TRACKED_DIFF_FLAGS, context_lines=_WHOLE_FILE_CONTEXT
-            )
-        )
+        diff = tree.diff_to_index(repository.index, _TRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT)
+        diff.merge(repository.index.diff_to_workdir(_TRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT))
         diff.find_similar(flags=DiffFind.FIND_RENAMES, rename_limit=_GIT_RENAME_LIMIT)
         return [
             patch
@@ -80,9 +74,7 @@ class WorkingTree:
         ]
 
     def _untracked_patches(self, repository: pygit2.Repository) -> list[pygit2.Patch]:
-        diff = repository.index.diff_to_workdir(
-            flags=_UNTRACKED_DIFF_FLAGS, context_lines=_WHOLE_FILE_CONTEXT
-        )
+        diff = repository.index.diff_to_workdir(_UNTRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT)
         return [
             patch
             for patch in diff

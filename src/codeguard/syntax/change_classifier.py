@@ -54,7 +54,7 @@ class ChangeClassifier:
 def _classify_file(
     scope: ChangedLines, file: str, parsed: ParsedFile, before: ParsedFile | None
 ) -> FileClassification:
-    added = scope.lines.get(file, frozenset())
+    added = scope.added_lines(file)
     removed_code = scope.removed_code_lines(file)
     context_lines = parsed.judged_lines(added)
     kind_lines = parsed.kind_lines(added)
