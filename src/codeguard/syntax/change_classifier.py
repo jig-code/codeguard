@@ -31,14 +31,12 @@ class ChangeClassifier:
         }
         for file, parsed in head.items():
             added = scope.lines.get(file, frozenset())
-            removed_code = frozenset(
-                line for removal in scope.removals_in(file) for line in removal.base_lines
-            )
+            removed_code = scope.removed_code_lines(file)
             before = base.get(file)
             judged = parsed.judged_lines(added)
             kind_lines = parsed.kind_lines(added)
             if before is not None:
-                replaced_rows = scope.removed_base_lines(file)
+                replaced_rows = scope.replaced_base_rows(file)
                 judged |= _in_head(
                     scope, file, before.kept_judged_lines(removed_code, replaced_rows)
                 )

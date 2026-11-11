@@ -76,7 +76,10 @@ class ChangedLines:
             return None
         return self.sources.get(file, file)
 
-    def removed_base_lines(self, file: str) -> frozenset[int]:
+    def removed_code_lines(self, file: str) -> frozenset[int]:
+        return frozenset(line for removal in self.removals_in(file) for line in removal.base_lines)
+
+    def replaced_base_rows(self, file: str) -> frozenset[int]:
         return frozenset(line for edit in self.edits.get(file, ()) for line in edit.base_rows)
 
     def head_line(self, file: str, base_line: int) -> int | None:

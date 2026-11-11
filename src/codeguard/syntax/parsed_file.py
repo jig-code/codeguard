@@ -22,16 +22,16 @@ class ParsedFile:
         return tuple(node.text for node in self.of_kind(NodeKind.DEFINITION))
 
     def judged_lines(
-        self, points: frozenset[int], removed: frozenset[int] = frozenset()
+        self, points: frozenset[int], replaced: frozenset[int] = frozenset()
     ) -> frozenset[int]:
-        scopes = self._standing(NodeKind.SCOPE, removed)
-        members = self._standing(NodeKind.MEMBER_LIST, removed)
+        scopes = self._standing(NodeKind.SCOPE, replaced)
+        members = self._standing(NodeKind.MEMBER_LIST, replaced)
         statements = _Statements(
             self.of_kind(NodeKind.STATEMENT),
             self.of_kind(NodeKind.HANDLER),
             self.of_kind(NodeKind.GUARDED_BLOCK),
             self.of_kind(NodeKind.BLOCK),
-            removed,
+            replaced,
         )
         return frozenset(
             line
@@ -45,14 +45,14 @@ class ParsedFile:
         )
 
     def kind_lines(
-        self, points: frozenset[int], removed: frozenset[int] = frozenset()
+        self, points: frozenset[int], replaced: frozenset[int] = frozenset()
     ) -> dict[str, frozenset[int]]:
         spans: dict[str, set[int]] = {}
         for node in self.nodes:
             if (
                 not isinstance(node.kind, NodeKind)
                 and any(self._touches(node, point) for point in points)
-                and not _removed(node, removed)
+                and not _replaced(node, replaced)
             ):
                 spans.setdefault(node.kind, set()).update(node.lines)
         return {kind: frozenset(lines) for kind, lines in spans.items()}
@@ -72,12 +72,15 @@ class ParsedFile:
         return self.kind_lines(removed_code, replaced_rows)
 
     def touched_kinds(
-        self, points: frozenset[int], base: Self | None, removed: frozenset[int] = frozenset()
+        self,
+        points: frozenset[int],
+        base: Self | None,
+        removed_code: frozenset[int] = frozenset(),
     ) -> frozenset[str]:
         kinds = {kind for point in points for kind in self._kinds_spanning(point)}
         if base:
-            kinds.update(kind for line in removed for kind in base._kinds_spanning(line))
-        if points or removed:
+            kinds.update(kind for line in removed_code for kind in base._kinds_spanning(line))
+        if points or removed_code:
             kinds.add(ChangeKind.ANY)
         if self._scope_names != (base._scope_names if base else Counter()):
             kinds.add(ChangeKind.DEFINITION_ADDED_OR_REMOVED)
@@ -103,8 +106,8 @@ class ParsedFile:
             content = content[: node.start] + text + content[node.end :]
         return content
 
-    def _standing(self, kind: NodeKind, removed: frozenset[int]) -> list[SyntaxNode]:
-        return [node for node in self.of_kind(kind) if not _removed(node, removed)]
+    def _standing(self, kind: NodeKind, replaced: frozenset[int]) -> list[SyntaxNode]:
+        return [node for node in self.of_kind(kind) if not _replaced(node, replaced)]
 
     def _kinds_spanning(self, line: int) -> set[str]:
         found: set[str] = {
@@ -160,7 +163,7 @@ class _Statements:
     handlers: list[SyntaxNode]
     guarded: list[SyntaxNode]
     blocks: list[SyntaxNode]
-    removed: frozenset[int]
+    replaced: frozenset[int]
 
     def lines_around(self, point: int, scope: SyntaxNode | None) -> set[int]:
         around = [
@@ -171,8 +174,8 @@ class _Statements:
         statement = min(around, key=_length) if around else None
         if statement is None:
             return {point}
-        if _removed(statement, self.removed):
-            gone = max((node for node in around if _removed(node, self.removed)), key=_length)
+        if _replaced(statement, self.replaced):
+            gone = max((node for node in around if _replaced(node, self.replaced)), key=_length)
             return self._kept_around(gone, point, scope)
         return {*statement.lines, *self._guarded_by(statement)}
 
@@ -185,7 +188,7 @@ class _Statements:
             node
             for node in self.nodes
             if _encloses(node, gone)
-            and not _removed(node, self.removed)
+            and not _replaced(node, self.replaced)
             and (scope is None or _within(node, scope))
         ]
         if not owners:
@@ -194,7 +197,9 @@ class _Statements:
         blocks = [
             block
             for block in self.blocks
-            if _encloses(owner, block) and block.spans(point) and not _removed(block, self.removed)
+            if _encloses(owner, block)
+            and block.spans(point)
+            and not _replaced(block, self.replaced)
         ]
         body = min(blocks, key=_length).start_line if blocks else owner.start_line
         return set(range(owner.start_line, max(body, owner.start_line + 1)))
@@ -210,7 +215,7 @@ class _Statements:
         blocks = [
             block
             for block in self.guarded
-            if _encloses(owner, block) and not _removed(block, self.removed)
+            if _encloses(owner, block) and not _replaced(block, self.replaced)
         ]
         if not blocks:
             return range(0)
@@ -259,6 +264,6 @@ def _holds(scope: SyntaxNode, body: SyntaxNode) -> bool:
     return _within(body, scope) and not _within(scope, body)
 
 
-def _removed(node: SyntaxNode, removed: frozenset[int]) -> bool:
-    """Whether the change removed every line of a base node."""
-    return bool(removed) and removed.issuperset(node.lines)
+def _replaced(node: SyntaxNode, replaced: frozenset[int]) -> bool:
+    """Whether the change replaced every line of a base node."""
+    return bool(replaced) and replaced.issuperset(node.lines)
