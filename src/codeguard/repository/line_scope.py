@@ -4,6 +4,7 @@ from typing import Protocol
 
 from codeguard.line_range import LineRange
 from codeguard.repository.file_diff import FileDiff, Removal
+from codeguard.repository.patch_reader import read_patch
 from codeguard.repository.working_tree import WorkingTree
 
 _UNCHANGED = FileDiff()
@@ -83,7 +84,7 @@ class LineScopes:
     def changed_lines(self, base: str) -> ChangedLines:
         merge_base = self.working_tree.merge_base(base)
         diffs = {
-            patch.delta.new_file.path: FileDiff.of(patch)
+            patch.delta.new_file.path: read_patch(patch)
             for patch in self.working_tree.patches_since(merge_base)
         }
         return ChangedLines(
