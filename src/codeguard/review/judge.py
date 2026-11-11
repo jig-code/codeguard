@@ -9,7 +9,7 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
-from codeguard.repository import AllLines, ChangedLines
+from codeguard.repository import LineScope
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
@@ -31,7 +31,7 @@ class JudgeRequest:
         binding: Binding,
         root: Path,
         file: str,
-        scope: ChangedLines | AllLines,
+        scope: LineScope,
         classification: Classification,
     ) -> Self:
         raw = (root / file).read_bytes().splitlines()

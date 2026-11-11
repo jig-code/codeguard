@@ -4,7 +4,7 @@ from functools import cached_property
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigLoader, Ruleset
 from codeguard.pattern_rules import Layout, PatternRuleCheck, PatternRuleTestRunner
-from codeguard.repository import AllLines, ChangedLines, WorkingTree
+from codeguard.repository import ChangedLines, LineScope, WorkingTree
 from codeguard.review import (
     Bindings,
     CheckStep,
@@ -37,7 +37,7 @@ class Rules:
     def config(self) -> Config:
         return ConfigLoader(self.working_tree.root).load()
 
-    def review(self, scope: ChangedLines | AllLines) -> Review:
+    def review(self, scope: LineScope) -> Review:
         deadline = Deadline(self.config.review_time_limit_minutes)
         classification = self._classification(scope)
         reviewer = Reviewer(
@@ -48,7 +48,7 @@ class Rules:
         )
         return reviewer.run(scope)
 
-    def check_patterns(self, scope: ChangedLines | AllLines) -> Review:
+    def check_patterns(self, scope: LineScope) -> Review:
         return Reviewer(steps=(self._pattern_step,)).run(scope)
 
     @property
@@ -60,13 +60,13 @@ class Rules:
             )
         )
 
-    def _classification(self, scope: ChangedLines | AllLines) -> Classification:
-        if isinstance(scope, AllLines):
+    def _classification(self, scope: LineScope) -> Classification:
+        if not isinstance(scope, ChangedLines):
             return Classification()
         classifier = ChangeClassifier.for_rulesets(self.ast_grep, self.rulesets, self.working_tree)
         return classifier.classify(scope)
 
-    def plan(self, scope: ChangedLines | AllLines) -> JudgePlan:
+    def plan(self, scope: LineScope) -> JudgePlan:
         root = self.working_tree.root
         classification = self._classification(scope)
         return JudgePlan(
@@ -124,7 +124,7 @@ class Rules:
         return Judges(self.config.judge)
 
     def _judge_checks(
-        self, scope: ChangedLines | AllLines, classification: Classification, deadline: Deadline
+        self, scope: LineScope, classification: Classification, deadline: Deadline
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
         threshold = self.config.confidence_threshold

@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from codeguard.repository import AllLines, ChangedLines
+from codeguard.repository import LineScope
 from codeguard.review.diagnostic import Diagnostic
 from codeguard.review.review import Review
 
@@ -17,7 +17,7 @@ class Step(Protocol):
 class Reviewer:
     steps: tuple[Step, ...]
 
-    def run(self, scope: ChangedLines | AllLines) -> Review:
+    def run(self, scope: LineScope) -> Review:
         diagnostics: tuple[Diagnostic, ...] = ()
         for step in self.steps:
             found = step.run(scope.files, diagnostics)

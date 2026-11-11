@@ -10,7 +10,7 @@ import pydantic_ai
 
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
-from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
+from codeguard.repository import LineScope, LineScopes, WorkingTree
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
 
@@ -224,7 +224,7 @@ def _review(args: argparse.Namespace) -> int:
     return _EXIT_FAILED if result.blocks else _EXIT_PASSED
 
 
-def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> ChangedLines | AllLines:
+def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> LineScope:
     return (
         LineScopes(working_tree).all_lines()
         if args.all
