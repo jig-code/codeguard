@@ -13,7 +13,9 @@ class Git:
         ).stdout
 
     def text(self, *args: str) -> str:
-        return self.bytes(*args).decode(errors="surrogateescape")
+        return subprocess.run(
+            ["git", *args], cwd=self.root, stdout=subprocess.PIPE, text=True, check=True
+        ).stdout
 
     def paths(self, command: str, *args: str) -> set[str]:
         return set(self.text(command, "-z", *args).split("\0")) - {""}

@@ -73,7 +73,7 @@ class TestJudgePrompt:
     def test_triggers_fire_on_each_case_the_judge_sees(self, rule: str, case: RuleEvalCase):
         with EditRepo.of(_edits(EVALS, rule, case.inputs)) as repo:
             working_tree = WorkingTree.at(repo.root)
-            plan = Rules(working_tree).plan(LineScopes.of(working_tree).changed_lines("HEAD"))
+            plan = Rules(working_tree).plan(LineScopes(working_tree).changed_lines("HEAD"))
 
         triggered = [call.file for call in plan.calls if call.triggered]
         judged = case.expected_output.outcome is not Outcome.SKIPPED
@@ -86,7 +86,7 @@ class TestJudgePrompt:
     ):
         with EditRepo.of(_edits(judged_evals, rule, case.inputs)) as repo:
             working_tree = WorkingTree.at(repo.root)
-            review = Rules(working_tree).review(LineScopes.of(working_tree).changed_lines("HEAD"))
+            review = Rules(working_tree).review(LineScopes(working_tree).changed_lines("HEAD"))
 
         listing = "\n".join(map(str, review.diagnostics))
         telemetry = finished_span_attributes(capfire, "codex judges {rule} on {file}")

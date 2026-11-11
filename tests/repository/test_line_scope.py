@@ -16,7 +16,7 @@ class TestLineScopes:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "d = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.files == ("staged.py", "unstaged.py", "untracked.py")
 
@@ -31,7 +31,7 @@ class TestLineScopes:
         git_repo.git("switch", "feature")
         git_repo.write("untracked.py", "c = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("main")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("main")
 
         assert changed.files == ("committed.py", "untracked.py")
 
@@ -41,17 +41,11 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nb = 2\nc = 1\nd = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 4})},
-            removals={
-                "a.py": (
-                    Removal(
-                        shown_before_line=2, reported_line=2, shown_rows=("b = 1",), base_lines=(2,)
-                    ),
-                )
-            },
+            removals={"a.py": (Removal(before=2, line=2, rows=("b = 1",), base_lines=(2,)),)},
             edits={"a.py": (Edit(2, 1, 2, 1), Edit(3, 0, 4, 1))},
             base=git_repo.head(),
         )
@@ -62,7 +56,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "class A:\n    x = 1\n\n    def y(self):\n        pass\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({4, 5})}, edits={"a.py": (Edit(2, 0, 3, 3),)}, base=git_repo.head()
@@ -77,7 +71,7 @@ class TestLineScopes:
         git_repo.write("b.py", "a = 1\n\nb = 1\n")
         git_repo.write("c.py", "\n\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -89,18 +83,12 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nc = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(
-                        shown_before_line=2, reported_line=1, shown_rows=("b = 1",), base_lines=(2,)
-                    ),
-                )
-            },
+            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
             edits={"a.py": (Edit(2, 1, 2, 1),)},
             base=git_repo.head(),
         )
@@ -111,7 +99,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({}, base=git_repo.head())
 
@@ -121,21 +109,12 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "\nb = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(
-                        shown_before_line=1,
-                        reported_line=1,
-                        shown_rows=("import os",),
-                        base_lines=(1,),
-                    ),
-                )
-            },
+            removals={"a.py": (Removal(before=1, line=1, rows=("import os",), base_lines=(1,)),)},
             edits={"a.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -146,7 +125,7 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\n\x0cdef f():\n    s = 'p\u2028+q\r+r'\n    return 2\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2, 3, 4})},
@@ -163,7 +142,7 @@ class TestLineScopes:
         git_repo.write("a.py", "a = 1\n\u00a0\n")
         git_repo.write("b.py", "\u00a0\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"a.py": frozenset({2}), "b.py": frozenset({1})},
@@ -177,17 +156,11 @@ class TestLineScopes:
         git_repo.commit("Add x y")
         git_repo.write("x y.py", "a = 2\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             {"x y.py": frozenset({1})},
-            removals={
-                "x y.py": (
-                    Removal(
-                        shown_before_line=1, reported_line=1, shown_rows=("a = 1",), base_lines=(1,)
-                    ),
-                )
-            },
+            removals={"x y.py": (Removal(before=1, line=1, rows=("a = 1",), base_lines=(1,)),)},
             edits={"x y.py": (Edit(1, 1, 1, 1),)},
             base=git_repo.head(),
         )
@@ -200,7 +173,7 @@ class TestLineScopes:
         git_repo.git("mv", "a.py", "b.py")
         git_repo.write("b.py", source.replace("x9 = 9", "x9 = 10"))
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed.sources == {"b.py": "a.py"}
         assert changed.base_path("b.py") == "a.py"
@@ -212,7 +185,7 @@ class TestLineScopes:
         git_repo.write("b.py", "b = 1\n")
 
         assert (
-            LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
+            LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD").base_path("b.py")
             is None
         )
 
@@ -220,7 +193,7 @@ class TestLineScopes:
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"a.py": frozenset({1, 3})}, base=git_repo.head())
 
@@ -232,7 +205,7 @@ class TestLineScopes:
         nested_repo.write("module.py", "value = 1\n")
         git_repo.write("new/module.py", "value = 2\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines({"new/module.py": frozenset({1})}, base=git_repo.head())
 
@@ -242,18 +215,12 @@ class TestLineScopes:
         git_repo.commit("Add a")
         git_repo.write("a.py", "a = 1\nc = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         assert changed == ChangedLines(
             lines={},
             deletions={"a.py": frozenset({1})},
-            removals={
-                "a.py": (
-                    Removal(
-                        shown_before_line=2, reported_line=1, shown_rows=("b = 1",), base_lines=(2,)
-                    ),
-                )
-            },
+            removals={"a.py": (Removal(before=2, line=1, rows=("b = 1",), base_lines=(2,)),)},
             edits={"a.py": (Edit(2, 1, 1, 0),)},
             base=git_repo.head(),
         )
@@ -264,11 +231,11 @@ class TestLineScopes:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
-        assert removal.shown_rows == ("b = '\ufffd'",)
-        assert removal.shown_rows[0].encode()
+        assert removal.rows == ("b = '\ufffd'",)
+        assert removal.rows[0].encode()
 
     def test_removed_row_ending_in_crlf_drops_the_carriage_return(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -276,10 +243,10 @@ class TestLineScopes:
         git_repo.commit("Add a")
         (git_repo.root / "a.py").write_bytes(b"a = 1\r\n")
 
-        changed = LineScopes.of(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+        changed = LineScopes(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 
         [removal] = changed.removals_in("a.py")
-        assert removal.shown_rows == ("b = 1",)
+        assert removal.rows == ("b = 1",)
 
     def test_head_line_follows_the_edits_before_a_base_line(self):
         changed = ChangedLines(
@@ -297,7 +264,7 @@ class TestLineScopes:
         (git_repo.root / "deleted.py").unlink()
         git_repo.write("untracked.py", "")
 
-        scope = LineScopes.of(WorkingTree.at(git_repo.root)).all_lines()
+        scope = LineScopes(WorkingTree.at(git_repo.root)).all_lines()
 
         assert scope == AllLines(("tracked.py", "untracked.py"))
 

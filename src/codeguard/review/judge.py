@@ -33,11 +33,11 @@ class JudgeRequest:
         lines = scope.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
-        removals = {removal.shown_before_line: removal for removal in scope.removals_in(file)}
+        removals = {removal.before: removal for removal in scope.removals_in(file)}
         rows: list[str] = []
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
-                rows.extend(f"-{removal.reported_line:>6}\t{text}\n" for text in removal.shown_rows)
+                rows.extend(f"-{removal.line:>6}\t{text}\n" for text in removal.rows)
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")

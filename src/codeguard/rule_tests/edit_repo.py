@@ -32,7 +32,7 @@ class EditRepo:
     def classified(self, scanner: SyntaxScanner) -> ChangedLines:
         working_tree = WorkingTree.at(self.root)
         return ChangeClassifier(scanner, working_tree).classify(
-            LineScopes.of(working_tree).changed_lines("HEAD")
+            LineScopes(working_tree).changed_lines("HEAD")
         )
 
     def _write(self, files: Mapping[str, str]) -> None:

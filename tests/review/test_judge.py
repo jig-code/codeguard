@@ -59,14 +59,7 @@ class TestJudgeRequest:
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (
-                    Removal(
-                        shown_before_line=2,
-                        reported_line=1,
-                        shown_rows=("FEE = 1",),
-                        base_lines=(2,),
-                    ),
-                )
+                "pricing.py": (Removal(before=2, line=1, rows=("FEE = 1",), base_lines=(2,)),)
             },
         ).with_judged_lines({"pricing.py": frozenset({1, 2})})
 
@@ -86,14 +79,7 @@ class TestJudgeRequest:
             {},
             deletions={"pricing.py": frozenset({1})},
             removals={
-                "pricing.py": (
-                    Removal(
-                        shown_before_line=2,
-                        reported_line=1,
-                        shown_rows=("TAX = 2",),
-                        base_lines=(2,),
-                    ),
-                )
+                "pricing.py": (Removal(before=2, line=1, rows=("TAX = 2",), base_lines=(2,)),)
             },
         )
 
