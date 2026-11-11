@@ -11,10 +11,11 @@ rule, a convention a model judges each change against.
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
-2. **State the convention and why it exists**, as the two sections below say. Before
-   writing the rule, check that its statement says only what code must do or never do,
-   and cut any clause about how or why. Reread the two sections when two rules, or a
-   rule and its cases, disagree about the same code.
+2. **State the convention and why it exists**, as the two sections below say. After
+   writing the statement, reread it and cut everything beyond the requirement: any
+   clause that says the requirement again, says how code meets it, or gives its reason.
+   Reread the two sections when two rules, or a rule and its cases, disagree about the
+   same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
