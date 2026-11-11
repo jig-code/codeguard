@@ -11,13 +11,14 @@ def classified_kinds(
 ) -> frozenset[str] | None:
     working_tree = WorkingTree.at(git_repo.root)
     classifier = ChangeClassifier(SyntaxScanner(AstGrep(), gates or {}), working_tree)
-    return classifier.classify(LineScopes(working_tree).changed_lines("HEAD")).kinds_of(file)
+    return classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))[file].kinds
 
 
-def classified_judged_lines(git_repo: GitRepo, file: str) -> frozenset[int] | None:
+def classified_judged_lines(git_repo: GitRepo, file: str) -> frozenset[int]:
     working_tree = WorkingTree.at(git_repo.root)
     classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-    return classifier.classify(LineScopes(working_tree).changed_lines("HEAD")).judged_lines(file)
+    classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+    return classification[file].judged_lines(frozenset())
 
 
 class TestChangeClassifier:
@@ -132,7 +133,7 @@ class TestChangeClassifier:
 
         classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        kinds = classification.kinds_of("a.py")
+        kinds = classification["a.py"].kinds
         assert kinds is not None
         assert "gate:example/python/enum-value" in kinds
 
@@ -231,8 +232,8 @@ class TestChangeClassifier:
 
         classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py") == {3, 4}
-        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {
+        assert classification["a.py"].judged_lines(frozenset()) == {3, 4}
+        assert classification["a.py"].judged_lines(frozenset({ChangeKind.CONTROL_FLOW})) == {
             1,
             2,
             3,
@@ -435,7 +436,7 @@ class TestChangeClassifier:
 
         classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {2}
+        assert classification["a.py"].judged_lines(frozenset({ChangeKind.CONTROL_FLOW})) == {2}
 
     def test_removed_statement_in_a_module_level_block_judges_the_block_header(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
@@ -515,10 +516,18 @@ class TestChangeClassifier:
 
         assert classified_judged_lines(git_repo, "a.py") == {1, 3}
 
-    def test_file_without_change_kinds_judges_its_changed_points(self, tmp_path):
+    def test_file_without_change_kinds_judges_its_changed_points(
+        self, tmp_path, make_file_classification
+    ):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.md", "one\ntwo\nthree\nfour\nfive\n")
         git_repo.commit("Add a")
         git_repo.write("a.md", "ONE\ntwo\nthree\nfive\n")
+        working_tree = WorkingTree.at(git_repo.root)
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
 
-        assert classified_judged_lines(git_repo, "a.md") == {1, 3}
+        classification = classifier.classify(LineScopes(working_tree).changed_lines("HEAD"))
+
+        assert classification == {
+            "a.md": make_file_classification(kinds=None, judged=frozenset({1, 3}))
+        }

@@ -7,7 +7,7 @@ from typing import Self
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.repository import ChangedLines, WorkingTree
-from codeguard.syntax.classification import Classification
+from codeguard.syntax.classification import Classification, FileClassification
 from codeguard.syntax.parsed_file import ParsedFile
 from codeguard.syntax.syntax_scanner import SyntaxScanner
 
@@ -26,28 +26,29 @@ class ChangeClassifier:
     def classify(self, scope: ChangedLines) -> Classification:
         head = self.scanner.scan_files(self.working_tree.root, scope.files)
         base = self._base(scope)
-        kinds: dict[str, frozenset[str]] = {}
-        judged = {file: scope.points(file) for file in scope.files}
-        kind_lines: dict[str, dict[str, frozenset[int]]] = {}
+        classification = {
+            file: FileClassification(kinds=None, judged=scope.points(file)) for file in scope.files
+        }
         for file, parsed in head.items():
             added = scope.lines.get(file, frozenset())
             removed = frozenset(
                 line for removal in scope.removals_in(file) for line in removal.base_lines
             )
             before = base.get(file)
-            kinds[file] = parsed.touched_kinds(added, before, removed)
-            judged[file] = parsed.judged_lines(added)
-            kind_lines[file] = parsed.kind_lines(added)
-            if before is None:
-                continue
-            # A removal shows the code around it that the change kept, not the code beside it.
-            gone = scope.removed_base_lines(file)
-            judged[file] |= _in_head(scope, file, before.judged_lines(removed, gone))
-            for kind, lines in before.kind_lines(removed, gone).items():
-                kind_lines[file][kind] = kind_lines[file].get(kind, frozenset()) | _in_head(
-                    scope, file, lines
-                )
-        return Classification(kinds, judged, kind_lines)
+            judged = parsed.judged_lines(added)
+            kind_lines = parsed.kind_lines(added)
+            if before is not None:
+                # A removal shows the code around it that the change kept, not the code beside it.
+                gone = scope.removed_base_lines(file)
+                judged |= _in_head(scope, file, before.judged_lines(removed, gone))
+                for kind, lines in before.kind_lines(removed, gone).items():
+                    kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(
+                        scope, file, lines
+                    )
+            classification[file] = FileClassification(
+                parsed.touched_kinds(added, before, removed), judged, kind_lines
+            )
+        return classification
 
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:

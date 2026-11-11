@@ -4,7 +4,6 @@ from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
 from codeguard.repository import AllLines, ChangedLines
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
-from codeguard.syntax import Classification
 
 
 def review(repo, judge, binding, scope, classification) -> Review:
@@ -29,7 +28,7 @@ class TestReviewer:
             )
         )
 
-        result = review(repo, judge, make_binding(), AllLines(("a.py", "b.py")), Classification())
+        result = review(repo, judge, make_binding(), AllLines(("a.py", "b.py")), {})
 
         assert result == Review(
             diagnostics=(make_diagnostic(), make_diagnostic(judged=True, file="b.py"))
@@ -37,7 +36,7 @@ class TestReviewer:
         assert judge.received == [make_judge_request(file="b.py", changes="+     1\tx = 1\n")]
 
     def test_violations_on_unchanged_lines_are_not_reported(
-        self, repo, make_violation, make_binding
+        self, make_file_classification, repo, make_violation, make_binding
     ):
         repo.write("a.py", "print(1)\nx = 1\ny = 2\n")
         judge = RecordingJudge(
@@ -52,13 +51,13 @@ class TestReviewer:
             judge,
             make_binding(),
             ChangedLines({"a.py": frozenset({3})}),
-            Classification(judged={"a.py": frozenset({3})}),
+            {"a.py": make_file_classification(judged=frozenset({3}))},
         )
 
         assert result == Review(diagnostics=())
 
     def test_violation_whose_lines_take_in_a_changed_line_is_reported(
-        self, repo, make_diagnostic, make_violation, make_binding
+        self, make_file_classification, repo, make_diagnostic, make_violation, make_binding
     ):
         repo.write("a.py", "print(1)\nx = 1\n")
         judge = RecordingJudge(
@@ -73,7 +72,7 @@ class TestReviewer:
             judge,
             make_binding(),
             ChangedLines({"a.py": frozenset({2})}),
-            Classification(judged={"a.py": frozenset({2})}),
+            {"a.py": make_file_classification(judged=frozenset({2}))},
         )
 
         assert result == Review(
@@ -96,10 +95,10 @@ class TestReviewer:
             judge,
             make_binding(),
             ChangedLines({"a.py": frozenset({2})}),
-            Classification(judged={"a.py": frozenset({2})}),
+            {},
         )
 
         assert result == Review(
             diagnostics=(make_diagnostic(judged=True, lines__start=2, lines__end=2),)
         )
-        assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]
+        assert judge.received == [make_judge_request(changes="      1\tprint(1)\n+     2\tx = 1\n")]
