@@ -36,7 +36,7 @@ def test_missing_google_credentials_are_a_judge_error(monkeypatch):
     models = VertexGemini(project="my-project", location="global", cloud=no_credentials)
 
     with pytest.raises(JudgeProcessError) as error:
-        asyncio.run(models("gemini-3.1-pro-preview").__aenter__())
+        asyncio.run(models("gemini-4-argon").__aenter__())
 
     assert str(error.value) == (
         "Gemini on Vertex AI found no Google credentials: no credentials found"
@@ -49,7 +49,7 @@ def test_api_key_is_sent_with_the_project_and_location_from_the_environment(monk
     monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "us")
     clients = RecordingClients()
 
-    asyncio.run(VertexGemini(genai=clients)("gemini-3.1-pro-preview").__aenter__())
+    asyncio.run(VertexGemini(genai=clients)("gemini-4-argon").__aenter__())
 
     assert clients.received == [
         {"vertexai": True, "api_key": "proxy-injected", "project": "my-project", "location": "us"}
@@ -62,7 +62,7 @@ def test_api_key_without_a_location_runs_in_the_global_location(monkeypatch):
         monkeypatch.delenv(name, raising=False)
     clients = RecordingClients()
 
-    asyncio.run(VertexGemini(genai=clients)("gemini-3.1-pro-preview").__aenter__())
+    asyncio.run(VertexGemini(genai=clients)("gemini-4-argon").__aenter__())
 
     assert clients.received == [
         {"vertexai": True, "api_key": "proxy-injected", "project": None, "location": "global"}
