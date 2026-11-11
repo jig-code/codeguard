@@ -112,8 +112,8 @@ codeguard's `docs/rule-formats.md` has the binding and rule eval formats.
 - Match the shape only where it breaks the convention, not everywhere it appears.
   `stopBy: end` on `has` or `inside` searches every descendant or ancestor; in a
   positive match, use it only when the shape breaks the convention in every position.
-- Put the reason and the fix in the rule's `note`. codeguard prints it under the
-  diagnostic, so it is what the blocked agent reads (no comments in the rule's own file).
+- Put the reason and the fix in the rule's `note`, not in comments in the rule's file.
+  codeguard prints the note under the diagnostic, so it is what the blocked agent reads.
 - Scope a rule with a binding, `bindings/<id>.yaml` with `rule`, `paths` and
   `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
   the scope. The exception is a file name that is the convention itself.
