@@ -32,13 +32,12 @@ class _CaseCheck:
         if self.path not in changed.files:
             return f"{self.name}: the case changes no code in {file}"
         should_fire = expected.outcome is not Outcome.SKIPPED
-        classified = classification.get(self.path)
-        if self.binding.is_triggered(classified) == should_fire:
+        if classification.is_triggered(self.path, self.binding.triggers) == should_fire:
             return None
-        if classified is None or classified.kinds is None:
-            # As in a review, a change in a language without change kinds fires every trigger.
+        kinds = classification.touched_kinds(self.path)
+        if kinds is None:
             return f"{self.name}: {file} has no change kinds, so every {rule} trigger fires on it"
-        touched = ", ".join(sorted(classified.kinds - {ChangeKind.ANY}))
+        touched = ", ".join(sorted(kinds - {ChangeKind.ANY}))
         triggers = ", ".join(sorted(self.binding.triggers))
         verb = "miss" if should_fire else "fire on"
         return f"{self.name}: {rule} triggers {triggers} {verb} the change, which touches {touched}"

@@ -13,7 +13,7 @@ from codeguard.repository import AllLines, ChangedLines
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
-from codeguard.syntax import FileClassification
+from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
@@ -32,11 +32,11 @@ class JudgeRequest:
         root: Path,
         file: str,
         scope: ChangedLines | AllLines,
-        classified: FileClassification | None,
+        classification: Classification,
     ) -> Self:
         raw = (root / file).read_bytes().splitlines()
         content = [line.decode(errors="replace") for line in raw]
-        lines = None if classified is None else classified.judged_lines(binding.triggers)
+        lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
         removals = {removal.before: removal for removal in scope.removals_in(file)}

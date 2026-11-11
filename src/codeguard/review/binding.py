@@ -7,7 +7,6 @@ from typing import Self
 from codeguard.config import (
     SKILL_FILE,
     BindingConfig,
-    ChangeKind,
     JudgeChoice,
     JudgeModel,
     PathScope,
@@ -17,7 +16,6 @@ from codeguard.config import (
     named_languages,
 )
 from codeguard.review.skill import Skill
-from codeguard.syntax import FileClassification
 
 
 @dataclass(frozen=True)
@@ -84,11 +82,6 @@ class Binding:
 
     def files(self, changed: Sequence[str]) -> list[str]:
         return [file for file in changed if self._matches(file)]
-
-    def is_triggered(self, classified: FileClassification | None) -> bool:
-        if classified is None or classified.kinds is None:
-            return True
-        return ChangeKind.ANY in self.triggers or not self.triggers.isdisjoint(classified.kinds)
 
     def _matches(self, file: str) -> bool:
         return PathScope(self.paths, self.exclude_paths).matches(file)

@@ -5,7 +5,7 @@ from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
 from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
-from codeguard.syntax import ChangeClassifier, SyntaxScanner
+from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
 
 class TestReviewer:
@@ -25,7 +25,11 @@ class TestReviewer:
         reviewer = Reviewer(
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
-                CheckStep(checks=(JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, {}),)),
+                CheckStep(
+                    checks=(
+                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, Classification()),
+                    )
+                ),
             )
         )
 
@@ -48,7 +52,9 @@ class TestReviewer:
         )
 
         scope = ChangedLines({"a.py": frozenset({3})})
-        classification = {"a.py": make_file_classification(judged=frozenset({3}))}
+        classification = Classification(
+            {"a.py": make_file_classification(context_lines=frozenset({3}))}
+        )
         local = Ruleset(name=None, root=repo.root / ".codeguard")
         reviewer = Reviewer(
             steps=(
@@ -77,7 +83,9 @@ class TestReviewer:
         )
 
         scope = ChangedLines({"a.py": frozenset({2})})
-        classification = {"a.py": make_file_classification(judged=frozenset({2}))}
+        classification = Classification(
+            {"a.py": make_file_classification(context_lines=frozenset({2}))}
+        )
         local = Ruleset(name=None, root=repo.root / ".codeguard")
         reviewer = Reviewer(
             steps=(

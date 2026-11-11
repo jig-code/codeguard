@@ -16,6 +16,7 @@ from codeguard.review import (
     Severity,
     Verdict,
 )
+from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
 
@@ -48,7 +49,9 @@ class TestJudgeCheck:
     def test_failed_judge_call_is_a_judge_error_on_the_file(
         self, tmp_path, make_binding, make_diagnostic
     ):
-        check = JudgeCheck(tmp_path, make_binding(), FailingJudge(), THRESHOLD, AllLines(()), {})
+        check = JudgeCheck(
+            tmp_path, make_binding(), FailingJudge(), THRESHOLD, AllLines(()), Classification()
+        )
 
         assert check.check(["a.py"]) == [make_diagnostic(judge_error=True)]
 
@@ -61,7 +64,7 @@ class TestJudgeCheck:
             FailingJudge(),
             THRESHOLD,
             AllLines(()),
-            {},
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [
@@ -71,7 +74,7 @@ class TestJudgeCheck:
     def test_judge_call_past_the_time_limit_is_a_timeout(self, tmp_path, make_binding):
         error = JudgeTimeout("The review reached its 5-minute time limit.")
         check = JudgeCheck(
-            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), {}
+            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), Classification()
         )
 
         [diagnostic] = check.check(["a.py"])
@@ -81,7 +84,7 @@ class TestJudgeCheck:
     def test_judge_call_without_a_verdict_is_no_verdict(self, tmp_path, make_binding):
         error = JudgeNoVerdict("claude returned no verdict.")
         check = JudgeCheck(
-            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), {}
+            tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()), Classification()
         )
 
         [diagnostic] = check.check(["a.py"])
@@ -100,7 +103,7 @@ class TestJudgeCheck:
             WaitingJudge(barrier),
             THRESHOLD,
             AllLines(()),
-            {},
+            Classification(),
         ).check(files)
 
         assert not barrier.broken
@@ -112,7 +115,7 @@ class TestJudgeCheck:
             RecordingJudge(),
             THRESHOLD,
             AllLines(()),
-            {},
+            Classification(),
         )
 
         assert check.check(["a.py"]) == []
@@ -121,9 +124,9 @@ class TestJudgeCheck:
         (tmp_path / "b.py").write_text("x = 1\n")
         judge = RecordingJudge()
 
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), {}).check(
-            ["a.py", "b.py"]
-        )
+        JudgeCheck(
+            tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), Classification()
+        ).check(["a.py", "b.py"])
 
         assert set(judge.received) == {
             make_judge_request(),
@@ -138,7 +141,9 @@ class TestJudgeCheck:
         )
         judge = RecordingJudge()
         scope = ChangedLines({"pricing.py": frozenset({5})})
-        classification = {"pricing.py": make_file_classification(judged=frozenset({4, 5}))}
+        classification = Classification(
+            {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
+        )
 
         JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope, classification).check(
             ["pricing.py"]
@@ -160,7 +165,7 @@ class TestJudgeCheck:
             judge,
             THRESHOLD,
             AllLines(()),
-            {},
+            Classification(),
         ).check(["a.py"])
 
         assert judge.received == []
@@ -170,9 +175,13 @@ class TestJudgeCheck:
     ):
         judge = RecordingJudge()
         scope = ChangedLines({"a.py": frozenset({1})})
-        classification = {
-            "a.py": make_file_classification(kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY}))
-        }
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
+        )
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
 
         JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, classification).check(["a.py"])
@@ -184,9 +193,13 @@ class TestJudgeCheck:
     ):
         judge = RecordingJudge()
         scope = ChangedLines({"a.py": frozenset({1})})
-        classification = {
-            "a.py": make_file_classification(kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY}))
-        }
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
+        )
         binding = make_binding(triggers=frozenset({ChangeKind.COMMENT, ChangeKind.CLASS_HEADER}))
 
         JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, classification).check(["a.py"])
@@ -199,7 +212,7 @@ class TestJudgeCheck:
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
         scope = ChangedLines({"a.md": frozenset({1})})
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, {}).check(["a.md"])
+        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope, Classification()).check(["a.md"])
 
         assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
 
@@ -208,9 +221,13 @@ class TestJudgeCheck:
     ):
         judge = RecordingJudge()
         scope = ChangedLines({"a.py": frozenset({1})})
-        classification = {
-            "a.py": make_file_classification(kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY}))
-        }
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
+        )
 
         JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope, classification).check(
             ["a.py"]
@@ -230,7 +247,7 @@ class TestJudgeCheck:
             judge,
             THRESHOLD,
             AllLines(()),
-            {},
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [make_diagnostic(judged=True, severity=Severity.WARNING)]
@@ -244,7 +261,9 @@ class TestJudgeCheck:
                 violations=(make_violation(confidence=0.5),),
             )
         )
-        check = JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), {})
+        check = JudgeCheck(
+            tmp_path, make_binding(), judge, THRESHOLD, AllLines(()), Classification()
+        )
 
         assert check.check(["a.py"]) == [
             make_diagnostic(judged=True, severity=Severity.WARNING, confidence=0.5)

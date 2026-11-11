@@ -62,7 +62,7 @@ class Rules:
 
     def _classification(self, scope: ChangedLines | AllLines) -> Classification:
         if isinstance(scope, AllLines):
-            return {}
+            return Classification()
         classifier = ChangeClassifier.for_rulesets(self.ast_grep, self.rulesets, self.working_tree)
         return classifier.classify(scope)
 
@@ -75,9 +75,9 @@ class Rules:
                     rule=binding.rule,
                     file=file,
                     cached=self.judges.cached(root, binding.model).has(
-                        JudgeRequest.of_change(binding, root, file, scope, classification.get(file))
+                        JudgeRequest.of_change(binding, root, file, scope, classification)
                     ),
-                    triggered=binding.is_triggered(classification.get(file)),
+                    triggered=classification.is_triggered(file, binding.triggers),
                 )
                 for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
                 for file in binding.files(scope.files)

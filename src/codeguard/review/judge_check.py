@@ -23,7 +23,7 @@ class JudgeCheck:
         matched = [
             file
             for file in self.binding.files(files)
-            if self.binding.is_triggered(self.classification.get(file))
+            if self.classification.is_triggered(file, self.binding.triggers)
         ]
         if not matched:
             return []
@@ -52,5 +52,5 @@ class JudgeCheck:
 
     def _request(self, file: str) -> JudgeRequest:
         return JudgeRequest.of_change(
-            self.binding, self.root, file, self.scope, self.classification.get(file)
+            self.binding, self.root, file, self.scope, self.classification
         )

@@ -26,28 +26,14 @@ class ChangeClassifier:
     def classify(self, scope: ChangedLines) -> Classification:
         head = self.scanner.scan_files(self.working_tree.root, scope.files)
         base = self._base(scope)
-        classification = {
-            file: FileClassification(kinds=None, judged=scope.points(file)) for file in scope.files
-        }
-        for file, parsed in head.items():
-            added = scope.lines.get(file, frozenset())
-            removed_code = scope.removed_code_lines(file)
-            before = base.get(file)
-            judged = parsed.judged_lines(added)
-            kind_lines = parsed.kind_lines(added)
-            if before is not None:
-                replaced_rows = scope.replaced_base_rows(file)
-                judged |= _in_head(
-                    scope, file, before.kept_judged_lines(removed_code, replaced_rows)
-                )
-                for kind, lines in before.kept_kind_lines(removed_code, replaced_rows).items():
-                    kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(
-                        scope, file, lines
-                    )
-            classification[file] = FileClassification(
-                parsed.touched_kinds(added, before, removed_code), judged, kind_lines
-            )
-        return classification
+        return Classification(
+            {
+                file: _classify_file(scope, file, head[file], base.get(file))
+                if file in head
+                else FileClassification(touched_kinds=None, context_lines=scope.points(file))
+                for file in scope.files
+            }
+        )
 
     def _base(self, scope: ChangedLines) -> dict[str, ParsedFile]:
         if scope.base is None:
@@ -62,6 +48,25 @@ class ChangeClassifier:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(contents[paths[file]])
             return self.scanner.scan_files(Path(directory), found)
+
+
+def _classify_file(
+    scope: ChangedLines, file: str, parsed: ParsedFile, before: ParsedFile | None
+) -> FileClassification:
+    added = scope.lines.get(file, frozenset())
+    removed_code = scope.removed_code_lines(file)
+    context_lines = parsed.judged_lines(added)
+    kind_lines = parsed.kind_lines(added)
+    if before is not None:
+        replaced_rows = scope.replaced_base_rows(file)
+        context_lines |= _in_head(
+            scope, file, before.kept_judged_lines(removed_code, replaced_rows)
+        )
+        for kind, lines in before.kept_kind_lines(removed_code, replaced_rows).items():
+            kind_lines[kind] = kind_lines.get(kind, frozenset()) | _in_head(scope, file, lines)
+    return FileClassification(
+        parsed.touched_kinds(added, before, removed_code), context_lines, kind_lines
+    )
 
 
 def _in_head(scope: ChangedLines, file: str, base_lines: Iterable[int]) -> frozenset[int]:

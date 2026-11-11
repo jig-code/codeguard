@@ -8,5 +8,5 @@ class MakeFileClassification(factory.Factory):
     class Meta:
         model = FileClassification
 
-    kinds = frozenset({ChangeKind.ANY})
-    judged = frozenset({1})
+    touched_kinds = frozenset({ChangeKind.ANY})
+    context_lines = frozenset({1})
