@@ -1,6 +1,5 @@
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
-from operator import attrgetter
 from typing import Protocol
 
 import pygit2
@@ -100,12 +99,12 @@ class LineScopes:
         ]
         changed = {diff.file: diff for diff in file_diffs if diff.changes_code}
         return ChangedLines(
-            lines=_by_file(changed, attrgetter("added")),
-            deletions=_by_file(changed, attrgetter("deletions")),
-            removals=_by_file(changed, attrgetter("removals")),
-            kept=_by_file(changed, attrgetter("kept")),
-            replaced=_by_file(changed, attrgetter("replaced")),
-            base_paths=_by_file(changed, attrgetter("base_path")),
+            lines=_by_file(changed, lambda diff: diff.added),
+            deletions=_by_file(changed, lambda diff: diff.deletions),
+            removals=_by_file(changed, lambda diff: diff.removals),
+            kept=_by_file(changed, lambda diff: diff.kept),
+            replaced=_by_file(changed, lambda diff: diff.replaced),
+            base_paths=_by_file(changed, lambda diff: diff.base_path),
             base=merge_base,
         )
 
