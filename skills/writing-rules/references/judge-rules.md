@@ -10,10 +10,11 @@ The skill is the convention codeguard's judge reviews against, and the text the 
 agent loads before it edits. It holds, in this order, and nothing else:
 
 1. A title.
-2. The convention, as `SKILL.md` says to state it: one declarative sentence in the
-   words a reviewer would use, never a question, and nothing beside it. The judge reads
-   any other sentence or clause as a test of its own, so code that meets that text's
-   letter passes though it breaks the statement. The purpose goes under `## Why`.
+2. The convention, as `SKILL.md` says to state it: one declarative sentence in the words
+   a reviewer would use, never a question, that says what code must do or never do,
+   once, and nothing about how code does it or why. The judge reads any other text, a
+   clause in that sentence included, as a test of its own, so code that meets that
+   text's letter passes though it breaks the statement. The purpose goes under `## Why`.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
