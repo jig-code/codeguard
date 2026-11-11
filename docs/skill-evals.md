@@ -24,31 +24,30 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A grader reads one file the agent wrote, checks that it wrote no rule file or that it
-  loaded the skill, or, in a case that declines a rule, reads the agent's final reply.
+- A grader reads a file the agent wrote, whether it wrote any rule file, or, in a case
+  that declines a rule, the agent's final reply.
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
   A grader checks the instruction or the ask, never the answer the fixture's domain has,
   such as which code the rule should flag.
-- Every case has a `tool_used` grader that passes when the agent loads the writing-rules
-  skill.
+- Every case has a grader that passes when the agent loads the writing-rules skill,
+  written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
 Cases are named like tests. A case's directory is its expected outcome, then its
 subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
 changes an existing rule) or `declines`. A grader's file is its number, then what
 the agent's output does.
 
-Only a case's graders check what its runs produce. A check of a fixed marker in a file
-the agent wrote, such as a heading, a key or the start of a line, is a `regex` grader
-whose pattern a reader can check at a glance. A check that has to read prose, such as
-counting its sentences, is an `llm` grader focused on the short text it judges: a
-pattern that parses prose is too long for a reviewer to tell what it checks, and it
-breaks on wording that does what the skill asks.
+[Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
+says when to use each grader type. codeguard adds that a `regex` grader's pattern is one
+a reader can check at a glance, and that no grader parses prose with a pattern: such a
+pattern is too long for a reviewer to tell what it checks, and it breaks on wording that
+does what the skill asks.
 
-An `llm` grader judges one criterion. Its rubric is one `PASS if` line stating what a
-correct output contains, and one `FAIL if` line naming that criterion's concrete failures
-the `PASS if` line doesn't make obvious, a missing or empty output among them.
+An `llm` grader judges one criterion, and its `FAIL if` line names that criterion's
+concrete failures, a missing or empty output among them.
+[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ## Running them
 
