@@ -104,18 +104,14 @@ containers = ["codeguard.repository"]
 exhaustive = true
 layers = [
     "line_scope",
-    "pinned_diff | working_tree",
-    "unified_diff | git",
+    "working_tree",
+    "git",
 ]
 
 [[tool.importlinter.contracts]]
-name = "only the repository package runs git and parses diffs"
+name = "only the repository package runs git"
 type = "protected"
-protected_modules = [
-    "codeguard.repository.git",
-    "codeguard.repository.pinned_diff",
-    "codeguard.repository.unified_diff",
-]
+protected_modules = ["codeguard.repository.git"]
 allowed_importers = ["codeguard.repository"]
 
 [[tool.importlinter.contracts]]
