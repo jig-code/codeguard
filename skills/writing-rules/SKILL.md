@@ -12,9 +12,10 @@ rule, a convention a model judges each change against.
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
 2. **State the convention and why it exists**, as the two sections below say. After
-   writing the statement, reread it and keep only which code it covers and what that
-   code must do or never do; every other clause goes. Reread the two sections when two
-   rules, or a rule and its cases, disagree about the same code.
+   writing the statement, reread it and keep only its intent: which code it covers and
+   what that code must do or never do. A list of the code shapes that do it goes, as
+   does every other clause. Reread the two sections when two rules, or a rule and its
+   cases, disagree about the same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
