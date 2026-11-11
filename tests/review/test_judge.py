@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from codeguard.config import ChangeKind
 from codeguard.repository import AllLines, ChangedLines, Removal
 from codeguard.review import JudgeRequest, Severity, Verdict
 from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
@@ -115,9 +116,10 @@ class TestJudgeRequest:
         (tmp_path / "pricing.py").write_text("try:\n    x = 1\nexcept:\n    pass\n")
         scope = ChangedLines({"pricing.py": frozenset({2})})
         classified = make_file_classification(
-            context_lines=frozenset({2}), kind_lines={"control-flow": frozenset({1, 2, 3, 4})}
+            context_lines=frozenset({2}),
+            kind_lines={ChangeKind.CONTROL_FLOW: frozenset({1, 2, 3, 4})},
         )
-        binding = make_binding(triggers=frozenset({"control-flow"}))
+        binding = make_binding(triggers=frozenset({ChangeKind.CONTROL_FLOW}))
 
         request = JudgeRequest.of_change(
             binding, tmp_path, "pricing.py", scope, Classification({"pricing.py": classified})
