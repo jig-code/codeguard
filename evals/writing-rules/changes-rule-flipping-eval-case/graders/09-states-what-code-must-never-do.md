@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the sentence under this SKILL.md's `#` title and before `## Why`, leaving out the title and the frontmatter, states what the code it covers must never do.
-FAIL if that sentence, leaving out the title and the frontmatter, is missing or empty, states an action code must take, or lists the code shapes, steps or names code must use.
+FAIL if that sentence, leaving out the title and the frontmatter, is missing or empty, states what code must do instead of what it must never do, or lists code shapes, values or names.

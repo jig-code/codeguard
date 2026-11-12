@@ -39,7 +39,7 @@ reviewer would, and says on what ground the code keeps or breaks it.
 - **What code must never do, once.** The statement says what code must never do, once,
   and nothing about how code avoids it or why: a clause about how or why is text beside
   the statement, and the judge reads it as a test of its own. A statement that forbids
-  not doing something prescribes a fix; state the harm that fix prevents instead.
+  not doing something says how code avoids it, not what code must never do.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
