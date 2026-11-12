@@ -93,24 +93,3 @@ class TestVertexGemini:
             "GOOGLE_CLOUD_PROJECT."
         )
         assert clients.received == []
-
-    def test_client_is_built_with_the_api_key_project_and_location(self):
-        clients = RecordingClients()
-        models = VertexGemini(
-            project="my-project", location="us", api_key="proxy-injected", genai=clients
-        )
-
-        async def connect() -> None:
-            async with models("gemini-4-argon"):
-                pass
-
-        asyncio.run(connect())
-
-        assert clients.received == [
-            {
-                "vertexai": True,
-                "api_key": "proxy-injected",
-                "project": "my-project",
-                "location": "us",
-            }
-        ]

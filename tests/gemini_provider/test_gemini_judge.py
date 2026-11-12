@@ -20,7 +20,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.gemini_provider import GeminiJudge, gemini_judge
+from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -124,6 +124,21 @@ class RecordingProcesses:
 
     def __exit__(self, *exc_info: object) -> None:
         self.events.append("released")
+
+
+@dataclass
+class VertexEndpoint:
+    sent: list[httpx2.Request] = field(default_factory=list)
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.sent.append(request)
+        return httpx2.Response(
+            400, json={"error": {"code": 400, "message": "Bad request.", "status": "INVALID"}}
+        )
+
+
+def refuse(request: httpx2.Request) -> httpx2.Response:
+    raise httpx2.ConnectError("Connection refused", request=request)
 
 
 @pytest.fixture(autouse=True)
@@ -475,3 +490,49 @@ class TestGeminiJudge:
         assert attributes["tool_calls"] == (
             '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
         )
+
+
+class TestGeminiJudgeOnVertex:
+    def test_request_goes_to_the_project_and_location_with_the_api_key(
+        self, tmp_path, make_judge_request
+    ):
+        endpoint = VertexEndpoint()
+        models = VertexGemini(
+            project="my-project",
+            location="global",
+            api_key="proxy-injected",
+            transport=httpx2.MockTransport(endpoint),
+        )
+
+        with pytest.raises(JudgeProcessError):
+            GeminiJudge(tmp_path, "gemini-4-argon", models, RecordingProcesses()).judge(
+                make_judge_request()
+            )
+
+        assert [
+            (str(request.url), request.headers["x-goog-api-key"]) for request in endpoint.sent
+        ] == [
+            (
+                "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
+                "publishers/google/models/gemini-4-argon:generateContent",
+                "proxy-injected",
+            )
+        ]
+
+    def test_refused_connection_is_sent_again_then_a_judge_error(
+        self, tmp_path, make_judge_request, waits
+    ):
+        models = VertexGemini(
+            project="my-project",
+            location="global",
+            api_key="proxy-injected",
+            transport=httpx2.MockTransport(refuse),
+        )
+
+        with pytest.raises(JudgeProcessError) as error:
+            GeminiJudge(tmp_path, "gemini-4-argon", models, RecordingProcesses()).judge(
+                make_judge_request()
+            )
+
+        assert str(error.value) == "gemini-4-argon failed: Connection refused"
+        assert [int(wait) for wait in waits] == [1, 2, 4, 8]
