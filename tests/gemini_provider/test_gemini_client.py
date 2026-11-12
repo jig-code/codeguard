@@ -55,9 +55,32 @@ class TestVertexGeminiFromConfig:
 
 
 class TestVertexGemini:
-    def test_missing_google_credentials_are_a_judge_error(self):
-        models = VertexGemini(project=None, location="global", api_key=None, genai=_no_credentials)
-
+    @pytest.mark.parametrize(
+        ("models", "message"),
+        [
+            (
+                VertexGemini(
+                    project=None,
+                    location="global",
+                    api_key=None,
+                    client_factory=_no_credentials,
+                ),
+                "Gemini on Vertex AI found no Google credentials: no credentials found",
+            ),
+            (
+                VertexGemini(
+                    project=None,
+                    location="global",
+                    api_key="proxy-injected",
+                    client_factory=_no_client,
+                ),
+                "Gemini on Vertex AI needs a project to run with an API key: set judge.project "
+                "or GOOGLE_CLOUD_PROJECT.",
+            ),
+        ],
+        ids=["missing credentials", "api key without a project"],
+    )
+    def test_unusable_google_settings_are_a_judge_error(self, models, message):
         async def connect() -> None:
             async with models("gemini-4-argon"):
                 pass
@@ -65,23 +88,4 @@ class TestVertexGemini:
         with pytest.raises(JudgeProcessError) as error:
             asyncio.run(connect())
 
-        assert str(error.value) == (
-            "Gemini on Vertex AI found no Google credentials: no credentials found"
-        )
-
-    def test_api_key_without_a_project_is_a_judge_error(self):
-        models = VertexGemini(
-            project=None, location="global", api_key="proxy-injected", genai=_no_client
-        )
-
-        async def connect() -> None:
-            async with models("gemini-4-argon"):
-                pass
-
-        with pytest.raises(JudgeProcessError) as error:
-            asyncio.run(connect())
-
-        assert str(error.value) == (
-            "Gemini on Vertex AI needs a project to run with an API key: set judge.project or "
-            "GOOGLE_CLOUD_PROJECT."
-        )
+        assert str(error.value) == message

@@ -25,7 +25,7 @@ class VertexGemini:
     project: str | None
     location: str
     api_key: str | None = field(repr=False)
-    genai: Callable[..., Client] = Client
+    client_factory: Callable[..., Client] = Client
     transport: httpx2.AsyncBaseTransport | None = None
 
     @classmethod
@@ -53,7 +53,7 @@ class VertexGemini:
                 "or GOOGLE_CLOUD_PROJECT."
             )
         try:
-            return self.genai(
+            return self.client_factory(
                 vertexai=True,
                 api_key=self.api_key,
                 project=self.project,

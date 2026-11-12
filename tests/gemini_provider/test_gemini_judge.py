@@ -127,7 +127,7 @@ class RecordingProcesses:
 
 
 @dataclass
-class VertexEndpoint:
+class BadRequestRecorder:
     sent: list[httpx2.Request] = field(default_factory=list)
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
@@ -496,18 +496,18 @@ class TestGeminiJudgeOnVertex:
     def test_request_goes_to_the_project_and_location_with_the_api_key(
         self, tmp_path, make_judge_request
     ):
-        endpoint = VertexEndpoint()
+        recorder = BadRequestRecorder()
         models = VertexGemini(
             project="my-project",
             location="global",
             api_key="proxy-injected",
-            transport=httpx2.MockTransport(endpoint),
+            transport=httpx2.MockTransport(recorder),
         )
 
         with pytest.raises(JudgeProcessError):
             judge_with(tmp_path, models).judge(make_judge_request())
 
-        [request] = endpoint.sent
+        [request] = recorder.sent
         assert str(request.url) == (
             "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
             f"publishers/google/models/{MODEL}:generateContent"
