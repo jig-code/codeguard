@@ -16,11 +16,12 @@ rule, a convention that a model judges each change against.
    statement covers and what that code must never do. Any list of code shapes goes, as
    does every other clause, and the harm the rule prevents goes under `## Why`. Then
    check that the statement is written out in full: no relative pronoun is dropped where
-   a phrase could misparse, and no pronoun's noun is unclear. Then check that the
-   statement doesn't forbid code to leave something undone: such a statement names an
-   action that code must take, so rewrite the statement as what that code must never do.
-   Reread the two sections when two rules, or a rule and its cases, disagree about the
-   same code.
+   a phrase could misparse, and no pronoun's noun is unclear. Then look in the statement
+   for words that say code leaves an action undone: "without" followed by a verb, "fail
+   to", "skip", or "leave" with "undone". If the statement has any of them, the
+   statement names an action that code must take, so rewrite the statement as what that
+   code must never do. Reread the two sections when two rules, or a rule and its cases,
+   disagree about the same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
