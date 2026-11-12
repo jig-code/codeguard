@@ -13,10 +13,12 @@ codeguard, testing rules and reviewing code.
 Each case asks an agent with the skill for a codeguard rule, and grades what the agent
 does against what the skill says. A case is one of two kinds:
 
-| The agent is asked for | It should | Graders check | Example |
-|---|---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule's skill holds only its statement and `## Why` |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `declines-unused-functions` asks for a judge rule that flags a function nobody calls any more, which takes a lookup across the whole repository |
+| The agent is asked for | It should | Graders check |
+|---|---|---|
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check |
+
+The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
 never check whether a rule the agent writes works, or whether its rule tests or rule
