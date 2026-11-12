@@ -322,6 +322,27 @@ class TestGeminiJudge:
         assert models.answers == []
         assert 1 <= waits[0] < 2
 
+    def test_empty_answer_is_sent_again(self, tmp_path, make_judge_request, waits):
+        models = ScriptedGemini([ModelResponse(parts=[]), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
+        assert models.answers == []
+        assert 1 <= waits[0] < 2
+
+    def test_empty_answer_on_every_attempt_is_no_verdict(self, tmp_path, make_judge_request, waits):
+        models = ScriptedGemini([ModelResponse(parts=[]) for _ in range(10)])
+
+        with pytest.raises(JudgeNoVerdict) as error:
+            judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert (
+            str(error.value) == f"{MODEL} returned no verdict: Exceeded maximum output retries (1)"
+        )
+        assert models.answers == []
+        assert [int(wait) for wait in waits] == [1, 2, 4, 8, 1, 2, 4, 8]
+
     def test_request_is_sent_at_most_five_times(self, tmp_path, make_judge_request, waits):
         unsent = verdict()
         models = ScriptedGemini([*(http_error(429, "Quota exceeded.") for _ in range(5)), unsent])

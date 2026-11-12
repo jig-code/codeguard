@@ -150,9 +150,9 @@ class GeminiJudge:
         return JudgeTimeout(f"{self.model} took over {self.request_limit_seconds:g}s to answer.")
 
 
-# Sends a request again when Gemini turned it away or the connection broke, while the backoff
-# fits before the deadline. The SDK's own retries miss a connection that broke after the
-# response started.
+# Sends a request again when Gemini turned it away, the connection broke, or Gemini answered
+# with nothing at all, while the backoff fits before the deadline. The SDK's own retries miss a
+# connection that broke after the response started.
 class _Retrying(WrapperModel):
     def __init__(self, wrapped: Model, deadline: Deadline | None) -> None:
         super().__init__(wrapped)
@@ -166,13 +166,17 @@ class _Retrying(WrapperModel):
     ) -> ModelResponse:
         attempt = 1
         while True:
+            # Backs off 1s doubling, plus up to 1s of jitter: about 15s over 5 attempts.
+            wait = 2 ** (attempt - 1) + random.random()
+            last = attempt == _MAX_ATTEMPTS or not self._fits(wait)
             try:
-                return await super().request(messages, model_settings, model_request_parameters)
+                response = await super().request(messages, model_settings, model_request_parameters)
             except ModelAPIError as error:
-                # Backs off 1s doubling, plus up to 1s of jitter: about 15s over 5 attempts.
-                wait = 2 ** (attempt - 1) + random.random()
-                if attempt == _MAX_ATTEMPTS or not _retried(error) or not self._fits(wait):
+                if last or not _retried(error):
                     raise
+            else:
+                if last or response.parts:
+                    return response
             await asyncio.sleep(wait)
             attempt += 1
 
