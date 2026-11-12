@@ -505,16 +505,14 @@ class TestGeminiJudgeOnVertex:
         )
 
         with pytest.raises(JudgeProcessError):
-            GeminiJudge(tmp_path, "gemini-4-argon", models, RecordingProcesses()).judge(
-                make_judge_request()
-            )
+            judge_with(tmp_path, models).judge(make_judge_request())
 
         assert [
             (str(request.url), request.headers["x-goog-api-key"]) for request in endpoint.sent
         ] == [
             (
                 "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
-                "publishers/google/models/gemini-4-argon:generateContent",
+                f"publishers/google/models/{MODEL}:generateContent",
                 "proxy-injected",
             )
         ]
@@ -529,8 +527,6 @@ class TestGeminiJudgeOnVertex:
         )
 
         with pytest.raises(JudgeProcessError) as error:
-            GeminiJudge(tmp_path, "gemini-4-argon", models, RecordingProcesses()).judge(
-                make_judge_request()
-            )
+            judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert str(error.value) == "gemini-4-argon failed: Connection refused"
+        assert str(error.value) == f"{MODEL} failed: Connection refused"
