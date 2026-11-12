@@ -230,11 +230,12 @@ class TestRulesetLoader:
         assert ruleset.bindings.root["placement.yaml"].model == "claude-haiku-5-5"
 
     def test_loads_the_binding_provider(self, repo, make_skill, make_binding_config):
+        model = "gemini-judge-test"
         repo.write(SKILL, make_skill().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
-            "provider: gemini\nmodel: gemini-4-argon\n",
+            f"provider: gemini\nmodel: {model}\n",
         )
 
         ruleset = RulesetLoader.local(repo.root).load()
@@ -242,7 +243,7 @@ class TestRulesetLoader:
         assert ruleset.bindings.root["placement.yaml"] == make_binding_config(
             skill=repo.root / ".claude/skills/responsibility-placement",
             provider=JudgeProvider.GEMINI,
-            model=JudgeProvider.GEMINI.default_model,
+            model=model,
         )
 
     def test_loads_the_binding_triggers(self, repo, make_skill):

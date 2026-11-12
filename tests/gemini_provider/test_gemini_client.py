@@ -24,6 +24,17 @@ def test_missing_google_credentials_without_a_project_are_a_judge_error(tmp_path
 
 
 @mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
+def test_credentials_file_wins_over_an_api_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", str(tmp_path / "judge.json"))
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+
+    with pytest.raises(JudgeProcessError) as error:
+        asyncio.run(VertexGemini()(MODEL).__aenter__())
+
+    assert str(error.value).startswith("Gemini on Vertex AI found no Google credentials: ")
+
+
+@mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
 def test_api_key_without_a_project_is_a_judge_error(monkeypatch):
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)

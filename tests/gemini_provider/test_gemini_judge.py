@@ -7,7 +7,6 @@ from unittest import mock
 
 import httpx2
 import pytest
-from google.oauth2.credentials import Credentials
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
@@ -520,25 +519,3 @@ class TestGeminiJudgeOnVertex:
         assert "/projects/my-project/locations/global/" in request.url.path
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
-
-    def test_credentials_judge_in_the_project_and_the_global_location(
-        self, tmp_path, make_judge_request, make_verdict, monkeypatch
-    ):
-        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.delenv("GOOGLE_CLOUD_LOCATION", raising=False)
-        verdict = make_verdict()
-        vertex = VertexVerdicts(verdict)
-        models = VertexGemini(
-            project="my-project",
-            credentials=Credentials(token="access-token"),
-            transport=httpx2.MockTransport(vertex),
-        )
-
-        judgement = judge_with(tmp_path, models).judge(make_judge_request())
-
-        assert judgement == Judgement(verdict)
-        [request] = vertex.sent
-        assert "/projects/my-project/locations/global/" in request.url.path
-        assert f"/models/{MODEL}:" in request.url.path
-        assert request.headers["authorization"] == "Bearer access-token"

@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 
 import httpx2
-from google.auth.credentials import Credentials
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import Client
 from google.genai.types import HttpOptions
@@ -19,7 +18,6 @@ from codeguard.review import JudgeProcessError
 class VertexGemini:
     project: str | None = None
     location: str | None = None
-    credentials: Credentials | None = None
     transport: httpx2.AsyncBaseTransport | None = None
 
     @asynccontextmanager
@@ -35,7 +33,7 @@ class VertexGemini:
     def _client(self, http: httpx2.AsyncClient) -> Iterator[Client]:
         project = self.project or os.environ.get("GOOGLE_CLOUD_PROJECT")
         location = self.location or os.environ.get("GOOGLE_CLOUD_LOCATION") or "global"
-        api_key = None if self.credentials else _api_key()
+        api_key = _api_key()
         if api_key is not None and project is None:
             raise JudgeProcessError(
                 "Gemini on Vertex AI needs a project to use with the API key: set judge.project "
@@ -45,7 +43,6 @@ class VertexGemini:
             client = Client(
                 vertexai=True,
                 api_key=api_key,
-                credentials=self.credentials,
                 project=project,
                 location=location,
                 http_options=HttpOptions(httpx_async_client=http),
