@@ -16,8 +16,8 @@ rule, a convention that a model judges each change against.
    every check:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
-   3. Forbid something that code does: use no "without" followed by a verb, no "fail
-      to", no "skip", and no "leave" with "undone".
+   3. Name what code does, never what code leaves out: use no "without" followed by a
+      verb, no "fail to", no "skip", and no "leave" with "undone".
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
@@ -42,8 +42,7 @@ says on what ground the code keeps or breaks it.
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
 - **What code must never do, once.** The statement says what code must never do, once,
-  and nothing about how code avoids what that code must never do, or why. The harm the
-  rule prevents goes under `## Why`, never in the statement.
+  and nothing about how code avoids what that code must never do, or why.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.

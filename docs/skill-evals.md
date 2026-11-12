@@ -16,7 +16,7 @@ does against what the skill says. A case is one of two kinds:
 | The agent is asked for | It should | Graders check |
 |---|---|---|
 | A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say the convention isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, say the convention isn't codeguard's to check, and offer no other rule, without naming or setting up the other tool | That no rule file was written, that the agent's reply says the convention isn't a codeguard rule's to check, and that the reply offers no other rule |
 
 The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
