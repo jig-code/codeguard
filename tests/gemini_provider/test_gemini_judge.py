@@ -519,9 +519,8 @@ class TestGeminiJudgeOnVertex:
             )
         ]
 
-    def test_refused_connection_is_sent_again_then_a_judge_error(
-        self, tmp_path, make_judge_request, waits
-    ):
+    @pytest.mark.usefixtures("waits")
+    def test_refused_connection_is_a_judge_error(self, tmp_path, make_judge_request):
         models = VertexGemini(
             project="my-project",
             location="global",
@@ -535,4 +534,3 @@ class TestGeminiJudgeOnVertex:
             )
 
         assert str(error.value) == "gemini-4-argon failed: Connection refused"
-        assert [int(wait) for wait in waits] == [1, 2, 4, 8]

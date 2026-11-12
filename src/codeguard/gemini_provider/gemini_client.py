@@ -8,17 +8,16 @@ import httpx2
 from google.auth.exceptions import DefaultCredentialsError
 from google.genai import Client
 from google.genai.types import HttpOptions
-from pydantic_ai.models import Model, create_async_httpx2_client, get_user_agent
+from pydantic_ai.models import (
+    DEFAULT_HTTP_TIMEOUT,
+    Model,
+    create_async_httpx2_client,
+    get_user_agent,
+)
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
 from codeguard.review import JudgeProcessError
-
-# pydantic-ai's Google providers give their own client these timeouts: the 20 minutes Google
-# recommends for long decode, and 5 s to connect. pydantic-ai keeps them private, so they are
-# repeated here for the client codeguard hands it.
-_READ_SECONDS = 20 * 60
-_TIMEOUT = httpx2.Timeout(_READ_SECONDS, connect=5)
 
 
 @dataclass(frozen=True)
@@ -43,10 +42,9 @@ class VertexGemini:
         # GoogleCloudProvider drops an API key given with a project or location, so the client
         # that keeps all three is built here.
         # pydantic-ai maps only httpx2's transport errors, so the client sends through httpx2.
-        async with create_async_httpx2_client(timeout=_TIMEOUT, transport=self.transport) as http:
+        async with create_async_httpx2_client(transport=self.transport) as http:
             with self._client(http) as client:
-                async with client.aio:
-                    yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
+                yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
 
     def _client(self, http: httpx2.AsyncClient) -> Client:
         if self.api_key and self.project is None:
@@ -63,7 +61,7 @@ class VertexGemini:
                 http_options=HttpOptions(
                     headers={"User-Agent": get_user_agent()},
                     httpx_async_client=http,
-                    timeout=_READ_SECONDS * 1000,
+                    timeout=int((http.timeout.read or DEFAULT_HTTP_TIMEOUT) * 1000),
                 ),
             )
         except DefaultCredentialsError as error:
