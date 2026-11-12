@@ -69,10 +69,13 @@ def no_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def committed_config(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CODEGUARD_CONFIG", raising=False)
-    # The llm tests judge with the Gemini sign-in this machine sets.
-    kept = "CODEGUARD_JUDGE__GEMINI__" if request.node.get_closest_marker("llm") else None
+    machine_gemini_sign_in = (
+        "CODEGUARD_JUDGE__GEMINI__" if request.node.get_closest_marker("llm") else None
+    )
     for name in list(os.environ):
-        if name.startswith("CODEGUARD_JUDGE__") and not (kept and name.startswith(kept)):
+        if name.startswith("CODEGUARD_JUDGE__") and not (
+            machine_gemini_sign_in and name.startswith(machine_gemini_sign_in)
+        ):
             monkeypatch.delenv(name)
 
 
