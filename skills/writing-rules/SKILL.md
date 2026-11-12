@@ -14,9 +14,10 @@ rule, a convention that a model judges each change against.
 2. **State the convention and why it exists**, as the two sections below say. After
    writing the statement, reread the statement and keep only its intent: which code the
    statement covers and what that code must never do. Any list of code shapes goes, as
-   does every other clause, and the harm the rule prevents goes under `## Why`. Reread
-   the two sections when two rules, or a rule and its cases, disagree about the same
-   code.
+   does every other clause, and the harm the rule prevents goes under `## Why`. Then
+   check that the statement is written out in full: no relative pronoun is dropped where
+   a phrase could misparse, and no pronoun's noun is unclear. Reread the two sections
+   when two rules, or a rule and its cases, disagree about the same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
