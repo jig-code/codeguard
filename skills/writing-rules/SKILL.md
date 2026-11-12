@@ -14,8 +14,8 @@ rule, a convention a model judges each change against.
 2. **State the convention and why it exists**, as the two sections below say. After
    writing the statement, reread it and keep only its intent: which code it covers and
    what that code must never do. Any list of code shapes goes, as does every other
-   clause. Reread the two sections when two rules, or a rule and its cases, disagree
-   about the same code.
+   clause, and the harm the rule prevents goes under `## Why`. Reread the two sections
+   when two rules, or a rule and its cases, disagree about the same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
@@ -37,8 +37,9 @@ reviewer would, and says on what ground the code keeps or breaks it.
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
 - **What code must never do, once.** The statement says what code must never do, once,
-  and nothing about how code avoids it or why: a clause about how or why is text beside
-  the statement, and the judge reads it as a test of its own. A statement that forbids
+  and nothing about how code avoids it or why. The harm the rule prevents goes under
+  `## Why`, never in the statement: a clause about how or why is text beside the
+  statement, and the judge reads it as a test of its own. A statement that forbids
   skipping an action says how code avoids it, not what code must never do.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
