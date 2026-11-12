@@ -77,7 +77,7 @@ model: gemini-3.1-pro-preview
 ```yaml
 judge:
   project: my-project             # default: GOOGLE_CLOUD_PROJECT
-  location: global                # default: GOOGLE_CLOUD_LOCATION, then global
+  location: global                # default: GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
@@ -98,7 +98,8 @@ Where a proxy adds credentials to requests, as Claude Code cloud environments' n
 secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
 to the service account instead, restricted to the Agent Platform API, and set
 `GOOGLE_API_KEY=proxy-injected`. codeguard then signs in with the key in place of
-Application Default Credentials, and calls Gemini in the project and location set above.
+Application Default Credentials, and calls Gemini in the project and location set above,
+so the key needs a project.
 Have the proxy send the key as the `x-goog-api-key` header to the Vertex AI endpoint for
 that location
 ([Vertex AI locations](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)).

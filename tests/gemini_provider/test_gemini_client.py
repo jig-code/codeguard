@@ -64,12 +64,35 @@ class TestVertexGemini:
     def test_missing_google_credentials_are_a_judge_error(self):
         models = VertexGemini(project=None, location="global", api_key=None, genai=_no_credentials)
 
+        async def connect() -> None:
+            async with models("gemini-4-argon"):
+                pass
+
         with pytest.raises(JudgeProcessError) as error:
-            asyncio.run(models("gemini-4-argon").__aenter__())
+            asyncio.run(connect())
 
         assert str(error.value) == (
             "Gemini on Vertex AI found no Google credentials: no credentials found"
         )
+
+    def test_api_key_without_a_project_is_a_judge_error(self):
+        clients = RecordingClients()
+        models = VertexGemini(
+            project=None, location="global", api_key="proxy-injected", genai=clients
+        )
+
+        async def connect() -> None:
+            async with models("gemini-4-argon"):
+                pass
+
+        with pytest.raises(JudgeProcessError) as error:
+            asyncio.run(connect())
+
+        assert str(error.value) == (
+            "Gemini on Vertex AI needs a project to run with an API key: set judge.project or "
+            "GOOGLE_CLOUD_PROJECT."
+        )
+        assert clients.received == []
 
     def test_client_is_built_with_the_api_key_project_and_location(self):
         clients = RecordingClients()
@@ -77,7 +100,11 @@ class TestVertexGemini:
             project="my-project", location="us", api_key="proxy-injected", genai=clients
         )
 
-        asyncio.run(models("gemini-4-argon").__aenter__())
+        async def connect() -> None:
+            async with models("gemini-4-argon"):
+                pass
+
+        asyncio.run(connect())
 
         assert clients.received == [
             {

@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import environ
 from typing import Self
 
@@ -17,7 +17,7 @@ from codeguard.review import JudgeProcessError
 class VertexGemini:
     project: str | None
     location: str
-    api_key: str | None
+    api_key: str | None = field(repr=False)
     genai: Callable[..., Client] = Client
 
     @classmethod
@@ -34,13 +34,15 @@ class VertexGemini:
         # GoogleCloudProvider drops an API key given with a project or location, so the client
         # that keeps all three is built here.
         with self._client() as client:
-            async with (
-                client.aio,
-                GoogleModel(model, provider=GoogleCloudProvider(client=client)) as connected,
-            ):
-                yield connected
+            async with client.aio:
+                yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
 
     def _client(self) -> Client:
+        if self.api_key and self.project is None:
+            raise JudgeProcessError(
+                "Gemini on Vertex AI needs a project to run with an API key: set judge.project "
+                "or GOOGLE_CLOUD_PROJECT."
+            )
         try:
             return self.genai(
                 vertexai=True, api_key=self.api_key, project=self.project, location=self.location
