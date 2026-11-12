@@ -16,7 +16,7 @@ does against what the skill says. A case is one of two kinds:
 | The agent is asked for | It should | Graders check |
 |---|---|---|
 | A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say the convention isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check |
 
 The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
@@ -26,13 +26,13 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A grader reads a file the agent wrote, whether it wrote any rule file, or, in a case
-  that declines a rule, the agent's final reply.
+- A grader reads a file that the agent wrote, whether the agent wrote any rule file, or,
+  in a case that declines a rule, the agent's final reply.
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
-  A grader checks the instruction or the ask, never the answer the fixture's domain has,
-  such as which code the rule should flag.
+  A grader checks the instruction or the ask, never the answer that the fixture's domain
+  has, such as which code the rule should flag.
 - Every case has a grader that passes when the agent loads the writing-rules skill,
   written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
@@ -43,9 +43,9 @@ the agent's output does.
 
 [Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
 says when to use each grader type. codeguard adds that a `regex` grader's pattern is one
-a reader can check at a glance, and that no grader parses prose with a pattern: such a
-pattern is too long for a reviewer to tell what it checks, and it breaks on wording that
-does what the skill asks.
+that a reader can check at a glance, and that no grader parses prose with a pattern:
+such a pattern is too long for a reviewer to tell what the pattern checks, and the
+pattern breaks on wording that does what the skill asks.
 
 An `llm` grader judges one criterion, and its `FAIL if` line names that criterion's
 concrete failures, a missing or empty output among them.

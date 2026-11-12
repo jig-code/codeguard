@@ -12,9 +12,10 @@ agent loads before it edits. It holds, in this order, and nothing else:
 1. A title.
 2. The convention, as `SKILL.md` says to state it: one declarative sentence in common
    terms, never a question, that says what code must never do, once, and nothing about
-   how code avoids it or why. The judge reads any other text, a clause in that
-   sentence included, as a test of its own, so code that meets that text's letter passes
-   though it breaks the statement. The purpose goes under `## Why`.
+   how code avoids what that code must never do, or why. The judge reads any other text,
+   a clause in that sentence included, as a test of its own, so code that meets that
+   text's letter passes though the code breaks the statement. The purpose goes under `##
+   Why`.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
@@ -53,14 +54,14 @@ sees.
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
 ground on which code breaks the convention and one `valid` case for each distinct
 situation in which code keeps it, and a `skipped` case outside the gate. A convention
-broken on one ground has one `invalid` case. Each case tests one thing none of the others
-does: a different thing the code does or fails to do, not another syntax for the same
-thing. No edge cases: a case a reasonable reviewer could argue either way proves nothing
-about the rule, and a judge that flips on it is right to.
+broken on one ground has one `invalid` case. Each case tests one thing that none of the
+others does: a different thing the code does or fails to do, not another syntax for the
+same thing. No edge cases: a case that a reasonable reviewer could argue either way
+proves nothing about the rule, and a judge that flips on it is right to.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
-  It is named as `SKILL.md` says.
+  Each case is named as `SKILL.md` says.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by

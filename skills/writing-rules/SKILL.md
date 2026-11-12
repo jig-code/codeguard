@@ -6,16 +6,17 @@ description: Writes codeguard rules: decides whether a convention is codeguard's
 # Writing codeguard rules
 
 A rule is a pattern rule, an ast-grep rule that matches code by its syntax, or a judge
-rule, a convention a model judges each change against.
+rule, a convention that a model judges each change against.
 
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
 2. **State the convention and why it exists**, as the two sections below say. After
-   writing the statement, reread it and keep only its intent: which code it covers and
-   what that code must never do. Any list of code shapes goes, as does every other
-   clause, and the harm the rule prevents goes under `## Why`. Reread the two sections
-   when two rules, or a rule and its cases, disagree about the same code.
+   writing the statement, reread the statement and keep only its intent: which code the
+   statement covers and what that code must never do. Any list of code shapes goes, as
+   does every other clause, and the harm the rule prevents goes under `## Why`. Reread
+   the two sections when two rules, or a rule and its cases, disagree about the same
+   code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
@@ -24,23 +25,25 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 
 ## The convention
 
-A rule is one convention, stated as one declarative sentence at the level of intent, in
-words that don't depend on the language, that says what code must never do. Each piece
-of code the rule reads either keeps the convention or breaks it: that is the rule's one
-yes/no test. The rule is that statement and why it exists, and nothing else. The judge
-reads any other text in a rule, a clause in the statement's own sentence included, as a
-test of its own, so code that meets that text's letter passes though it breaks the
-statement. The statement alone decides each piece of code; the judge reads it as a
-reviewer would, and says on what ground the code keeps or breaks it.
+A rule is one convention, stated as one declarative sentence that says what code must
+never do, at the level of intent and in words that don't depend on the language. Each
+piece of code the rule reads either keeps the convention or breaks it: that is the
+rule's one yes/no test. The rule is that statement and why it exists, and nothing else.
+The judge reads any other text in a rule, a clause in the statement's own sentence
+included, as a test of its own, so code that meets that text's letter passes though the
+code breaks the statement. The statement alone decides each piece of code; the judge
+reads the statement as a reviewer would, and says on what ground the code keeps or
+breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
 - **What code must never do, once.** The statement says what code must never do, once,
-  and nothing about how code avoids it or why. The harm the rule prevents goes under
-  `## Why`, never in the statement: a clause about how or why is text beside the
-  statement, and the judge reads it as a test of its own. A statement that forbids
-  skipping an action says how code avoids it, not what code must never do.
+  and nothing about how code avoids what that code must never do, or why. The harm the
+  rule prevents goes under `## Why`, never in the statement: a clause about how or why
+  is text beside the statement, and the judge reads that clause as a test of its own. A
+  statement that forbids skipping an action names an action that code must take, not
+  what that code must never do.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
@@ -61,10 +64,10 @@ reviewer would, and says on what ground the code keeps or breaks it.
   framework uses it, though: calling the framework's API is fine, while copying its
   shape into the project's own code may not be. A statement that flags idiomatic code
   is restated so it doesn't; it isn't given an exception for that code.
-- **Decided by its wording, never by examples.** A case the statement decides wrongly,
-  or on the wrong ground, shows the statement is unclear: reword it so the statement
-  decides the case. An example would only make the judge match code to it, and the next
-  case fails the same way.
+- **Decided by its wording, never by examples.** A case that the statement decides
+  wrongly, or on the wrong ground, shows the statement is unclear: reword it so the
+  statement decides the case. An example would only make the judge match code to it, and
+  the next case fails the same way.
 - **Never contradicts another rule.** A new rule never flags what another rule in the
   project or package requires.
 - **A rule names a specific class, function or file only when its convention is about
