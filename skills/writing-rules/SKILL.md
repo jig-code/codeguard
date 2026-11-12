@@ -16,9 +16,9 @@ rule, a convention that a model judges each change against.
    every check:
    1. Keep only which code the rule covers and what that code must never do.
    2. Put the harm the rule prevents under `## Why`.
-   3. Write every relative pronoun that a phrase needs, and make every pronoun's noun
-      plain.
-   4. Forbid something that code does: use no "without" followed by a verb, no "fail
+   3. Write every relative pronoun that a phrase needs.
+   4. Wherever a pronoun could mean more than one noun, write the noun instead.
+   5. Forbid something that code does: use no "without" followed by a verb, no "fail
       to", no "skip", and no "leave" with "undone".
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
