@@ -1,5 +1,7 @@
 import asyncio
+import os
 from dataclasses import dataclass, field
+from unittest import mock
 
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
@@ -22,27 +24,66 @@ def _no_credentials(**_: object) -> Client:
     raise DefaultCredentialsError("no credentials found")
 
 
-def test_missing_google_credentials_are_a_judge_error():
-    models = VertexGemini(
-        project="my-project", location="global", api_key=None, genai=_no_credentials
-    )
+@pytest.fixture
+def no_ambient_google_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("GOOGLE_API_KEY", "GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"):
+        monkeypatch.delenv(name, raising=False)
 
-    with pytest.raises(JudgeProcessError) as error:
+
+class TestVertexGeminiFromConfig:
+    @mock.patch.dict(
+        os.environ,
+        {
+            "GOOGLE_API_KEY": "proxy-injected",
+            "GOOGLE_CLOUD_PROJECT": "env-project",
+            "GOOGLE_CLOUD_LOCATION": "us",
+        },
+    )
+    def test_api_key_project_and_location_come_from_the_environment(self):
+        assert VertexGemini.from_config(None, None) == VertexGemini(
+            project="env-project", location="us", api_key="proxy-injected"
+        )
+
+    @pytest.mark.usefixtures("no_ambient_google_env")
+    @mock.patch.dict(
+        os.environ, {"GOOGLE_CLOUD_PROJECT": "env-project", "GOOGLE_CLOUD_LOCATION": "us"}
+    )
+    def test_configured_project_and_location_win_over_the_environment(self):
+        assert VertexGemini.from_config("sanctum", "eu") == VertexGemini(
+            project="sanctum", location="eu", api_key=None
+        )
+
+    @pytest.mark.usefixtures("no_ambient_google_env")
+    def test_location_defaults_to_global(self):
+        assert VertexGemini.from_config(None, None) == VertexGemini(
+            project=None, location="global", api_key=None
+        )
+
+
+class TestVertexGemini:
+    def test_missing_google_credentials_are_a_judge_error(self):
+        models = VertexGemini(project=None, location="global", api_key=None, genai=_no_credentials)
+
+        with pytest.raises(JudgeProcessError) as error:
+            asyncio.run(models("gemini-4-argon").__aenter__())
+
+        assert str(error.value) == (
+            "Gemini on Vertex AI found no Google credentials: no credentials found"
+        )
+
+    def test_client_is_built_with_the_api_key_project_and_location(self):
+        clients = RecordingClients()
+        models = VertexGemini(
+            project="my-project", location="us", api_key="proxy-injected", genai=clients
+        )
+
         asyncio.run(models("gemini-4-argon").__aenter__())
 
-    assert str(error.value) == (
-        "Gemini on Vertex AI found no Google credentials: no credentials found"
-    )
-
-
-def test_client_is_built_with_the_api_key_project_and_location():
-    clients = RecordingClients()
-    models = VertexGemini(
-        project="my-project", location="us", api_key="proxy-injected", genai=clients
-    )
-
-    asyncio.run(models("gemini-4-argon").__aenter__())
-
-    assert clients.received == [
-        {"vertexai": True, "api_key": "proxy-injected", "project": "my-project", "location": "us"}
-    ]
+        assert clients.received == [
+            {
+                "vertexai": True,
+                "api_key": "proxy-injected",
+                "project": "my-project",
+                "location": "us",
+            }
+        ]
