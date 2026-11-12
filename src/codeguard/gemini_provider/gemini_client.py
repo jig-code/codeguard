@@ -61,7 +61,7 @@ class VertexGemini:
                 http_options=HttpOptions(
                     headers={"User-Agent": get_user_agent()},
                     httpx_async_client=http,
-                    timeout=int((http.timeout.read or DEFAULT_HTTP_TIMEOUT) * 1000),
+                    timeout=DEFAULT_HTTP_TIMEOUT * 1000,
                 ),
             )
         except DefaultCredentialsError as error:

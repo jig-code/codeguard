@@ -507,15 +507,12 @@ class TestGeminiJudgeOnVertex:
         with pytest.raises(JudgeProcessError):
             judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert [
-            (str(request.url), request.headers["x-goog-api-key"]) for request in endpoint.sent
-        ] == [
-            (
-                "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
-                f"publishers/google/models/{MODEL}:generateContent",
-                "proxy-injected",
-            )
-        ]
+        [request] = endpoint.sent
+        assert str(request.url) == (
+            "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
+            f"publishers/google/models/{MODEL}:generateContent"
+        )
+        assert request.headers["x-goog-api-key"] == "proxy-injected"
 
     @pytest.mark.usefixtures("waits")
     def test_refused_connection_is_a_judge_error(self, tmp_path, make_judge_request):

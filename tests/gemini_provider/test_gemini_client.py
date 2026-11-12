@@ -1,6 +1,5 @@
 import asyncio
 import os
-from dataclasses import dataclass, field
 from unittest import mock
 
 import pytest
@@ -11,17 +10,12 @@ from codeguard.gemini_provider import VertexGemini
 from codeguard.review import JudgeProcessError
 
 
-@dataclass
-class RecordingClients:
-    received: list[dict[str, object]] = field(default_factory=list)
-
-    def __call__(self, **kwargs: object) -> Client:
-        self.received.append(kwargs)
-        return Client(**kwargs)
-
-
 def _no_credentials(**_: object) -> Client:
     raise DefaultCredentialsError("no credentials found")
+
+
+def _no_client(**_: object) -> Client:
+    raise AssertionError
 
 
 @pytest.fixture
@@ -76,9 +70,8 @@ class TestVertexGemini:
         )
 
     def test_api_key_without_a_project_is_a_judge_error(self):
-        clients = RecordingClients()
         models = VertexGemini(
-            project=None, location="global", api_key="proxy-injected", genai=clients
+            project=None, location="global", api_key="proxy-injected", genai=_no_client
         )
 
         async def connect() -> None:
@@ -92,4 +85,3 @@ class TestVertexGemini:
             "Gemini on Vertex AI needs a project to run with an API key: set judge.project or "
             "GOOGLE_CLOUD_PROJECT."
         )
-        assert clients.received == []
