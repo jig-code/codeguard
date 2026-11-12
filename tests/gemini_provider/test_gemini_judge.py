@@ -1,7 +1,9 @@
+import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from unittest import mock
 
 import httpx2
 import pytest
@@ -128,17 +130,18 @@ class RecordingProcesses:
 
 @dataclass
 class VertexVerdicts:
+    verdict: Verdict
     sent: list[httpx2.Request] = field(default_factory=list)
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.sent.append(request)
-        verdict = Verdict(reason="Judged.", violations=()).model_dump_json()
+        answer = self.verdict.model_dump_json()
         return httpx2.Response(
             200,
             json={
                 "candidates": [
                     {
-                        "content": {"role": "model", "parts": [{"text": verdict}]},
+                        "content": {"role": "model", "parts": [{"text": answer}]},
                         "finishReason": "STOP",
                     }
                 ],
@@ -499,18 +502,19 @@ class TestGeminiJudge:
 
 
 class TestGeminiJudgeOnVertex:
+    @mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
     def test_api_key_judges_in_the_project_and_the_global_location(
-        self, tmp_path, make_judge_request, monkeypatch
+        self, tmp_path, make_judge_request, make_verdict, monkeypatch
     ):
-        monkeypatch.setenv("GOOGLE_API_KEY", "proxy-injected")
         monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
         monkeypatch.delenv("GOOGLE_CLOUD_LOCATION", raising=False)
-        vertex = VertexVerdicts()
+        verdict = make_verdict()
+        vertex = VertexVerdicts(verdict)
         models = VertexGemini(project="my-project", transport=httpx2.MockTransport(vertex))
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
+        assert judgement == Judgement(verdict)
         [request] = vertex.sent
         assert str(request.url) == (
             "https://aiplatform.googleapis.com/v1beta1/projects/my-project/"

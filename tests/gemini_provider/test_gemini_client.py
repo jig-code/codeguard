@@ -1,4 +1,6 @@
 import asyncio
+import os
+from unittest import mock
 
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
@@ -25,8 +27,8 @@ def test_missing_google_credentials_are_a_judge_error(monkeypatch):
     )
 
 
+@mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
 def test_api_key_without_a_project_is_a_judge_error(monkeypatch):
-    monkeypatch.setenv("GOOGLE_API_KEY", "proxy-injected")
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
 

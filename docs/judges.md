@@ -81,7 +81,7 @@ judge:
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
-Use `gemini-4-argon`: codeguard supports only the Gemini model it is tested with.
+Use the model in the example: codeguard supports only the Gemini model it is tested with.
 
 codeguard signs in with
 [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc).
@@ -97,8 +97,7 @@ secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-ke
 to the service account instead, restricted to the Agent Platform API: have the proxy send
 it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 `GOOGLE_API_KEY=proxy-injected` with the project in `GOOGLE_CLOUD_PROJECT` or `project`.
-codeguard sends the key with the project and location, because Vertex AI serves a key
-sent without them from `us-central1`, which doesn't serve `gemini-4-argon`.
+codeguard sends the key with the project and location.
 
 ## Bedrock
 
