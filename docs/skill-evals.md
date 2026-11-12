@@ -26,8 +26,9 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A grader reads a file that the agent wrote, whether the agent wrote any rule file, or,
-  in a case that declines a rule, the agent's final reply.
+- A grader reads one thing: a file that the agent wrote, whether the agent wrote any
+  rule file, whether the agent loaded the writing-rules skill, or, in a case that
+  declines a rule, the agent's final reply.
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).

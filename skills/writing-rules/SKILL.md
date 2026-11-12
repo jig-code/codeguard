@@ -14,11 +14,9 @@ rule, a convention that a model judges each change against.
 2. **State the convention and why it exists**, as the two sections below say. Then reread
    the statement once for each check below, and rewrite the statement until it meets
    every check:
-   1. Keep only which code the rule covers and what that code must never do.
-   2. Put the harm the rule prevents under `## Why`.
-   3. Write every relative pronoun that a phrase needs.
-   4. Wherever a pronoun could mean more than one noun, write the noun instead.
-   5. Forbid something that code does: use no "without" followed by a verb, no "fail
+   1. Write every relative pronoun that a phrase needs.
+   2. Wherever a pronoun could mean more than one noun, write the noun instead.
+   3. Forbid something that code does: use no "without" followed by a verb, no "fail
       to", no "skip", and no "leave" with "undone".
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
@@ -31,23 +29,21 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 
 ## The convention
 
-A rule is one convention, stated as one declarative sentence that says what code must
-never do, at the level of intent and in words that don't depend on the language. Each
-piece of code the rule reads either keeps the convention or breaks it: that is the
-rule's one yes/no test. The rule is that statement and why it exists, and nothing else.
-The judge reads any other text in a rule, a clause in the statement's own sentence
-included, as a test of its own, so code that meets that text's letter passes though the
-code breaks the statement. The statement alone decides each piece of code; the judge
-reads the statement as a reviewer would, and says on what ground the code keeps or
-breaks it.
+A rule is one convention, stated as one declarative sentence at the level of intent and
+in words that don't depend on the language. Each piece of code the rule reads either
+keeps the convention or breaks it: that is the rule's one yes/no test. The rule is that
+statement and why it exists, and nothing else. The judge reads any other text in a rule,
+a clause in the statement's own sentence included, as a test of its own, so code that
+meets that text's letter passes though the code breaks the statement. The statement
+alone decides each piece of code; the judge reads the statement as a reviewer would, and
+says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
 - **What code must never do, once.** The statement says what code must never do, once,
   and nothing about how code avoids what that code must never do, or why. The harm the
-  rule prevents goes under `## Why`, never in the statement: a clause about how or why
-  is text beside the statement, and the judge reads that clause as a test of its own.
+  rule prevents goes under `## Why`, never in the statement.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
@@ -74,6 +70,9 @@ breaks it.
   the next case fails the same way.
 - **Never contradicts another rule.** A new rule never flags what another rule in the
   project or package requires.
+- **Never overlaps another rule.** A new rule never flags code that another rule already
+  flags. When two rules flag the same code, move that code's shape to one rule, or merge
+  the two rules.
 - **A rule names a specific class, function or file only when its convention is about
   that one.** A rule meant for many classes or functions matches what they share, never
   one of them standing in for the rest.

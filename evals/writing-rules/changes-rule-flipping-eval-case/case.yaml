@@ -1,6 +1,10 @@
 schema_version: "1.1"
 name: changes-rule-flipping-eval-case
 expected_outcome: |
-  The rule is restated as one plain declarative convention, not a question, with a ## Why and no list of forms, the broad-catch form that contradicts it is dropped or split into another rule, the flipping case is made clear or removed rather than the wording bent to pass it.
+  The agent loads the writing-rules skill. The rule's SKILL.md holds a title, one statement and a `## Why`, and no other section.
+  The statement is one sentence, not a question. The statement uses only common terms. The statement states what code must never do, once.
+  The statement names no action that code must take, and the statement gives no why. The statement forbids something that code does.
+  The statement writes every relative pronoun that a phrase needs, and no pronoun in the statement could mean more than one noun.
+  The rule eval has no case for a handler that logs the error and re-raises it, or keeps that case with code that a reader of the case alone can judge.
 context:
   scaffold_script: place-files.sh
