@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from os import process_cpu_count
+from os import environ, process_cpu_count
 from pathlib import Path
 from threading import Semaphore
 
@@ -41,8 +41,9 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            models = VertexGemini(self.config.project, self.config.location)
-            return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
+            return GeminiJudge(
+                root, model.required_name, self._vertex_gemini(), processes, deadline=deadline
+            )
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(
                 root,
@@ -53,3 +54,10 @@ class Judges:
                 provider=model.provider,
             )
         return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+
+    def _vertex_gemini(self) -> VertexGemini:
+        return VertexGemini(
+            project=self.config.project or environ.get("GOOGLE_CLOUD_PROJECT"),
+            location=self.config.location or environ.get("GOOGLE_CLOUD_LOCATION") or "global",
+            api_key=environ.get("GOOGLE_API_KEY") or None,
+        )

@@ -96,11 +96,12 @@ elsewhere, through `GOOGLE_APPLICATION_CREDENTIALS` or, in GitHub Actions,
 
 Where a proxy adds credentials to requests, as Claude Code cloud environments' network
 secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
-to the service account instead, restricted to the Agent Platform API: have the proxy send
-it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
-`GOOGLE_API_KEY=proxy-injected`. codeguard sends the key with the project and location
-set above, the location defaulting to `global` as it does with Application Default
-Credentials.
+to the service account instead, restricted to the Agent Platform API, and set
+`GOOGLE_API_KEY=proxy-injected`. codeguard then signs in with the key in place of
+Application Default Credentials, and calls Gemini in the project and location set above,
+the location defaulting to `global`. Have the proxy send the key as the `x-goog-api-key`
+header to the Vertex AI endpoint for that location
+([Vertex AI locations](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)).
 
 ## Bedrock
 
