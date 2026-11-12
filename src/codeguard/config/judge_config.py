@@ -42,7 +42,7 @@ class JudgeProvider(StrEnum):
 _DEFAULT_MODELS = {
     JudgeProvider.CLAUDE_CLI: None,
     JudgeProvider.CODEX_CLI: "gpt-6-luna",
-    JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
+    JudgeProvider.GEMINI: "gemini-4-argon",
     JudgeProvider.BEDROCK: "us.anthropic.claude-haiku-5-5",
 }
 

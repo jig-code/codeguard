@@ -19,7 +19,7 @@ uv run pytest
 
 The LLM tests check that the judge's instructions, request and tools still get the right
 verdicts from a real model. Each one reviews an edit in a scratch repository the way
-`codeguard review` does, with the fixture bindings' judge, `gemini-3.1-pro-preview` on
+`codeguard review` does, with the fixture bindings' judge, `gemini-4-argon` on
 Vertex AI, so they need Gemini credentials
 ([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)) and cost tokens. They are
 marked `llm`, which plain `pytest` deselects. `--judge-provider` and `--judge-model`

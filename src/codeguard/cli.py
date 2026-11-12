@@ -139,7 +139,7 @@ def main() -> int:
     eval_command.add_argument(
         "--model",
         help="The model --provider judges with. Default: none for claude-cli, so the claude "
-        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
+        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-4-argon for gemini, "
         "us.anthropic.claude-haiku-5-5 for bedrock.",
     )
     eval_command.set_defaults(run=_eval)

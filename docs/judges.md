@@ -69,7 +69,7 @@ A judge rule whose binding sets `provider: gemini` is judged with Gemini on Goog
 skill: .codeguard/skills/responsibility-placement
 paths: ["app/**/*.py"]
 provider: gemini
-model: gemini-3.1-pro-preview
+model: gemini-4-argon
 ```
 
 `judge` in `.codeguard/config.yaml` sets where Gemini runs and how many calls run at once:
@@ -77,13 +77,11 @@ model: gemini-3.1-pro-preview
 ```yaml
 judge:
   project: my-project             # default: GOOGLE_CLOUD_PROJECT
-  location: global                # default: GOOGLE_CLOUD_LOCATION
+  location: global                # default: GOOGLE_CLOUD_LOCATION, else global
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
-Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash was
-unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15
-to 37 s, where 3.1 Pro's longest of 79 took 13 s (median 6.5 s).
+Use `gemini-4-argon`: codeguard supports only the Gemini model it is tested with.
 
 codeguard signs in with
 [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc).
@@ -98,8 +96,9 @@ Where a proxy adds credentials to requests, as Claude Code cloud environments' n
 secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
 to the service account instead, restricted to the Agent Platform API: have the proxy send
 it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
-`GOOGLE_API_KEY=proxy-injected` with `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`,
-`project` and `location` unset. The key identifies the project.
+`GOOGLE_API_KEY=proxy-injected` with the project in `GOOGLE_CLOUD_PROJECT` or `project`.
+codeguard sends the key with the project and location, because Vertex AI serves a key
+sent without them from `us-central1`, which doesn't serve `gemini-4-argon`.
 
 ## Bedrock
 

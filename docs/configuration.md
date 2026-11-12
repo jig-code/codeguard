@@ -22,7 +22,7 @@ in use.
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
 | `judge.provider`, `judge.model` | `claude-cli` and the `claude` CLI's own default model | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
-| `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
+| `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`; `GOOGLE_CLOUD_LOCATION`, else `global` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
 
 ## Rule package keys
 

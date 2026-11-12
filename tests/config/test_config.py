@@ -396,7 +396,7 @@ class TestJudgeChoice:
         ("provider", "model"),
         [
             (JudgeProvider.CLAUDE_CLI, "gpt-6-luna"),
-            (JudgeProvider.BEDROCK, "gemini-3.1-pro-preview"),
+            (JudgeProvider.BEDROCK, "gemini-4-argon"),
         ],
     )
     def test_model_the_provider_cant_run_is_an_error(self, provider, model):
