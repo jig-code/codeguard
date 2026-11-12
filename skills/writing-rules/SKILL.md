@@ -16,8 +16,11 @@ rule, a convention that a model judges each change against.
    statement covers and what that code must never do. Any list of code shapes goes, as
    does every other clause, and the harm the rule prevents goes under `## Why`. Then
    check that the statement is written out in full: no relative pronoun is dropped where
-   a phrase could misparse, and no pronoun's noun is unclear. Reread the two sections
-   when two rules, or a rule and its cases, disagree about the same code.
+   a phrase could misparse, and no pronoun's noun is unclear. Then check that the
+   statement doesn't forbid code to leave something undone: such a statement names an
+   action that code must take, so rewrite the statement as what that code must never do.
+   Reread the two sections when two rules, or a rule and its cases, disagree about the
+   same code.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
    `triggers` (`references/judge-rules.md`).
 4. **Write the cases** (Cases, below).
@@ -42,9 +45,7 @@ breaks it.
 - **What code must never do, once.** The statement says what code must never do, once,
   and nothing about how code avoids what that code must never do, or why. The harm the
   rule prevents goes under `## Why`, never in the statement: a clause about how or why
-  is text beside the statement, and the judge reads that clause as a test of its own. A
-  statement that forbids skipping an action names an action that code must take, not
-  what that code must never do.
+  is text beside the statement, and the judge reads that clause as a test of its own.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
