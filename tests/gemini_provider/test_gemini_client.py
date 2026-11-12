@@ -56,31 +56,27 @@ class TestVertexGeminiFromConfig:
 
 class TestVertexGemini:
     @pytest.mark.parametrize(
-        ("models", "message"),
+        ("api_key", "client_factory", "message"),
         [
             (
-                VertexGemini(
-                    project=None,
-                    location="global",
-                    api_key=None,
-                    client_factory=_no_credentials,
-                ),
+                None,
+                _no_credentials,
                 "Gemini on Vertex AI found no Google credentials: no credentials found",
             ),
             (
-                VertexGemini(
-                    project=None,
-                    location="global",
-                    api_key="proxy-injected",
-                    client_factory=_no_client,
-                ),
+                "proxy-injected",
+                _no_client,
                 "Gemini on Vertex AI needs a project to run with an API key: set judge.project "
                 "or GOOGLE_CLOUD_PROJECT.",
             ),
         ],
         ids=["missing credentials", "api key without a project"],
     )
-    def test_unusable_google_settings_are_a_judge_error(self, models, message):
+    def test_unusable_google_settings_are_a_judge_error(self, api_key, client_factory, message):
+        models = VertexGemini(
+            project=None, location="global", api_key=api_key, client_factory=client_factory
+        )
+
         async def connect() -> None:
             async with models("gemini-4-argon"):
                 pass
