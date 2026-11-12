@@ -23,14 +23,24 @@ jobs:
   codeguard-rules:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    # The role allows only application inference profiles, so the model is Haiku's profile ARN.
+    env:
+      CODEGUARD_JUDGE__PROVIDER: bedrock
+      CODEGUARD_JUDGE__MODEL: ${{ vars.CODEGUARD_JUDGE_MODEL }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.CLAUDE_AWS_ROLE }}
+          aws-region: us-west-2
       - uses: ./
         with:
           logfire-token: ${{ secrets.LOGFIRE_TOKEN }}
-          dry-run: true
   # One run of each fixture case verifies the change, stopping at the first failure.
   llm-tests-validity:
     runs-on: ubuntu-latest

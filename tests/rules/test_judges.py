@@ -1,9 +1,10 @@
+import pytest
 from diskcache import Cache
 
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import GeminiJudge
+from codeguard.config import ConfigError, JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.gemini_provider import BedrockClaude, GeminiJudge
 from codeguard.rules.judges import Judges
 
 
@@ -37,12 +38,13 @@ class TestJudges:
 
     def test_bedrock_model_builds_a_judge_cached_apart_from_gemini(self, tmp_path):
         judges = Judges(store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5")
+        model = JudgeModel(provider=JudgeProvider.BEDROCK, name="claude-haiku-5-5")
 
         judge = judges.uncached(tmp_path, model)
 
         assert isinstance(judge, GeminiJudge)
-        assert judge.identity == "bedrock\0us.anthropic.claude-haiku-5-5"
+        assert judge.identity == "bedrock\0claude-haiku-5-5"
+        assert judge.models == BedrockClaude()
         assert judge.processes is judges.processes[JudgeProvider.BEDROCK]
 
 
@@ -63,11 +65,24 @@ def test_codex_binding_builds_a_separate_subscription_judge(tmp_path):
     )
 
 
-def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tmp_path):
+@pytest.mark.parametrize("provider", [JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI])
+def test_cli_judge_without_a_model_runs_the_cli_default(tmp_path, provider):
+    judge = Judges(store=Cache(tmp_path)).uncached(tmp_path, JudgeModel(provider=provider))
+
+    assert isinstance(judge, ClaudeJudge | CodexJudge)
+    assert judge.model is None
+    assert "default" in judge.identity.split("\0")
+
+
+@pytest.mark.parametrize("provider", [JudgeProvider.GEMINI, JudgeProvider.BEDROCK])
+def test_api_judge_without_a_model_is_an_error(tmp_path, provider):
     judges = Judges(store=Cache(tmp_path))
-    model = JudgeModel(provider=JudgeProvider.BEDROCK, name="us.openai.gpt-6-luna")
 
-    judge = judges.uncached(tmp_path, model)
+    with pytest.raises(ConfigError) as error:
+        judges.uncached(tmp_path, JudgeModel(provider=provider))
 
-    assert isinstance(judge, GeminiJudge)
-    assert judge.identity == "bedrock\0us.openai.gpt-6-luna"
+    assert str(error.value) == (
+        f"provider {provider} needs a model: set model in the rule's binding, judge.model in "
+        ".codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or judge.model in its "
+        "package's codeguard-package.yaml"
+    )
