@@ -12,15 +12,14 @@ rule, a convention that a model judges each change against.
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
 2. **State the convention and why it exists**, as the two sections below say. Then reread
-   the statement once for each check below, and rewrite the statement until it passes
+   the statement once for each check below, and rewrite the statement until it meets
    every check:
-   - The statement names only which code the rule covers and what that code must never
-     do.
-   - The harm the rule prevents is under `## Why`.
-   - The statement is written out in full: every relative pronoun that a phrase needs is
-     in place, and every pronoun's noun is plain.
-   - The statement forbids something that code does: the statement has no "without"
-     followed by a verb, no "fail to", no "skip", and no "leave" with "undone".
+   1. Keep only which code the rule covers and what that code must never do.
+   2. Put the harm the rule prevents under `## Why`.
+   3. Write every relative pronoun that a phrase needs, and make every pronoun's noun
+      plain.
+   4. Forbid something that code does: use no "without" followed by a verb, no "fail
+      to", no "skip", and no "leave" with "undone".
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
