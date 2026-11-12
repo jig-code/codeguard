@@ -27,12 +27,12 @@ class TestJudges:
 
     def test_gemini_model_builds_a_gemini_judge_with_its_name(self, tmp_path):
         judges = Judges(JudgeConfig(project="sanctum"), store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-4-argon")
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name=JudgeProvider.GEMINI.default_model)
 
         judge = judges.uncached(tmp_path, model)
 
         assert isinstance(judge, GeminiJudge)
-        assert judge.model == "gemini-4-argon"
+        assert judge.model == JudgeProvider.GEMINI.default_model
         assert judge.processes is judges.processes[JudgeProvider.GEMINI]
 
     def test_bedrock_model_builds_a_judge_cached_apart_from_gemini(self, tmp_path):

@@ -97,7 +97,9 @@ secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-ke
 to the service account instead, restricted to the Agent Platform API: have the proxy send
 it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
 `GOOGLE_API_KEY=proxy-injected` with the project in `GOOGLE_CLOUD_PROJECT` or `project`.
-codeguard sends the key with the project and location.
+codeguard sends the key with the project and location. It signs in with an API key in
+`GOOGLE_API_KEY` or `GEMINI_API_KEY` unless `GOOGLE_APPLICATION_CREDENTIALS` is set, which
+wins over a key.
 
 ## Bedrock
 
