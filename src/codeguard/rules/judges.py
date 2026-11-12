@@ -41,7 +41,7 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            models = VertexGemini.from_config(self.config.project, self.config.location)
+            models = VertexGemini(self.config.gemini)
             return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(

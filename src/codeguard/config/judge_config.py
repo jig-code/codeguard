@@ -1,6 +1,8 @@
 from enum import StrEnum
+from pathlib import Path
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from codeguard.config.config_error import ConfigError
 
@@ -104,14 +106,28 @@ class JudgeChoice(BaseModel):
         return JudgeModel(provider=provider, name=self.model)
 
 
+class GeminiSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    project: str | None = None
+    location: str = "global"
+    api_key: SecretStr | None = None
+    credentials_file: Path | None = None
+
+    @model_validator(mode="after")
+    def _signs_in_one_way(self) -> Self:
+        if self.api_key is not None and self.credentials_file is not None:
+            raise ValueError("set api_key or credentials_file, not both")
+        return self
+
+
 class JudgeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None
     model: str | None = None
-    project: str | None = None
-    location: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
+    gemini: GeminiSettings = GeminiSettings()
 
     @property
     def choice(self) -> JudgeChoice:

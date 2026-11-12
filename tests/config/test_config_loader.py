@@ -1,7 +1,10 @@
+import os
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 import pytest
+from pydantic import SecretStr
 
 from codeguard.config import (
     BindingConfig,
@@ -10,6 +13,7 @@ from codeguard.config import (
     Config,
     ConfigError,
     ConfigLoader,
+    GeminiSettings,
     JudgeConfig,
     JudgeProvider,
     PathPackageConfig,
@@ -68,11 +72,52 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 20
 
-    def test_loads_the_gemini_project_and_location(self, repo):
-        repo.write(CONFIG, "judge:\n  project: my-project\n  location: global\n")
-
+    @mock.patch.dict(
+        os.environ,
+        {
+            "CODEGUARD_JUDGE__GEMINI__PROJECT": "my-project",
+            "CODEGUARD_JUDGE__GEMINI__LOCATION": "us",
+            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
+        },
+    )
+    def test_gemini_settings_come_from_the_environment(self, repo):
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            project="my-project", location="global"
+            gemini=GeminiSettings(
+                project="my-project", location="us", api_key=SecretStr("proxy-injected")
+            )
+        )
+
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json"})
+    def test_gemini_service_account_key_file_comes_from_the_environment(self, repo):
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
+            gemini=GeminiSettings(credentials_file=Path("keys/judge.json"))
+        )
+
+    @mock.patch.dict(
+        os.environ,
+        {
+            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
+            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
+        },
+    )
+    def test_gemini_api_key_and_key_file_together_are_an_error(self, repo):
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.gemini: Value error, set api_key or credentials_file, not both"
+        )
+
+    def test_gemini_settings_in_the_config_file_are_an_error(self, repo):
+        repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            "judge.gemini is read from the environment only: set the CODEGUARD_JUDGE__GEMINI__ "
+            "variables instead"
         )
 
     def test_loads_the_project_judge_default(self, repo):
@@ -92,11 +137,11 @@ class TestConfigLoader:
         )
 
     def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo, monkeypatch):
-        repo.write(CONFIG, "judge:\n  project: my-project\n  model: file-model\n")
+        repo.write(CONFIG, "judge:\n  calls_at_once: 1\n  model: file-model\n")
         monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            project="my-project", model="env-model"
+            calls_at_once=1, model="env-model"
         )
 
     def test_judge_env_var_applies_without_a_config_file(self, repo, monkeypatch):
@@ -111,11 +156,10 @@ class TestConfigLoader:
         assert ConfigLoader(repo.root).load().confidence_threshold == 0.75
 
     def test_env_var_for_another_judge_setting_is_ignored(self, repo, monkeypatch):
-        repo.write(CONFIG, "judge:\n  project: my-project\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__PROJECT", "env-project")
+        repo.write(CONFIG, "judge:\n  calls_at_once: 1\n")
         monkeypatch.setenv("CODEGUARD_JUDGE__CALLS_AT_ONCE", "9")
 
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(project="my-project")
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(calls_at_once=1)
 
     def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):
         repo.write(CONFIG, "judge:\n  model: file-model\n")

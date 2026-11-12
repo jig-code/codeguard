@@ -72,12 +72,10 @@ provider: gemini
 model: gemini-3.1-pro-preview
 ```
 
-`judge` in `.codeguard/config.yaml` sets where Gemini runs and how many calls run at once:
+`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini calls run at once:
 
 ```yaml
 judge:
-  project: my-project             # default: GOOGLE_CLOUD_PROJECT
-  location: global                # default: GOOGLE_CLOUD_LOCATION
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
@@ -85,24 +83,32 @@ Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash 
 unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15
 to 37 s, where 3.1 Pro's longest of 79 took 13 s (median 6.5 s).
 
-codeguard signs in with
-[Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc).
-It needs the Vertex AI API enabled in the project
-([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)), and
-credentials with the Vertex AI User role (`roles/aiplatform.user`): your own on your
-machine, and a [service account](https://cloud.google.com/iam/docs/service-accounts-create)
-elsewhere, through `GOOGLE_APPLICATION_CREDENTIALS` or, in GitHub Actions,
-`google-github-actions/auth` before the codeguard action.
+Where Gemini runs and how it signs in come only from codeguard's environment variables,
+not from Google's own settings, so codeguard can sign in differently from your other Google
+Cloud tools:
 
-Where a proxy adds credentials to requests, as Claude Code cloud environments' network
-secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
-to the service account instead, restricted to the Agent Platform API, and set
-`GOOGLE_API_KEY=proxy-injected`. codeguard then signs in with the key in place of
-Application Default Credentials, and calls Gemini in the project and location set above,
-so the key needs a project.
-Have the proxy send the key as the `x-goog-api-key` header to the Vertex AI endpoint for
-that location
-([Vertex AI locations](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)).
+```sh
+CODEGUARD_JUDGE__GEMINI__PROJECT=my-project
+CODEGUARD_JUDGE__GEMINI__LOCATION=global                      # default: global
+CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE=/path/to/key.json   # or:
+CODEGUARD_JUDGE__GEMINI__API_KEY=...
+```
+
+The project needs the Vertex AI API enabled
+([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)), and
+codeguard signs in as a
+[service account](https://cloud.google.com/iam/docs/service-accounts-create) with the
+Vertex AI User role (`roles/aiplatform.user`), in one of two ways:
+
+- A service account key file, named by `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`. In
+  GitHub Actions, `google-github-actions/auth` writes one before the codeguard action and
+  gives its path as the `credentials_file_path` output.
+- An [API key](https://cloud.google.com/docs/authentication/api-keys) bound to the service
+  account and restricted to the Agent Platform API, in `CODEGUARD_JUDGE__GEMINI__API_KEY`.
+  Where a proxy adds credentials to requests, as Claude Code cloud environments' network
+  secrets do, set the variable to a placeholder such as `proxy-injected` and have the proxy
+  send the key as the `x-goog-api-key` header to the Vertex AI endpoint for the location
+  ([Vertex AI locations](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)).
 
 ## Bedrock
 

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import httpx2
 import pytest
+from pydantic import SecretStr
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
@@ -20,6 +21,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
+from codeguard.config import GeminiSettings
 from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
 from codeguard.review import (
     Deadline,
@@ -498,9 +500,7 @@ class TestGeminiJudgeOnVertex:
     ):
         recorder = BadRequestRecorder()
         models = VertexGemini(
-            project="my-project",
-            location="global",
-            api_key="proxy-injected",
+            GeminiSettings(project="my-project", api_key=SecretStr("proxy-injected")),
             transport=httpx2.MockTransport(recorder),
         )
 
@@ -517,9 +517,7 @@ class TestGeminiJudgeOnVertex:
     @pytest.mark.usefixtures("waits")
     def test_refused_connection_is_a_judge_error(self, tmp_path, make_judge_request):
         models = VertexGemini(
-            project="my-project",
-            location="global",
-            api_key="proxy-injected",
+            GeminiSettings(project="my-project", api_key=SecretStr("proxy-injected")),
             transport=httpx2.MockTransport(refuse),
         )
 

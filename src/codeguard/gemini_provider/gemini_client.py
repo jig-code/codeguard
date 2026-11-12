@@ -1,13 +1,12 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from os import environ
-from typing import Self
+from dataclasses import dataclass
 
 import httpx2
-from google.auth.exceptions import DefaultCredentialsError
+from google.auth.exceptions import GoogleAuthError
 from google.genai import Client
 from google.genai.types import HttpOptions
+from google.oauth2.service_account import Credentials
 from pydantic_ai.models import (
     DEFAULT_HTTP_TIMEOUT,
     Model,
@@ -17,24 +16,17 @@ from pydantic_ai.models import (
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
+from codeguard.config import GeminiSettings
 from codeguard.review import JudgeProcessError
+
+_CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 
 
 @dataclass(frozen=True)
 class VertexGemini:
-    project: str | None
-    location: str
-    api_key: str | None = field(repr=False)
+    settings: GeminiSettings
     client_factory: Callable[..., Client] = Client
     transport: httpx2.AsyncBaseTransport | None = None
-
-    @classmethod
-    def from_config(cls, project: str | None, location: str | None) -> Self:
-        return cls(
-            project=project or environ.get("GOOGLE_CLOUD_PROJECT"),
-            location=location or environ.get("GOOGLE_CLOUD_LOCATION") or "global",
-            api_key=environ.get("GOOGLE_API_KEY") or None,
-        )
 
     @asynccontextmanager
     async def __call__(self, model: str) -> AsyncIterator[Model]:
@@ -47,24 +39,37 @@ class VertexGemini:
                 yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
 
     def _client(self, http: httpx2.AsyncClient) -> Client:
-        if self.api_key and self.project is None:
+        settings = self.settings
+        if settings.project is None:
             raise JudgeProcessError(
-                "Gemini on Vertex AI needs a project to run with an API key: set judge.project "
-                "or GOOGLE_CLOUD_PROJECT."
+                "Gemini on Vertex AI needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT."
             )
+        if settings.api_key is None and settings.credentials_file is None:
+            raise JudgeProcessError(
+                "Gemini on Vertex AI needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY "
+                "or CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE."
+            )
+        return self.client_factory(
+            vertexai=True,
+            api_key=None if settings.api_key is None else settings.api_key.get_secret_value(),
+            credentials=self._credentials(),
+            project=settings.project,
+            location=settings.location,
+            http_options=HttpOptions(
+                headers={"User-Agent": get_user_agent()},
+                httpx_async_client=http,
+                timeout=DEFAULT_HTTP_TIMEOUT * 1000,
+            ),
+        )
+
+    def _credentials(self) -> Credentials | None:
+        path = self.settings.credentials_file
+        if path is None:
+            return None
         try:
-            return self.client_factory(
-                vertexai=True,
-                api_key=self.api_key,
-                project=self.project,
-                location=self.location,
-                http_options=HttpOptions(
-                    headers={"User-Agent": get_user_agent()},
-                    httpx_async_client=http,
-                    timeout=DEFAULT_HTTP_TIMEOUT * 1000,
-                ),
-            )
-        except DefaultCredentialsError as error:
+            return Credentials.from_service_account_file(str(path), scopes=[_CLOUD_PLATFORM_SCOPE])
+        except (OSError, ValueError, GoogleAuthError) as error:
             raise JudgeProcessError(
-                f"Gemini on Vertex AI found no Google credentials: {error}"
+                f"Gemini on Vertex AI couldn't read the service account key file {path}: "
+                f"{type(error).__name__}"
             ) from error

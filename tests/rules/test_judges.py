@@ -1,11 +1,9 @@
-import os
-from unittest import mock
-
 from diskcache import Cache
+from pydantic import SecretStr
 
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
 from codeguard.review import CachedJudge
 from codeguard.rules.judges import Judges
@@ -30,9 +28,11 @@ class TestJudges:
         )
         assert uncached == ClaudeJudge(tmp_path, "opus", processes, warmup=judges.warmup)
 
-    @mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
-    def test_gemini_judge_runs_in_the_configured_project_and_location(self, tmp_path):
-        judges = Judges(JudgeConfig(project="sanctum", location="eu"), store=Cache(tmp_path))
+    def test_gemini_judge_runs_with_the_gemini_settings(self, tmp_path):
+        settings = GeminiSettings(
+            project="sanctum", location="eu", api_key=SecretStr("proxy-injected")
+        )
+        judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-4-argon")
 
         judge = judges.uncached(tmp_path, model)
@@ -40,7 +40,7 @@ class TestJudges:
         assert judge == GeminiJudge(
             tmp_path,
             "gemini-4-argon",
-            VertexGemini(project="sanctum", location="eu", api_key="proxy-injected"),
+            VertexGemini(settings),
             judges.processes[JudgeProvider.GEMINI],
         )
 
