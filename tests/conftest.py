@@ -69,10 +69,10 @@ def no_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def committed_config(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CODEGUARD_CONFIG", raising=False)
-    judges_with_this_machines_gemini = request.node.get_closest_marker("llm") is not None
+    is_llm_test = request.node.get_closest_marker("llm") is not None
     for name in list(os.environ):
         if name.startswith("CODEGUARD_JUDGE__") and not (
-            judges_with_this_machines_gemini and name.startswith("CODEGUARD_JUDGE__GEMINI__")
+            is_llm_test and name.startswith("CODEGUARD_JUDGE__GEMINI__")
         ):
             monkeypatch.delenv(name)
 

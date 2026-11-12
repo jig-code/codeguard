@@ -94,19 +94,17 @@ CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE=/path/to/key.json   # or:
 CODEGUARD_JUDGE__GEMINI__API_KEY=...
 ```
 
-The project needs the Vertex AI API enabled
-([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)).
-codeguard signs in as a
-[service account](https://cloud.google.com/iam/docs/service-accounts-create) with the
-Vertex AI User role (`roles/aiplatform.user`), with one of:
+See [Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)
+for the project. codeguard signs in as a
+[service account](https://cloud.google.com/iam/docs/service-accounts-create), with one of:
 
 - its [key file](https://cloud.google.com/iam/docs/keys-create-delete), in
   `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`;
 - an [API key](https://cloud.google.com/docs/authentication/api-keys) bound to it, in
   `CODEGUARD_JUDGE__GEMINI__API_KEY`.
 
-A Gemini judge call without a project, or with neither or both of these, fails as a judge
-error.
+Setting both is a config error. A Gemini judge call without a project or a sign-in fails
+as a judge error that names the variable to set.
 
 ## Bedrock
 

@@ -1,4 +1,5 @@
 import time
+import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -129,13 +130,23 @@ class RecordingProcesses:
 
 
 @dataclass
-class BadRequestRecorder:
+class VertexVerdicts:
     sent: list[httpx2.Request] = field(default_factory=list)
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.sent.append(request)
+        verdict = Verdict(reason="Judged.", violations=()).model_dump_json()
         return httpx2.Response(
-            400, json={"error": {"code": 400, "message": "Bad request.", "status": "INVALID"}}
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"role": "model", "parts": [{"text": verdict}]},
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5},
+            },
         )
 
 
@@ -495,19 +506,17 @@ class TestGeminiJudge:
 
 
 class TestGeminiJudgeOnVertex:
-    def test_request_goes_to_the_project_and_location_with_the_api_key(
-        self, tmp_path, make_judge_request
-    ):
-        recorder = BadRequestRecorder()
+    def test_api_key_judges_in_the_project_and_location(self, tmp_path, make_judge_request):
+        vertex = VertexVerdicts()
         models = VertexGemini(
             GeminiSettings(project="my-project", api_key=SecretStr("proxy-injected")),
-            transport=httpx2.MockTransport(recorder),
+            transport=httpx2.MockTransport(vertex),
         )
 
-        with pytest.raises(JudgeProcessError):
-            judge_with(tmp_path, models).judge(make_judge_request())
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        [request] = recorder.sent
+        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
+        [request] = vertex.sent
         assert str(request.url) == (
             "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
             f"publishers/google/models/{MODEL}:generateContent"
@@ -515,9 +524,9 @@ class TestGeminiJudgeOnVertex:
         assert request.headers["x-goog-api-key"] == "proxy-injected"
 
     @pytest.mark.usefixtures("waits")
-    def test_refused_connection_is_a_judge_error(self, tmp_path, make_judge_request):
+    def test_failed_request_leaves_the_api_key_out_of_its_error(self, tmp_path, make_judge_request):
         models = VertexGemini(
-            GeminiSettings(project="my-project", api_key=SecretStr("proxy-injected")),
+            GeminiSettings(project="my-project", api_key=SecretStr("secret-api-key")),
             transport=httpx2.MockTransport(refuse),
         )
 
@@ -525,3 +534,4 @@ class TestGeminiJudgeOnVertex:
             judge_with(tmp_path, models).judge(make_judge_request())
 
         assert str(error.value) == f"{MODEL} failed: Connection refused"
+        assert "secret-api-key" not in "".join(traceback.format_exception(error.value))

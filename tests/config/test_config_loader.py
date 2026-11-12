@@ -108,7 +108,35 @@ class TestConfigLoader:
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: Value error, read from the environment only, not the config file"
+            "  judge.gemini: read from the environment only, not the config file"
+        )
+
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__LOCATION": "us"})
+    def test_gemini_settings_in_the_config_file_are_an_error_beside_gemini_variables(self, repo):
+        repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.gemini: read from the environment only, not the config file"
+        )
+
+    @mock.patch.dict(
+        os.environ,
+        {
+            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
+            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
+        },
+    )
+    def test_gemini_api_key_and_credentials_file_together_are_an_error(self, repo):
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.gemini: Value error, set api_key or credentials_file, not both"
         )
 
     def test_loads_the_project_judge_default(self, repo):
