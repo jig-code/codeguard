@@ -242,7 +242,7 @@ class TestRulesetLoader:
         assert ruleset.bindings.root["placement.yaml"] == make_binding_config(
             skill=repo.root / ".claude/skills/responsibility-placement",
             provider=JudgeProvider.GEMINI,
-            model="gemini-4-argon",
+            model=JudgeProvider.GEMINI.default_model,
         )
 
     def test_loads_the_binding_triggers(self, repo, make_skill):

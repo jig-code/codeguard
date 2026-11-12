@@ -27,9 +27,7 @@ class VertexGemini:
         # Each judgement runs on its own event loop, so it gets its own HTTP client.
         async with create_async_httpx2_client(transport=self.transport) as http:
             with self._client(http) as client:
-                provider = GoogleCloudProvider(client=client)
-                async with GoogleModel(model, provider=provider) as connected:
-                    yield connected
+                yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
 
     # GoogleCloudProvider can't send an API key together with a project, so codeguard builds
     # the client for every sign-in.
@@ -37,7 +35,7 @@ class VertexGemini:
     def _client(self, http: httpx2.AsyncClient) -> Iterator[Client]:
         project = self.project or os.environ.get("GOOGLE_CLOUD_PROJECT")
         location = self.location or os.environ.get("GOOGLE_CLOUD_LOCATION") or "global"
-        api_key = _api_key()
+        api_key = None if self.credentials else _api_key()
         if api_key is not None and project is None:
             raise JudgeProcessError(
                 "Gemini on Vertex AI needs a project to use with the API key: set judge.project "
@@ -47,7 +45,7 @@ class VertexGemini:
             client = Client(
                 vertexai=True,
                 api_key=api_key,
-                credentials=None if api_key else self.credentials,
+                credentials=self.credentials,
                 project=project,
                 location=location,
                 http_options=HttpOptions(httpx_async_client=http),

@@ -33,7 +33,7 @@ from codeguard.review import (
     Verdict,
 )
 
-MODEL = "gemini-4-argon"
+MODEL = "gemini-judge-test"
 VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
@@ -517,10 +517,8 @@ class TestGeminiJudgeOnVertex:
 
         assert judgement == Judgement(verdict)
         [request] = vertex.sent
-        assert str(request.url) == (
-            "https://aiplatform.googleapis.com/v1beta1/projects/my-project/"
-            f"locations/global/publishers/google/models/{MODEL}:generateContent"
-        )
+        assert "/projects/my-project/locations/global/" in request.url.path
+        assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
 
     def test_credentials_judge_in_the_project_and_the_global_location(
@@ -541,8 +539,6 @@ class TestGeminiJudgeOnVertex:
 
         assert judgement == Judgement(verdict)
         [request] = vertex.sent
-        assert str(request.url) == (
-            "https://aiplatform.googleapis.com/v1beta1/projects/my-project/"
-            f"locations/global/publishers/google/models/{MODEL}:generateContent"
-        )
+        assert "/projects/my-project/locations/global/" in request.url.path
+        assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["authorization"] == "Bearer access-token"

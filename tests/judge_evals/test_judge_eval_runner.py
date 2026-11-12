@@ -96,7 +96,7 @@ class TestJudgeEvalRunner:
             ),
         )
         judges = RecordingJudges(RecordingJudge())
-        model = JudgeProvider.GEMINI.default_model
+        model = "gemini-judge-test"
         gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model=model)
         runner = JudgeEvalRunner(
             repo.root, RulesetLoader.local(repo.root), judges, 0.9, judge_override=gemini
