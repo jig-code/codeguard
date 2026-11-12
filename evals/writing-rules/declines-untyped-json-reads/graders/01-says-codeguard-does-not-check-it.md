@@ -4,5 +4,5 @@ focus: last_message
 weight: 1
 ---
 
-PASS if the reply says this convention is not something a codeguard rule should check.
-FAIL if the reply is missing or empty, or offers a codeguard rule for this convention.
+PASS if the reply says that a codeguard rule should not check this convention.
+FAIL if the reply is missing or empty. Also FAIL if the reply offers a codeguard rule for this convention.

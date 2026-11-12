@@ -4,5 +4,5 @@ focus: { source: file, path: .codeguard/skills/no-swallowed-exceptions/SKILL.md 
 weight: 1
 ---
 
-PASS if the sentence under this SKILL.md's `#` title and before `## Why`, leaving out the title and the frontmatter, uses only common terms and no term the agent invented.
-FAIL if that sentence, leaving out the title and the frontmatter, is missing or empty, or uses a term the agent invented.
+PASS if the statement uses only common terms. The statement is the sentence under this SKILL.md's `#` title and before `## Why`, leaving out the title and the frontmatter.
+FAIL if the statement is missing or empty. Also FAIL if the statement uses a term that the agent invented.
