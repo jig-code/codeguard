@@ -7,11 +7,12 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from codeguard.config.judge_config import ENV_NESTED_DELIMITER, ENV_PREFIX, GEMINI, JudgeConfig
+from codeguard.config.environment import ENV_NESTED_DELIMITER, ENV_PREFIX
+from codeguard.config.judge_config import GEMINI_FIELD, JudgeConfig
 from codeguard.config.package_config import PackageConfig
 from codeguard.config.versions import ExactVersion
 
-_ENVIRONMENT_ONLY_JUDGE_KEYS = (GEMINI,)
+_ENVIRONMENT_ONLY_JUDGE_KEYS = (GEMINI_FIELD,)
 _ENVIRONMENT_JUDGE_KEYS = ("provider", "model", *_ENVIRONMENT_ONLY_JUDGE_KEYS)
 
 

@@ -2,15 +2,14 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import assert_never
 
 import httpx2
 from google.auth.exceptions import GoogleAuthError
 from google.genai import Client
 from google.genai.types import HttpOptions
 from google.oauth2.service_account import Credentials
-from pydantic import SecretStr
 from pydantic_ai.models import (
-    DEFAULT_HTTP_TIMEOUT,
     Model,
     create_async_httpx2_client,
     get_user_agent,
@@ -18,13 +17,13 @@ from pydantic_ai.models import (
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
-from codeguard.config import GeminiSettings
+from codeguard.config import ApiKeySignIn, GeminiSignIn, KeyFileSignIn
 from codeguard.review import JudgeProcessError
 
 
 @dataclass(frozen=True)
 class VertexGemini:
-    settings: GeminiSettings
+    sign_in: GeminiSignIn
     transport: httpx2.AsyncBaseTransport | None = None
 
     @asynccontextmanager
@@ -37,30 +36,31 @@ class VertexGemini:
 
     @contextmanager
     def _signed_in_provider(self, http: httpx2.AsyncClient) -> Iterator[GoogleCloudProvider]:
-        settings = self.settings
-        match settings.required_sign_in:
-            case Path() as credentials_file:
+        match self.sign_in:
+            case KeyFileSignIn() as sign_in:
                 yield GoogleCloudProvider(
-                    credentials=_credentials(credentials_file),
-                    project=settings.required_project,
-                    location=settings.location,
+                    credentials=_credentials(sign_in.credentials_file),
+                    project=sign_in.project,
+                    location=sign_in.location,
                     http_client=http,
                 )
-            case SecretStr() as api_key:
+            case ApiKeySignIn() as sign_in:
                 # GoogleCloudProvider drops an API key given with a project, so the client that
                 # keeps both is built here.
                 with Client(
                     vertexai=True,
-                    api_key=api_key.get_secret_value(),
-                    project=settings.required_project,
-                    location=settings.location,
+                    api_key=sign_in.api_key.get_secret_value(),
+                    project=sign_in.project,
+                    location=sign_in.location,
                     http_options=HttpOptions(
                         headers={"User-Agent": get_user_agent()},
                         httpx_async_client=http,
-                        timeout=DEFAULT_HTTP_TIMEOUT * 1000,
+                        timeout=_milliseconds(http.timeout.read),
                     ),
                 ) as client:
                     yield GoogleCloudProvider(client=client)
+            case _:
+                assert_never(self.sign_in)
 
 
 def _credentials(credentials_file: Path) -> Credentials:
@@ -71,3 +71,7 @@ def _credentials(credentials_file: Path) -> Credentials:
             f"Gemini on Vertex AI couldn't read the service account key file {credentials_file}: "
             f"{type(error).__name__}"
         ) from error
+
+
+def _milliseconds(seconds: float | None) -> int | None:
+    return None if seconds is None else int(seconds * 1000)
