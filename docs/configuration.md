@@ -65,9 +65,9 @@ on telemetry:
 | `CODEGUARD_JUDGE__PROVIDER`, `CODEGUARD_JUDGE__MODEL` | unset | Set `judge.provider` and `judge.model` in place of the config file's, such as for a CI job that judges with Bedrock while developers use the `claude` CLI. An empty variable counts as unset. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
 | `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs and how it signs in; see [Bedrock](judges.md#bedrock). |
-| `CODEGUARD_JUDGE__GEMINI__PROJECT` | unset; Gemini judge calls fail without it | The Google Cloud project Gemini runs in; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
+| `CODEGUARD_JUDGE__GEMINI__PROJECT` | unset; judging with Gemini without it is a config error | The Google Cloud project Gemini runs in; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
 | `CODEGUARD_JUDGE__GEMINI__LOCATION` | `global` | The Vertex AI location Gemini runs in. |
-| `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`, `CODEGUARD_JUDGE__GEMINI__API_KEY` | unset; Gemini judge calls fail without one | How Gemini signs in: a service account key file, or an API key. Setting both is a config error. These Gemini settings come from the environment only: `judge.gemini` in the config file is a config error. |
+| `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`, `CODEGUARD_JUDGE__GEMINI__API_KEY` | unset; judging with Gemini without one is a config error | How Gemini signs in: a service account key file, or an API key. Setting both is a config error. These Gemini settings come from the environment only: `judge.gemini` in the config file is a config error. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |
 
 ## No setting on purpose

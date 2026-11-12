@@ -509,7 +509,11 @@ class TestGeminiJudgeOnVertex:
     def test_api_key_judges_in_the_project_and_location(self, tmp_path, make_judge_request):
         vertex = VertexVerdicts()
         models = VertexGemini(
-            GeminiSettings(project="my-project", api_key=SecretStr("proxy-injected")),
+            GeminiSettings(
+                project="my-project",
+                location="europe-west4",
+                api_key=SecretStr("proxy-injected"),
+            ),
             transport=httpx2.MockTransport(vertex),
         )
 
@@ -518,8 +522,8 @@ class TestGeminiJudgeOnVertex:
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         [request] = vertex.sent
         assert str(request.url) == (
-            "https://aiplatform.googleapis.com/v1beta1/projects/my-project/locations/global/"
-            f"publishers/google/models/{MODEL}:generateContent"
+            "https://europe-west4-aiplatform.googleapis.com/v1beta1/projects/my-project/"
+            f"locations/europe-west4/publishers/google/models/{MODEL}:generateContent"
         )
         assert request.headers["x-goog-api-key"] == "proxy-injected"
 

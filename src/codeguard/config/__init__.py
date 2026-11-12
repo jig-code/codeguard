@@ -1,7 +1,7 @@
 from codeguard.config.binding_config import SKILL_FILE, BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
-from codeguard.config.config import Config, gemini_variable
+from codeguard.config.config import Config
 from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE, ConfigLoader
 from codeguard.config.gate_rule import GateRule
@@ -74,7 +74,6 @@ __all__ = [
     "RulesetStructure",
     "Severity",
     "VersionRange",
-    "gemini_variable",
     "language_of",
     "named_languages",
 ]

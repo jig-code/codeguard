@@ -3,8 +3,20 @@ from pathlib import Path
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic_core import PydanticCustomError
 
 from codeguard.config.config_error import ConfigError
+
+ENV_PREFIX = "CODEGUARD_"
+ENV_NESTED_DELIMITER = "__"
+# JudgeConfig's field for the Gemini settings, which only the environment sets.
+GEMINI = "gemini"
+
+
+def judge_environment_variable(*field_path: str) -> str:
+    """The environment variable that sets `judge.<field_path>`."""
+    return ENV_PREFIX + ENV_NESTED_DELIMITER.join(("judge", *field_path)).upper()
+
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -60,7 +72,7 @@ _FAMILIES = {
 def _unset(key: str, problem: str) -> ConfigError:
     return ConfigError(
         f"{problem}: set {key} in the rule's binding, judge.{key} in .codeguard/config.yaml "
-        f"(or CODEGUARD_JUDGE__{key.upper()}), or judge.{key} in its package's "
+        f"(or {judge_environment_variable(key)}), or judge.{key} in its package's "
         "codeguard-package.yaml"
     )
 
@@ -117,8 +129,36 @@ class GeminiSettings(BaseModel):
     @model_validator(mode="after")
     def _reject_two_sign_ins(self) -> Self:
         if self.api_key is not None and self.credentials_file is not None:
-            raise ValueError("set api_key or credentials_file, not both")
+            raise PydanticCustomError(
+                "two_sign_ins",
+                "set {api_key} or {credentials_file}, not both",
+                {
+                    "api_key": _gemini_variable("api_key"),
+                    "credentials_file": _gemini_variable("credentials_file"),
+                },
+            )
         return self
+
+    @property
+    def required_project(self) -> str:
+        if self.project is None:
+            raise ConfigError(f"Gemini needs a project: set {_gemini_variable('project')}")
+        return self.project
+
+    @property
+    def required_sign_in(self) -> Path | SecretStr:
+        if self.credentials_file is not None:
+            return self.credentials_file
+        if self.api_key is not None:
+            return self.api_key
+        raise ConfigError(
+            f"Gemini needs a way to sign in: set {_gemini_variable('api_key')} or "
+            f"{_gemini_variable('credentials_file')}"
+        )
+
+
+def _gemini_variable(field: str) -> str:
+    return judge_environment_variable(GEMINI, field)
 
 
 class JudgeConfig(BaseModel):

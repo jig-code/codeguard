@@ -136,7 +136,8 @@ class TestConfigLoader:
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: Value error, set api_key or credentials_file, not both"
+            "  judge.gemini: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
         )
 
     def test_loads_the_project_judge_default(self, repo):
