@@ -1,4 +1,5 @@
 import os
+import traceback
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
@@ -87,27 +88,17 @@ class TestConfigLoader:
             )
         )
 
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json"})
-    def test_gemini_service_account_key_file_comes_from_the_environment(self, repo):
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            gemini=GeminiSettings(credentials_file=Path("keys/judge.json"))
-        )
-
-    @mock.patch.dict(
-        os.environ,
-        {
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
-        },
-    )
-    def test_gemini_api_key_and_key_file_together_are_an_error(self, repo):
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__API_KYE": "secret-key-value"})
+    def test_mistyped_gemini_variable_is_an_error_that_leaves_out_its_value(self, repo):
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 
+        report = "".join(traceback.format_exception(error.value))
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: Value error, set api_key or credentials_file, not both"
+            "  judge.gemini.api_kye: Extra inputs are not permitted"
         )
+        assert "secret-key-value" not in report
 
     def test_gemini_settings_in_the_config_file_are_an_error(self, repo):
         repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
@@ -116,8 +107,8 @@ class TestConfigLoader:
             ConfigLoader(repo.root).load()
 
         assert str(error.value) == (
-            "judge.gemini is read from the environment only: set the CODEGUARD_JUDGE__GEMINI__ "
-            "variables instead"
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.gemini: Value error, read from the environment only, not the config file"
         )
 
     def test_loads_the_project_judge_default(self, repo):

@@ -1,8 +1,6 @@
 import asyncio
-from pathlib import Path
 
 import pytest
-from google.genai import Client
 from pydantic import SecretStr
 
 from codeguard.config import GeminiSettings
@@ -10,33 +8,46 @@ from codeguard.gemini_provider import VertexGemini
 from codeguard.review import JudgeProcessError
 
 
-def _no_client(**_: object) -> Client:
-    raise AssertionError
-
-
 class TestVertexGemini:
     @pytest.mark.parametrize(
-        ("settings", "message"),
+        ("project", "api_key", "key_file", "message"),
         [
             (
-                GeminiSettings(api_key=SecretStr("proxy-injected")),
-                "Gemini on Vertex AI needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT.",
+                None,
+                SecretStr("proxy-injected"),
+                None,
+                "Gemini on Vertex AI needs judge.gemini.project.",
             ),
             (
-                GeminiSettings(project="my-project"),
-                "Gemini on Vertex AI needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY "
-                "or CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE.",
+                "my-project",
+                None,
+                None,
+                "Gemini on Vertex AI needs judge.gemini.api_key or judge.gemini.credentials_file.",
             ),
             (
-                GeminiSettings(project="my-project", credentials_file=Path("missing/judge.json")),
-                "Gemini on Vertex AI couldn't read the service account key file "
-                "missing/judge.json: FileNotFoundError",
+                "my-project",
+                SecretStr("proxy-injected"),
+                "judge.json",
+                "Gemini on Vertex AI signs in with judge.gemini.api_key or "
+                "judge.gemini.credentials_file, not both.",
+            ),
+            (
+                "my-project",
+                None,
+                "judge.json",
+                "Gemini on Vertex AI couldn't read the service account key file {key_file}: "
+                "FileNotFoundError",
             ),
         ],
-        ids=["no project", "no sign-in", "missing key file"],
+        ids=["no project", "no sign-in", "two sign-ins", "missing key file"],
     )
-    def test_unusable_settings_are_a_judge_error(self, settings, message):
-        models = VertexGemini(settings, client_factory=_no_client)
+    def test_unusable_settings_are_a_judge_error(
+        self, tmp_path, project, api_key, key_file, message
+    ):
+        credentials_file = None if key_file is None else tmp_path / key_file
+        models = VertexGemini(
+            GeminiSettings(project=project, api_key=api_key, credentials_file=credentials_file)
+        )
 
         async def connect() -> None:
             async with models("gemini-4-argon"):
@@ -45,4 +56,4 @@ class TestVertexGemini:
         with pytest.raises(JudgeProcessError) as error:
             asyncio.run(connect())
 
-        assert str(error.value) == message
+        assert str(error.value) == message.format(key_file=credentials_file)

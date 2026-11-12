@@ -1,8 +1,9 @@
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Self
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, SecretStr
 
 from codeguard.config.config_error import ConfigError
 
@@ -107,27 +108,34 @@ class JudgeChoice(BaseModel):
 
 
 class GeminiSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
     project: str | None = None
     location: str = "global"
     api_key: SecretStr | None = None
     credentials_file: Path | None = None
 
-    @model_validator(mode="after")
-    def _signs_in_one_way(self) -> Self:
-        if self.api_key is not None and self.credentials_file is not None:
-            raise ValueError("set api_key or credentials_file, not both")
-        return self
+
+@dataclass(frozen=True)
+class FromEnvironment:
+    values: object
+
+
+def _from_environment(value: object) -> object:
+    if isinstance(value, FromEnvironment):
+        return value.values
+    if isinstance(value, GeminiSettings):
+        return value
+    raise ValueError("read from the environment only, not the config file")
 
 
 class JudgeConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
     provider: JudgeProvider | None = None
     model: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
-    gemini: GeminiSettings = GeminiSettings()
+    gemini: Annotated[GeminiSettings, BeforeValidator(_from_environment)] = GeminiSettings()
 
     @property
     def choice(self) -> JudgeChoice:

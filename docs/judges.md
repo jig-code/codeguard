@@ -95,20 +95,18 @@ CODEGUARD_JUDGE__GEMINI__API_KEY=...
 ```
 
 The project needs the Vertex AI API enabled
-([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)), and
+([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)).
 codeguard signs in as a
 [service account](https://cloud.google.com/iam/docs/service-accounts-create) with the
-Vertex AI User role (`roles/aiplatform.user`), in one of two ways:
+Vertex AI User role (`roles/aiplatform.user`), with one of:
 
-- A service account key file, named by `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`. In
-  GitHub Actions, `google-github-actions/auth` writes one before the codeguard action and
-  gives its path as the `credentials_file_path` output.
-- An [API key](https://cloud.google.com/docs/authentication/api-keys) bound to the service
-  account and restricted to the Agent Platform API, in `CODEGUARD_JUDGE__GEMINI__API_KEY`.
-  Where a proxy adds credentials to requests, as Claude Code cloud environments' network
-  secrets do, set the variable to a placeholder such as `proxy-injected` and have the proxy
-  send the key as the `x-goog-api-key` header to the Vertex AI endpoint for the location
-  ([Vertex AI locations](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)).
+- its [key file](https://cloud.google.com/iam/docs/keys-create-delete), in
+  `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`;
+- an [API key](https://cloud.google.com/docs/authentication/api-keys) bound to it, in
+  `CODEGUARD_JUDGE__GEMINI__API_KEY`.
+
+A Gemini judge call without a project, or with neither or both of these, fails as a judge
+error.
 
 ## Bedrock
 
