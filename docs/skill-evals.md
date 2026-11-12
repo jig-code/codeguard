@@ -47,8 +47,9 @@ that a reader can check at a glance, and that no grader parses prose with a patt
 such a pattern is too long for a reviewer to tell what the pattern checks, and the
 pattern breaks on wording that does what the skill asks.
 
-An `llm` grader judges one criterion, and its `FAIL if` line names that criterion's
-concrete failures, a missing or empty output among them.
+An `llm` grader judges one criterion. It states each check in its own short sentence,
+with a numbered list where it checks several things in order. Its `FAIL if` sentences
+name that criterion's concrete failures, a missing or empty output among them.
 [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ## Running them
