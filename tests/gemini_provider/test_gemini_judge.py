@@ -1,7 +1,9 @@
+import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from unittest import mock
 
 import httpx2
 import pytest
@@ -20,7 +22,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.gemini_provider import GeminiJudge, gemini_judge
+from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -30,7 +32,7 @@ from codeguard.review import (
     Verdict,
 )
 
-MODEL = "gemini-3.1-pro-preview"
+MODEL = "gemini-judge-test"
 VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
@@ -124,6 +126,28 @@ class RecordingProcesses:
 
     def __exit__(self, *exc_info: object) -> None:
         self.events.append("released")
+
+
+@dataclass
+class VertexVerdicts:
+    verdict: Verdict
+    sent: list[httpx2.Request] = field(default_factory=list)
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.sent.append(request)
+        answer = self.verdict.model_dump_json()
+        return httpx2.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"role": "model", "parts": [{"text": answer}]},
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5},
+            },
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -475,3 +499,23 @@ class TestGeminiJudge:
         assert attributes["tool_calls"] == (
             '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
         )
+
+
+class TestGeminiJudgeOnVertex:
+    @mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
+    def test_api_key_judges_in_the_project_and_the_global_location(
+        self, tmp_path, make_judge_request, make_verdict, monkeypatch
+    ):
+        monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+        monkeypatch.delenv("GOOGLE_CLOUD_LOCATION", raising=False)
+        verdict = make_verdict()
+        vertex = VertexVerdicts(verdict)
+        models = VertexGemini(project="my-project", transport=httpx2.MockTransport(vertex))
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement == Judgement(verdict)
+        [request] = vertex.sent
+        assert "/projects/my-project/locations/global/" in request.url.path
+        assert f"/models/{MODEL}:" in request.url.path
+        assert request.headers["x-goog-api-key"] == "proxy-injected"

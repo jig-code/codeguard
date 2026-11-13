@@ -852,7 +852,7 @@ class TestEvalCommand:
         package.write(
             "python/bindings/responsibility-placement.yaml",
             'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+            "triggers: [any]\nprovider: gemini\nmodel: gemini-4-argon\n",
         )
         bin_dir = recording_claude(tmp_path, [])
 

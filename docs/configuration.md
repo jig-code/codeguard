@@ -22,7 +22,7 @@ in use.
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
 | `judge.provider`, `judge.model` | `claude-cli` and the `claude` CLI's own default model | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
-| `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
+| `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`; `GOOGLE_CLOUD_LOCATION`, else `global` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
 
 ## Rule package keys
 
@@ -67,7 +67,7 @@ on telemetry:
 | `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
 | `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs and how it signs in; see [Bedrock](judges.md#bedrock). |
 | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
-| `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
+| `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds, which needs a project. `GOOGLE_APPLICATION_CREDENTIALS` wins over a key. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |
 
 ## No setting on purpose

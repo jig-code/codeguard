@@ -14,6 +14,18 @@ from codeguard.repository import LineScope, LineScopes, WorkingTree
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
 
+_MODEL_HELP = (
+    "The model --provider judges with. Default: none for claude-cli, so the claude CLI runs its "
+    "own default; "
+    + ", ".join(
+        f"{provider.default_model} for {provider}"
+        for provider in JudgeProvider
+        if provider.default_model is not None
+    )
+    + "."
+)
+
+
 _EXIT_PASSED = 0
 _EXIT_FAILED = 1
 _EXIT_ERROR = 2
@@ -138,9 +150,7 @@ def main() -> int:
     )
     eval_command.add_argument(
         "--model",
-        help="The model --provider judges with. Default: none for claude-cli, so the claude "
-        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
-        "us.anthropic.claude-haiku-5-5 for bedrock.",
+        help=_MODEL_HELP,
     )
     eval_command.set_defaults(run=_eval)
 
