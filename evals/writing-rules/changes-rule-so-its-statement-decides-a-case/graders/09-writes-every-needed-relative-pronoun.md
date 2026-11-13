@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the statement writes every relative pronoun that a phrase needs. The statement is the sentence under this SKILL.md's `#` title and before `## Why`, leaving out the title and the frontmatter.
-FAIL if the statement is missing or empty. Also FAIL if a clause that describes a noun has no "that", "which" or "who" where one is needed.
+FAIL if the statement is missing or empty. Also FAIL if the statement drops a relative pronoun that a phrase needs.
