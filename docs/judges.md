@@ -81,9 +81,7 @@ judge:
 
 Use the model in the example: codeguard supports only the Gemini model it is tested with.
 
-Where Gemini runs and how it signs in come only from codeguard's environment variables,
-not from Google's own settings, so codeguard can sign in differently from your other Google
-Cloud tools:
+codeguard reads where Gemini runs and how it signs in from these environment variables:
 
 ```sh
 CODEGUARD_JUDGE__GEMINI__PROJECT=my-project

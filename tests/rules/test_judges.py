@@ -51,7 +51,7 @@ class TestJudges:
             judges.processes[JudgeProvider.GEMINI],
         )
 
-    def test_gemini_without_a_project_is_a_config_error_before_its_key_file_is_read(self, tmp_path):
+    def test_gemini_with_a_key_file_and_no_project_is_a_config_error(self, tmp_path):
         settings = GeminiSettings(credentials_file=tmp_path / "judge.json")
         judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")

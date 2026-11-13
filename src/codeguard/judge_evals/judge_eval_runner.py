@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import JudgeChoice, JudgeConfig, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, RulesetLoader
 from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
@@ -38,6 +38,16 @@ class JudgeEvalRunner:
                 [self.ruleset.load()], self.judge_config.choice, self.judge_override
             )
         }
+
+    def judge_models(self) -> tuple[JudgeModel, ...]:
+        """The models that judge the selected rules."""
+        return tuple(
+            binding.model
+            for binding in Bindings.from_rulesets(
+                [self.ruleset.load()], self.judge_config.choice, self.judge_override
+            )
+            if self.selection.selects_rule(binding.skill.name)
+        )
 
     def run(self) -> JudgeEvalResult:
         evals = [

@@ -126,11 +126,13 @@ class TestConfigLoader:
     @mock.patch.dict(
         os.environ,
         {
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
+            "CODEGUARD_JUDGE__GEMINI__API_KEY": "secret-key-value",
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
         },
     )
-    def test_gemini_api_key_and_credentials_file_together_are_an_error(self, repo):
+    def test_gemini_api_key_and_credentials_file_together_are_an_error_that_leaves_out_the_key(
+        self, repo
+    ):
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 
@@ -139,18 +141,6 @@ class TestConfigLoader:
             "  judge.gemini: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
         )
-
-    @mock.patch.dict(
-        os.environ,
-        {
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "secret-key-value",
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
-        },
-    )
-    def test_gemini_api_key_and_credentials_file_error_leaves_out_the_key(self, repo):
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
         assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
 
     def test_loads_the_project_judge_default(self, repo):

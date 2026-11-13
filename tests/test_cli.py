@@ -172,6 +172,28 @@ class TestReviewCommand:
         assert traceback.endswith("returned non-zero exit status 128.\n")
         assert result.returncode == 2
 
+    def test_gemini_rule_without_a_gemini_sign_in_is_a_config_error_before_any_judge_call(
+        self, repo, make_skill
+    ):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        repo.write("a.py", "x = 1\n")
+
+        result = subprocess.run(
+            [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
+        )
+
+        _, traceback = result.stderr.split(TRACEBACK_HEADING)
+        assert traceback.splitlines()[-1] == (
+            "codeguard.config.config_error.ConfigError: "
+            "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
+        )
+        assert result.returncode == 2
+
 
 class TestReviewWithAstGrepVersion:
     def test_pinned_ast_grep_runs_the_rules(self, repo, make_diagnostic):
@@ -900,6 +922,32 @@ class TestEvalCommand:
 
         assert recorded_call(tmp_path / "eval")["model"] == model
         assert f"Evaluation Summary: responsibility-placement on {label}" in result.stdout
+
+    def test_gemini_rule_without_a_gemini_sign_in_exits_2_before_any_case_runs(
+        self, tmp_path, tmp_path_factory
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: gemini\nmodel: gemini-judge-test\n",
+        )
+
+        result = subprocess.run(
+            [CODEGUARD, "eval"],
+            cwd=package.root,
+            env={**os.environ, "HOME": str(tmp_path)},
+            capture_output=True,
+            text=True,
+        )
+
+        _, traceback = result.stderr.split(TRACEBACK_HEADING)
+        assert traceback.splitlines()[-1] == (
+            "codeguard.config.config_error.ConfigError: "
+            "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
+        )
+        assert result.stdout == ""
+        assert result.returncode == 2
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(
