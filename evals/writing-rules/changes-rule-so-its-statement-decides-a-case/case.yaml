@@ -3,7 +3,7 @@ name: changes-rule-so-its-statement-decides-a-case
 expected_outcome: |
   The agent loads the writing-rules skill. The rule's SKILL.md holds a title, one statement and a `## Why`, and no other section.
   The statement is one sentence, not a question. The statement uses only common terms. The statement states what code must never do, once.
-  The statement says nothing about how code avoids what it forbids, and the statement gives no why. The statement names nothing that code leaves out.
+  The statement says nothing about how code avoids what the statement forbids, and the statement gives no why. The statement names nothing that code leaves out.
   The statement writes every relative pronoun that a phrase needs, and no pronoun in the statement could mean more than one noun.
   A reader of the statement alone can tell whether a handler that catches `Exception`, logs the error and re-raises it keeps or breaks the statement.
 context:

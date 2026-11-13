@@ -48,11 +48,11 @@ sees.
 
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
 ground on which code breaks the convention and one `valid` case for each distinct
-situation in which code keeps it, and a `skipped` case outside the gate. A convention
-broken on one ground has one `invalid` case. Each case tests one thing that none of the
-others does: a different thing the code does or fails to do, not another syntax for the
-same thing. No edge cases: a case that a reasonable reviewer could argue either way
-proves nothing about the rule, and a judge that flips on it is right to.
+situation near the boundary in which code keeps it, and a `skipped` case outside the
+gate. A convention broken on one ground has one `invalid` case. Each case tests one
+thing that none of the others does: a different thing the code does or fails to do, not
+another syntax for the same thing. No edge cases: a case that a reasonable reviewer could
+argue either way proves nothing about the rule, and a judge that flips on it is right to.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code is a problem or why it's fine.

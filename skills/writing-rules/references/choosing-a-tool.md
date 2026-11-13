@@ -8,8 +8,8 @@ similar exact tool can check, directly, through its configuration or with a cust
 isn't codeguard's, whether or not the project runs that tool or turns that check on. An
 exact tool gives the same answer every run, costs nothing, and already runs in the
 editor. A way past the tool, such as a cast or a comment that silences it, doesn't make
-the convention a judgment when the tool's configuration can forbid it. Write no rule.
-When a convention isn't codeguard's to check, say only that. Offer no other rule.
+the convention a judgment when the tool's configuration can forbid it. Write no rule, say
+only that the convention isn't codeguard's to check, and offer no other rule.
 
 A codeguard pattern rule is for a code shape in one file that those tools can't express:
 a YAML file and its test cases take the place of a custom rule's class and spec.

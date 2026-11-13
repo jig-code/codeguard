@@ -11,9 +11,9 @@ convention that a model judges each change against.
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
-2. **State the convention and why it exists**, as the two sections below say. Then reread
-   the statement once for each bullet under The convention that is about the statement,
-   and once for each check below. Rewrite the statement until it meets them all:
+2. **State the convention and why it exists**, as the two sections below say. Then check
+   the statement against each bullet under The convention and each check below, and
+   rewrite the statement until it meets them all:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
    3. Name what code does, never what code leaves out: use no "without" followed by a
@@ -32,10 +32,10 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 A rule is one convention, stated as one declarative sentence at the level of intent and
 in words that don't depend on the language. Each piece of code the rule reads either
 keeps the convention or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else. The judge treats any other text, even a
-clause in the statement, as a separate test. Code can pass that test and still break the
-statement. The statement alone decides each piece of code; the judge reads the statement
-as a reviewer would, and says on what ground the code keeps or breaks it.
+statement and why it exists, and nothing else. The judge treats any other text, even an
+extra clause in the statement, as a separate test. Code can pass that test and still
+break the statement. The statement alone decides each piece of code; the judge reads the
+statement as a reviewer would, and says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
@@ -134,7 +134,8 @@ codeguard's `docs/rule-formats.md` has the binding and rule eval formats.
   codeguard prints the note under the diagnostic, so it is what the blocked agent reads.
 - Scope a rule with a binding, `bindings/<id>.yaml` with `rule`, `paths` and
   `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
-  the scope. The exception is a file name that is the convention itself.
+  the scope. The exception is a rule whose convention is about which file code belongs
+  in.
 - When syntax decides only some shapes a violation takes, write a pattern rule for those
   shapes and a judge rule gated on every shape. No judge rule runs on a file with an
   `error` diagnostic, so the two report the same code only if the pattern rule is a
