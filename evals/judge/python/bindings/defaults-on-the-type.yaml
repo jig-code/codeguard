@@ -1,5 +1,3 @@
 skill: python/skills/defaults-on-the-type
 paths: ["**/*.py"]
 triggers: [call]
-provider: gemini
-model: gemini-4-argon

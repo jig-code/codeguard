@@ -51,7 +51,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--judge-provider",
         type=JudgeProvider,
         choices=list(JudgeProvider),
-        help="Judge the llm tests' fixture cases with this provider instead of their bindings'.",
+        help="Judge the llm tests' fixture cases with this provider instead of their package's.",
     )
     parser.addoption(
         "--judge-model",

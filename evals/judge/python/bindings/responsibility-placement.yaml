@@ -1,5 +1,3 @@
 skill: python/skills/responsibility-placement
 paths: ["**/*.py"]
 triggers: [attribute-access]
-provider: gemini
-model: gemini-4-argon
