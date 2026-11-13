@@ -40,37 +40,19 @@ class JudgeEvalRunner:
         }
 
     def judge_models(self) -> tuple[JudgeModel, ...]:
-        """The models that judge the rule eval cases `run` evaluates."""
-        _, experiments = self._experiments(self.ruleset.load())
-        return tuple(binding.model for _, binding, _ in experiments)
+        bindings = self._bindings(self.ruleset.load())
+        return tuple(
+            bindings[dataset.name].model
+            for _, dataset in self._selected_evals()
+            if dataset.name in bindings
+        )
 
     def run(self) -> JudgeEvalResult:
-        ruleset = self.ruleset.load()
-        unknown, experiments = self._experiments(ruleset)
-        if not unknown and not experiments:
+        evals = self._selected_evals()
+        if not evals:
             return JudgeEvalResult()
-        scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
-        reports = asyncio.run(self._evaluate_all(experiments, scanner))
-        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
-
-    def _experiments(
-        self, ruleset: Ruleset
-    ) -> tuple[tuple[str, ...], list[tuple[RuleEval, Binding, str | None]]]:
-        """The selected rule evals no judge rule binds, and the selected cases to judge with
-        each binding, by language."""
-        evals = [
-            (file, self._selected_cases(dataset))
-            for file, dataset in rule_evals(self.ruleset.root)
-            if self.selection.selects_rule(dataset.name)
-        ]
-        if self.selection.cases:
-            evals = [(file, dataset) for file, dataset in evals if dataset.cases]
-        bindings = {
-            binding.skill.name: binding
-            for binding in Bindings.from_rulesets(
-                [ruleset], self.judge_config.choice, self.judge_override
-            )
-        }
+        ruleset = self.ruleset.load()
+        bindings = self._bindings(ruleset)
         unknown = tuple(
             f"{file.relative_to(self.root)}: no judge rule {dataset.name}"
             for file, dataset in evals
@@ -82,7 +64,27 @@ class JudgeEvalRunner:
             if dataset.name in bindings
             for language, part in dataset.by_language(bindings[dataset.name].languages)
         ]
-        return unknown, experiments
+        scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
+        reports = asyncio.run(self._evaluate_all(experiments, scanner))
+        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
+
+    def _selected_evals(self) -> list[tuple[Path, RuleEval]]:
+        evals = [
+            (file, self._selected_cases(dataset))
+            for file, dataset in rule_evals(self.ruleset.root)
+            if self.selection.selects_rule(dataset.name)
+        ]
+        if self.selection.cases:
+            return [(file, dataset) for file, dataset in evals if dataset.cases]
+        return evals
+
+    def _bindings(self, ruleset: Ruleset) -> dict[str, Binding]:
+        return {
+            binding.skill.name: binding
+            for binding in Bindings.from_rulesets(
+                [ruleset], self.judge_config.choice, self.judge_override
+            )
+        }
 
     def _selected_cases(self, rule_eval: RuleEval) -> RuleEval:
         cases = tuple(case for case in rule_eval.cases if self.selection.selects_case(case.name))

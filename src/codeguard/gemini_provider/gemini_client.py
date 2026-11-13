@@ -8,11 +8,11 @@ from google.auth.exceptions import GoogleAuthError
 from google.genai import Client
 from google.genai.types import HttpOptions
 from google.oauth2.service_account import Credentials
+from pydantic import SecretStr
 from pydantic_ai.models import Model, create_async_httpx2_client
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
-from codeguard.config import GeminiSettings
 from codeguard.review import JudgeProcessError
 
 _CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
@@ -20,7 +20,10 @@ _CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 
 @dataclass(frozen=True)
 class VertexGemini:
-    settings: GeminiSettings
+    project: str | None
+    location: str
+    api_key: SecretStr | None = None
+    credentials_file: Path | None = None
     transport: httpx2.AsyncBaseTransport | None = None
 
     @asynccontextmanager
@@ -34,16 +37,12 @@ class VertexGemini:
     # the client for every sign-in.
     @contextmanager
     def _client(self, http: httpx2.AsyncClient) -> Iterator[Client]:
-        settings = self.settings
-        settings.check_sign_in()
         with Client(
             vertexai=True,
-            api_key=settings.api_key.get_secret_value() if settings.api_key else None,
-            credentials=_credentials(settings.credentials_file)
-            if settings.credentials_file
-            else None,
-            project=settings.project,
-            location=settings.location,
+            api_key=self.api_key.get_secret_value() if self.api_key else None,
+            credentials=_credentials(self.credentials_file) if self.credentials_file else None,
+            project=self.project,
+            location=self.location,
             http_options=HttpOptions(httpx_async_client=http),
         ) as client:
             yield client

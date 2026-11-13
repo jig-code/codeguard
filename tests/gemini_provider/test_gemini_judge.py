@@ -22,7 +22,6 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.config import GeminiSettings
 from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
 from codeguard.review import (
     Deadline,
@@ -513,11 +512,9 @@ class TestGeminiJudgeOnVertex:
         verdict = make_verdict()
         vertex = VertexVerdicts(verdict)
         models = VertexGemini(
-            GeminiSettings(
-                project="my-project",
-                location="europe-west4",
-                api_key=SecretStr("proxy-injected"),
-            ),
+            "my-project",
+            "europe-west4",
+            api_key=SecretStr("proxy-injected"),
             transport=httpx2.MockTransport(vertex),
         )
 
@@ -532,7 +529,9 @@ class TestGeminiJudgeOnVertex:
     @pytest.mark.usefixtures("waits")
     def test_failed_request_leaves_the_api_key_out_of_its_error(self, tmp_path, make_judge_request):
         models = VertexGemini(
-            GeminiSettings(project="my-project", api_key=SecretStr("secret-api-key")),
+            "my-project",
+            "global",
+            api_key=SecretStr("secret-api-key"),
             transport=httpx2.MockTransport(refuse),
         )
 

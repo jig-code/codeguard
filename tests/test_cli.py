@@ -172,7 +172,7 @@ class TestReviewCommand:
         assert traceback.endswith("returned non-zero exit status 128.\n")
         assert result.returncode == 2
 
-    def test_review_checks_every_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
+    def test_review_checks_a_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
         self, repo, tmp_path, make_skill
     ):
         repo.write(".claude/skills/placement/SKILL.md", make_skill().text)

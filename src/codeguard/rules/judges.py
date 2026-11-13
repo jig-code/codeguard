@@ -33,9 +33,7 @@ class Judges:
             },
         )
 
-    def check_sign_ins(self, models: Iterable[JudgeModel]) -> None:
-        """Raise the config error a judge of these models would raise when it calls its
-        model, so a review reports it before any judge call."""
+    def require_sign_ins(self, models: Iterable[JudgeModel]) -> None:
         if any(model.provider is JudgeProvider.GEMINI for model in models):
             self.gemini.check_sign_in()
 
@@ -49,7 +47,10 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            models = VertexGemini(self.gemini)
+            gemini = self.gemini
+            models = VertexGemini(
+                gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
+            )
             return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(
