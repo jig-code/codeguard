@@ -7,7 +7,6 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from codeguard.config.environment import ENV_NESTED_DELIMITER, ENV_PREFIX
 from codeguard.config.judge_config import GEMINI_FIELD, JudgeConfig
 from codeguard.config.package_config import PackageConfig
 from codeguard.config.versions import ExactVersion
@@ -66,8 +65,8 @@ class Config(BaseSettings):
         frozen=True,
         arbitrary_types_allowed=True,
         validate_by_name=True,
-        env_prefix=ENV_PREFIX,
-        env_nested_delimiter=ENV_NESTED_DELIMITER,
+        env_prefix="CODEGUARD_",
+        env_nested_delimiter="__",
         env_ignore_empty=True,
         hide_input_in_errors=True,
     )

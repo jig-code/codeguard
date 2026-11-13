@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_core import PydanticCustomError
 
 from codeguard.config.config_error import ConfigError
-from codeguard.config.environment import environment_variable
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -63,7 +62,7 @@ _FAMILIES = {
 def _unset(key: str, problem: str) -> ConfigError:
     return ConfigError(
         f"{problem}: set {key} in the rule's binding, judge.{key} in .codeguard/config.yaml "
-        f"(or {environment_variable('judge', key)}), or judge.{key} in its package's "
+        f"(or CODEGUARD_JUDGE__{key.upper()}), or judge.{key} in its package's "
         "codeguard-package.yaml"
     )
 
@@ -139,30 +138,23 @@ class GeminiSettings(BaseModel):
         if self.api_key is not None and self.credentials_file is not None:
             raise PydanticCustomError(
                 "two_sign_ins",
-                "set {api_key} or {credentials_file}, not both",
-                {
-                    "api_key": _gemini_variable("api_key"),
-                    "credentials_file": _gemini_variable("credentials_file"),
-                },
+                "set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both",
             )
         return self
 
     @property
     def required_sign_in(self) -> GeminiSignIn:
         if self.project is None:
-            raise ConfigError(f"Gemini needs a project: set {_gemini_variable('project')}")
+            raise ConfigError("Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT")
         if self.credentials_file is not None:
             return KeyFileSignIn(self.project, self.location, self.credentials_file)
         if self.api_key is not None:
             return ApiKeySignIn(self.project, self.location, self.api_key)
         raise ConfigError(
-            f"Gemini needs a way to sign in: set {_gemini_variable('api_key')} or "
-            f"{_gemini_variable('credentials_file')}"
+            "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
         )
-
-
-def _gemini_variable(field: str) -> str:
-    return environment_variable("judge", GEMINI_FIELD, field)
 
 
 class JudgeConfig(BaseModel):
