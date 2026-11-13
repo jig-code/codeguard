@@ -70,7 +70,7 @@ class LineScopes:
         diffs = {
             **self.libgit2.tracked_diffs(merge_base),
             **{
-                file: FileDiff.of_new_file(self.working_tree.contents(file))
+                file: FileDiff.from_new_file(self.working_tree.contents(file))
                 for file in self.working_tree.untracked_files()
             },
         }

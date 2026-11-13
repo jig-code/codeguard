@@ -24,17 +24,29 @@ class KeptRow:
     base_line: int
     head_line: int
 
+    @property
+    def kept_head_line(self) -> int | None:
+        return self.head_line
+
 
 @dataclass(frozen=True)
 class AddedRow:
     head_line: int
     text: RowText
 
+    @property
+    def kept_head_line(self) -> int | None:
+        return None
+
 
 @dataclass(frozen=True)
 class RemovedRow:
     base_line: int
     text: RowText
+
+    @property
+    def kept_head_line(self) -> int | None:
+        return None
 
 
 type DiffRow = KeptRow | AddedRow | RemovedRow
@@ -76,7 +88,7 @@ class FileDiff:
         )
 
     @classmethod
-    def of_new_file(cls, content: bytes) -> Self:
+    def from_new_file(cls, content: bytes) -> Self:
         lines = content.split(b"\n")
         if lines[-1] == b"":
             lines.pop()
@@ -114,7 +126,7 @@ class _ChangeRun:
     def split(cls, rows: tuple[DiffRow, ...]) -> tuple[Self, ...]:
         runs: list[Self] = []
         head_before = 0
-        for kept_head_line, group in groupby(rows, key=_kept_head_line):
+        for kept_head_line, group in groupby(rows, key=lambda row: row.kept_head_line):
             if kept_head_line is not None:
                 head_before = kept_head_line
                 continue
@@ -152,7 +164,3 @@ class _ChangeRun:
     @property
     def _line_before(self) -> int:
         return max(self.head_before, 1)
-
-
-def _kept_head_line(row: DiffRow) -> int | None:
-    return row.head_line if isinstance(row, KeptRow) else None

@@ -145,7 +145,7 @@ class TestFileDiffFromWholeFileRows:
 
 class TestFileDiffOfNewFile:
     def test_new_file_ending_in_a_newline_adds_its_lines_with_code(self):
-        assert FileDiff.of_new_file(b"a = 1\n\nb = 1\n") == FileDiff(
+        assert FileDiff.from_new_file(b"a = 1\n\nb = 1\n") == FileDiff(
             base_path=None,
             added_lines=frozenset({1, 3}),
             deletion_points=frozenset(),
@@ -155,7 +155,7 @@ class TestFileDiffOfNewFile:
         )
 
     def test_new_file_without_a_final_newline_adds_its_last_line(self):
-        assert FileDiff.of_new_file(b"a = 1\nb = 1") == FileDiff(
+        assert FileDiff.from_new_file(b"a = 1\nb = 1") == FileDiff(
             base_path=None,
             added_lines=frozenset({1, 2}),
             deletion_points=frozenset(),
@@ -165,7 +165,7 @@ class TestFileDiffOfNewFile:
         )
 
     def test_new_file_of_only_blank_lines_adds_no_lines(self):
-        assert FileDiff.of_new_file(b"\n  \n") == FileDiff(
+        assert FileDiff.from_new_file(b"\n  \n") == FileDiff(
             base_path=None,
             added_lines=frozenset(),
             deletion_points=frozenset(),

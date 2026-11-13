@@ -21,4 +21,4 @@ class MakeNewFileChangedLines(MakeChangedLines):
 
     @classmethod
     def _create(cls, model_class, **kwargs):
-        return model_class({kwargs["file"]: FileDiff.of_new_file(kwargs["content"])})
+        return model_class({kwargs["file"]: FileDiff.from_new_file(kwargs["content"])})
