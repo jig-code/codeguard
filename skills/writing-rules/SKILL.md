@@ -41,8 +41,12 @@ says on what ground the code keeps or breaks it.
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
-- **What code must never do, once.** The statement says what code must never do, once,
-  and nothing about how code avoids what that code must never do, or why.
+- **What code must never do.** The statement says what code must never do.
+- **Once.** The statement says it once.
+- **Nothing about how.** The statement says nothing about how code avoids what that code
+  must never do.
+- **No reason or consequence.** The statement gives no reason for the convention and no
+  consequence of breaking it.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
