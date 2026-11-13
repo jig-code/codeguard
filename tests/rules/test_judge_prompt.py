@@ -7,9 +7,10 @@ import pytest
 import yaml
 from spans import finished_span_attributes
 
-from codeguard.config import JudgeProvider
+from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider
+from codeguard.packages import MANIFEST_FILE, Package
 from codeguard.repository import LineScopes, WorkingTree
-from codeguard.review import Category, Review
+from codeguard.review import Bindings, Category, Review
 from codeguard.rule_tests import EditCase, EditRepo, Outcome, RuleEvalCase, rule_evals
 from codeguard.rules import Rules, judges
 
@@ -31,15 +32,22 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
 
 @pytest.fixture
-def judged_evals(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
+def judge_override(request: pytest.FixtureRequest) -> JudgeChoice:
     provider: JudgeProvider | None = request.config.getoption("judge_provider")
     if provider is None:
-        return EVALS
+        return JudgeChoice()
     model: str | None = request.config.getoption("judge_model") or provider.default_model
+    return JudgeChoice(provider=provider, model=model)
+
+
+@pytest.fixture
+def judged_evals(judge_override: JudgeChoice, tmp_path: Path) -> Path:
+    if judge_override.provider is None:
+        return EVALS
     evals = shutil.copytree(EVALS, tmp_path / "evals")
-    for binding in (evals / "python" / "bindings").glob("*.yaml"):
-        config = yaml.safe_load(binding.read_text()) | {"provider": str(provider), "model": model}
-        binding.write_text(yaml.safe_dump(config))
+    manifest = evals / MANIFEST_FILE
+    judge = judge_override.model_dump(mode="json", exclude_none=True)
+    manifest.write_text(yaml.safe_dump(yaml.safe_load(manifest.read_text()) | {"judge": judge}))
     return evals
 
 
@@ -49,6 +57,16 @@ def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 
 class TestJudgePrompt:
+    @pytest.mark.parametrize("judge_override", [JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)])
+    def test_claude_cli_override_judges_with_the_cli_default_model(self, judged_evals: Path):
+        ruleset = Package.load(judged_evals).ruleset_loader("python").load()
+
+        bindings = Bindings.from_rulesets([ruleset])
+
+        assert {binding.model for binding in bindings} == {
+            JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+        }
+
     def test_public_interface_valid_fixture_loads_from_its_consumer(self):
         case = next(
             parameter.values[1]

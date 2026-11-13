@@ -69,7 +69,7 @@ A judge rule whose binding sets `provider: gemini` is judged with Gemini on Goog
 skill: .codeguard/skills/responsibility-placement
 paths: ["app/**/*.py"]
 provider: gemini
-model: gemini-3.1-pro-preview
+model: gemini-4-argon
 ```
 
 `judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini calls run at once:
@@ -79,9 +79,7 @@ judge:
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
-Use `gemini-3.1-pro-preview`, the Gemini model codeguard was tested with. Flash was
-unreliable in testing. Gemini 4 Argon was as accurate, but some of its requests took 15
-to 37 s, where 3.1 Pro's longest of 79 took 13 s (median 6.5 s).
+Use the model in the example: codeguard supports only the Gemini model it is tested with.
 
 Where Gemini runs and how it signs in come only from codeguard's environment variables,
 not from Google's own settings, so codeguard can sign in differently from your other Google

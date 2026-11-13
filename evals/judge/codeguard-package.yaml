@@ -1,2 +1,5 @@
 name: judge-evals
 rulesets: [python]
+judge:
+  provider: gemini
+  model: gemini-4-argon

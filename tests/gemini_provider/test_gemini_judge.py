@@ -33,7 +33,7 @@ from codeguard.review import (
     Verdict,
 )
 
-MODEL = "gemini-3.1-pro-preview"
+MODEL = "gemini-judge-test"
 VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
