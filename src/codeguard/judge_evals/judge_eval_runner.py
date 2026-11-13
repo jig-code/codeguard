@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import JudgeChoice, JudgeConfig, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, Ruleset, RulesetLoader
 from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
@@ -39,23 +39,20 @@ class JudgeEvalRunner:
             )
         }
 
+    def judge_models(self) -> tuple[JudgeModel, ...]:
+        bindings = self._bindings(self.ruleset.load())
+        return tuple(
+            bindings[dataset.name].model
+            for _, dataset in self._selected_evals()
+            if dataset.name in bindings
+        )
+
     def run(self) -> JudgeEvalResult:
-        evals = [
-            (file, self._selected_cases(dataset))
-            for file, dataset in rule_evals(self.ruleset.root)
-            if self.selection.selects_rule(dataset.name)
-        ]
-        if self.selection.cases:
-            evals = [(file, dataset) for file, dataset in evals if dataset.cases]
+        evals = self._selected_evals()
         if not evals:
             return JudgeEvalResult()
         ruleset = self.ruleset.load()
-        bindings = {
-            binding.skill.name: binding
-            for binding in Bindings.from_rulesets(
-                [ruleset], self.judge_config.choice, self.judge_override
-            )
-        }
+        bindings = self._bindings(ruleset)
         unknown = tuple(
             f"{file.relative_to(self.root)}: no judge rule {dataset.name}"
             for file, dataset in evals
@@ -70,6 +67,24 @@ class JudgeEvalRunner:
         scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
         reports = asyncio.run(self._evaluate_all(experiments, scanner))
         return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
+
+    def _selected_evals(self) -> list[tuple[Path, RuleEval]]:
+        evals = [
+            (file, self._selected_cases(dataset))
+            for file, dataset in rule_evals(self.ruleset.root)
+            if self.selection.selects_rule(dataset.name)
+        ]
+        if self.selection.cases:
+            return [(file, dataset) for file, dataset in evals if dataset.cases]
+        return evals
+
+    def _bindings(self, ruleset: Ruleset) -> dict[str, Binding]:
+        return {
+            binding.skill.name: binding
+            for binding in Bindings.from_rulesets(
+                [ruleset], self.judge_config.choice, self.judge_override
+            )
+        }
 
     def _selected_cases(self, rule_eval: RuleEval) -> RuleEval:
         cases = tuple(case for case in rule_eval.cases if self.selection.selects_case(case.name))

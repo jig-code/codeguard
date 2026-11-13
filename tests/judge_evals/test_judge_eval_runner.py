@@ -96,7 +96,8 @@ class TestJudgeEvalRunner:
             ),
         )
         judges = RecordingJudges(RecordingJudge())
-        gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model="gemini-3.1-pro-preview")
+        model = "gemini-judge-test"
+        gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model=model)
         runner = JudgeEvalRunner(
             repo.root, RulesetLoader.local(repo.root), judges, 0.9, judge_override=gemini
         )
@@ -104,11 +105,9 @@ class TestJudgeEvalRunner:
         result = runner.run()
 
         assert [creation.model for creation in judges.created] == [
-            JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-3.1-pro-preview")
+            JudgeModel(provider=JudgeProvider.GEMINI, name=model)
         ]
-        assert [report.name for report in result.reports] == [
-            "enum-usage on gemini-3.1-pro-preview"
-        ]
+        assert [report.name for report in result.reports] == [f"enum-usage on {model}"]
 
     def test_failing_case_fails_once_per_repeat_numbered(
         self, repo, make_rule_eval_case, make_verdict, make_violation

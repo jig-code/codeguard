@@ -33,7 +33,7 @@ where one the binding leaves out comes from:
 
 ```yaml
 provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
-model: gemini-3.1-pro-preview     # default: the claude CLI's own; every provider but claude-cli needs one
+model: gemini-4-argon             # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
 A judge rule's id is its skill's directory name.
@@ -196,5 +196,6 @@ reason for each case it judged, then one line per failure.
 | The convention | the skill |
 | Paths and triggers | the binding |
 | Provider and model | the binding, or `--provider` and `--model` |
-| The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
+| The confidence threshold, and Gemini's calls at once | the caller's `.codeguard/config.yaml` |
+| Gemini's project, location and sign-in | the `CODEGUARD_JUDGE__GEMINI__` environment variables |
 | The judge prompt and how each case is checked | codeguard |

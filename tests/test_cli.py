@@ -172,6 +172,32 @@ class TestReviewCommand:
         assert traceback.endswith("returned non-zero exit status 128.\n")
         assert result.returncode == 2
 
+    def test_review_checks_a_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
+        self, repo, tmp_path, make_skill
+    ):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        repo.write("a.py", "x = 1\n")
+
+        result = subprocess.run(
+            [CODEGUARD, "review"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(tmp_path)},
+        )
+
+        _, traceback = result.stderr.split(TRACEBACK_HEADING)
+        assert traceback.splitlines()[-1] == (
+            "codeguard.config.config_error.ConfigError: "
+            "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
+        )
+        assert result.returncode == 2
+
 
 class TestReviewWithAstGrepVersion:
     def test_pinned_ast_grep_runs_the_rules(self, repo, make_diagnostic):
@@ -424,6 +450,40 @@ class TestReviewDryRun:
             "a.py\n"
             "  claude   placement\n"
             "  skipped  class-shape\n"
+        )
+        assert result.returncode == 0
+
+    def test_lists_gemini_judge_calls_without_a_gemini_sign_in(self, repo, tmp_path, make_skill):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        repo.write("a.py", "x = 1\n")
+
+        result = subprocess.run(
+            [CODEGUARD, "review", "--dry-run"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(tmp_path)},
+        )
+
+        assert result.stdout == (
+            "Judge calls: 1 (0 cached, 1 to Claude), 0 skipped by triggers\n"
+            "\n"
+            "By rule:\n"
+            "  claude  cached  skipped  rule\n"
+            "       1       0        0  placement\n"
+            "\n"
+            "By file:\n"
+            "  claude  cached  skipped  file\n"
+            "       1       0        0  a.py\n"
+            "\n"
+            "Calls by file:\n"
+            "a.py\n"
+            "  claude   placement\n"
         )
         assert result.returncode == 0
 
@@ -852,7 +912,7 @@ class TestEvalCommand:
         package.write(
             "python/bindings/responsibility-placement.yaml",
             'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-3.1-pro-preview\n",
+            "triggers: [any]\nprovider: gemini\nmodel: gemini-4-argon\n",
         )
         bin_dir = recording_claude(tmp_path, [])
 
@@ -866,6 +926,74 @@ class TestEvalCommand:
 
         assert recorded_call(tmp_path / "eval")["model"] == model
         assert f"Evaluation Summary: responsibility-placement on {label}" in result.stdout
+
+    def test_gemini_rule_without_a_gemini_sign_in_exits_2_before_any_case_runs(
+        self, tmp_path, tmp_path_factory
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write(
+            "python/bindings/responsibility-placement.yaml",
+            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            "triggers: [any]\nprovider: gemini\nmodel: gemini-judge-test\n",
+        )
+
+        result = subprocess.run(
+            [CODEGUARD, "eval"],
+            cwd=package.root,
+            env={**os.environ, "HOME": str(tmp_path)},
+            capture_output=True,
+            text=True,
+        )
+
+        _, traceback = result.stderr.split(TRACEBACK_HEADING)
+        assert traceback.splitlines()[-1] == (
+            "codeguard.config.config_error.ConfigError: "
+            "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
+        )
+        assert result.stdout == ""
+        assert result.returncode == 2
+
+    def test_gemini_rule_the_selection_leaves_out_needs_no_gemini_sign_in(
+        self, tmp_path, tmp_path_factory, make_skill
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write("python/skills/naming/SKILL.md", make_skill().text)
+        package.write(
+            "python/bindings/naming.yaml",
+            'skill: python/skills/naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        naming_case = {
+            "name": "names the helper",
+            "inputs": {"file": "invoice.py", "before": INVOICE_BEFORE, "after": INVOICE_AFTER},
+            "expected_output": {"outcome": "invalid"},
+        }
+        package.write("python/rule-evals/naming.yaml", yaml.safe_dump({"cases": [naming_case]}))
+        bin_dir = recording_claude(
+            tmp_path,
+            [
+                {
+                    "file": "invoice.py",
+                    "lines": {"start": 3, "end": 3},
+                    "message": "M.",
+                    "confidence": 1.0,
+                }
+            ],
+        )
+
+        result = subprocess.run(
+            [CODEGUARD, "eval", "--case", "order lines"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
+            capture_output=True,
+            text=True,
+        )
+
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
+        assert result.returncode == 0
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(

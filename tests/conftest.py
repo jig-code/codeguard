@@ -54,13 +54,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--judge-provider",
         type=JudgeProvider,
         choices=list(JudgeProvider),
-        help="Judge the llm tests' fixture cases with this provider instead of their bindings'.",
+        help="Judge the llm tests' fixture cases with this provider instead of their package's.",
     )
     parser.addoption(
         "--judge-model",
         help="The model --judge-provider judges with. Default: the provider's default model; "
         "none for claude-cli, so the claude CLI runs its own default.",
     )
+
+
+_THIS_MACHINES_GEMINI_SETTINGS = {
+    name: value
+    for name, value in os.environ.items()
+    if name.startswith("CODEGUARD_JUDGE__GEMINI__")
+}
 
 
 @pytest.fixture(autouse=True)
@@ -75,6 +82,12 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in list(os.environ):
         if name.startswith("CODEGUARD_JUDGE__"):
             monkeypatch.delenv(name)
+
+
+@pytest.fixture
+def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name, value in _THIS_MACHINES_GEMINI_SETTINGS.items():
+        monkeypatch.setenv(name, value)
 
 
 @pytest.fixture

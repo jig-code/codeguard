@@ -1,43 +1,60 @@
-import os
-from collections.abc import AsyncIterator, Callable
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 
-from google.auth.exceptions import DefaultCredentialsError
-from pydantic_ai.models import Model
+import httpx2
+from google.auth.exceptions import GoogleAuthError
+from google.genai import Client
+from google.genai.types import HttpOptions
+from google.oauth2.service_account import Credentials
+from pydantic import SecretStr
+from pydantic_ai.models import Model, create_async_httpx2_client
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
 from codeguard.review import JudgeProcessError
 
+_CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+
 
 @dataclass(frozen=True)
 class VertexGemini:
-    project: str | None = None
-    location: str | None = None
-    cloud: Callable[..., GoogleCloudProvider] = GoogleCloudProvider
+    project: str | None
+    location: str
+    api_key: SecretStr | None = None
+    credentials_file: Path | None = None
+    transport: httpx2.AsyncBaseTransport | None = None
 
     @asynccontextmanager
     async def __call__(self, model: str) -> AsyncIterator[Model]:
         # Each judgement runs on its own event loop, so it gets its own HTTP client.
-        async with GoogleModel(model, provider=self._provider()) as connected:
-            yield connected
+        async with create_async_httpx2_client(transport=self.transport) as http:
+            with self._client(http) as client:
+                yield GoogleModel(model, provider=GoogleCloudProvider(client=client))
 
-    def _provider(self) -> GoogleCloudProvider:
-        project = self.project or os.environ.get("GOOGLE_CLOUD_PROJECT")
-        location = self.location or os.environ.get("GOOGLE_CLOUD_LOCATION")
-        if project is None and location is None and _api_key():
-            # An API key identifies the project.
-            return self.cloud()
-        try:
-            return self.cloud(project=project, location=location or "global")
-        except DefaultCredentialsError as error:
-            raise JudgeProcessError(
-                f"Gemini on Vertex AI found no Google credentials: {error}"
-            ) from error
+    # GoogleCloudProvider can't send an API key together with a project, so codeguard builds
+    # the client for every sign-in.
+    @contextmanager
+    def _client(self, http: httpx2.AsyncClient) -> Iterator[Client]:
+        with Client(
+            vertexai=True,
+            api_key=self.api_key.get_secret_value() if self.api_key else None,
+            credentials=_credentials(self.credentials_file) if self.credentials_file else None,
+            project=self.project,
+            location=self.location,
+            http_options=HttpOptions(httpx_async_client=http),
+        ) as client:
+            yield client
 
 
-def _api_key() -> bool:
-    return bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")) and not (
-        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    )
+def _credentials(credentials_file: Path) -> Credentials:
+    try:
+        return Credentials.from_service_account_file(
+            str(credentials_file), scopes=[_CLOUD_PLATFORM_SCOPE]
+        )
+    except (OSError, ValueError, GoogleAuthError) as error:
+        raise JudgeProcessError(
+            f"Gemini on Vertex AI couldn't read the service account key file {credentials_file}: "
+            f"{type(error).__name__}"
+        ) from error
