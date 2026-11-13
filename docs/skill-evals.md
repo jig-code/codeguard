@@ -13,10 +13,12 @@ codeguard, testing rules and reviewing code.
 Each case asks an agent with the skill for a codeguard rule, and grades what the agent
 does against what the skill says. A case is one of two kinds:
 
-| The agent is asked for | It should | Graders check | Example |
-|---|---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` | `writes-rule-created-flag-tuples` asks for a rule that functions don't return a `(thing, created)` pair; a grader checks that the rule eval gives the framework's `get_or_create` call a `valid` case |
-| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, and say it isn't codeguard's to check, without naming or setting up the other tool | That no rule file was written, and that the agent's reply says the convention isn't a codeguard rule's to check | `declines-unused-functions` asks for a judge rule that flags a function nobody calls any more, which takes a lookup across the whole repository |
+| The agent is asked for | It should | Graders check |
+|---|---|---|
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
+| A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, say only that the convention isn't codeguard's to check, and offer no other rule | That no rule file was written, that the agent's reply says the convention isn't codeguard's to check, and that the reply offers no other rule |
+
+The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
 never check whether a rule the agent writes works, or whether its rule tests or rule
@@ -24,16 +26,34 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A grader reads one file the agent wrote, checks that it wrote no rule file, or, in a
-  case that declines a rule, reads the agent's final reply.
+- A grader reads one thing: a file that the agent wrote, whether the agent wrote any
+  rule file, whether the agent loaded the writing-rules skill, or, in a case that
+  declines a rule, the agent's final reply.
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
+  A grader checks the instruction or the ask, never the answer that the fixture's domain
+  has, such as which code the rule should flag.
+- An `llm` grader states the convention and any limit the docs set on what it checks.
+  It never refers to the prompt or the docs.
+- Every case has a grader that passes when the agent loads the writing-rules skill,
+  written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
 Cases are named like tests. A case's directory is its expected outcome, then its
 subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
 changes an existing rule) or `declines`. A grader's file is its number, then what
-the agent's output does. A grader that checks names is a `regex`, never an `llm` grader.
+the agent's output does.
+
+[Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
+says when to use each grader type. codeguard adds that a `regex` grader's pattern is one
+that a reader can check at a glance, and that no grader parses prose with a pattern:
+such a pattern is too long for a reviewer to tell what the pattern checks, and the
+pattern breaks on wording that does what the skill asks.
+
+An `llm` grader judges one criterion. It states each check in its own short sentence,
+with a numbered list where it checks several things in order. Its `FAIL if` sentences
+name that criterion's concrete failures, a missing or empty output among them.
+[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ## Running them
 
