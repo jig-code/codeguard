@@ -10,7 +10,7 @@ The skill is the convention codeguard's judge reviews against, and the text the 
 agent loads before it edits. It holds, in this order, and nothing else:
 
 1. A title.
-2. The convention, written as the convention section of `SKILL.md` says.
+2. The convention: one declarative sentence, stated as `SKILL.md`'s The convention section says. It goes directly under the title, with no heading of its own.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
