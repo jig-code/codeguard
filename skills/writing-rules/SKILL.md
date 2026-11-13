@@ -5,15 +5,17 @@ description: Writes codeguard rules: decides whether a convention is codeguard's
 
 # Writing codeguard rules
 
-A rule is a pattern rule, an ast-grep rule that matches code by its syntax, or a judge
-rule, a convention that a model judges each change against.
+A pattern rule matches code by its syntax. A model judges each change against a judge
+rule.
 
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
 2. **State the convention and why it exists**, as the two sections below say. Then reread
-   the statement once for each bullet under The convention, and once for each check
-   below. Rewrite the statement until it meets them all:
+   the statement once for each of these bullets under The convention: A statement, never
+   a question; What code must never do; Once; Nothing about how; No reason or
+   consequence; and Common terms. Reread it once more for each check below. Rewrite the
+   statement until it meets them all:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
    3. Name what code does, never what code leaves out: use no "without" followed by a
@@ -32,17 +34,18 @@ For a judge rule, also read `references/judge-rules.md` before writing or changi
 A rule is one convention, stated as one declarative sentence at the level of intent and
 in words that don't depend on the language. Each piece of code the rule reads either
 keeps the convention or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else. The judge reads any other text in a rule,
-a clause in the statement's own sentence included, as a test of its own, so code that
-meets that text's letter passes though the code breaks the statement. The statement
-alone decides each piece of code; the judge reads the statement as a reviewer would, and
-says on what ground the code keeps or breaks it.
+statement and why it exists, and nothing else. The judge treats any other text, even a
+clause in the statement, as a separate test. Code can pass that test and still break the
+statement. The statement alone decides each piece of code; the judge reads the statement
+as a reviewer would, and says on what ground the code keeps or breaks it.
 
 - **A statement, never a question.** The judge decides whether code breaks the
   convention it is given; a question in its place leaves the judge to infer which
   answer is the violation.
-- **What code must never do.** The statement says what code must never do.
-- **Once.** The statement says it once.
+- **What code must never do.** The statement says what code must never do. The judge
+  looks for code that breaks the rule, so the statement names that code.
+- **Once.** The statement says what it forbids once. A second statement of the same
+  thing is a test of its own, and it can drift from the first.
 - **Nothing about how.** The statement says nothing about how code avoids what that code
   must never do.
 - **No reason or consequence.** The statement gives no reason for the convention and no
@@ -115,9 +118,9 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
   each ruleset's directory instead of `.codeguard/`.
 - A judge rule whose convention holds in several languages is one rule: its binding's
   paths name each language, and its eval has cases in each (codeguard's
-  `docs/rule-formats.md`, A rule in several languages). The skill is written in no language's names, syntax or
-  libraries, and gets no supplement per language. Never copy a convention into a rule
-  per language. A pattern rule matches one language.
+  `docs/rule-formats.md`, A rule in several languages). The skill is written in no
+  language's names, syntax or libraries, and gets no supplement per language. Never copy
+  a convention into a rule per language. A pattern rule matches one language.
 - Before writing a rule, check the rulesets the project opts into in
   `.codeguard/config.yaml`. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.
