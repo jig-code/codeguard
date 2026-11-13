@@ -128,6 +128,8 @@ class Rules:
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
         threshold = self.config.confidence_threshold
+        bindings = Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+        self.judges.check_sign_ins(binding.model for binding in bindings)
         return tuple(
             JudgeCheck(
                 root,
@@ -137,5 +139,5 @@ class Rules:
                 scope,
                 classification,
             )
-            for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+            for binding in bindings
         )

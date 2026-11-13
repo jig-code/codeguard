@@ -427,6 +427,40 @@ class TestReviewDryRun:
         )
         assert result.returncode == 0
 
+    def test_lists_gemini_judge_calls_without_a_gemini_sign_in(self, repo, tmp_path, make_skill):
+        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        repo.write("a.py", "x = 1\n")
+
+        result = subprocess.run(
+            [CODEGUARD, "review", "--dry-run"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(tmp_path)},
+        )
+
+        assert result.stdout == (
+            "Judge calls: 1 (0 cached, 1 to Claude), 0 skipped by triggers\n"
+            "\n"
+            "By rule:\n"
+            "  claude  cached  skipped  rule\n"
+            "       1       0        0  placement\n"
+            "\n"
+            "By file:\n"
+            "  claude  cached  skipped  file\n"
+            "       1       0        0  a.py\n"
+            "\n"
+            "Calls by file:\n"
+            "a.py\n"
+            "  claude   placement\n"
+        )
+        assert result.returncode == 0
+
     def test_pattern_rule_error_is_printed_and_exits_1(self, repo, make_diagnostic):
         repo.write("a.py", "print(1)\n")
 

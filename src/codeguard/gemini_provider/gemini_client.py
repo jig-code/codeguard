@@ -2,7 +2,6 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import assert_never
 
 import httpx2
 from google.auth.exceptions import GoogleAuthError
@@ -17,13 +16,13 @@ from pydantic_ai.models import (
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
-from codeguard.config import ApiKeySignIn, GeminiSignIn, KeyFileSignIn
+from codeguard.config import ApiKeySignIn, GeminiSettings, KeyFileSignIn
 from codeguard.review import JudgeProcessError
 
 
 @dataclass(frozen=True)
 class VertexGemini:
-    sign_in: GeminiSignIn
+    settings: GeminiSettings
     transport: httpx2.AsyncBaseTransport | None = None
 
     @asynccontextmanager
@@ -36,7 +35,7 @@ class VertexGemini:
 
     @contextmanager
     def _signed_in_provider(self, http: httpx2.AsyncClient) -> Iterator[GoogleCloudProvider]:
-        match self.sign_in:
+        match self.settings.required_sign_in:
             case KeyFileSignIn() as sign_in:
                 yield GoogleCloudProvider(
                     credentials=_credentials(sign_in.credentials_file),
@@ -59,8 +58,6 @@ class VertexGemini:
                     ),
                 ) as client:
                     yield GoogleCloudProvider(client=client)
-            case _:
-                assert_never(self.sign_in)
 
 
 def _credentials(credentials_file: Path) -> Credentials:

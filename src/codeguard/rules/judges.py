@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from os import process_cpu_count
 from pathlib import Path
@@ -31,6 +32,12 @@ class Judges:
             },
         )
 
+    def check_sign_ins(self, models: Iterable[JudgeModel]) -> None:
+        """Raise the config error a judge of these models would raise when it calls its
+        model, so a review reports it before any judge call."""
+        if any(model.provider is JudgeProvider.GEMINI for model in models):
+            _ = self.config.gemini.required_sign_in
+
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> CachedJudge:
@@ -41,9 +48,8 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            name = model.required_name
-            models = VertexGemini(self.config.gemini.required_sign_in)
-            return GeminiJudge(root, name, models, processes, deadline=deadline)
+            models = VertexGemini(self.config.gemini)
+            return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(
                 root,

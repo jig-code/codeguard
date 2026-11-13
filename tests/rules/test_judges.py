@@ -5,7 +5,6 @@ from pydantic import SecretStr
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import (
-    ApiKeySignIn,
     ConfigError,
     GeminiSettings,
     JudgeConfig,
@@ -36,29 +35,29 @@ class TestJudges:
         )
         assert uncached == ClaudeJudge(tmp_path, "opus", processes, warmup=judges.warmup)
 
-    def test_gemini_judge_signs_in_with_the_gemini_settings(self, tmp_path):
+    def test_gemini_judge_runs_with_the_gemini_settings(self, tmp_path):
         settings = GeminiSettings(
             project="sanctum", location="eu", api_key=SecretStr("proxy-injected")
         )
         judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-4-argon")
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         judge = judges.uncached(tmp_path, model)
 
         assert judge == GeminiJudge(
             tmp_path,
-            "gemini-4-argon",
-            VertexGemini(ApiKeySignIn("sanctum", "eu", SecretStr("proxy-injected"))),
+            "gemini-judge-test",
+            VertexGemini(settings),
             judges.processes[JudgeProvider.GEMINI],
         )
 
     def test_gemini_without_a_project_is_a_config_error_before_its_key_file_is_read(self, tmp_path):
         settings = GeminiSettings(credentials_file=tmp_path / "judge.json")
         judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-4-argon")
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.uncached(tmp_path, model)
+            judges.check_sign_ins([model])
 
         assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
 
@@ -66,10 +65,10 @@ class TestJudges:
         judges = Judges(
             JudgeConfig(gemini=GeminiSettings(project="sanctum")), store=Cache(tmp_path)
         )
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-4-argon")
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.uncached(tmp_path, model)
+            judges.check_sign_ins([model])
 
         assert str(error.value) == (
             "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
