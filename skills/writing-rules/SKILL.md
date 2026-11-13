@@ -12,8 +12,8 @@ rule, a convention that a model judges each change against.
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
 2. **State the convention and why it exists**, as the two sections below say. Then reread
-   the statement once for each check below, and rewrite the statement until it meets
-   every check:
+   the statement once for each bullet under The convention, and once for each check
+   below. Rewrite the statement until it meets them all:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
    3. Name what code does, never what code leaves out: use no "without" followed by a
