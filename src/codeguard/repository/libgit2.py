@@ -13,7 +13,6 @@ from codeguard.repository.file_diff import (
     RowText,
 )
 
-_GIT_RENAME_LIMIT = 1000
 _WHOLE_FILE_CONTEXT = 2**31 - 1
 _TRACKED_DIFF_FLAGS = DiffOption.INDENT_HEURISTIC
 _NO_NEWLINE_MARKERS = frozenset({"=", ">", "<"})
@@ -28,7 +27,7 @@ class Libgit2:
         tree = repository.revparse_single(merge_base).peel(pygit2.Tree)
         diff = tree.diff_to_index(repository.index, _TRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT)
         diff.merge(repository.index.diff_to_workdir(_TRACKED_DIFF_FLAGS, _WHOLE_FILE_CONTEXT))
-        diff.find_similar(flags=DiffFind.FIND_RENAMES, rename_limit=_GIT_RENAME_LIMIT)
+        diff.find_similar(flags=DiffFind.FIND_RENAMES)
         return {
             patch.delta.new_file.path: FileDiff.from_whole_file_rows(
                 _base_path(patch.delta), _rows(patch)

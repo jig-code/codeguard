@@ -16,11 +16,7 @@ class MakeChangedLines(factory.Factory):
         return model_class({file: FileDiff.from_whole_file_rows(file, kwargs["rows"])})
 
 
-class MakeNewFileChangedLines(factory.Factory):
-    class Meta:
-        model = ChangedLines
-
-    file = "a.py"
+class MakeNewFileChangedLines(MakeChangedLines):
     content = b"print(1)\n"
 
     @classmethod
