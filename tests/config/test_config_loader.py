@@ -66,10 +66,10 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
 
-    def test_env_var_names_the_config_file_to_load(self, repo, monkeypatch):
+    @mock.patch.dict(os.environ, {"CODEGUARD_CONFIG": "codeguard.local.yaml"})
+    def test_env_var_names_the_config_file_to_load(self, repo):
         repo.write(CONFIG, "review_time_limit_minutes: 10\n")
         repo.write("codeguard.local.yaml", "review_time_limit_minutes: 20\n")
-        monkeypatch.setenv("CODEGUARD_CONFIG", "codeguard.local.yaml")
 
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 20
 
@@ -121,49 +121,48 @@ class TestConfigLoader:
             provider=JudgeProvider.BEDROCK, model="project-model"
         )
 
-    def test_judge_env_vars_override_the_file(self, repo, monkeypatch):
+    @mock.patch.dict(
+        os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock", "CODEGUARD_JUDGE__MODEL": "env-model"}
+    )
+    def test_judge_env_vars_override_the_file(self, repo):
         repo.write(CONFIG, "judge:\n  provider: codex-cli\n  model: file-model\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
-        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             provider=JudgeProvider.BEDROCK, model="env-model"
         )
 
-    def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo, monkeypatch):
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": "env-model"})
+    def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo):
         repo.write(CONFIG, "judge:\n  calls_at_once: 1\n  model: file-model\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             calls_at_once=1, model="env-model"
         )
 
-    def test_judge_env_var_applies_without_a_config_file(self, repo, monkeypatch):
-        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
-
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock"})
+    def test_judge_env_var_applies_without_a_config_file(self, repo):
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
 
-    def test_env_var_for_another_setting_is_ignored(self, repo, monkeypatch):
+    @mock.patch.dict(os.environ, {"CODEGUARD_CONFIDENCE_THRESHOLD": "0.8"})
+    def test_env_var_for_another_setting_is_ignored(self, repo):
         repo.write(CONFIG, "confidence_threshold: 0.75\n")
-        monkeypatch.setenv("CODEGUARD_CONFIDENCE_THRESHOLD", "0.8")
 
         assert ConfigLoader(repo.root).load().confidence_threshold == 0.75
 
-    def test_env_var_for_another_judge_setting_is_ignored(self, repo, monkeypatch):
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__CALLS_AT_ONCE": "9"})
+    def test_env_var_for_another_judge_setting_is_ignored(self, repo):
         repo.write(CONFIG, "judge:\n  calls_at_once: 1\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__CALLS_AT_ONCE", "9")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(calls_at_once=1)
 
-    def test_empty_judge_env_var_leaves_the_file_value(self, repo, monkeypatch):
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": ""})
+    def test_empty_judge_env_var_leaves_the_file_value(self, repo):
         repo.write(CONFIG, "judge:\n  model: file-model\n")
-        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "")
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(model="file-model")
 
-    def test_unknown_judge_provider_in_the_environment_is_an_error(self, repo, monkeypatch):
-        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "openai")
-
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "openai"})
+    def test_unknown_judge_provider_in_the_environment_is_an_error(self, repo):
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 
