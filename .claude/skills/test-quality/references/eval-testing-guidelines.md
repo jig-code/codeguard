@@ -29,7 +29,7 @@ uv run pytest -m llm -n 4 --judge-provider gemini
 ```
 
 `--llm-runs N` runs each case N times (default 3). `--judge-provider` and `--judge-model`
-judge every case with another provider or model than its binding names. `docs/testing.md`
+judge every case with another provider or model than its package names. `docs/testing.md`
 says which changes need the LLM tests and how many runs.
 
 ## Cases

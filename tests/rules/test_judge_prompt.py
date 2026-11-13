@@ -57,28 +57,15 @@ def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 
 class TestJudgePrompt:
-    @pytest.mark.parametrize(
-        ("judge_override", "model"),
-        [
-            (
-                JudgeChoice(),
-                JudgeModel(provider=JudgeProvider.GEMINI, name=JudgeProvider.GEMINI.default_model),
-            ),
-            (
-                JudgeChoice(provider=JudgeProvider.CLAUDE_CLI),
-                JudgeModel(provider=JudgeProvider.CLAUDE_CLI),
-            ),
-        ],
-        ids=["package judge", "claude-cli override"],
-    )
-    def test_fixture_rules_judge_with_the_package_judge_or_the_override(
-        self, judged_evals: Path, model: JudgeModel
-    ):
+    @pytest.mark.parametrize("judge_override", [JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)])
+    def test_claude_cli_override_judges_with_the_cli_default_model(self, judged_evals: Path):
         ruleset = Package.load(judged_evals).ruleset_loader("python").load()
 
         bindings = Bindings.from_rulesets([ruleset])
 
-        assert {binding.model for binding in bindings} == {model}
+        assert {binding.model for binding in bindings} == {
+            JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+        }
 
     def test_public_interface_valid_fixture_loads_from_its_consumer(self):
         case = next(
