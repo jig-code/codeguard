@@ -4,5 +4,5 @@ focus: last_message
 weight: 1
 ---
 
-PASS if the reply offers no other rule. What the reply says about another tool is not another rule.
+PASS if the reply offers no other rule. A check in another tool is not a rule. A pointer to code that breaks the convention is not a rule.
 FAIL if the reply is missing or empty. Also FAIL if the reply offers a codeguard rule other than the one the prompt asked for. Also FAIL if the reply offers a rule for a different convention.
