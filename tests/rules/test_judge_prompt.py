@@ -98,6 +98,7 @@ class TestJudgePrompt:
         assert triggered == ([case.inputs.file] if judged else [])
 
     @pytest.mark.llm
+    @pytest.mark.usefixtures("this_machines_gemini_sign_in")
     @pytest.mark.parametrize(("rule", "case"), JUDGED_CASES)
     def test_review_reaches_each_case_verdict(
         self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path, capfire
