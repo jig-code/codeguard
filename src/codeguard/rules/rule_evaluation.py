@@ -47,6 +47,9 @@ class RuleEvaluation:
             problems = selection.problems(case_names)
             if problems:
                 return JudgeEvalResult(checks=RuleTestResult(problems=problems))
+        rules.judges.require_sign_ins(
+            model for _, runner in runners for model in runner.judge_models()
+        )
         return JudgeEvalResult.merge(
             result
             for loader, runner in runners

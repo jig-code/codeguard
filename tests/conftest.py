@@ -60,6 +60,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+_THIS_MACHINES_GEMINI_SETTINGS = {
+    name: value
+    for name, value in os.environ.items()
+    if name.startswith("CODEGUARD_JUDGE__GEMINI__")
+}
+
+
 @pytest.fixture(autouse=True)
 def no_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LOGFIRE_TOKEN", raising=False)
@@ -72,6 +79,12 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in list(os.environ):
         if name.startswith("CODEGUARD_JUDGE__"):
             monkeypatch.delenv(name)
+
+
+@pytest.fixture
+def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name, value in _THIS_MACHINES_GEMINI_SETTINGS.items():
+        monkeypatch.setenv(name, value)
 
 
 @pytest.fixture

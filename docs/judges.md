@@ -72,34 +72,36 @@ provider: gemini
 model: gemini-4-argon
 ```
 
-`judge` in `.codeguard/config.yaml` sets where Gemini runs and how many calls run at once:
+`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini calls run at once:
 
 ```yaml
 judge:
-  project: my-project             # default: GOOGLE_CLOUD_PROJECT
-  location: global                # default: GOOGLE_CLOUD_LOCATION, else global
   calls_at_once: 2                # Gemini only; default: 2
 ```
 
 Use the model in the example: codeguard supports only the Gemini model it is tested with.
 
-codeguard signs in with
-[Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc).
-It needs the Vertex AI API enabled in the project
-([Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)), and
-credentials with the Vertex AI User role (`roles/aiplatform.user`): your own on your
-machine, and a [service account](https://cloud.google.com/iam/docs/service-accounts-create)
-elsewhere, through `GOOGLE_APPLICATION_CREDENTIALS` or, in GitHub Actions,
-`google-github-actions/auth` before the codeguard action.
+codeguard reads where Gemini runs and how it signs in from these environment variables:
 
-Where a proxy adds credentials to requests, as Claude Code cloud environments' network
-secrets do, use an [API key](https://cloud.google.com/docs/authentication/api-keys) bound
-to the service account instead, restricted to the Agent Platform API: have the proxy send
-it as the `x-goog-api-key` header to `aiplatform.googleapis.com`, and set
-`GOOGLE_API_KEY=proxy-injected` with the project in `GOOGLE_CLOUD_PROJECT` or `project`.
-codeguard sends the key with the project and location. It signs in with an API key in
-`GOOGLE_API_KEY` or `GEMINI_API_KEY` unless `GOOGLE_APPLICATION_CREDENTIALS` is set, which
-wins over a key.
+```sh
+CODEGUARD_JUDGE__GEMINI__PROJECT=my-project
+CODEGUARD_JUDGE__GEMINI__LOCATION=global                      # default: global
+CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE=/path/to/key.json   # or:
+CODEGUARD_JUDGE__GEMINI__API_KEY=...
+```
+
+See [Set up a project](https://cloud.google.com/vertex-ai/docs/start/cloud-environment)
+for the project. codeguard signs in as a
+[service account](https://cloud.google.com/iam/docs/service-accounts-create) with the
+Vertex AI User role (`roles/aiplatform.user`), with one of:
+
+- its [key file](https://cloud.google.com/iam/docs/keys-create-delete), in
+  `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`;
+- an [API key](https://cloud.google.com/docs/authentication/api-keys) bound to it, in
+  `CODEGUARD_JUDGE__GEMINI__API_KEY`.
+
+Setting both is a config error. So is judging with Gemini without a project or a sign-in:
+the error names the variable to set.
 
 ## Bedrock
 

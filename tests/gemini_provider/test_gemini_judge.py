@@ -1,12 +1,11 @@
-import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from unittest import mock
 
 import httpx2
 import pytest
+from pydantic import SecretStr
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
@@ -502,20 +501,22 @@ class TestGeminiJudge:
 
 
 class TestGeminiJudgeOnVertex:
-    @mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "proxy-injected"})
-    def test_api_key_judges_in_the_project_and_the_global_location(
-        self, tmp_path, make_judge_request, make_verdict, monkeypatch
+    def test_api_key_judges_in_the_project_and_location(
+        self, tmp_path, make_judge_request, make_verdict
     ):
-        monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
-        monkeypatch.delenv("GOOGLE_CLOUD_LOCATION", raising=False)
         verdict = make_verdict()
         vertex = VertexVerdicts(verdict)
-        models = VertexGemini(project="my-project", transport=httpx2.MockTransport(vertex))
+        models = VertexGemini(
+            "my-project",
+            "europe-west4",
+            api_key=SecretStr("proxy-injected"),
+            transport=httpx2.MockTransport(vertex),
+        )
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement == Judgement(verdict)
         [request] = vertex.sent
-        assert "/projects/my-project/locations/global/" in request.url.path
+        assert "/projects/my-project/locations/europe-west4/" in request.url.path
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"

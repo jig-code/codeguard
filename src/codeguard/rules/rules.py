@@ -40,10 +40,12 @@ class Rules:
     def review(self, scope: LineScope) -> Review:
         deadline = Deadline(self.config.review_time_limit_minutes)
         classification = self._classification(scope)
+        bindings = Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+        self.judges.require_sign_ins(binding.model for binding in bindings)
         reviewer = Reviewer(
             steps=(
                 self._pattern_step,
-                CheckStep(checks=self._judge_checks(scope, classification, deadline)),
+                CheckStep(checks=self._judge_checks(bindings, scope, classification, deadline)),
             )
         )
         return reviewer.run(scope)
@@ -124,7 +126,11 @@ class Rules:
         return Judges(self.config.judge)
 
     def _judge_checks(
-        self, scope: LineScope, classification: Classification, deadline: Deadline
+        self,
+        bindings: Bindings,
+        scope: LineScope,
+        classification: Classification,
+        deadline: Deadline,
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
         threshold = self.config.confidence_threshold
@@ -137,5 +143,5 @@ class Rules:
                 scope,
                 classification,
             )
-            for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+            for binding in bindings
         )
