@@ -123,7 +123,7 @@ class Rules:
 
     @cached_property
     def judges(self) -> Judges:
-        return Judges(self.config.judge, ConfigLoader(self.working_tree.root).gemini())
+        return Judges(self.config.judge)
 
     def _judge_checks(
         self,

@@ -1,9 +1,7 @@
 from enum import StrEnum
 from pathlib import Path
-from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
-from pydantic_core import PydanticCustomError
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
@@ -110,27 +108,13 @@ class JudgeChoice(BaseModel):
 
 class GeminiSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="CODEGUARD_JUDGE__GEMINI__",
-        extra="forbid",
-        frozen=True,
-        env_ignore_empty=True,
-        hide_input_in_errors=True,
+        env_prefix="CODEGUARD_JUDGE__GEMINI__", frozen=True, env_ignore_empty=True
     )
 
     project: str | None = None
     location: str = "global"
     api_key: SecretStr | None = None
     credentials_file: Path | None = None
-
-    @model_validator(mode="after")
-    def _reject_two_sign_ins(self) -> Self:
-        if self.api_key is not None and self.credentials_file is not None:
-            raise PydanticCustomError(
-                "two_sign_ins",
-                "set CODEGUARD_JUDGE__GEMINI__API_KEY or "
-                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both",
-            )
-        return self
 
     def check_sign_in(self) -> None:
         if self.project is None:
@@ -139,6 +123,11 @@ class GeminiSettings(BaseSettings):
             raise ConfigError(
                 "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
                 "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
+            )
+        if self.api_key is not None and self.credentials_file is not None:
+            raise ConfigError(
+                "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
             )
 
 

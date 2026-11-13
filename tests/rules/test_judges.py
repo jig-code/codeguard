@@ -1,3 +1,7 @@
+import os
+import traceback
+from unittest import mock
+
 import pytest
 from diskcache import Cache
 from pydantic import SecretStr
@@ -43,6 +47,21 @@ class TestJudges:
             judges.processes[JudgeProvider.GEMINI],
         )
 
+    @mock.patch.dict(
+        os.environ,
+        {
+            "CODEGUARD_JUDGE__GEMINI__PROJECT": "my-project",
+            "CODEGUARD_JUDGE__GEMINI__LOCATION": "us",
+            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
+        },
+    )
+    def test_gemini_settings_come_from_the_environment(self, tmp_path):
+        judges = Judges(store=Cache(tmp_path))
+
+        assert judges.gemini == GeminiSettings(
+            project="my-project", location="us", api_key=SecretStr("proxy-injected")
+        )
+
     def test_gemini_with_a_key_file_and_no_project_is_a_config_error(self, tmp_path):
         settings = GeminiSettings(credentials_file=tmp_path / "judge.json")
         judges = Judges(gemini=settings, store=Cache(tmp_path))
@@ -64,6 +83,24 @@ class TestJudges:
             "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
         )
+
+    def test_two_gemini_sign_ins_are_a_config_error_that_leaves_out_the_key(self, tmp_path):
+        settings = GeminiSettings(
+            project="sanctum",
+            api_key=SecretStr("secret-key-value"),
+            credentials_file=tmp_path / "judge.json",
+        )
+        judges = Judges(gemini=settings, store=Cache(tmp_path))
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
+
+        with pytest.raises(ConfigError) as error:
+            judges.require_sign_ins([model])
+
+        assert str(error.value) == (
+            "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
+        )
+        assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
 
     def test_bedrock_model_builds_a_judge_cached_apart_from_gemini(self, tmp_path):
         judges = Judges(store=Cache(tmp_path))

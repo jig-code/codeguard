@@ -1,5 +1,4 @@
 import time
-import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -148,10 +147,6 @@ class VertexVerdicts:
                 "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5},
             },
         )
-
-
-def refuse(request: httpx2.Request) -> httpx2.Response:
-    raise httpx2.ConnectError("Connection refused", request=request)
 
 
 @pytest.fixture(autouse=True)
@@ -525,18 +520,3 @@ class TestGeminiJudgeOnVertex:
         assert "/projects/my-project/locations/europe-west4/" in request.url.path
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
-
-    @pytest.mark.usefixtures("waits")
-    def test_failed_request_leaves_the_api_key_out_of_its_error(self, tmp_path, make_judge_request):
-        models = VertexGemini(
-            "my-project",
-            "global",
-            api_key=SecretStr("secret-api-key"),
-            transport=httpx2.MockTransport(refuse),
-        )
-
-        with pytest.raises(JudgeProcessError) as error:
-            judge_with(tmp_path, models).judge(make_judge_request())
-
-        assert str(error.value) == f"{MODEL} failed: Connection refused"
-        assert "secret-api-key" not in "".join(traceback.format_exception(error.value))

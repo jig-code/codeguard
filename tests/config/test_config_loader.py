@@ -1,11 +1,9 @@
 import os
-import traceback
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
 import pytest
-from pydantic import SecretStr
 
 from codeguard.config import (
     BindingConfig,
@@ -14,7 +12,6 @@ from codeguard.config import (
     Config,
     ConfigError,
     ConfigLoader,
-    GeminiSettings,
     JudgeConfig,
     JudgeProvider,
     PathPackageConfig,
@@ -73,19 +70,6 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 20
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "CODEGUARD_JUDGE__GEMINI__PROJECT": "my-project",
-            "CODEGUARD_JUDGE__GEMINI__LOCATION": "us",
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
-        },
-    )
-    def test_gemini_settings_come_from_the_environment(self, repo):
-        assert ConfigLoader(repo.root).gemini() == GeminiSettings(
-            project="my-project", location="us", api_key=SecretStr("proxy-injected")
-        )
-
     def test_gemini_settings_in_the_config_file_are_an_error(self, repo):
         repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
 
@@ -95,24 +79,6 @@ class TestConfigLoader:
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n  judge.gemini: Extra inputs are not permitted"
         )
-
-    @mock.patch.dict(
-        os.environ,
-        {
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "secret-key-value",
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
-        },
-    )
-    def test_two_gemini_sign_ins_are_an_error_that_leaves_out_the_key(self, repo):
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).gemini()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
-        )
-        assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
 
     def test_loads_the_project_judge_default(self, repo):
         repo.write(CONFIG, "judge:\n  provider: bedrock\n  model: project-model\n")
