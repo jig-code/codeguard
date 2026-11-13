@@ -172,8 +172,8 @@ class TestReviewCommand:
         assert traceback.endswith("returned non-zero exit status 128.\n")
         assert result.returncode == 2
 
-    def test_gemini_rule_without_a_gemini_sign_in_is_a_config_error_before_any_judge_call(
-        self, repo, make_skill
+    def test_review_checks_every_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
+        self, repo, tmp_path, make_skill
     ):
         repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
         repo.write(
@@ -184,7 +184,11 @@ class TestReviewCommand:
         repo.write("a.py", "x = 1\n")
 
         result = subprocess.run(
-            [CODEGUARD, "review"], cwd=repo.root, capture_output=True, text=True
+            [CODEGUARD, "review"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(tmp_path)},
         )
 
         _, traceback = result.stderr.split(TRACEBACK_HEADING)
@@ -948,6 +952,48 @@ class TestEvalCommand:
         )
         assert result.stdout == ""
         assert result.returncode == 2
+
+    def test_gemini_rule_the_selection_leaves_out_needs_no_gemini_sign_in(
+        self, tmp_path, tmp_path_factory, make_skill
+    ):
+        package = invoice_package(tmp_path_factory)
+        package.write("python/skills/naming/SKILL.md", make_skill().text)
+        package.write(
+            "python/bindings/naming.yaml",
+            'skill: python/skills/naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            "provider: gemini\nmodel: gemini-judge-test\n",
+        )
+        naming_case = {
+            "name": "names the helper",
+            "inputs": {"file": "invoice.py", "before": INVOICE_BEFORE, "after": INVOICE_AFTER},
+            "expected_output": {"outcome": "invalid"},
+        }
+        package.write("python/rule-evals/naming.yaml", yaml.safe_dump({"cases": [naming_case]}))
+        bin_dir = recording_claude(
+            tmp_path,
+            [
+                {
+                    "file": "invoice.py",
+                    "lines": {"start": 3, "end": 3},
+                    "message": "M.",
+                    "confidence": 1.0,
+                }
+            ],
+        )
+
+        result = subprocess.run(
+            [CODEGUARD, "eval", "--case", "order lines"],
+            cwd=package.root,
+            env=recording_env(tmp_path, bin_dir, tmp_path / "eval"),
+            capture_output=True,
+            text=True,
+        )
+
+        assert (
+            "Evaluation Summary: responsibility-placement on claude-cli's default model"
+            in result.stdout
+        )
+        assert result.returncode == 0
 
     def test_model_without_a_provider_exits_2(self, tmp_path):
         result = subprocess.run(

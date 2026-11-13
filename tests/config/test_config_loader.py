@@ -130,9 +130,7 @@ class TestConfigLoader:
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE": "keys/judge.json",
         },
     )
-    def test_gemini_api_key_and_credentials_file_together_are_an_error_that_leaves_out_the_key(
-        self, repo
-    ):
+    def test_two_gemini_sign_ins_are_an_error_that_leaves_out_the_key(self, repo):
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
 

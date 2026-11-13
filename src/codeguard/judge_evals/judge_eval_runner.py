@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, Ruleset, RulesetLoader
 from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
@@ -40,16 +40,24 @@ class JudgeEvalRunner:
         }
 
     def judge_models(self) -> tuple[JudgeModel, ...]:
-        """The models that judge the selected rules."""
-        return tuple(
-            binding.model
-            for binding in Bindings.from_rulesets(
-                [self.ruleset.load()], self.judge_config.choice, self.judge_override
-            )
-            if self.selection.selects_rule(binding.skill.name)
-        )
+        """The models that judge the rule eval cases `run` evaluates."""
+        _, experiments = self._experiments(self.ruleset.load())
+        return tuple(binding.model for _, binding, _ in experiments)
 
     def run(self) -> JudgeEvalResult:
+        ruleset = self.ruleset.load()
+        unknown, experiments = self._experiments(ruleset)
+        if not unknown and not experiments:
+            return JudgeEvalResult()
+        scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
+        reports = asyncio.run(self._evaluate_all(experiments, scanner))
+        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
+
+    def _experiments(
+        self, ruleset: Ruleset
+    ) -> tuple[tuple[str, ...], list[tuple[RuleEval, Binding, str | None]]]:
+        """The selected rule evals no judge rule binds, and the selected cases to judge with
+        each binding, by language."""
         evals = [
             (file, self._selected_cases(dataset))
             for file, dataset in rule_evals(self.ruleset.root)
@@ -57,9 +65,6 @@ class JudgeEvalRunner:
         ]
         if self.selection.cases:
             evals = [(file, dataset) for file, dataset in evals if dataset.cases]
-        if not evals:
-            return JudgeEvalResult()
-        ruleset = self.ruleset.load()
         bindings = {
             binding.skill.name: binding
             for binding in Bindings.from_rulesets(
@@ -77,9 +82,7 @@ class JudgeEvalRunner:
             if dataset.name in bindings
             for language, part in dataset.by_language(bindings[dataset.name].languages)
         ]
-        scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
-        reports = asyncio.run(self._evaluate_all(experiments, scanner))
-        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
+        return unknown, experiments
 
     def _selected_cases(self, rule_eval: RuleEval) -> RuleEval:
         cases = tuple(case for case in rule_eval.cases if self.selection.selects_case(case.name))
