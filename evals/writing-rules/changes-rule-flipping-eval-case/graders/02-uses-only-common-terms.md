@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the statement uses only common terms. The statement is the sentence under this SKILL.md's `#` title and before `## Why`, leaving out the title and the frontmatter.
-FAIL if the statement is missing or empty. Also FAIL if the statement uses a term that the agent invented.
+FAIL if the statement is missing or empty. Also FAIL if the statement uses a term that isn't common.
