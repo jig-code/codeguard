@@ -121,7 +121,7 @@ class Rules:
 
     @cached_property
     def judges(self) -> Judges:
-        return Judges(self.config.judge)
+        return Judges(self.config.judge, ConfigLoader(self.working_tree.root).gemini())
 
     def _judge_checks(
         self, scope: LineScope, classification: Classification, deadline: Deadline

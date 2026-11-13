@@ -12,7 +12,7 @@ from pydantic_ai.models import Model, create_async_httpx2_client
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 
-from codeguard.config import ApiKeySignIn, GeminiSettings, KeyFileSignIn
+from codeguard.config import GeminiSettings
 from codeguard.review import JudgeProcessError
 
 _CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
@@ -34,18 +34,16 @@ class VertexGemini:
     # the client for every sign-in.
     @contextmanager
     def _client(self, http: httpx2.AsyncClient) -> Iterator[Client]:
-        sign_in = self.settings.required_sign_in
-        match sign_in:
-            case KeyFileSignIn():
-                api_key, credentials = None, _credentials(sign_in.credentials_file)
-            case ApiKeySignIn():
-                api_key, credentials = sign_in.api_key.get_secret_value(), None
+        settings = self.settings
+        settings.check_sign_in()
         with Client(
             vertexai=True,
-            api_key=api_key,
-            credentials=credentials,
-            project=sign_in.project,
-            location=sign_in.location,
+            api_key=settings.api_key.get_secret_value() if settings.api_key else None,
+            credentials=_credentials(settings.credentials_file)
+            if settings.credentials_file
+            else None,
+            project=settings.project,
+            location=settings.location,
             http_options=HttpOptions(httpx_async_client=http),
         ) as client:
             yield client

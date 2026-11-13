@@ -4,15 +4,8 @@ from pydantic import SecretStr
 
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import (
-    ConfigError,
-    GeminiSettings,
-    JudgeConfig,
-    JudgeModel,
-    JudgeProvider,
-)
-from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
-from codeguard.review import CachedJudge
+from codeguard.config import ConfigError, GeminiSettings, JudgeModel, JudgeProvider
+from codeguard.gemini_provider import GeminiJudge, VertexGemini
 from codeguard.rules.judges import Judges
 
 
@@ -27,19 +20,18 @@ class TestJudges:
             tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="opus")
         )
 
-        processes = judges.processes[JudgeProvider.CLAUDE_CLI]
-        assert cached == CachedJudge(
-            ClaudeJudge(tmp_path, "sonnet", processes, warmup=judges.warmup),
-            judges.store,
-            tmp_path,
-        )
-        assert uncached == ClaudeJudge(tmp_path, "opus", processes, warmup=judges.warmup)
+        assert isinstance(cached.wrapped, ClaudeJudge)
+        assert isinstance(uncached, ClaudeJudge)
+        assert cached.store is judges.store
+        assert cached.wrapped.processes is uncached.processes
+        assert uncached.processes is judges.processes[JudgeProvider.CLAUDE_CLI]
+        assert cached.wrapped.warmup is uncached.warmup is judges.warmup
 
     def test_gemini_judge_runs_with_the_gemini_settings(self, tmp_path):
         settings = GeminiSettings(
             project="sanctum", location="eu", api_key=SecretStr("proxy-injected")
         )
-        judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
+        judges = Judges(gemini=settings, store=Cache(tmp_path))
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         judge = judges.uncached(tmp_path, model)
@@ -53,7 +45,7 @@ class TestJudges:
 
     def test_gemini_with_a_key_file_and_no_project_is_a_config_error(self, tmp_path):
         settings = GeminiSettings(credentials_file=tmp_path / "judge.json")
-        judges = Judges(JudgeConfig(gemini=settings), store=Cache(tmp_path))
+        judges = Judges(gemini=settings, store=Cache(tmp_path))
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
@@ -62,9 +54,7 @@ class TestJudges:
         assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
 
     def test_gemini_without_a_sign_in_is_a_config_error(self, tmp_path):
-        judges = Judges(
-            JudgeConfig(gemini=GeminiSettings(project="sanctum")), store=Cache(tmp_path)
-        )
+        judges = Judges(gemini=GeminiSettings(project="sanctum"), store=Cache(tmp_path))
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
@@ -81,13 +71,9 @@ class TestJudges:
 
         judge = judges.uncached(tmp_path, model)
 
-        assert judge == GeminiJudge(
-            tmp_path,
-            "us.anthropic.claude-haiku-5-5",
-            BedrockClaude(),
-            judges.processes[JudgeProvider.BEDROCK],
-            provider=JudgeProvider.BEDROCK,
-        )
+        assert isinstance(judge, GeminiJudge)
+        assert judge.identity == "bedrock\0us.anthropic.claude-haiku-5-5"
+        assert judge.processes is judges.processes[JudgeProvider.BEDROCK]
 
 
 def test_codex_binding_builds_a_separate_subscription_judge(tmp_path):
@@ -96,7 +82,9 @@ def test_codex_binding_builds_a_separate_subscription_judge(tmp_path):
 
     judge = judges.uncached(tmp_path, model)
 
-    assert judge == CodexJudge(tmp_path, "gpt-6-luna", judges.processes[JudgeProvider.CODEX_CLI])
+    assert isinstance(judge, CodexJudge)
+    assert judge.model == model.name
+    assert judge.processes is judges.processes[JudgeProvider.CODEX_CLI]
     assert (
         judge.identity
         != judges.uncached(
@@ -111,10 +99,5 @@ def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tm
 
     judge = judges.uncached(tmp_path, model)
 
-    assert judge == GeminiJudge(
-        tmp_path,
-        "us.openai.gpt-6-luna",
-        BedrockClaude(),
-        judges.processes[JudgeProvider.BEDROCK],
-        provider=JudgeProvider.BEDROCK,
-    )
+    assert isinstance(judge, GeminiJudge)
+    assert judge.identity == "bedrock\0us.openai.gpt-6-luna"

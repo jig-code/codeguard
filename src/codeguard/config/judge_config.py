@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_core import PydanticCustomError
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
 
@@ -108,25 +108,14 @@ class JudgeChoice(BaseModel):
         return JudgeModel(provider=provider, name=self.model)
 
 
-@dataclass(frozen=True)
-class KeyFileSignIn:
-    project: str
-    location: str
-    credentials_file: Path
-
-
-@dataclass(frozen=True)
-class ApiKeySignIn:
-    project: str
-    location: str
-    api_key: SecretStr
-
-
-type GeminiSignIn = KeyFileSignIn | ApiKeySignIn
-
-
-class GeminiSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+class GeminiSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="CODEGUARD_JUDGE__GEMINI__",
+        extra="forbid",
+        frozen=True,
+        env_ignore_empty=True,
+        hide_input_in_errors=True,
+    )
 
     project: str | None = None
     location: str = "global"
@@ -143,18 +132,14 @@ class GeminiSettings(BaseModel):
             )
         return self
 
-    @property
-    def required_sign_in(self) -> GeminiSignIn:
+    def check_sign_in(self) -> None:
         if self.project is None:
             raise ConfigError("Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT")
-        if self.credentials_file is not None:
-            return KeyFileSignIn(self.project, self.location, self.credentials_file)
-        if self.api_key is not None:
-            return ApiKeySignIn(self.project, self.location, self.api_key)
-        raise ConfigError(
-            "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
-        )
+        if self.api_key is None and self.credentials_file is None:
+            raise ConfigError(
+                "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
+            )
 
 
 class JudgeConfig(BaseModel):
@@ -163,7 +148,6 @@ class JudgeConfig(BaseModel):
     provider: JudgeProvider | None = None
     model: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
-    gemini: GeminiSettings = GeminiSettings()
 
     @property
     def choice(self) -> JudgeChoice:
@@ -177,8 +161,3 @@ class JudgeConfig(BaseModel):
         if not provider.runs_a_cli:
             return _API_CALLS_AT_ONCE
         return cpus or 1
-
-
-[GEMINI_FIELD] = (
-    name for name, info in JudgeConfig.model_fields.items() if info.annotation is GeminiSettings
-)

@@ -6,14 +6,11 @@ from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE, ConfigLoader
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import (
-    ApiKeySignIn,
     GeminiSettings,
-    GeminiSignIn,
     JudgeChoice,
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
-    KeyFileSignIn,
     ModelFamily,
 )
 from codeguard.config.languages import LANGUAGES, language_of, named_languages
@@ -51,7 +48,6 @@ __all__ = [
     "RULE_TEST_DIR",
     "SKILL_FILE",
     "SNAPSHOT_DIR",
-    "ApiKeySignIn",
     "BindingConfig",
     "BindingsConfig",
     "ChangeKind",
@@ -61,13 +57,11 @@ __all__ = [
     "ExactVersion",
     "GateRule",
     "GeminiSettings",
-    "GeminiSignIn",
     "GitPackageConfig",
     "JudgeChoice",
     "JudgeConfig",
     "JudgeModel",
     "JudgeProvider",
-    "KeyFileSignIn",
     "PackageConfig",
     "PathPackageConfig",
     "PathScope",

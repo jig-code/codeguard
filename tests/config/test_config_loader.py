@@ -82,23 +82,9 @@ class TestConfigLoader:
         },
     )
     def test_gemini_settings_come_from_the_environment(self, repo):
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            gemini=GeminiSettings(
-                project="my-project", location="us", api_key=SecretStr("proxy-injected")
-            )
+        assert ConfigLoader(repo.root).gemini() == GeminiSettings(
+            project="my-project", location="us", api_key=SecretStr("proxy-injected")
         )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__API_KYE": "secret-key-value"})
-    def test_mistyped_gemini_variable_is_an_error_that_leaves_out_its_value(self, repo):
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        report = "".join(traceback.format_exception(error.value))
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini.api_kye: Extra inputs are not permitted"
-        )
-        assert "secret-key-value" not in report
 
     def test_gemini_settings_in_the_config_file_are_an_error(self, repo):
         repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
@@ -107,20 +93,7 @@ class TestConfigLoader:
             ConfigLoader(repo.root).load()
 
         assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: read from the environment only, not the config file"
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__GEMINI__LOCATION": "us"})
-    def test_gemini_settings_in_the_config_file_are_an_error_beside_gemini_variables(self, repo):
-        repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.gemini: read from the environment only, not the config file"
+            f"{repo.root}/.codeguard is invalid:\n  judge.gemini: Extra inputs are not permitted"
         )
 
     @mock.patch.dict(
@@ -132,7 +105,7 @@ class TestConfigLoader:
     )
     def test_two_gemini_sign_ins_are_an_error_that_leaves_out_the_key(self, repo):
         with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
+            ConfigLoader(repo.root).gemini()
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"

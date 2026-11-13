@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from codeguard.config.config import Config
 from codeguard.config.config_error import ConfigError
+from codeguard.config.judge_config import GeminiSettings
 
 CONFIG_DIR = ".codeguard"
 CONFIG_FILE = f"{CONFIG_DIR}/config.yaml"
@@ -28,3 +29,9 @@ class ConfigLoader:
             return Config(**settings)
         except ValidationError as error:
             raise ConfigError.invalid(self.root / CONFIG_DIR, error) from error
+
+    def gemini(self) -> GeminiSettings:
+        try:
+            return GeminiSettings()
+        except ValidationError as error:
+            raise ConfigError.invalid(self.root / CONFIG_DIR, error, "judge.gemini") from error

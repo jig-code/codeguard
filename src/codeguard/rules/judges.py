@@ -8,7 +8,7 @@ from diskcache import Cache
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
 from codeguard.review import CachedJudge, Deadline, Judge
 
@@ -18,6 +18,7 @@ _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
 @dataclass(frozen=True)
 class Judges:
     config: JudgeConfig = JudgeConfig()
+    gemini: GeminiSettings = field(default_factory=GeminiSettings)
     store: Cache = field(default_factory=lambda: Cache(_JUDGEMENT_CACHE_DIR))
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
@@ -36,7 +37,7 @@ class Judges:
         """Raise the config error a judge of these models would raise when it calls its
         model, so a review reports it before any judge call."""
         if any(model.provider is JudgeProvider.GEMINI for model in models):
-            _ = self.config.gemini.required_sign_in
+            self.gemini.check_sign_in()
 
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
@@ -48,7 +49,7 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            models = VertexGemini(self.config.gemini)
+            models = VertexGemini(self.gemini)
             return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(

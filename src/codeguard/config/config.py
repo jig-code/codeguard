@@ -1,5 +1,4 @@
-from pydantic import Field, ValidationError
-from pydantic_core import InitErrorDetails, PydanticCustomError
+from pydantic import Field
 from pydantic_settings import (
     BaseSettings,
     EnvSettingsSource,
@@ -7,12 +6,11 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from codeguard.config.judge_config import GEMINI_FIELD, JudgeConfig
+from codeguard.config.judge_config import JudgeConfig
 from codeguard.config.package_config import PackageConfig
 from codeguard.config.versions import ExactVersion
 
-_ENVIRONMENT_ONLY_JUDGE_KEYS = (GEMINI_FIELD,)
-_ENVIRONMENT_JUDGE_KEYS = ("provider", "model", *_ENVIRONMENT_ONLY_JUDGE_KEYS)
+_ENVIRONMENT_JUDGE_KEYS = ("provider", "model")
 
 
 class _JudgeEnvironment(EnvSettingsSource):
@@ -24,41 +22,6 @@ class _JudgeEnvironment(EnvSettingsSource):
         return {"judge": named} if named else {}
 
 
-class _ConfigFile(PydanticBaseSettingsSource):
-    """The config file's settings, which may not hold the judge settings only the environment
-    sets. pydantic-settings merges the environment's values over the file's, so the file's are
-    checked here, before the merge can hide them."""
-
-    def __init__(
-        self, settings_cls: type[BaseSettings], source: PydanticBaseSettingsSource
-    ) -> None:
-        super().__init__(settings_cls)
-        self.source = source
-
-    def get_field_value(self, field: object, field_name: str) -> tuple[object, str, bool]:
-        return None, field_name, False
-
-    def __call__(self) -> dict[str, object]:
-        settings = self.source()
-        judge = settings.get("judge")
-        errors = [
-            InitErrorDetails(
-                type=PydanticCustomError(
-                    "environment_only", "read from the environment only, not the config file"
-                ),
-                loc=("judge", key),
-                input=judge[key],
-            )
-            for key in _ENVIRONMENT_ONLY_JUDGE_KEYS
-            if isinstance(judge, dict) and key in judge
-        ]
-        if errors:
-            raise ValidationError.from_exception_data(
-                self.settings_cls.__name__, errors, hide_input=True
-            )
-        return settings
-
-
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
         extra="forbid",
@@ -68,7 +31,6 @@ class Config(BaseSettings):
         env_prefix="CODEGUARD_",
         env_nested_delimiter="__",
         env_ignore_empty=True,
-        hide_input_in_errors=True,
     )
 
     confidence_threshold: float = Field(default=0.9, ge=0, le=1)
@@ -86,4 +48,4 @@ class Config(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (_JudgeEnvironment(settings_cls), _ConfigFile(settings_cls, init_settings))
+        return (_JudgeEnvironment(settings_cls), init_settings)

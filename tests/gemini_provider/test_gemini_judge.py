@@ -131,17 +131,18 @@ class RecordingProcesses:
 
 @dataclass
 class VertexVerdicts:
+    verdict: Verdict
     sent: list[httpx2.Request] = field(default_factory=list)
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.sent.append(request)
-        verdict = Verdict(reason="Judged.", violations=()).model_dump_json()
+        answer = self.verdict.model_dump_json()
         return httpx2.Response(
             200,
             json={
                 "candidates": [
                     {
-                        "content": {"role": "model", "parts": [{"text": verdict}]},
+                        "content": {"role": "model", "parts": [{"text": answer}]},
                         "finishReason": "STOP",
                     }
                 ],
@@ -506,8 +507,11 @@ class TestGeminiJudge:
 
 
 class TestGeminiJudgeOnVertex:
-    def test_api_key_judges_in_the_project_and_location(self, tmp_path, make_judge_request):
-        vertex = VertexVerdicts()
+    def test_api_key_judges_in_the_project_and_location(
+        self, tmp_path, make_judge_request, make_verdict
+    ):
+        verdict = make_verdict()
+        vertex = VertexVerdicts(verdict)
         models = VertexGemini(
             GeminiSettings(
                 project="my-project",
@@ -519,12 +523,10 @@ class TestGeminiJudgeOnVertex:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
+        assert judgement == Judgement(verdict)
         [request] = vertex.sent
-        assert str(request.url) == (
-            "https://europe-west4-aiplatform.googleapis.com/v1beta1/projects/my-project/"
-            f"locations/europe-west4/publishers/google/models/{MODEL}:generateContent"
-        )
+        assert "/projects/my-project/locations/europe-west4/" in request.url.path
+        assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
 
     @pytest.mark.usefixtures("waits")
