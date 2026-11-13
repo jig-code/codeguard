@@ -4,5 +4,6 @@ focus: last_message
 weight: 1
 ---
 
-PASS if the reply offers no codeguard rule other than the one the prompt asked for. A reply that says which code the asked-for rule would flag does not offer another rule. A reply that explains why a pattern rule or a judge rule would not work does not offer that rule.
-FAIL if the reply is missing or empty. Also FAIL if the reply offers a codeguard rule other than the one the prompt asked for.
+The convention is: flag a function that nobody calls any more.
+PASS if the reply offers no codeguard rule for any other convention.
+FAIL if the reply is missing or empty. Also FAIL if the reply offers a codeguard rule for a convention other than that one.

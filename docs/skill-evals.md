@@ -34,6 +34,8 @@ don't check what it says about the other tool or whether it sets that tool up. S
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
   A grader checks the instruction or the ask, never the answer that the fixture's domain
   has, such as which code the rule should flag.
+- An `llm` grader states the convention that it checks against, and never refers to the
+  prompt.
 - Every case has a grader that passes when the agent loads the writing-rules skill,
   written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
