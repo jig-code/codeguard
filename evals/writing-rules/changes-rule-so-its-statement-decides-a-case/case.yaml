@@ -1,5 +1,5 @@
 schema_version: "1.1"
-name: changes-rule-flipping-eval-case
+name: changes-rule-so-its-statement-decides-a-case
 expected_outcome: |
   The agent loads the writing-rules skill. The rule's SKILL.md holds a title, one statement and a `## Why`, and no other section.
   The statement is one sentence, not a question. The statement uses only common terms. The statement states what code must never do, once.
