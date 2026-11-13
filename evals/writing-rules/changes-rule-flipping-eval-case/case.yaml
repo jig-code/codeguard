@@ -5,6 +5,6 @@ expected_outcome: |
   The statement is one sentence, not a question. The statement uses only common terms. The statement states what code must never do, once.
   The statement says nothing about how code avoids what it forbids, and the statement gives no why. The statement names nothing that code leaves out.
   The statement writes every relative pronoun that a phrase needs, and no pronoun in the statement could mean more than one noun.
-  The rule eval has no case for a handler that logs the error and re-raises it, or keeps that case with code that a reader of the case alone can judge.
+  A reader of the statement alone can tell whether a handler that catches `Exception`, logs the error and re-raises it keeps or breaks the statement.
 context:
   scaffold_script: place-files.sh
