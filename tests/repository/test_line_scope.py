@@ -183,6 +183,36 @@ class TestLineScopes:
             base=git_repo.head(),
         )
 
+    def test_changed_last_line_without_a_final_newline_is_added_and_its_old_text_removed(
+        self, tmp_path
+    ):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.py", "a = 1\nb = 1")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", "a = 1\nb = 2")
+
+        changed = LineScopes.at(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+
+        assert changed == ChangedLines(
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({2}),
+                    deletion_points=frozenset(),
+                    removals=(
+                        Removal(
+                            shown_before=2,
+                            reported_line=2,
+                            rows=(RemovedRow(2, RowText(b"b = 1")),),
+                        ),
+                    ),
+                    head_lines_by_base_line={1: 1},
+                    removed_base_lines=frozenset({2}),
+                )
+            },
+            base=git_repo.head(),
+        )
+
     def test_change_of_only_blank_lines_changes_no_file(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
         git_repo.write("a.py", "a = 1\n\nb = 1\n")
