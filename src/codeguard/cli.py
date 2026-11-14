@@ -236,9 +236,9 @@ def _review(args: argparse.Namespace) -> int:
 
 def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> LineScope:
     return (
-        LineScopes(working_tree).all_lines()
+        LineScopes.at(working_tree).all_lines()
         if args.all
-        else LineScopes(working_tree).changed_lines(args.base)
+        else LineScopes.at(working_tree).changed_lines(args.base)
     )
 
 

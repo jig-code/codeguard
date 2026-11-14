@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from codeguard.judge_evals.judge_factory import JudgeFactory
+from codeguard.repository import WorkingTree
 from codeguard.review import Binding, JudgeRequest
 from codeguard.rule_tests import EditCase, EditRepo, EditReview, JudgedViolation, Outcome
 from codeguard.syntax import SyntaxScanner
@@ -25,7 +26,7 @@ class EditReviewTask:
                 return EditReview(outcome=Outcome.SKIPPED)
             judge = self.judges(repo.root, self.binding.model)
             request = JudgeRequest.of_change(
-                self.binding, repo.root, inputs.file, changed, classification
+                self.binding, WorkingTree.at(repo.root), inputs.file, changed, classification
             )
             verdict = judge.judge(request).verdict
             parsed = self.scanner.scan_files(repo.root, [inputs.file]).get(inputs.file)

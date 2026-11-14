@@ -1,9 +1,8 @@
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from pathlib import Path
 
-from codeguard.repository import LineScope
+from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic
 from codeguard.review.judge import Judge, JudgeError, JudgeRequest
@@ -12,7 +11,7 @@ from codeguard.syntax import Classification
 
 @dataclass(frozen=True)
 class JudgeCheck:
-    root: Path
+    working_tree: WorkingTree
     binding: Binding
     judge: Judge
     confidence_threshold: float
@@ -52,5 +51,5 @@ class JudgeCheck:
 
     def _request(self, file: str) -> JudgeRequest:
         return JudgeRequest.of_change(
-            self.binding, self.root, file, self.scope, self.classification
+            self.binding, self.working_tree, file, self.scope, self.classification
         )
