@@ -1,3 +1,4 @@
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,18 +27,14 @@ class WorkingTree:
         return self.git.text("merge-base", base, "HEAD").strip()
 
     def untracked_files(self) -> set[str]:
-        return {
-            file
-            for file in self.git.paths("ls-files", "--others", "--exclude-standard")
-            if (self.root / file).is_file()
-        }
+        return self._files("--others", "--exclude-standard")
 
     def tracked_and_untracked_files(self) -> set[str]:
-        return {
-            file
-            for file in self.git.paths("ls-files", "--cached", "--others", "--exclude-standard")
-            if (self.root / file).is_file()
-        }
+        return self._files("--cached", "--others", "--exclude-standard")
+
+    def contents(self, file: str) -> bytes:
+        path = self.root / file
+        return os.fsencode(os.readlink(path)) if path.is_symlink() else path.read_bytes()
 
     def base_contents(self, base: str, files: Sequence[str]) -> dict[str, bytes]:
         if not files:
@@ -47,3 +44,10 @@ class WorkingTree:
 
     def git_path(self, name: str) -> Path:
         return self.root / self.git.text("rev-parse", "--git-path", name).strip()
+
+    def _files(self, *ls_files_args: str) -> set[str]:
+        return {
+            file
+            for file in self.git.paths("ls-files", *ls_files_args)
+            if (self.root / file).is_file()
+        }

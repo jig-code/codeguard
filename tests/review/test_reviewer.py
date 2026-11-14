@@ -3,7 +3,7 @@ from recording_judge import RecordingJudge
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
-from codeguard.repository import AllLines, ChangedLines, LineScopes, WorkingTree
+from codeguard.repository import AllLines, LineScopes, WorkingTree
 from codeguard.review import CheckStep, JudgeCheck, Review, Reviewer, Verdict
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
@@ -27,7 +27,14 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, Classification()),
+                        JudgeCheck(
+                            WorkingTree.at(repo.root),
+                            make_binding(),
+                            judge,
+                            0.9,
+                            scope,
+                            Classification(),
+                        ),
                     )
                 ),
             )
@@ -41,9 +48,16 @@ class TestReviewer:
         assert judge.received == [make_judge_request(file="b.py", changes="+     1\tx = 1\n")]
 
     def test_violations_on_unchanged_lines_are_not_reported(
-        self, make_file_classification, repo, make_violation, make_binding
+        self, repo, make_violation, make_binding
     ):
+        repo.write("a.py", "print(1)\nx = 1\n")
+        repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\ny = 2\n")
+        working_tree = WorkingTree.at(repo.root)
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
+        classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
+            scope
+        )
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
@@ -51,17 +65,13 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": frozenset({3})})
-        classification = Classification(
-            {"a.py": make_file_classification(context_lines=frozenset({3}))}
-        )
         local = Ruleset(name=None, root=repo.root / ".codeguard")
         reviewer = Reviewer(
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )
@@ -72,9 +82,16 @@ class TestReviewer:
         assert result == Review(diagnostics=())
 
     def test_violation_whose_lines_take_in_a_changed_line_is_reported(
-        self, make_file_classification, repo, make_diagnostic, make_violation, make_binding
+        self, repo, make_diagnostic, make_violation, make_binding
     ):
+        repo.write("a.py", "print(1)\n")
+        repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\n")
+        working_tree = WorkingTree.at(repo.root)
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
+        classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
+            scope
+        )
         judge = RecordingJudge(
             Verdict(
                 reason="The code breaks the convention.",
@@ -82,17 +99,13 @@ class TestReviewer:
             )
         )
 
-        scope = ChangedLines({"a.py": frozenset({2})})
-        classification = Classification(
-            {"a.py": make_file_classification(context_lines=frozenset({2}))}
-        )
         local = Ruleset(name=None, root=repo.root / ".codeguard")
         reviewer = Reviewer(
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )
@@ -111,7 +124,7 @@ class TestReviewer:
         repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\n")
         working_tree = WorkingTree.at(repo.root)
-        scope = LineScopes(working_tree).changed_lines("HEAD")
+        scope = LineScopes.at(working_tree).changed_lines("HEAD")
         classification = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree).classify(
             scope
         )
@@ -128,7 +141,7 @@ class TestReviewer:
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
                     checks=(
-                        JudgeCheck(repo.root, make_binding(), judge, 0.9, scope, classification),
+                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
                     )
                 ),
             )

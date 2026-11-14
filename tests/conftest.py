@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from diskcache import Cache
+from factories.changed_lines import MakeChangedLines, MakeNewFileChangedLines
 from factories.classification import MakeFileClassification
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
@@ -38,6 +39,8 @@ register(MakeEditReview)
 register(MakeEvaluatorContext)
 register(MakeRuleEvalCase)
 register(MakeFileClassification)
+register(MakeChangedLines)
+register(MakeNewFileChangedLines, _name="new_file_changed_lines")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

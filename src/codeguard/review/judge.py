@@ -9,7 +9,7 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
-from codeguard.repository import LineScope
+from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
@@ -29,13 +29,13 @@ class JudgeRequest:
     def of_change(
         cls,
         binding: Binding,
-        root: Path,
+        working_tree: WorkingTree,
         file: str,
         scope: LineScope,
         classification: Classification,
     ) -> Self:
-        raw = (root / file).read_bytes().splitlines()
-        content = [line.decode(errors="replace") for line in raw]
+        raw = working_tree.contents(file).splitlines()
+        content = [_decoded_for_judge(line) for line in raw]
         lines = classification.judged_lines(file, binding.triggers)
         shown = set(range(1, len(content) + 1) if lines is None else lines)
         added = scope.added_lines(file)
@@ -43,7 +43,10 @@ class JudgeRequest:
         rows: list[str] = []
         for number in sorted(shown | set(removals)):
             if removal := removals.get(number):
-                rows.extend(f"-{removal.reported_line:>6}\t{text}\n" for text in removal.rows)
+                rows.extend(
+                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text.content)}\n"
+                    for row in removal.rows
+                )
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
@@ -59,6 +62,10 @@ class JudgeRequest:
             f'<rule name="{self.skill.name}">\n{self.skill.text}</rule>\n\n'
             f'<changes path="{self.file}">\n{self.changes}</changes>\n'
         )
+
+
+def _decoded_for_judge(row: bytes) -> str:
+    return row.decode(errors="replace")
 
 
 # The likelihood levels the judge rates a violation with. The schema gives the model only these
