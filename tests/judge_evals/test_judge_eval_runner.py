@@ -68,7 +68,7 @@ class TestJudgeEvalRunner:
             "provider": "claude-cli",
             "model": "claude-haiku-5-5",
             "confidence_threshold": 0.9,
-            "rule_version": binding.version_for("python"),
+            "rule_version": binding.version,
             "codeguard_version": version("codeguard"),
         }
 

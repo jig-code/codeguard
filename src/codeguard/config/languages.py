@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from fnmatch import fnmatchcase
 from pathlib import PurePath
 
-# The languages a judge rule's paths and supplements name, by their files' extensions.
+# The languages a judge rule's paths name, by their files' extensions.
 LANGUAGES: dict[str, tuple[str, ...]] = {
     "javascript": ("js", "jsx", "mjs", "cjs"),
     "python": ("py", "pyi"),
@@ -27,14 +27,6 @@ def named_languages(patterns: Iterable[str]) -> frozenset[str]:
         for language, extensions in LANGUAGES.items()
         if any(fnmatchcase(known, extension) for known in extensions)
     )
-
-
-def covers_language(patterns: Iterable[str], language: str) -> bool:
-    """Whether the patterns can match the language's files: a pattern names it, or names no
-    extension, as `src/**` doesn't."""
-    patterns = tuple(patterns)
-    unnamed = any(_extension(pattern) is None for pattern in patterns)
-    return unnamed or language in named_languages(patterns)
 
 
 def _extension(pattern: str) -> str | None:

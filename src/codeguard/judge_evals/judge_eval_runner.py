@@ -124,7 +124,7 @@ class JudgeEvalRunner:
                 "provider": model.provider,
                 "model": model.name,
                 "confidence_threshold": self.confidence_threshold,
-                "rule_version": binding.version_for(language),
+                "rule_version": binding.version,
                 "codeguard_version": version("codeguard"),
             },
             repeat=self.repeat,
