@@ -50,7 +50,7 @@ class JudgeRequest:
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
-        return cls(binding.skill_for(file), file, "".join(rows))
+        return cls(binding.skill, file, "".join(rows))
 
     @property
     def instructions(self) -> str:

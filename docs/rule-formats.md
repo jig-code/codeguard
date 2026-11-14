@@ -80,11 +80,6 @@ typescript (`ts`, `tsx`, `mts`, `cts`).
 
 A path without an extension, like `src/**`, matches every language.
 
-codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, after
-`SKILL.md`, and fails on one named after a language it doesn't know or the binding's
-paths don't match; the [writing-rules skill](../skills/writing-rules/SKILL.md) says not to
-write one.
-
 - When the paths name more than one language, `codeguard eval` reports each language
   apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
   needs an `invalid` case.

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Self
 
 from pydantic import (
     BaseModel,
@@ -13,12 +12,9 @@ from pydantic import (
 
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.judge_config import JudgeChoice, JudgeProvider
-from codeguard.config.languages import LANGUAGES, covers_language
 from codeguard.config.severity import Severity
 
 SKILL_FILE = "SKILL.md"
-# A skill's language supplements are named after their language: `python.md`.
-_SUPPLEMENT_SUFFIX = ".md"
 # Released rule packages still set it, from when evals judged code variants.
 _RETIRED_FIELDS = frozenset({"disable_skips"})
 
@@ -59,24 +55,3 @@ class BindingConfig(BaseModel):
         if not (skill / SKILL_FILE).is_file():
             raise ValueError(f"{skill} has no {SKILL_FILE}")
         return skill
-
-    @property
-    def supplements(self) -> dict[str, Path]:
-        """The skill's supplement for each language: that language's forms of the convention."""
-        return {
-            file.stem: file
-            for file in sorted(self.skill.glob(f"*{_SUPPLEMENT_SUFFIX}"))
-            if file.name != SKILL_FILE
-        }
-
-    @model_validator(mode="after")
-    def validate_supplements(self) -> Self:
-        for language, file in self.supplements.items():
-            if language not in LANGUAGES:
-                raise ValueError(
-                    f"{file} names no language codeguard knows; a supplement is one of: "
-                    + ", ".join(f"{name}{_SUPPLEMENT_SUFFIX}" for name in LANGUAGES)
-                )
-            if not covers_language(self.paths, language):
-                raise ValueError(f"{file} is for {language}, but paths match no {language} file")
-        return self

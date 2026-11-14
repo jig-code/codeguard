@@ -8,7 +8,6 @@ GENERAL_SKILL = (
     "# Knowledge stated once\n\nEach piece of knowledge has one home in the code.\n\n"
     "## Why\n\nTwo copies of one fact drift apart when only one is changed.\n"
 )
-PYTHON_SUPPLEMENT = "## In Python\n\nA module-level constant is the home of a value.\n"
 BOTH_LANGUAGES = 'paths: ["**/*.py", "**/*.ts"]\ntriggers: [string-literal]\n'
 
 
@@ -24,7 +23,6 @@ TYPESCRIPT_CASE = case("a repeated status literal in a script", "orders.ts", "co
 
 
 def write_general_rule(repo: GitRepo, binding: str = BOTH_LANGUAGES) -> None:
-    """A rule for Python and TypeScript files, with a Python supplement."""
+    """A rule for Python and TypeScript files."""
     repo.write(f"{SKILL_DIR}/SKILL.md", GENERAL_SKILL)
-    repo.write(f"{SKILL_DIR}/python.md", PYTHON_SUPPLEMENT)
     repo.write(BINDING, f"skill: {SKILL_DIR}\n{binding}")

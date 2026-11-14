@@ -24,22 +24,6 @@ class TestJudgeRequest:
             '<changes path="pricing.py">\n+     1\tA = 1\n</changes>\n'
         )
 
-    def test_convention_is_the_skill_and_the_supplement_for_the_file_language(
-        self, make_new_file_changed_lines, tmp_path, make_binding, make_skill
-    ):
-        content = b'STATUS = "shipped"\n'
-        (tmp_path / "orders.py").write_bytes(content)
-        skill = make_skill()
-        supplement = make_skill(text="## In Python\n\nA module constant is a home.\n")
-        binding = make_binding(skill=skill, supplements={"python": supplement})
-        scope = make_new_file_changed_lines(file="orders.py", content=content)
-
-        request = JudgeRequest.of_change(
-            binding, WorkingTree.at(tmp_path), "orders.py", scope, Classification()
-        )
-
-        assert request.skill.text == f"{skill.text}\n{supplement.text}"
-
     def test_judged_lines_are_numbered_with_their_file_line_numbers(
         self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
     ):
