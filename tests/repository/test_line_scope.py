@@ -1,3 +1,5 @@
+import textwrap
+
 from git_repo import GitRepo
 
 from codeguard.repository import (
@@ -140,9 +142,24 @@ class TestLineScopes:
 
     def test_changed_lines_are_the_added_and_modified_lines(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("a.py", "a = 1\nb = 1\nc = 1\n")
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                a = 1
+                b = 1
+                c = 1
+            """),
+        )
         git_repo.commit("Add a")
-        git_repo.write("a.py", "a = 1\nb = 2\nc = 1\nd = 1\n")
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                a = 1
+                b = 2
+                c = 1
+                d = 1
+            """),
+        )
 
         changed = LineScopes.at(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
 

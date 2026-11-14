@@ -1,3 +1,5 @@
+import textwrap
+
 from recording_judge import RecordingJudge
 
 from codeguard.ast_grep import AstGrep
@@ -50,7 +52,13 @@ class TestReviewer:
     def test_violations_on_unchanged_lines_are_not_reported(
         self, repo, make_violation, make_binding
     ):
-        repo.write("a.py", "print(1)\nx = 1\n")
+        repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                print(1)
+                x = 1
+            """),
+        )
         repo.commit("Add a")
         repo.write("a.py", "print(1)\nx = 1\ny = 2\n")
         working_tree = WorkingTree.at(repo.root)

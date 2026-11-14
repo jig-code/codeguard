@@ -1,3 +1,5 @@
+import textwrap
+
 from codeguard.repository import AddedRow, FileDiff, KeptRow, Removal, RemovedRow, RowText
 
 
@@ -145,7 +147,13 @@ class TestFileDiffFromWholeFileRows:
 
 class TestFileDiffFromNewFile:
     def test_new_file_ending_in_a_newline_adds_its_lines_with_code(self):
-        assert FileDiff.from_new_file(b"a = 1\n\nb = 1\n") == FileDiff(
+        content = textwrap.dedent("""\
+            a = 1
+
+            b = 1
+        """).encode()
+
+        assert FileDiff.from_new_file(content) == FileDiff(
             base_path=None,
             added_lines=frozenset({1, 3}),
             deletion_points=frozenset(),

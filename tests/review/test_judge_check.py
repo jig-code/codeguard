@@ -1,3 +1,4 @@
+import textwrap
 from dataclasses import dataclass
 from threading import Barrier
 
@@ -162,8 +163,14 @@ class TestJudgeCheck:
         make_judge_request,
     ):
         returned = b"    return total - DISCOUNT"
-        (tmp_path / "pricing.py").write_bytes(
-            b"DISCOUNT = 5\n\n\ndef discounted(total):\n" + returned + b"\n"
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                DISCOUNT = 5
+
+
+                def discounted(total):
+                    return total - DISCOUNT
+            """)
         )
         judge = RecordingJudge()
         scope = make_changed_lines(

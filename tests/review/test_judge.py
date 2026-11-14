@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 from pydantic import ValidationError
 
@@ -42,8 +44,14 @@ class TestJudgeRequest:
         self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
     ):
         returned = b"    return total - DISCOUNT"
-        (tmp_path / "pricing.py").write_bytes(
-            b"DISCOUNT = 5\n\n\ndef discounted(total):\n" + returned + b"\n"
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                DISCOUNT = 5
+
+
+                def discounted(total):
+                    return total - DISCOUNT
+            """)
         )
         scope = make_changed_lines(
             file="pricing.py",
@@ -141,7 +149,14 @@ class TestJudgeRequest:
         self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
     ):
         added = b"    x = 1"
-        (tmp_path / "pricing.py").write_bytes(b"try:\n" + added + b"\nexcept:\n    pass\n")
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                try:
+                    x = 1
+                except:
+                    pass
+            """)
+        )
         scope = make_changed_lines(
             file="pricing.py",
             rows=[KeptRow(1, 1), AddedRow(2, RowText(added)), KeptRow(2, 3), KeptRow(3, 4)],
@@ -190,7 +205,13 @@ class TestJudgeRequest:
         make_skill,
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
-        scope = make_new_file_changed_lines(file="pricing.py", content=b"DISCOUNT = 5\nTAX = 2\n")
+        scope = make_new_file_changed_lines(
+            file="pricing.py",
+            content=textwrap.dedent("""\
+                DISCOUNT = 5
+                TAX = 2
+            """).encode(),
+        )
         classified = make_file_classification(context_lines=frozenset({1, 2}))
 
         request = JudgeRequest.of_change(
