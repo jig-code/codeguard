@@ -4,14 +4,8 @@ from pathlib import Path
 import pygit2
 from pygit2.enums import DeltaStatus, DiffFind, DiffOption
 
-from codeguard.repository.file_diff import (
-    AddedRow,
-    DiffRow,
-    FileDiff,
-    KeptRow,
-    RemovedRow,
-    RowText,
-)
+from codeguard.repository.diff_row import AddedRow, DiffRow, KeptRow, RemovedRow, RowText
+from codeguard.repository.file_diff import FileDiff
 
 _WHOLE_FILE_CONTEXT = 2**31 - 1
 _TRACKED_DIFF_FLAGS = DiffOption.INDENT_HEURISTIC

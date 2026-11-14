@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import Protocol, Self
 
 from codeguard.line_range import LineRange
-from codeguard.repository.file_diff import FileDiff, Removal
+from codeguard.repository.change_block import Removal
+from codeguard.repository.file_diff import FileDiff
 from codeguard.repository.libgit2 import Libgit2
 from codeguard.repository.working_tree import WorkingTree
 

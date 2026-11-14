@@ -107,6 +107,8 @@ layers = [
     "line_scope",
     "working_tree | libgit2",
     "file_diff | git",
+    "change_block",
+    "diff_row",
 ]
 
 [[tool.importlinter.contracts]]
