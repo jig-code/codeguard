@@ -1,12 +1,12 @@
 import factory
 
 from codeguard.config import JudgeChoice
-from codeguard.review import Binding, Severity, Skill
+from codeguard.review import Binding, JudgeRule, Severity
 
 
-class MakeSkill(factory.Factory):
+class MakeJudgeRule(factory.Factory):
     class Meta:
-        model = Skill
+        model = JudgeRule
 
     class Params:
         no_print = factory.Trait(name="no-print", text="# No print\n")
@@ -22,8 +22,8 @@ class MakeBinding(factory.Factory):
     class Meta:
         model = Binding
 
-    rule = factory.LazyAttribute(lambda binding: binding.skill.name)
-    skill = factory.SubFactory(MakeSkill)
+    rule = factory.LazyAttribute(lambda binding: binding.judge_rule.name)
+    judge_rule = factory.SubFactory(MakeJudgeRule)
     paths = ("**",)
     severity = Severity.ERROR
     judge = JudgeChoice()

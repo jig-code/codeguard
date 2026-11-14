@@ -7,12 +7,12 @@
 ## 1. `Make*` factory registered as a fixture
 
 ```python
-# tests/factories/skill.py
+# tests/factories/judge_rule.py
 class MakeBinding(factory.Factory):
     class Meta:
         model = Binding
 
-    skill = factory.SubFactory(MakeSkill)
+    judge_rule = factory.SubFactory(MakeJudgeRule)
 
 
 # tests/conftest.py
@@ -20,13 +20,13 @@ register(MakeBinding)
 
 
 # a test
-binding = make_binding(skill__name="no-print")
+binding = make_binding(judge_rule__name="no-print")
 ```
 
 `register()` names fixtures after the model, so check no fixture of that name exists
 first. A `SubFactory` in a registered factory resolves to the test's fixture for that
-model (`SubFactory(MakeSkill)` returns the test's `skill`), so a factory graph shares
-objects with the test as a fixture chain would.
+model (`SubFactory(MakeJudgeRule)` returns the test's `judge_rule`), so a factory graph
+shares objects with the test as a fixture chain would.
 
 ## 2. `Params`
 
@@ -39,7 +39,7 @@ class MakeJudgeRequest(factory.Factory):
         line = 1
         code = "print(1)"
 
-    skill = factory.SubFactory(MakeSkill)
+    judge_rule = factory.SubFactory(MakeJudgeRule)
     file = "a.py"
     changes = factory.LazyAttribute(lambda o: f"+{o.line:>6}\t{o.code}\n")
 ```
@@ -47,7 +47,7 @@ class MakeJudgeRequest(factory.Factory):
 ## 3. `SubFactory` `__` forwarding
 
 ```python
-make_binding(skill__name="no-print", skill__text="# No print\n")
+make_binding(judge_rule__name="no-print", judge_rule__text="# No print\n")
 ```
 
 This replaces a wrapper such as `_make_request(rule)` that only forwards to a nested
@@ -65,13 +65,15 @@ class MakeJudgedDiagnostic(MakeDiagnostic):
         exclude = ("binding", "request")
 
     binding = factory.SubFactory(MakeBinding)
-    request = factory.SubFactory(MakeJudgeRequest, skill=factory.SelfAttribute("..binding.skill"))
+    request = factory.SubFactory(
+        MakeJudgeRequest, judge_rule=factory.SelfAttribute("..binding.judge_rule")
+    )
     rule = factory.SelfAttribute("binding.rule")
     file = factory.SelfAttribute("request.file")
 ```
 
-The tell you need it: the same derivation (`skill=binding.skill`) at more than one call
-site, or a fixture whose body is "build B from A's field".
+The tell you need it: the same derivation (`judge_rule=binding.judge_rule`) at more than
+one call site, or a fixture whose body is "build B from A's field".
 
 ## 5. `LazyFixture`
 

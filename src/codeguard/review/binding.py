@@ -14,13 +14,13 @@ from codeguard.config import (
     Severity,
     named_languages,
 )
-from codeguard.review.skill import Skill
+from codeguard.review.judge_rule import JudgeRule
 
 
 @dataclass(frozen=True)
 class Binding:
     rule: str
-    skill: Skill
+    judge_rule: JudgeRule
     paths: tuple[str, ...]
     severity: Severity
     triggers: frozenset[str]
@@ -31,7 +31,7 @@ class Binding:
     def from_config(cls, rule: str, binding: BindingConfig, judge: JudgeChoice) -> Self:
         return cls(
             rule=rule,
-            skill=Skill.from_file(binding.skill.name, binding.skill / SKILL_FILE),
+            judge_rule=JudgeRule.from_file(binding.skill.name, binding.skill / SKILL_FILE),
             paths=binding.paths,
             severity=binding.severity,
             judge=judge,
@@ -50,7 +50,7 @@ class Binding:
     @property
     def version(self) -> str:
         """Identify what decides the rule's verdicts, other than its model."""
-        rule = [self.skill.text, sorted(self.triggers), self.paths, self.exclude_paths]
+        rule = [self.judge_rule.text, sorted(self.triggers), self.paths, self.exclude_paths]
         return hashlib.sha256(json.dumps(rule).encode()).hexdigest()[:12]
 
     def files(self, changed: Sequence[str]) -> list[str]:

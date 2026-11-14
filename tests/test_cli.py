@@ -173,9 +173,9 @@ class TestReviewCommand:
         assert result.returncode == 2
 
     def test_review_checks_a_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
-        self, repo, tmp_path, make_skill
+        self, repo, tmp_path, make_judge_rule
     ):
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
@@ -353,9 +353,9 @@ def git_config(package: GitRepo, ref: str) -> str:
 
 class TestReviewOfDeletedCode:
     def test_violation_on_the_class_that_lost_a_method_is_reported(
-        self, repo, tmp_path, make_skill
+        self, repo, tmp_path, make_judge_rule
     ):
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
@@ -410,13 +410,13 @@ class TestReviewOfDeletedCode:
 
 
 class TestReviewDryRun:
-    def test_lists_judge_calls_without_calling_claude(self, repo, tmp_path, make_skill):
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+    def test_lists_judge_calls_without_calling_claude(self, repo, tmp_path, make_judge_rule):
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
         )
-        repo.write(".claude/skills/class-shape/SKILL.md", make_skill().text)
+        repo.write(".claude/skills/class-shape/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/class-shape.yaml",
             'skill: .claude/skills/class-shape\npaths: ["**/*.py"]\ntriggers: [class-header]\n',
@@ -453,8 +453,10 @@ class TestReviewDryRun:
         )
         assert result.returncode == 0
 
-    def test_lists_gemini_judge_calls_without_a_gemini_sign_in(self, repo, tmp_path, make_skill):
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+    def test_lists_gemini_judge_calls_without_a_gemini_sign_in(
+        self, repo, tmp_path, make_judge_rule
+    ):
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
@@ -516,9 +518,9 @@ class TestReviewJsonFormat:
         assert result.returncode == 1
 
     def test_low_confidence_finding_is_a_warning_with_its_confidence(
-        self, repo, tmp_path, make_skill, make_diagnostic
+        self, repo, tmp_path, make_judge_rule, make_diagnostic
     ):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
         violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
 
@@ -535,8 +537,10 @@ class TestReviewJsonFormat:
         assert json.loads(result.stdout) == {"diagnostics": [finding.as_json()]}
         assert result.returncode == 0
 
-    def test_failed_judge_call_is_a_judge_error(self, repo, tmp_path, make_skill, make_diagnostic):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+    def test_failed_judge_call_is_a_judge_error(
+        self, repo, tmp_path, make_judge_rule, make_diagnostic
+    ):
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -561,9 +565,9 @@ class TestReviewJsonFormat:
 
 class TestReviewJudgeCache:
     def test_cached_verdict_is_reused_until_a_file_the_judge_read_changes(
-        self, repo, tmp_path, make_skill
+        self, repo, tmp_path, make_judge_rule
     ):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -584,9 +588,9 @@ class TestReviewJudgeCache:
 
     @pytest.mark.parametrize("search", ["Grep", "Glob"])
     def test_cached_verdict_is_reused_until_a_file_a_search_found_changes(
-        self, repo, tmp_path, make_skill, search
+        self, repo, tmp_path, make_judge_rule, search
     ):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
         repo.write("orders/pricing.toml", "discount = 5\n")
         calls = tmp_path / "calls"
         configure_fake_cli_response(
@@ -611,16 +615,16 @@ class TestReviewJudgeCache:
 
 
 class TestReviewJudgeErrorsAsWarnings:
-    def test_judge_error_fails_the_review_without_the_flag(self, repo, tmp_path, make_skill):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+    def test_judge_error_fails_the_review_without_the_flag(self, repo, tmp_path, make_judge_rule):
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
 
         result = run_review(repo, tmp_path, bin_dir)
 
         assert result.stdout.startswith("a.py: error placement: The judge call failed")
         assert result.returncode == 1
 
-    def test_judge_error_is_a_warning_with_the_flag(self, repo, tmp_path, make_skill):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+    def test_judge_error_is_a_warning_with_the_flag(self, repo, tmp_path, make_judge_rule):
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
 
         result = run_review(repo, tmp_path, bin_dir, "--judge-errors-as-warnings")
 
@@ -628,9 +632,9 @@ class TestReviewJudgeErrorsAsWarnings:
         assert result.returncode == 0
 
     def test_rule_violation_still_fails_the_review_with_the_flag(
-        self, repo, tmp_path, make_skill, make_diagnostic
+        self, repo, tmp_path, make_judge_rule, make_diagnostic
     ):
-        bin_dir = judged_repo(repo, tmp_path, make_skill)
+        bin_dir = judged_repo(repo, tmp_path, make_judge_rule)
         repo.write("b.py", "print(1)\n")
 
         result = run_review(
@@ -665,9 +669,9 @@ class TestReviewHost:
         assert with_host.returncode == without_host.returncode
 
 
-def judged_repo(repo: GitRepo, tmp_path: Path, make_skill) -> Path:
+def judged_repo(repo: GitRepo, tmp_path: Path, make_judge_rule) -> Path:
     """Bind a skill to every Python file, change a.py, and put a failing claude on PATH."""
-    repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+    repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
     repo.write(
         ".codeguard/bindings/placement.yaml",
         'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
@@ -954,10 +958,10 @@ class TestEvalCommand:
         assert result.returncode == 2
 
     def test_gemini_rule_the_selection_leaves_out_needs_no_gemini_sign_in(
-        self, tmp_path, tmp_path_factory, make_skill
+        self, tmp_path, tmp_path_factory, make_judge_rule
     ):
         package = invoice_package(tmp_path_factory)
-        package.write("python/skills/naming/SKILL.md", make_skill().text)
+        package.write("python/skills/naming/SKILL.md", make_judge_rule().text)
         package.write(
             "python/bindings/naming.yaml",
             'skill: python/skills/naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
@@ -1260,9 +1264,9 @@ class TestTestCommand:
         )
         assert result.returncode == 0
 
-    def test_broad_triggers_are_a_warning(self, repo, make_skill):
+    def test_broad_triggers_are_a_warning(self, repo, make_judge_rule):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any, fixture]\n',
@@ -1320,9 +1324,9 @@ class TestTestCommand:
         assert (repo.root / ".codeguard/rule-tests/__snapshots__/enum-value-snapshot.yml").is_file()
         assert result.returncode == 0
 
-    def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_skill):
+    def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_judge_rule):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
-        repo.write(".claude/skills/placement/SKILL.md", make_skill().text)
+        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
             'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [comment]\n',

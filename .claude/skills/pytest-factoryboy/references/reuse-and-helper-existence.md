@@ -90,8 +90,9 @@ For each local `_make_*`/`_build_*`, check:
 4. **Wrapped literal.** The body wraps a builder in a literal the suite writes inline
    (`Verdict(reason=..., violations=tuple(make_violation(...)))`): use the literal.
 5. **Re-passed defaults.** Every argument beyond the caller's own equals the builder's
-   default (`make_binding(skill=skill, severity=Severity.ERROR, rule=skill.name)`): strip
-   them, and inline the bare call that remains.
+   default
+   (`make_binding(judge_rule=judge_rule, severity=Severity.ERROR, rule=judge_rule.name)`):
+   strip them, and inline the bare call that remains.
 6. **One-constructor pass-through** (`return Thing(context=context)`): inline it, unless
    its return annotation is load-bearing. Inline it at one site and run basedpyright. When
    it stays green, inline everywhere. When only a `cast()` or `# type: ignore` fixes it,

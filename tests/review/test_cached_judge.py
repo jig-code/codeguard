@@ -31,9 +31,9 @@ def cached(repo, store, wrapped, **options) -> CachedJudge:
 
 
 @pytest.fixture
-def total_change(make_skill) -> JudgeRequest:
+def total_change(make_judge_rule) -> JudgeRequest:
     return JudgeRequest(
-        make_skill(),
+        make_judge_rule(),
         "orders/order_service.py",
         "     5\t    def total(self, order):\n     6\t        return order.subtotal - DISCOUNT\n",
     )
@@ -84,13 +84,13 @@ class TestCachedJudge:
 
         assert (before, judge.has(request)) == (False, True)
 
-    def test_changed_code_is_judged_again(self, orders, store, make_skill, total_change):
+    def test_changed_code_is_judged_again(self, orders, store, make_judge_rule, total_change):
         wrapped = RecordingJudge()
         judge = cached(orders, store, wrapped)
         judge.judge(total_change)
         orders.write("orders/order_service.py", ORDER_SERVICE.replace("- DISCOUNT", "- 5"))
         changed = JudgeRequest(
-            make_skill(),
+            make_judge_rule(),
             "orders/order_service.py",
             "     5\t    def total(self, order):\n     6\t        return order.subtotal - 5\n",
         )
@@ -157,12 +157,12 @@ class TestCachedJudge:
 
         assert wrapped.received == [request, request]
 
-    def test_changed_skill_text_is_judged_again(self, orders, store, make_skill, total_change):
+    def test_changed_skill_text_is_judged_again(self, orders, store, make_judge_rule, total_change):
         wrapped = RecordingJudge()
         judge = cached(orders, store, wrapped)
         judge.judge(total_change)
         revised = JudgeRequest(
-            make_skill(text="# Revised\n"),
+            make_judge_rule(text="# Revised\n"),
             "orders/order_service.py",
             total_change.changes,
         )
@@ -203,7 +203,7 @@ class TestCachedJudge:
         judge.judge(request)
 
         lookup = {
-            "rule": request.skill.name,
+            "rule": request.judge_rule.name,
             "file": request.file,
             "violations": 1,
             "changed_files": "[]",

@@ -426,7 +426,7 @@ class TestGeminiJudge:
         assert judge_with(tmp_path, ScriptedGemini([])).identity == f"gemini\0{MODEL}"
 
     def test_call_records_its_usage_across_requests(
-        self, tmp_path, make_skill, capfire, make_judge_request
+        self, tmp_path, make_judge_rule, capfire, make_judge_request
     ):
         models = ScriptedGemini(
             [calls(("glob", {"pattern": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
@@ -436,7 +436,7 @@ class TestGeminiJudge:
 
         assert finished_span_attributes(capfire, "gemini judges {rule} on {file}") == [
             {
-                "rule": make_skill().name,
+                "rule": make_judge_rule().name,
                 "file": "a.py",
                 "model": MODEL,
                 "num_turns": 2,

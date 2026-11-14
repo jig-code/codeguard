@@ -127,7 +127,7 @@ class TestClaudeJudge:
 
         assert finished_span_attributes(capfire, "claude judges {rule} on {file}") == [
             {
-                "rule": request.skill.name,
+                "rule": request.judge_rule.name,
                 "file": "a.py",
                 "model": MODEL,
                 "returncode": 0,

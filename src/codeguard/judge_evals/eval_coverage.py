@@ -14,7 +14,7 @@ class EvalCoverage:
     def run(self) -> RuleTestResult:
         ruleset = self.ruleset.load()
         bindings = Bindings.from_rulesets([ruleset])
-        languages = {binding.skill.name: binding.languages for binding in bindings}
+        languages = {binding.judge_rule.name: binding.languages for binding in bindings}
         evaluated = {
             part.name
             for _, dataset in rule_evals(ruleset.root)
@@ -29,8 +29,8 @@ class EvalCoverage:
             problems=tuple(
                 f"{name}: no eval with an invalid case"
                 for binding in bindings
-                if self.selection.selects_rule(binding.skill.name)
-                for name in _names(binding.skill.name, binding.languages)
+                if self.selection.selects_rule(binding.judge_rule.name)
+                for name in _names(binding.judge_rule.name, binding.languages)
                 if name not in evaluated
             )
         )
