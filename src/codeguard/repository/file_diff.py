@@ -18,14 +18,14 @@ class FileDiff:
     @classmethod
     def from_whole_file_rows(cls, base_path: str | None, rows: Iterable[DiffRow]) -> Self:
         rows = tuple(rows)
-        runs = ChangeBlock.between_kept_rows(rows)
+        blocks = ChangeBlock.between_kept_rows(rows)
         return cls(
             base_path=base_path,
-            added_lines=frozenset(line for run in runs for line in run.added_lines),
+            added_lines=frozenset(line for block in blocks for line in block.added_lines),
             deletion_points=frozenset(
-                point for run in runs if (point := run.deletion_point) is not None
+                point for block in blocks if (point := block.deletion_point) is not None
             ),
-            removals=tuple(removal for run in runs if (removal := run.removal) is not None),
+            removals=tuple(removal for block in blocks if (removal := block.removal) is not None),
             head_lines_by_base_line={
                 row.base_line: row.head_line for row in rows if isinstance(row, KeptRow)
             },
@@ -59,5 +59,5 @@ class FileDiff:
         return frozenset(
             self.head_lines_by_base_line[line]
             for line in base_lines
-            if line not in self.removed_base_lines
+            if line in self.head_lines_by_base_line
         )

@@ -3,11 +3,15 @@ import factory
 from codeguard.repository import AddedRow, ChangedLines, FileDiff, RowText
 
 
-class MakeChangedLines(factory.Factory):
+class MakeChangedLinesBase(factory.Factory):
     class Meta:
         model = ChangedLines
+        abstract = True
 
     file = "a.py"
+
+
+class MakeChangedLines(MakeChangedLinesBase):
     rows = (AddedRow(1, RowText(b"print(1)")),)
 
     @classmethod
@@ -16,7 +20,7 @@ class MakeChangedLines(factory.Factory):
         return model_class({file: FileDiff.from_whole_file_rows(file, kwargs["rows"])})
 
 
-class MakeNewFileChangedLines(MakeChangedLines):
+class MakeNewFileChangedLines(MakeChangedLinesBase):
     content = b"print(1)\n"
 
     @classmethod

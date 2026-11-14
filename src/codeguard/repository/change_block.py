@@ -20,21 +20,21 @@ class ChangeBlock:
 
     @classmethod
     def between_kept_rows(cls, rows: tuple[DiffRow, ...]) -> tuple[Self, ...]:
-        runs: list[Self] = []
+        blocks: list[Self] = []
         head_before = 0
         for kept_head_line, group in groupby(rows, key=lambda row: row.kept_head_line):
             if kept_head_line is not None:
                 head_before = kept_head_line
                 continue
             changed = tuple(group)
-            runs.append(
+            blocks.append(
                 cls(
                     head_before,
                     added=tuple(row for row in changed if isinstance(row, AddedRow)),
                     removed=tuple(row for row in changed if isinstance(row, RemovedRow)),
                 )
             )
-        return tuple(runs)
+        return tuple(blocks)
 
     @property
     def added_lines(self) -> frozenset[int]:

@@ -98,7 +98,7 @@ class TestFileDiffFromWholeFileRows:
 
         assert diff.kept_head_lines({1, 2, 3}) == {1, 2}
 
-    def test_run_that_replaces_code_adds_its_lines_and_reports_its_removal_on_them(self):
+    def test_change_block_that_replaces_code_adds_its_lines_and_reports_its_removal_on_them(self):
         rows = [
             KeptRow(1, 1),
             RemovedRow(2, RowText(b"b = 1")),
@@ -119,7 +119,7 @@ class TestFileDiffFromWholeFileRows:
             removed_base_lines=frozenset({2}),
         )
 
-    def test_each_run_of_changes_is_placed_by_the_line_before_it(self):
+    def test_each_change_block_is_placed_by_the_line_before_it(self):
         rows = [
             RemovedRow(1, RowText(b"a = 1")),
             KeptRow(2, 1),
@@ -143,7 +143,7 @@ class TestFileDiffFromWholeFileRows:
         )
 
 
-class TestFileDiffOfNewFile:
+class TestFileDiffFromNewFile:
     def test_new_file_ending_in_a_newline_adds_its_lines_with_code(self):
         assert FileDiff.from_new_file(b"a = 1\n\nb = 1\n") == FileDiff(
             base_path=None,
