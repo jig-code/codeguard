@@ -42,7 +42,7 @@ class TestBinding:
 
         assert files == ["a.py", "app/b.rb"]
 
-    def test_from_config_builds_its_judge_rule(
+    def test_from_config_builds_the_binding_its_config_describes(
         self, tmp_path, make_binding, make_binding_config, make_judge_rule
     ):
         skill = write_skill(tmp_path, make_judge_rule().text)
