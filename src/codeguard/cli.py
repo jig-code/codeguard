@@ -10,9 +10,21 @@ import pydantic_ai
 
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
+from codeguard.repository import LineScope, LineScopes, WorkingTree
 from codeguard.rule_tests import MissingWhyMode
 from codeguard.rules import Rules, check_installed_evals
-from codeguard.working_tree import AllLines, ChangedLines, WorkingTree
+
+_MODEL_HELP = (
+    "The model --provider judges with. Default: none for claude-cli, so the claude CLI runs its "
+    "own default; "
+    + ", ".join(
+        f"{provider.default_model} for {provider}"
+        for provider in JudgeProvider
+        if provider.default_model is not None
+    )
+    + "."
+)
+
 
 _EXIT_PASSED = 0
 _EXIT_FAILED = 1
@@ -138,9 +150,7 @@ def main() -> int:
     )
     eval_command.add_argument(
         "--model",
-        help="The model --provider judges with. Default: none for claude-cli, so the claude "
-        "CLI runs its own default; gpt-6-luna for codex-cli, gemini-3.1-pro-preview for gemini, "
-        "us.anthropic.claude-haiku-5-5 for bedrock.",
+        help=_MODEL_HELP,
     )
     eval_command.set_defaults(run=_eval)
 
@@ -224,8 +234,12 @@ def _review(args: argparse.Namespace) -> int:
     return _EXIT_FAILED if result.blocks else _EXIT_PASSED
 
 
-def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> ChangedLines | AllLines:
-    return working_tree.all_lines() if args.all else working_tree.changed_lines(args.base)
+def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> LineScope:
+    return (
+        LineScopes.at(working_tree).all_lines()
+        if args.all
+        else LineScopes.at(working_tree).changed_lines(args.base)
+    )
 
 
 def _test(args: argparse.Namespace) -> int:
@@ -255,7 +269,7 @@ def _eval(args: argparse.Namespace) -> int:
 
 
 def _working_tree(package: Path | None) -> WorkingTree:
-    return WorkingTree(package.resolve()) if package else WorkingTree.containing(Path.cwd())
+    return WorkingTree.at(package.resolve()) if package else WorkingTree.containing(Path.cwd())
 
 
 def _config(args: argparse.Namespace) -> int:

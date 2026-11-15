@@ -33,7 +33,7 @@ where one the binding leaves out comes from:
 
 ```yaml
 provider: gemini                  # default: claude-cli; or codex-cli, gemini, bedrock
-model: gemini-3.1-pro-preview     # default: the claude CLI's own; every provider but claude-cli needs one
+model: gemini-4-argon             # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
 A judge rule's id is its skill's directory name.
@@ -80,17 +80,12 @@ typescript (`ts`, `tsx`, `mts`, `cts`).
 
 A path without an extension, like `src/**`, matches every language.
 
-codeguard also loads a `<language>.md` beside `SKILL.md` as part of the rule, after
-`SKILL.md`, and fails on one named after a language it doesn't know or the binding's
-paths don't match; the [writing-rules skill](../skills/writing-rules/SKILL.md) says not to
-write one.
-
 - When the paths name more than one language, `codeguard eval` reports each language
   apart, as `<id> (python)`, from the cases whose `file` is in that language, and each
   needs an `invalid` case.
 - Triggers work per file: a change kind in any language, a gate only in its `language`.
   Only Python has change kinds and gates so far: on a file in another language, every
-  trigger fires.
+  trigger fires, and the judge is sent the changed lines without the code around them.
 
 ## The rule eval
 
@@ -196,5 +191,6 @@ reason for each case it judged, then one line per failure.
 | The convention | the skill |
 | Paths and triggers | the binding |
 | Provider and model | the binding, or `--provider` and `--model` |
-| The confidence threshold, and the Google Cloud project, location and calls at once | the caller's `.codeguard/config.yaml` |
+| The confidence threshold, and Gemini's calls at once | the caller's `.codeguard/config.yaml` |
+| Gemini's project, location and sign-in | the `CODEGUARD_JUDGE__GEMINI__` environment variables |
 | The judge prompt and how each case is checked | codeguard |

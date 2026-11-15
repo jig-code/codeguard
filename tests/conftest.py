@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 from diskcache import Cache
+from factories.changed_lines import MakeChangedLines, MakeNewFileChangedLines
+from factories.classification import MakeFileClassification
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
 from factories.line_range import MakeLineRange
@@ -36,6 +38,9 @@ register(MakeJudgedViolation)
 register(MakeEditReview)
 register(MakeEvaluatorContext)
 register(MakeRuleEvalCase)
+register(MakeFileClassification)
+register(MakeChangedLines)
+register(MakeNewFileChangedLines, _name="new_file_changed_lines")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -49,13 +54,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--judge-provider",
         type=JudgeProvider,
         choices=list(JudgeProvider),
-        help="Judge the llm tests' fixture cases with this provider instead of their bindings'.",
+        help="Judge the llm tests' fixture cases with this provider instead of their package's.",
     )
     parser.addoption(
         "--judge-model",
         help="The model --judge-provider judges with. Default: the provider's default model; "
         "none for claude-cli, so the claude CLI runs its own default.",
     )
+
+
+_THIS_MACHINES_GEMINI_SETTINGS = {
+    name: value
+    for name, value in os.environ.items()
+    if name.startswith("CODEGUARD_JUDGE__GEMINI__")
+}
 
 
 @pytest.fixture(autouse=True)
@@ -73,8 +85,19 @@ def committed_config(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    for name, value in _THIS_MACHINES_GEMINI_SETTINGS.items():
+        monkeypatch.setenv(name, value)
+
+
+@pytest.fixture
 def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> GitRepo:
+    return GitRepo.init(tmp_path.resolve())
 
 
 @pytest.fixture

@@ -4,6 +4,7 @@ from functools import cached_property
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigLoader, Ruleset
 from codeguard.pattern_rules import Layout, PatternRuleCheck, PatternRuleTestRunner
+from codeguard.repository import ChangedLines, LineScope, WorkingTree
 from codeguard.review import (
     Bindings,
     CheckStep,
@@ -24,8 +25,7 @@ from codeguard.rule_tests import (
 )
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
-from codeguard.syntax import ChangeClassifier
-from codeguard.working_tree import AllLines, ChangedLines, WorkingTree
+from codeguard.syntax import ChangeClassifier, Classification
 
 
 @dataclass(frozen=True)
@@ -37,18 +37,20 @@ class Rules:
     def config(self) -> Config:
         return ConfigLoader(self.working_tree.root).load()
 
-    def review(self, scope: ChangedLines | AllLines) -> Review:
+    def review(self, scope: LineScope) -> Review:
         deadline = Deadline(self.config.review_time_limit_minutes)
-        classified = self._classified(scope)
+        classification = self._classification(scope)
+        bindings = Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+        self.judges.require_sign_ins(binding.model for binding in bindings)
         reviewer = Reviewer(
             steps=(
                 self._pattern_step,
-                CheckStep(checks=self._judge_checks(classified, deadline)),
+                CheckStep(checks=self._judge_checks(bindings, scope, classification, deadline)),
             )
         )
-        return reviewer.run(classified)
+        return reviewer.run(scope)
 
-    def check_patterns(self, scope: ChangedLines | AllLines) -> Review:
+    def check_patterns(self, scope: LineScope) -> Review:
         return Reviewer(steps=(self._pattern_step,)).run(scope)
 
     @property
@@ -60,27 +62,29 @@ class Rules:
             )
         )
 
-    def _classified(self, scope: ChangedLines | AllLines) -> ChangedLines | AllLines:
-        if isinstance(scope, AllLines):
-            return scope
+    def _classification(self, scope: LineScope) -> Classification:
+        if not isinstance(scope, ChangedLines):
+            return Classification()
         classifier = ChangeClassifier.for_rulesets(self.ast_grep, self.rulesets, self.working_tree)
         return classifier.classify(scope)
 
-    def plan(self, scope: ChangedLines | AllLines) -> JudgePlan:
+    def plan(self, scope: LineScope) -> JudgePlan:
         root = self.working_tree.root
-        classified = self._classified(scope)
+        classification = self._classification(scope)
         return JudgePlan(
             calls=tuple(
                 PlannedCall(
                     rule=binding.rule,
                     file=file,
                     cached=self.judges.cached(root, binding.model).has(
-                        JudgeRequest.of_change(binding, root, file, classified)
+                        JudgeRequest.of_change(
+                            binding, self.working_tree, file, scope, classification
+                        )
                     ),
-                    triggered=binding.is_triggered(classified, file),
+                    triggered=classification.is_triggered(file, binding.triggers),
                 )
                 for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
-                for file in binding.files(classified.files)
+                for file in binding.files(scope.files)
             )
         )
 
@@ -115,7 +119,6 @@ class Rules:
 
     @cached_property
     def rulesets(self) -> tuple[Ruleset, ...]:
-        """The rulesets a review runs."""
         return tuple(
             replace(ruleset, skip_ci_only=self.skip_ci_only) for ruleset in self.resolver.rulesets
         )
@@ -125,13 +128,22 @@ class Rules:
         return Judges(self.config.judge)
 
     def _judge_checks(
-        self, scope: ChangedLines | AllLines, deadline: Deadline
+        self,
+        bindings: Bindings,
+        scope: LineScope,
+        classification: Classification,
+        deadline: Deadline,
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
         threshold = self.config.confidence_threshold
         return tuple(
             JudgeCheck(
-                root, binding, self.judges.cached(root, binding.model, deadline), threshold, scope
+                self.working_tree,
+                binding,
+                self.judges.cached(root, binding.model, deadline),
+                threshold,
+                scope,
+                classification,
             )
-            for binding in Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
+            for binding in bindings
         )

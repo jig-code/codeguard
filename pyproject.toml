@@ -16,6 +16,7 @@ dependencies = [
     "pydantic-ai-slim[bedrock,google]~=2.66.0",
     "pydantic-evals~=2.66.0",
     "pydantic-settings>=2.12",
+    "pygit2>=1.21.0",
     "pyyaml>=6.0.3",
 ]
 
@@ -93,9 +94,28 @@ layers = [
     "review | packages",
     "syntax",
     "ast_grep",
-    "config | working_tree | file_lock",
+    "config | repository | file_lock",
     "line_range",
 ]
+
+[[tool.importlinter.contracts]]
+name = "the repository package depends one way"
+type = "layers"
+containers = ["codeguard.repository"]
+exhaustive = true
+layers = [
+    "line_scope",
+    "working_tree | libgit2",
+    "file_diff | git",
+    "change_block",
+    "diff_row",
+]
+
+[[tool.importlinter.contracts]]
+name = "only the repository package runs git"
+type = "protected"
+protected_modules = ["codeguard.repository.git"]
+allowed_importers = ["codeguard.repository"]
 
 [[tool.importlinter.contracts]]
 name = "only judge_evals runs pydantic-evals"
@@ -113,12 +133,18 @@ source_modules = [
     "codeguard.syntax",
     "codeguard.ast_grep",
     "codeguard.config",
-    "codeguard.working_tree",
+    "codeguard.repository",
     "codeguard.line_range",
     "codeguard.file_lock",
 ]
 forbidden_modules = ["pydantic_evals"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "only the libgit2 module runs libgit2"
+type = "protected"
+protected_modules = ["pygit2"]
+allowed_importers = ["codeguard.repository.libgit2"]
 
 [dependency-groups]
 dev = [

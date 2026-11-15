@@ -1,3 +1,4 @@
+import textwrap
 from dataclasses import dataclass
 from threading import Barrier
 
@@ -5,6 +6,7 @@ import pytest
 from recording_judge import RecordingJudge
 
 from codeguard.config import ChangeKind
+from codeguard.repository import AddedRow, AllLines, KeptRow, RowText, WorkingTree
 from codeguard.review import (
     ErrorType,
     JudgeCheck,
@@ -15,7 +17,7 @@ from codeguard.review import (
     Severity,
     Verdict,
 )
-from codeguard.working_tree import AllLines, ChangedLines
+from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
 
@@ -48,7 +50,14 @@ class TestJudgeCheck:
     def test_failed_judge_call_is_a_judge_error_on_the_file(
         self, tmp_path, make_binding, make_diagnostic
     ):
-        check = JudgeCheck(tmp_path, make_binding(), FailingJudge(), THRESHOLD, AllLines(()))
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        )
 
         assert check.check(["a.py"]) == [make_diagnostic(judge_error=True)]
 
@@ -56,11 +65,12 @@ class TestJudgeCheck:
         self, tmp_path, make_binding, make_diagnostic
     ):
         check = JudgeCheck(
-            tmp_path,
+            WorkingTree.at(tmp_path),
             make_binding(severity=Severity.WARNING),
             FailingJudge(),
             THRESHOLD,
             AllLines(()),
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [
@@ -69,7 +79,14 @@ class TestJudgeCheck:
 
     def test_judge_call_past_the_time_limit_is_a_timeout(self, tmp_path, make_binding):
         error = JudgeTimeout("The review reached its 5-minute time limit.")
-        check = JudgeCheck(tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()))
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(error),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        )
 
         [diagnostic] = check.check(["a.py"])
 
@@ -77,7 +94,14 @@ class TestJudgeCheck:
 
     def test_judge_call_without_a_verdict_is_no_verdict(self, tmp_path, make_binding):
         error = JudgeNoVerdict("claude returned no verdict.")
-        check = JudgeCheck(tmp_path, make_binding(), FailingJudge(error), THRESHOLD, AllLines(()))
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            FailingJudge(error),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        )
 
         [diagnostic] = check.check(["a.py"])
 
@@ -89,15 +113,25 @@ class TestJudgeCheck:
             (tmp_path / file).write_text("print(1)\n")
         barrier = Barrier(len(files), timeout=5)
 
-        JudgeCheck(tmp_path, make_binding(), WaitingJudge(barrier), THRESHOLD, AllLines(())).check(
-            files
-        )
+        JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            WaitingJudge(barrier),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        ).check(files)
 
         assert not barrier.broken
 
     def test_no_matching_files_is_no_diagnostics(self, tmp_path, make_binding):
         check = JudgeCheck(
-            tmp_path, make_binding(paths=("app/**",)), RecordingJudge(), THRESHOLD, AllLines(())
+            WorkingTree.at(tmp_path),
+            make_binding(paths=("app/**",)),
+            RecordingJudge(),
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         assert check.check(["a.py"]) == []
@@ -106,89 +140,159 @@ class TestJudgeCheck:
         (tmp_path / "b.py").write_text("x = 1\n")
         judge = RecordingJudge()
 
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, AllLines(())).check(["a.py", "b.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        ).check(["a.py", "b.py"])
 
         assert set(judge.received) == {
             make_judge_request(),
-            make_judge_request(
-                file="b.py",
-                changes=(
-                    "diff --git a/b.py b/b.py\n"
-                    "new file mode 100644\n"
-                    "index 0000000..7d4290a\n"
-                    "--- /dev/null\n"
-                    "+++ b/b.py\n"
-                    "@@ -0,0 +1 @@\n"
-                    "+x = 1\n"
-                ),
-            ),
+            make_judge_request(file="b.py", changes="+     1\tx = 1\n"),
         }
+
+    def test_judge_gets_the_changed_function_of_the_file(
+        self,
+        make_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
+    ):
+        returned = b"    return total - DISCOUNT"
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                DISCOUNT = 5
+
+
+                def discounted(total):
+                    return total - DISCOUNT
+            """)
+        )
+        judge = RecordingJudge()
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[
+                KeptRow(1, 1),
+                KeptRow(2, 2),
+                KeptRow(3, 3),
+                KeptRow(4, 4),
+                AddedRow(5, RowText(returned)),
+            ],
+        )
+        classification = Classification(
+            {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
+        )
+
+        JudgeCheck(
+            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
+        ).check(["pricing.py"])
+
+        assert judge.received == [
+            make_judge_request(
+                file="pricing.py",
+                changes="      4\tdef discounted(total):\n+     5\t    return total - DISCOUNT\n",
+            )
+        ]
 
     def test_file_outside_the_binding_paths_is_not_judged(self, tmp_path, make_binding):
         judge = RecordingJudge()
 
-        JudgeCheck(tmp_path, make_binding(paths=("app/**",)), judge, THRESHOLD, AllLines(())).check(
-            ["a.py"]
-        )
+        JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(paths=("app/**",)),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        ).check(["a.py"])
 
         assert judge.received == []
 
-    def test_file_whose_changes_miss_the_triggers_is_not_judged(self, tmp_path, make_binding):
+    def test_file_whose_changes_miss_the_triggers_is_not_judged(
+        self, make_new_file_changed_lines, make_file_classification, tmp_path, make_binding
+    ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})}).with_kinds(
-            {"a.py": frozenset({ChangeKind.COMMENT, ChangeKind.ANY})}
+        scope = make_new_file_changed_lines()
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
         )
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope).check(["a.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == []
 
     def test_file_whose_changes_touch_a_trigger_is_judged(
-        self, tmp_path, make_binding, make_judge_request
+        self,
+        make_new_file_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})}).with_kinds(
-            {"a.py": frozenset({ChangeKind.COMMENT, ChangeKind.ANY})}
+        scope = make_new_file_changed_lines()
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
         )
         binding = make_binding(triggers=frozenset({ChangeKind.COMMENT, ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope).check(["a.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == [make_judge_request()]
 
-    def test_file_without_change_kinds_is_judged(self, tmp_path, make_binding, make_judge_request):
-        (tmp_path / "a.md").write_text("# A\n")
+    def test_file_without_change_kinds_is_judged(
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_judge_request
+    ):
+        content = b"# A\n"
+        (tmp_path / "a.md").write_bytes(content)
         judge = RecordingJudge()
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
-        scope = ChangedLines({"a.md": frozenset({1})})
+        scope = make_new_file_changed_lines(file="a.md", content=content)
 
-        JudgeCheck(tmp_path, binding, judge, THRESHOLD, scope).check(["a.md"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, Classification()
+        ).check(["a.md"])
 
-        assert judge.received == [
-            make_judge_request(
-                file="a.md",
-                changes=(
-                    "diff --git a/a.md b/a.md\n"
-                    "new file mode 100644\n"
-                    "index 0000000..7f3b95d\n"
-                    "--- /dev/null\n"
-                    "+++ b/a.md\n"
-                    "@@ -0,0 +1 @@\n"
-                    "+# A\n"
-                ),
-            )
-        ]
+        assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
 
     def test_binding_without_triggers_judges_every_changed_file(
-        self, tmp_path, make_binding, make_judge_request
+        self,
+        make_new_file_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_judge_request,
     ):
         judge = RecordingJudge()
-        scope = ChangedLines({"a.py": frozenset({1})}).with_kinds(
-            {"a.py": frozenset({ChangeKind.COMMENT, ChangeKind.ANY})}
+        scope = make_new_file_changed_lines()
+        classification = Classification(
+            {
+                "a.py": make_file_classification(
+                    touched_kinds=frozenset({ChangeKind.COMMENT, ChangeKind.ANY})
+                )
+            }
         )
 
-        JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, scope).check(["a.py"])
+        JudgeCheck(
+            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
+        ).check(["a.py"])
 
         assert judge.received == [make_judge_request()]
 
@@ -199,7 +303,12 @@ class TestJudgeCheck:
             Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
         )
         check = JudgeCheck(
-            tmp_path, make_binding(severity=Severity.WARNING), judge, THRESHOLD, AllLines(())
+            WorkingTree.at(tmp_path),
+            make_binding(severity=Severity.WARNING),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
         )
 
         assert check.check(["a.py"]) == [make_diagnostic(judged=True, severity=Severity.WARNING)]
@@ -213,7 +322,14 @@ class TestJudgeCheck:
                 violations=(make_violation(confidence=0.5),),
             )
         )
-        check = JudgeCheck(tmp_path, make_binding(), judge, THRESHOLD, AllLines(()))
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(),
+            judge,
+            THRESHOLD,
+            AllLines(()),
+            Classification(),
+        )
 
         assert check.check(["a.py"]) == [
             make_diagnostic(judged=True, severity=Severity.WARNING, confidence=0.5)

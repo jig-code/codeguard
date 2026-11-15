@@ -1,27 +1,28 @@
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from pathlib import Path
 
+from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic
 from codeguard.review.judge import Judge, JudgeError, JudgeRequest
-from codeguard.working_tree import AllLines, ChangedLines
+from codeguard.syntax import Classification
 
 
 @dataclass(frozen=True)
 class JudgeCheck:
-    root: Path
+    working_tree: WorkingTree
     binding: Binding
     judge: Judge
     confidence_threshold: float
-    scope: ChangedLines | AllLines
+    scope: LineScope
+    classification: Classification
 
     def check(self, files: Sequence[str]) -> list[Diagnostic]:
         matched = [
             file
             for file in self.binding.files(files)
-            if self.binding.is_triggered(self.scope, file)
+            if self.classification.is_triggered(file, self.binding.triggers)
         ]
         if not matched:
             return []
@@ -49,4 +50,6 @@ class JudgeCheck:
         return verdict.diagnostics_for(self.binding, file, self.confidence_threshold)
 
     def _request(self, file: str) -> JudgeRequest:
-        return JudgeRequest.of_change(self.binding, self.root, file, self.scope)
+        return JudgeRequest.of_change(
+            self.binding, self.working_tree, file, self.scope, self.classification
+        )

@@ -1,8 +1,6 @@
 from general_rule import (
     EVAL,
-    GENERAL_SKILL,
     PYTHON_CASE,
-    PYTHON_SUPPLEMENT,
     RULE,
     SKILL_DIR,
     TYPESCRIPT_CASE,
@@ -22,36 +20,15 @@ def binding(repo):
     return bound
 
 
-class TestGeneralRuleSkill:
-    def test_a_file_is_judged_with_the_skill_and_its_language_supplement(self, repo):
-        write_general_rule(repo)
-
-        assert binding(repo).skill_for("orders.py").text == f"{GENERAL_SKILL}\n{PYTHON_SUPPLEMENT}"
-
-    def test_a_language_without_a_supplement_gets_the_skill_alone(self, repo):
-        write_general_rule(repo)
-
-        assert binding(repo).skill_for("orders.ts").text == GENERAL_SKILL
-
-    def test_a_supplement_changes_only_its_language_version(self, repo):
-        write_general_rule(repo)
-        before = binding(repo)
-        repo.write(f"{SKILL_DIR}/python.md", "## In Python\n\nA settings module.\n")
-
-        after = binding(repo)
-
-        assert after.version_for("python") != before.version_for("python")
-        assert after.version_for("typescript") == before.version_for("typescript")
-
-    def test_the_skill_changes_every_language_version(self, repo):
+class TestGeneralRuleVersion:
+    def test_rewording_the_skill_changes_the_rule_version(self, repo):
         write_general_rule(repo)
         before = binding(repo)
         repo.write(f"{SKILL_DIR}/SKILL.md", "# Knowledge stated once, reworded\n")
 
         after = binding(repo)
 
-        assert after.version_for("python") != before.version_for("python")
-        assert after.version_for("typescript") != before.version_for("typescript")
+        assert after.version != before.version
 
 
 class TestGeneralRuleEvals:
@@ -68,18 +45,6 @@ class TestGeneralRuleEvals:
         assert sorted(report.name for report in result.reports) == [
             f"{RULE} (python) on claude-cli's default model",
             f"{RULE} (typescript) on claude-cli's default model",
-        ]
-
-    def test_each_case_is_judged_with_its_language_supplement(self, repo):
-        write_general_rule(repo)
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
-        judge = RecordingJudge()
-
-        self.run(repo, judge)
-
-        assert sorted(request.skill.text for request in judge.received) == [
-            GENERAL_SKILL,
-            f"{GENERAL_SKILL}\n{PYTHON_SUPPLEMENT}",
         ]
 
     def test_a_single_language_rule_keeps_one_report(self, repo):

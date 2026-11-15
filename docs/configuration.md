@@ -22,7 +22,6 @@ in use.
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
 | `judge.provider`, `judge.model` | `claude-cli` and the `claude` CLI's own default model | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
 | `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
-| `judge.project`, `judge.location` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Where Gemini runs; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). | |
 
 ## Rule package keys
 
@@ -66,8 +65,9 @@ on telemetry:
 | `CODEGUARD_JUDGE__PROVIDER`, `CODEGUARD_JUDGE__MODEL` | unset | Set `judge.provider` and `judge.model` in place of the config file's, such as for a CI job that judges with Bedrock while developers use the `claude` CLI. An empty variable counts as unset. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
 | `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs and how it signs in; see [Bedrock](judges.md#bedrock). |
-| `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | unset | Where Gemini runs, for a `gemini` binding, unless `judge.project` and `judge.location` set it; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
-| `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_API_KEY` | Application Default Credentials | How Gemini signs in: a service account key file, or an API key a proxy adds. |
+| `CODEGUARD_JUDGE__GEMINI__PROJECT` | unset; judging with Gemini without it is a config error | The Google Cloud project Gemini runs in; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
+| `CODEGUARD_JUDGE__GEMINI__LOCATION` | `global` | The Vertex AI location Gemini runs in. |
+| `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`, `CODEGUARD_JUDGE__GEMINI__API_KEY` | unset; judging with Gemini without one is a config error | How Gemini signs in: a service account key file, or an API key. Setting both is a config error. These Gemini settings come from the environment only: `judge.gemini` in the config file is a config error. |
 | `LOGFIRE_TOKEN` | none: nothing is sent | Sends a trace of each run to Logfire; see [Telemetry](telemetry.md). |
 
 ## No setting on purpose

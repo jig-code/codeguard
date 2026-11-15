@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import httpx2
 import pytest
+from pydantic import SecretStr
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
@@ -20,7 +21,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.gemini_provider import GeminiJudge, gemini_judge
+from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -30,7 +31,7 @@ from codeguard.review import (
     Verdict,
 )
 
-MODEL = "gemini-3.1-pro-preview"
+MODEL = "gemini-judge-test"
 VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
@@ -124,6 +125,28 @@ class RecordingProcesses:
 
     def __exit__(self, *exc_info: object) -> None:
         self.events.append("released")
+
+
+@dataclass
+class VertexVerdicts:
+    verdict: Verdict
+    sent: list[httpx2.Request] = field(default_factory=list)
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.sent.append(request)
+        answer = self.verdict.model_dump_json()
+        return httpx2.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"role": "model", "parts": [{"text": answer}]},
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {"promptTokenCount": 10, "candidatesTokenCount": 5},
+            },
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -475,3 +498,25 @@ class TestGeminiJudge:
         assert attributes["tool_calls"] == (
             '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
         )
+
+
+class TestGeminiJudgeOnVertex:
+    def test_api_key_judges_in_the_project_and_location(
+        self, tmp_path, make_judge_request, make_verdict
+    ):
+        verdict = make_verdict()
+        vertex = VertexVerdicts(verdict)
+        models = VertexGemini(
+            "my-project",
+            "europe-west4",
+            api_key=SecretStr("proxy-injected"),
+            transport=httpx2.MockTransport(vertex),
+        )
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement == Judgement(verdict)
+        [request] = vertex.sent
+        assert "/projects/my-project/locations/europe-west4/" in request.url.path
+        assert f"/models/{MODEL}:" in request.url.path
+        assert request.headers["x-goog-api-key"] == "proxy-injected"

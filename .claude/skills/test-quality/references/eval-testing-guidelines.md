@@ -17,7 +17,7 @@ fixture rules' rule evals (`evals/judge/python/rule-evals/<rule>.yaml`). For eac
 writes the case's edits into an `EditRepo`, with a `.codeguard/config.yaml` that includes
 only that rule, and reviews them with
 `Rules(working_tree).review(working_tree.changed_lines("HEAD"))`: the path
-`codeguard review` takes, with the real judge the fixture binding names. It asserts the
+`codeguard review` takes, with the real judge the fixture package names. It asserts the
 review has no judge errors and that its outcome is the case's expected outcome.
 
 Mark an LLM test `@pytest.mark.llm` on its class. Plain `uv run pytest` deselects it.
@@ -29,7 +29,7 @@ uv run pytest -m llm -n 4 --judge-provider gemini
 ```
 
 `--llm-runs N` runs each case N times (default 3). `--judge-provider` and `--judge-model`
-judge every case with another provider or model than its binding names. `docs/testing.md`
+judge every case with another provider or model than its package names. `docs/testing.md`
 says which changes need the LLM tests and how many runs.
 
 ## Cases

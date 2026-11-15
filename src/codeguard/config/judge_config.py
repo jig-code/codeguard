@@ -1,6 +1,8 @@
 from enum import StrEnum
+from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
 
@@ -42,7 +44,7 @@ class JudgeProvider(StrEnum):
 _DEFAULT_MODELS = {
     JudgeProvider.CLAUDE_CLI: None,
     JudgeProvider.CODEX_CLI: "gpt-6-luna",
-    JudgeProvider.GEMINI: "gemini-3.1-pro-preview",
+    JudgeProvider.GEMINI: "gemini-4-argon",
     JudgeProvider.BEDROCK: "us.anthropic.claude-haiku-5-5",
 }
 
@@ -104,13 +106,36 @@ class JudgeChoice(BaseModel):
         return JudgeModel(provider=provider, name=self.model)
 
 
+class GeminiSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="CODEGUARD_JUDGE__GEMINI__", frozen=True, env_ignore_empty=True
+    )
+
+    project: str | None = None
+    location: str = "global"
+    api_key: SecretStr | None = None
+    credentials_file: Path | None = None
+
+    def check_sign_in(self) -> None:
+        if self.project is None:
+            raise ConfigError("Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT")
+        if self.api_key is None and self.credentials_file is None:
+            raise ConfigError(
+                "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
+            )
+        if self.api_key is not None and self.credentials_file is not None:
+            raise ConfigError(
+                "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
+                "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
+            )
+
+
 class JudgeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None
     model: str | None = None
-    project: str | None = None
-    location: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
 
     @property

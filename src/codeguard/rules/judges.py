@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from os import process_cpu_count
 from pathlib import Path
@@ -7,7 +8,7 @@ from diskcache import Cache
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
 from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
 from codeguard.review import CachedJudge, Deadline, Judge
 
@@ -17,6 +18,7 @@ _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
 @dataclass(frozen=True)
 class Judges:
     config: JudgeConfig = JudgeConfig()
+    gemini: GeminiSettings = field(default_factory=GeminiSettings)
     store: Cache = field(default_factory=lambda: Cache(_JUDGEMENT_CACHE_DIR))
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
@@ -31,6 +33,10 @@ class Judges:
             },
         )
 
+    def require_sign_ins(self, models: Iterable[JudgeModel]) -> None:
+        if any(model.provider is JudgeProvider.GEMINI for model in models):
+            self.gemini.check_sign_in()
+
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> CachedJudge:
@@ -41,7 +47,10 @@ class Judges:
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(root, model.required_name, processes, deadline=deadline)
         if model.provider is JudgeProvider.GEMINI:
-            models = VertexGemini(self.config.project, self.config.location)
+            gemini = self.gemini
+            models = VertexGemini(
+                gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
+            )
             return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
             return GeminiJudge(

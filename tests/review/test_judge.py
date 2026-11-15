@@ -1,10 +1,13 @@
+import textwrap
+
 import pytest
-from git_repo import GitRepo
 from pydantic import ValidationError
 
+from codeguard.config import ChangeKind
+from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
 from codeguard.review import JudgeRequest, Severity, Verdict
 from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
-from codeguard.working_tree import ChangedLines, WorkingTree
+from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
 
@@ -14,50 +17,230 @@ class TestJudgeRequest:
         self, make_skill, make_judge_request
     ):
         skill = make_skill(name="pricing", text="Prices are integers.\n")
-        request = make_judge_request(
-            skill=skill, file="pricing.py", changes="@@ -0,0 +1 @@\n+A = 1\n"
-        )
+        request = make_judge_request(skill=skill, file="pricing.py", changes="+     1\tA = 1\n")
 
         assert request.prompt == (
             '<rule name="pricing">\nPrices are integers.\n</rule>\n\n'
-            '<changes path="pricing.py">\n@@ -0,0 +1 @@\n+A = 1\n</changes>\n'
+            '<changes path="pricing.py">\n+     1\tA = 1\n</changes>\n'
         )
 
-    def test_convention_is_the_skill_and_the_supplement_for_the_file_language(
-        self, tmp_path, make_binding, make_skill
+    def test_judged_lines_are_numbered_with_their_file_line_numbers(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
     ):
-        (tmp_path / "orders.py").write_text('STATUS = "shipped"\n')
-        skill = make_skill()
-        supplement = make_skill(text="## In Python\n\nA module constant is a home.\n")
-        binding = make_binding(skill=skill, supplements={"python": supplement})
-        scope = ChangedLines({"orders.py": frozenset({1})})
+        returned = b"    return total - DISCOUNT"
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                DISCOUNT = 5
 
-        request = JudgeRequest.of_change(binding, tmp_path, "orders.py", scope)
 
-        assert request.skill.text == f"{skill.text}\n{supplement.text}"
+                def discounted(total):
+                    return total - DISCOUNT
+            """)
+        )
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[
+                KeptRow(1, 1),
+                KeptRow(2, 2),
+                KeptRow(3, 3),
+                KeptRow(4, 4),
+                AddedRow(5, RowText(returned)),
+            ],
+        )
+        classified = make_file_classification(context_lines=frozenset({4, 5}))
 
-    def test_changes_are_the_diff_of_the_file_from_the_base(
-        self, tmp_path, make_binding, make_skill
-    ):
-        git_repo = GitRepo.init(tmp_path.resolve())
-        git_repo.write("pricing.py", "DISCOUNT = 5\n")
-        git_repo.commit("Add pricing")
-        git_repo.write("pricing.py", "DISCOUNT = 6\n")
-        scope = WorkingTree(root=git_repo.root).changed_lines("HEAD")
-
-        request = JudgeRequest.of_change(make_binding(), git_repo.root, "pricing.py", scope)
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
 
         assert request == JudgeRequest(
             make_skill(),
             "pricing.py",
-            "diff --git a/pricing.py b/pricing.py\n"
-            "index 1871a2f..bea06f6 100644\n"
-            "--- a/pricing.py\n"
-            "+++ b/pricing.py\n"
-            "@@ -1 +1 @@\n"
-            "-DISCOUNT = 5\n"
-            "+DISCOUNT = 6\n",
+            "      4\tdef discounted(total):\n+     5\t    return total - DISCOUNT\n",
         )
+
+    def test_removed_rows_come_before_the_line_after_them_with_their_reported_line(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2\n")
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[KeptRow(1, 1), RemovedRow(2, RowText(b"FEE = 1")), KeptRow(3, 2)],
+        )
+        classified = make_file_classification(context_lines=frozenset({1, 2}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(),
+            "pricing.py",
+            "      1\tDISCOUNT = 5\n-     1\tFEE = 1\n      2\tTAX = 2\n",
+        )
+
+    def test_removed_row_that_is_not_utf_8_is_shown_replace_decoded(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
+        scope = make_changed_lines(
+            file="pricing.py", rows=[KeptRow(1, 1), RemovedRow(2, RowText(b"FEE = '\xff'"))]
+        )
+        classified = make_file_classification(context_lines=frozenset({1}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tFEE = '\ufffd'\n"
+        )
+
+    def test_rows_removed_from_the_end_of_the_file_come_last(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
+        scope = make_changed_lines(
+            file="pricing.py", rows=[KeptRow(1, 1), RemovedRow(2, RowText(b"TAX = 2"))]
+        )
+        classified = make_file_classification(context_lines=frozenset({1}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tTAX = 2\n"
+        )
+
+    def test_shown_lines_take_in_the_nodes_of_the_rule_triggers(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        added = b"    x = 1"
+        (tmp_path / "pricing.py").write_text(
+            textwrap.dedent("""\
+                try:
+                    x = 1
+                except:
+                    pass
+            """)
+        )
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[KeptRow(1, 1), AddedRow(2, RowText(added)), KeptRow(2, 3), KeptRow(3, 4)],
+        )
+        classified = make_file_classification(
+            context_lines=frozenset({2}),
+            kind_lines={ChangeKind.CONTROL_FLOW: frozenset({1, 2, 3, 4})},
+        )
+        binding = make_binding(triggers=frozenset({ChangeKind.CONTROL_FLOW}))
+
+        request = JudgeRequest.of_change(
+            binding,
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(),
+            "pricing.py",
+            "      1\ttry:\n+     2\t    x = 1\n      3\texcept:\n      4\t    pass\n",
+        )
+
+    def test_all_lines_is_the_whole_file_changed(self, tmp_path, make_binding, make_skill):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2")
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            AllLines(("pricing.py",)),
+            Classification(),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "pricing.py", "+     1\tDISCOUNT = 5\n+     2\tTAX = 2\n"
+        )
+
+    def test_changed_point_past_the_end_of_the_file_is_left_out(
+        self,
+        make_new_file_changed_lines,
+        make_file_classification,
+        tmp_path,
+        make_binding,
+        make_skill,
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
+        scope = make_new_file_changed_lines(
+            file="pricing.py",
+            content=textwrap.dedent("""\
+                DISCOUNT = 5
+                TAX = 2
+            """).encode(),
+        )
+        classified = make_file_classification(context_lines=frozenset({1, 2}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(make_skill(), "pricing.py", "+     1\tDISCOUNT = 5\n")
+
+    def test_symlink_is_shown_as_its_link_text(
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "rates.py").write_text("RATE = 2\n")
+        link = "rates.py"
+        (tmp_path / "pricing.py").symlink_to(link)
+        scope = make_new_file_changed_lines(file="pricing.py", content=link.encode())
+
+        request = JudgeRequest.of_change(
+            make_binding(), WorkingTree.at(tmp_path), "pricing.py", scope, Classification()
+        )
+
+        assert request == JudgeRequest(make_skill(), "pricing.py", "+     1\trates.py\n")
+
+    def test_lines_are_numbered_as_git_numbers_them(
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+    ):
+        added = b"TAX = 2"
+        (tmp_path / "pricing.py").write_bytes(b"DISCOUNT = 5\f\n" + added + b"\n")
+        scope = make_changed_lines(
+            file="pricing.py", rows=[KeptRow(1, 1), AddedRow(2, RowText(added))]
+        )
+        classified = make_file_classification(context_lines=frozenset({2}))
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "pricing.py",
+            scope,
+            Classification({"pricing.py": classified}),
+        )
+
+        assert request == JudgeRequest(make_skill(), "pricing.py", "+     2\tTAX = 2\n")
 
     def test_instructions_are_the_same_for_every_rule_and_file(
         self, make_skill, make_judge_request

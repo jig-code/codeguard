@@ -9,10 +9,11 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
+from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.skill import Skill
-from codeguard.working_tree import AllLines, ChangedLines
+from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
@@ -26,9 +27,30 @@ class JudgeRequest:
 
     @classmethod
     def of_change(
-        cls, binding: Binding, root: Path, file: str, scope: ChangedLines | AllLines
+        cls,
+        binding: Binding,
+        working_tree: WorkingTree,
+        file: str,
+        scope: LineScope,
+        classification: Classification,
     ) -> Self:
-        return cls(binding.skill_for(file), file, scope.diff(root, file))
+        raw = working_tree.contents(file).splitlines()
+        content = [_decoded_for_judge(line) for line in raw]
+        lines = classification.judged_lines(file, binding.triggers)
+        shown = set(range(1, len(content) + 1) if lines is None else lines)
+        added = scope.added_lines(file)
+        removals = {removal.shown_before: removal for removal in scope.removals_in(file)}
+        rows: list[str] = []
+        for number in sorted(shown | set(removals)):
+            if removal := removals.get(number):
+                rows.extend(
+                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text.content)}\n"
+                    for row in removal.rows
+                )
+            if number in shown and number <= len(content):
+                mark = "+" if added is None or number in added else " "
+                rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
+        return cls(binding.skill, file, "".join(rows))
 
     @property
     def instructions(self) -> str:
@@ -40,6 +62,10 @@ class JudgeRequest:
             f'<rule name="{self.skill.name}">\n{self.skill.text}</rule>\n\n'
             f'<changes path="{self.file}">\n{self.changes}</changes>\n'
         )
+
+
+def _decoded_for_judge(row: bytes) -> str:
+    return row.decode(errors="replace")
 
 
 # The likelihood levels the judge rates a violation with. The schema gives the model only these
@@ -77,7 +103,10 @@ class Violation(BaseModel):
         description="The file under review's path, exactly as the `changes` element gives it."
     )
     lines: LineRange = Field(
-        description="The first and last line in the file of the code that breaks the rule."
+        description=(
+            "The first and last line of the code that breaks the rule, numbered as the "
+            "`changes` element numbers them."
+        )
     )
     message: str = Field(description="What breaks the rule, in one plain sentence.")
     confidence: Confidence = Field(
@@ -128,9 +157,7 @@ class Verdict(BaseModel):
 
 
 def output_schema(output: type[BaseModel]) -> JsonSchemaValue:
-    """The schema of what the model answers with, as a provider sends it to the model.
-
-    pydantic-ai's generator describes each `Confidence` value by its docstring; Pydantic's own
+    """pydantic-ai's generator describes each `Confidence` value by its docstring; Pydantic's own
     `model_json_schema` leaves the docstrings out. The Gemini provider gets this schema from
     pydantic-ai itself, which uses the same generator.
     """

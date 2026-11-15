@@ -6,6 +6,7 @@ from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE, ConfigLoader
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import (
+    GeminiSettings,
     JudgeChoice,
     JudgeConfig,
     JudgeModel,
@@ -55,6 +56,7 @@ __all__ = [
     "ConfigLoader",
     "ExactVersion",
     "GateRule",
+    "GeminiSettings",
     "GitPackageConfig",
     "JudgeChoice",
     "JudgeConfig",
