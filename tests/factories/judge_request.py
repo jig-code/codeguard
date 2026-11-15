@@ -1,13 +1,13 @@
 import factory
 
 from codeguard.review import JudgeRequest
-from factories.skill import MakeSkill
+from factories.judge_rule import MakeJudgeRule
 
 
 class MakeJudgeRequest(factory.Factory):
     class Meta:
         model = JudgeRequest
 
-    skill = factory.SubFactory(MakeSkill)
+    judge_rule = factory.SubFactory(MakeJudgeRule)
     file = "a.py"
     changes = "--- /dev/null\n+++ b/a.py\n@@ -0,0 +1 @@\n+print(1)\n"

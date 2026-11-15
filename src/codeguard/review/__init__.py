@@ -17,9 +17,9 @@ from codeguard.review.judge import (
 )
 from codeguard.review.judge_check import JudgeCheck
 from codeguard.review.judge_plan import JudgePlan, PlannedCall
+from codeguard.review.judge_rule import JudgeRule
 from codeguard.review.review import Review
 from codeguard.review.reviewer import Reviewer, Step
-from codeguard.review.skill import Skill
 
 __all__ = [
     "DEFAULT_MODEL_KEY",
@@ -40,12 +40,12 @@ __all__ = [
     "JudgePlan",
     "JudgeProcessError",
     "JudgeRequest",
+    "JudgeRule",
     "JudgeTimeout",
     "PlannedCall",
     "Review",
     "Reviewer",
     "Severity",
-    "Skill",
     "Step",
     "Verdict",
     "output_schema",

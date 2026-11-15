@@ -169,8 +169,8 @@ class TestConfigLoader:
 
 
 class TestRulesetLoader:
-    def test_local_ruleset_loads_bindings_by_file(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_local_ruleset_loads_bindings_by_file(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/python/placement.yaml",
             "skill: .claude/skills/responsibility-placement\n"
@@ -194,8 +194,8 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_binding_file_may_end_in_yml(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_binding_file_may_end_in_yml(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yml",
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
@@ -205,8 +205,8 @@ class TestRulesetLoader:
 
         assert ruleset.judged_rule_ids() == {"responsibility-placement"}
 
-    def test_skill_bound_in_a_yaml_and_a_yml_file_is_an_error(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_skill_bound_in_a_yaml_and_a_yml_file_is_an_error(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         binding = 'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
         repo.write(BINDING, binding)
         repo.write(".codeguard/bindings/placement.yml", binding)
@@ -220,8 +220,8 @@ class TestRulesetLoader:
             "is bound more than once: placement.yaml, placement.yml"
         )
 
-    def test_loads_the_binding_model(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_loads_the_binding_model(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
@@ -232,9 +232,9 @@ class TestRulesetLoader:
 
         assert ruleset.bindings.root["placement.yaml"].model == "claude-haiku-5-5"
 
-    def test_loads_the_binding_provider(self, repo, make_skill, make_binding_config):
+    def test_loads_the_binding_provider(self, repo, make_judge_rule, make_binding_config):
         model = "gemini-judge-test"
-        repo.write(SKILL, make_skill().text)
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
@@ -249,8 +249,8 @@ class TestRulesetLoader:
             model=model,
         )
 
-    def test_loads_the_binding_triggers(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_loads_the_binding_triggers(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
@@ -264,16 +264,16 @@ class TestRulesetLoader:
             ChangeKind.FIXTURE,
         }
 
-    def test_binding_without_triggers_triggers_on_any_change(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_binding_without_triggers_triggers_on_any_change(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(BINDING, 'skill: .claude/skills/responsibility-placement\npaths: ["**"]\n')
 
         ruleset = RulesetLoader.local(repo.root).load()
 
         assert ruleset.bindings.root["placement.yaml"].triggers == {ChangeKind.ANY}
 
-    def test_trigger_that_is_no_change_kind_or_gate_is_an_error(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_trigger_that_is_no_change_kind_or_gate_is_an_error(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\n'
@@ -288,8 +288,8 @@ class TestRulesetLoader:
             "  bindings.placement.yaml.triggers: no change kind or gate enum-value"
         )
 
-    def test_trigger_names_a_gate_of_the_ruleset(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_trigger_names_a_gate_of_the_ruleset(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(".codeguard/gates/enum-value.yml", ENUM_VALUE_GATE)
         repo.write(
             BINDING,
@@ -303,8 +303,8 @@ class TestRulesetLoader:
             "gate:enum-value"
         }
 
-    def test_ci_only_rule_is_selected_in_ci(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_ci_only_rule_is_selected_in_ci(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(BINDING, 'skill: .claude/skills/responsibility-placement\npaths: ["**"]\n')
         ruleset = replace(
             RulesetLoader.local(repo.root).load(), selection=RulesetConfig(ci_only=True)
@@ -312,8 +312,8 @@ class TestRulesetLoader:
 
         assert list(ruleset.selected_bindings()) == ["responsibility-placement"]
 
-    def test_ci_only_rule_is_not_selected_when_skipped(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_ci_only_rule_is_not_selected_when_skipped(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(BINDING, 'skill: .claude/skills/responsibility-placement\npaths: ["**"]\n')
         ruleset = replace(
             RulesetLoader.local(repo.root).load(),
@@ -323,8 +323,8 @@ class TestRulesetLoader:
 
         assert ruleset.selected_bindings() == {}
 
-    def test_gate_named_after_a_change_kind_is_an_error(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_gate_named_after_a_change_kind_is_an_error(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             ".codeguard/gates/fixture.yml",
             "id: fixture\nlanguage: python\nrule:\n  kind: decorator\n",
@@ -359,9 +359,9 @@ class TestRulesetLoader:
 
         assert ruleset.bindings == BindingsConfig({})
 
-    def test_package_skill_is_under_the_package(self, tmp_path, make_skill):
+    def test_package_skill_is_under_the_package(self, tmp_path, make_judge_rule):
         (tmp_path / "python/skills/placement").mkdir(parents=True)
-        (tmp_path / "python/skills/placement/SKILL.md").write_text(make_skill().text)
+        (tmp_path / "python/skills/placement/SKILL.md").write_text(make_judge_rule().text)
         (tmp_path / "python/bindings").mkdir()
         (tmp_path / "python/bindings/placement.yaml").write_text(
             'skill: python/skills/placement\npaths: ["**"]\ntriggers: [any]\n'
@@ -383,8 +383,8 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_errors_name_the_binding_file(self, repo, make_skill):
-        repo.write(SKILL, make_skill().text)
+    def test_errors_name_the_binding_file(self, repo, make_judge_rule):
+        repo.write(SKILL, make_judge_rule().text)
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npath: ["**"]\nseverity: fatal\n'

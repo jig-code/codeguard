@@ -7,7 +7,7 @@ _FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 
 
 @dataclass(frozen=True)
-class Skill:
+class JudgeRule:
     name: str
     text: str
 
