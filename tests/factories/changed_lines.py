@@ -12,12 +12,13 @@ class MakeChangedLinesBase(factory.Factory):
 
 
 class MakeChangedLines(MakeChangedLinesBase):
+    base_path = factory.SelfAttribute("file")
     rows = (AddedRow(1, RowText(b"print(1)")),)
 
     @classmethod
     def _create(cls, model_class, **kwargs):
-        file = kwargs["file"]
-        return model_class({file: FileDiff.from_whole_file_rows(file, kwargs["rows"])})
+        diff = FileDiff.from_whole_file_rows(kwargs["base_path"], kwargs["rows"])
+        return model_class({kwargs["file"]: diff})
 
 
 class MakeNewFileChangedLines(MakeChangedLinesBase):

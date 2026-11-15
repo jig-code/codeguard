@@ -9,7 +9,7 @@ from pydantic_ai import UseEnumMemberDocstrings
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
-from codeguard.repository import LineScope, WorkingTree
+from codeguard.repository import FileDiff, LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.judge_rule import JudgeRule
@@ -34,23 +34,13 @@ class JudgeRequest:
         scope: LineScope,
         classification: Classification,
     ) -> Self:
-        raw = working_tree.contents(file).splitlines()
-        content = [_decoded_for_judge(line) for line in raw]
-        lines = classification.judged_lines(file, binding.triggers)
-        shown = set(range(1, len(content) + 1) if lines is None else lines)
-        added = scope.added_lines(file)
-        removals = {removal.shown_before: removal for removal in scope.removals_in(file)}
-        rows: list[str] = []
-        for number in sorted(shown | set(removals)):
-            if removal := removals.get(number):
-                rows.extend(
-                    f"-{removal.reported_line:>6}\t{_decoded_for_judge(row.text.content)}\n"
-                    for row in removal.rows
-                )
-            if number in shown and number <= len(content):
-                mark = "+" if added is None or number in added else " "
-                rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
-        return cls(binding.judge_rule, file, "".join(rows))
+        content = working_tree.contents(file)
+        diff = scope.file_diff(file) or FileDiff.from_new_file(content)
+        return cls(
+            binding.judge_rule,
+            file,
+            diff.unified(file, content, classification.context_lines(file)),
+        )
 
     @property
     def instructions(self) -> str:
@@ -62,10 +52,6 @@ class JudgeRequest:
             f'<rule name="{self.judge_rule.name}">\n{self.judge_rule.text}</rule>\n\n'
             f'<changes path="{self.file}">\n{self.changes}</changes>\n'
         )
-
-
-def _decoded_for_judge(row: bytes) -> str:
-    return row.decode(errors="replace")
 
 
 # The likelihood levels the judge rates a violation with. The schema gives the model only these
@@ -103,10 +89,7 @@ class Violation(BaseModel):
         description="The file under review's path, exactly as the `changes` element gives it."
     )
     lines: LineRange = Field(
-        description=(
-            "The first and last line of the code that breaks the rule, numbered as the "
-            "`changes` element numbers them."
-        )
+        description="The first and last line in the file of the code that breaks the rule."
     )
     message: str = Field(description="What breaks the rule, in one plain sentence.")
     confidence: Confidence = Field(

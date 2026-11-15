@@ -3,12 +3,12 @@ import textwrap
 from git_repo import GitRepo
 
 from codeguard.repository import (
+    AddedRow,
     AllLines,
     ChangedLines,
     FileDiff,
     KeptRow,
     LineScopes,
-    Removal,
     RemovedRow,
     RowText,
     WorkingTree,
@@ -36,37 +36,22 @@ class TestLineScopes:
                     base_path="staged.py",
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=1,
-                            reported_line=1,
-                            rows=(RemovedRow(1, RowText(b"b = 1")),),
-                        ),
-                    ),
+                    rows=(RemovedRow(1, RowText(b"b = 1")), AddedRow(1, RowText(b"b = 2"))),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset({1}),
                 ),
                 "unstaged.py": FileDiff(
                     base_path="unstaged.py",
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=1,
-                            reported_line=1,
-                            rows=(RemovedRow(1, RowText(b"a = 1")),),
-                        ),
-                    ),
+                    rows=(RemovedRow(1, RowText(b"a = 1")), AddedRow(1, RowText(b"a = 2"))),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset({1}),
                 ),
                 "untracked.py": FileDiff(
                     base_path=None,
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(AddedRow(1, RowText(b"d = 1")),),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset(),
                 ),
             },
             base=git_repo.head(),
@@ -94,20 +79,42 @@ class TestLineScopes:
                     base_path=None,
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(AddedRow(1, RowText(b"a = 1")),),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset(),
                 ),
                 "untracked.py": FileDiff(
                     base_path=None,
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(AddedRow(1, RowText(b"c = 1")),),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset(),
                 ),
             },
             base=merge_base,
+        )
+
+    def test_adding_a_final_newline_replaces_the_last_line(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("a.py", "a = 1")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", "a = 1\n")
+
+        changed = LineScopes.at(WorkingTree.at(git_repo.root)).changed_lines("HEAD")
+
+        assert changed == ChangedLines(
+            {
+                "a.py": FileDiff(
+                    base_path="a.py",
+                    added_lines=frozenset({1}),
+                    deletion_points=frozenset(),
+                    rows=(
+                        RemovedRow(1, RowText(b"a = 1", ends_with_newline=False)),
+                        AddedRow(1, RowText(b"a = 1")),
+                    ),
+                    head_lines_by_base_line={},
+                )
+            },
+            base=git_repo.head(),
         )
 
     def test_staged_edit_keeps_the_head_line_of_every_unchanged_base_line(self, tmp_path):
@@ -126,15 +133,12 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({10}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=10,
-                            reported_line=10,
-                            rows=(RemovedRow(10, RowText(b"x10 = 10")),),
-                        ),
+                    rows=(
+                        *(KeptRow(line, line) for line in range(1, 10)),
+                        RemovedRow(10, RowText(b"x10 = 10")),
+                        AddedRow(10, RowText(b"x10 = 0")),
                     ),
                     head_lines_by_base_line={line: line for line in range(1, 10)},
-                    removed_base_lines=frozenset({10}),
                 )
             },
             base=git_repo.head(),
@@ -169,15 +173,14 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({2, 4}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=2,
-                            reported_line=2,
-                            rows=(RemovedRow(2, RowText(b"b = 1")),),
-                        ),
+                    rows=(
+                        KeptRow(1, 1),
+                        RemovedRow(2, RowText(b"b = 1")),
+                        AddedRow(2, RowText(b"b = 2")),
+                        KeptRow(3, 3),
+                        AddedRow(4, RowText(b"d = 1")),
                     ),
                     head_lines_by_base_line={1: 1, 3: 3},
-                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -199,15 +202,12 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({2}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=2,
-                            reported_line=2,
-                            rows=(RemovedRow(2, RowText(b"b = 1")),),
-                        ),
+                    rows=(
+                        KeptRow(1, 1),
+                        RemovedRow(2, RowText(b"b = 1", ends_with_newline=False)),
+                        AddedRow(2, RowText(b"b = 2", ends_with_newline=False)),
                     ),
                     head_lines_by_base_line={1: 1},
-                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -240,9 +240,13 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({2, 3, 4}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(
+                        KeptRow(1, 1),
+                        AddedRow(2, RowText(b"\x0cdef f():")),
+                        AddedRow(3, RowText("    s = 'p\u2028+q\r+r'".encode())),
+                        AddedRow(4, RowText(b"    return 2")),
+                    ),
                     head_lines_by_base_line={1: 1},
-                    removed_base_lines=frozenset(),
                 )
             },
             base=git_repo.head(),
@@ -265,17 +269,15 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({2}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(KeptRow(1, 1), AddedRow(2, RowText("\u00a0".encode()))),
                     head_lines_by_base_line={1: 1},
-                    removed_base_lines=frozenset(),
                 ),
                 "b.py": FileDiff(
                     base_path=None,
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(AddedRow(1, RowText("\u00a0".encode())),),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset(),
                 ),
             },
             base=git_repo.head(),
@@ -295,15 +297,8 @@ class TestLineScopes:
                     base_path="x y.py",
                     added_lines=frozenset({1}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=1,
-                            reported_line=1,
-                            rows=(RemovedRow(1, RowText(b"a = 1")),),
-                        ),
-                    ),
+                    rows=(RemovedRow(1, RowText(b"a = 1")), AddedRow(1, RowText(b"a = 2"))),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset({1}),
                 )
             },
             base=git_repo.head(),
@@ -325,15 +320,12 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset({10}),
                     deletion_points=frozenset(),
-                    removals=(
-                        Removal(
-                            shown_before=10,
-                            reported_line=10,
-                            rows=(RemovedRow(10, RowText(b"x9 = 9")),),
-                        ),
+                    rows=(
+                        *(KeptRow(line, line) for line in range(1, 10)),
+                        RemovedRow(10, RowText(b"x9 = 9")),
+                        AddedRow(10, RowText(b"x9 = 10")),
                     ),
                     head_lines_by_base_line={line: line for line in range(1, 10)},
-                    removed_base_lines=frozenset({10}),
                 )
             },
             base=git_repo.head(),
@@ -351,9 +343,12 @@ class TestLineScopes:
                     base_path=None,
                     added_lines=frozenset({1, 3}),
                     deletion_points=frozenset(),
-                    removals=(),
+                    rows=(
+                        AddedRow(1, RowText(b"a = 1")),
+                        AddedRow(2, RowText(b"")),
+                        AddedRow(3, RowText(b"b = 1")),
+                    ),
                     head_lines_by_base_line={},
-                    removed_base_lines=frozenset(),
                 )
             },
             base=git_repo.head(),
@@ -373,15 +368,8 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset(),
                     deletion_points=frozenset({1}),
-                    removals=(
-                        Removal(
-                            shown_before=2,
-                            reported_line=1,
-                            rows=(RemovedRow(2, RowText(b"b = '\xff'")),),
-                        ),
-                    ),
+                    rows=(KeptRow(1, 1), RemovedRow(2, RowText(b"b = '\xff'"))),
                     head_lines_by_base_line={1: 1},
-                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),
@@ -401,15 +389,8 @@ class TestLineScopes:
                     base_path="a.py",
                     added_lines=frozenset(),
                     deletion_points=frozenset({1}),
-                    removals=(
-                        Removal(
-                            shown_before=2,
-                            reported_line=1,
-                            rows=(RemovedRow(2, RowText(b"b = 1")),),
-                        ),
-                    ),
+                    rows=(KeptRow(1, 1), RemovedRow(2, RowText(b"b = 1"))),
                     head_lines_by_base_line={1: 1},
-                    removed_base_lines=frozenset({2}),
                 )
             },
             base=git_repo.head(),

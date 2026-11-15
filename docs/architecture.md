@@ -55,8 +55,13 @@ because that file has to change anyway.
 
 **The judge** grades one rule against one file's change, through the `claude` or `codex`
 CLI, Gemini on Vertex AI or Amazon Bedrock. Its instructions are
-[`review/judge.md`](../src/codeguard/review/judge.md), and the changed code it gets comes
-from the syntax table in [`syntax/`](../src/codeguard/syntax/).
+[`review/judge.md`](../src/codeguard/review/judge.md). It gets the change as a unified
+diff, the format git prints, not one of codeguard's own: models already read it, and its
+hunk headers mark every line it leaves out. Each hunk's context is the smallest function
+or class around each changed line (in the base file for a removed line), found with
+ast-grep through the syntax table in [`syntax/`](../src/codeguard/syntax/), plus the
+diff's usual three lines; a file whose language has no syntax table gets the three lines
+only.
 
 - The prompt holds only what the judge will certainly have to read; the judge decides
   from the rule what else to read, and reads it with its tools. The prompt never says

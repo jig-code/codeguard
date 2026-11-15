@@ -10,4 +10,4 @@ class MakeJudgeRequest(factory.Factory):
 
     judge_rule = factory.SubFactory(MakeJudgeRule)
     file = "a.py"
-    changes = "+     1\tprint(1)\n"
+    changes = "--- /dev/null\n+++ b/a.py\n@@ -0,0 +1 @@\n+print(1)\n"

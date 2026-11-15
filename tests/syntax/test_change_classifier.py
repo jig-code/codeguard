@@ -1,3 +1,5 @@
+import textwrap
+
 from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, GateRule, Ruleset
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
@@ -155,46 +157,53 @@ class TestChangeClassifier:
         assert ChangeKind.HELPER_FUNCTION not in kinds
         assert ChangeKind.TEST_FUNCTION not in kinds
 
-    def test_method_edit_judges_the_method(self, git_repo, working_tree, line_scopes):
-        git_repo.write(
-            "a.py",
-            "class Order:\n    def total(self):\n        return 1\n\n"
-            "    def tax(self):\n        return 0\n",
-        )
+    def test_method_edit_takes_in_the_method(self, git_repo, working_tree, line_scopes):
+        source = textwrap.dedent("""\
+            class Order:
+                def total(self):
+                    return 1
+
+                def tax(self):
+                    return 0
+        """)
+        git_repo.write("a.py", source)
         git_repo.commit("Add a")
-        git_repo.write(
-            "a.py",
-            "class Order:\n    def total(self):\n        return 1\n\n"
-            "    def tax(self):\n        return 2\n",
-        )
+        git_repo.write("a.py", source.replace("return 0", "return 2"))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {5, 6}
+        assert classification.context_lines("a.py") == {5, 6}
 
-    def test_class_body_edit_outside_a_method_judges_the_class_header_and_the_line(
+    def test_edit_in_a_nested_function_takes_in_only_the_nested_function(
         self, git_repo, working_tree, line_scopes
     ):
-        git_repo.write(
-            "a.py", "class Order:\n    rate = 1\n\n    def tax(self):\n        return 0\n"
-        )
+        source = textwrap.dedent("""\
+            def outer():
+                def inner():
+                    return 1
+
+                return inner
+        """)
+        git_repo.write("a.py", source)
         git_repo.commit("Add a")
-        git_repo.write(
-            "a.py", "class Order:\n    rate = 2\n\n    def tax(self):\n        return 0\n"
-        )
+        git_repo.write("a.py", source.replace("return 1", "return 2"))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2}
+        assert classification.context_lines("a.py") == {2, 3}
 
-    def test_class_body_edit_judges_every_line_of_a_class_header(
+    def test_class_body_edit_outside_a_method_takes_in_the_class(
         self, git_repo, working_tree, line_scopes
     ):
-        source = (
-            "class Order(\n    Base,\n):\n    def tax(self):\n        return 0\n\n    rate = 1\n"
-        )
+        source = textwrap.dedent("""\
+            class Order:
+                rate = 1
+
+                def tax(self):
+                    return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("rate = 1", "rate = 2"))
@@ -202,71 +211,32 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 3, 7}
+        assert classification.context_lines("a.py") == {1, 2, 3, 4, 5}
 
-    def test_class_header_edit_judges_the_class(self, git_repo, working_tree, line_scopes):
-        git_repo.write("a.py", "class Order:\n    def tax(self):\n        return 0\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "class Order(Base):\n    def tax(self):\n        return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 3}
-
-    def test_module_level_edit_judges_the_changed_line(self, git_repo, working_tree, line_scopes):
-        git_repo.write("a.py", "RATE = 1\n\n\ndef tax():\n    return 0\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "RATE = 2\n\n\ndef tax():\n    return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1}
-
-    def test_method_added_to_a_class_judges_the_method(self, git_repo, working_tree, line_scopes):
-        git_repo.write("a.py", "class Order:\n    def total(self):\n        return 1\n")
-        git_repo.commit("Add a")
-        git_repo.write(
-            "a.py",
-            "class Order:\n    def total(self):\n        return 1\n\n"
-            "    def tax(self):\n        return 0\n",
-        )
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {5, 6}
-
-    def test_new_file_judges_every_line_with_code(self, git_repo, working_tree, line_scopes):
-        git_repo.write("a.py", "RATE = 2\n\n\ndef tax():\n    return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 4, 5}
-
-    def test_judged_lines_for_a_trigger_take_in_its_node_around_the_change(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "try:\n    import fast\nexcept ImportError:\n    fast = None\n"
+    def test_class_header_edit_takes_in_the_class(self, git_repo, working_tree, line_scopes):
+        source = textwrap.dedent("""\
+            class Order:
+                def tax(self):
+                    return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("fast = None", "fast = False"))
+        git_repo.write("a.py", source.replace("class Order:", "class Order(Base):"))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {3, 4}
-        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {
-            1,
-            2,
-            3,
-            4,
-        }
+        assert classification.context_lines("a.py") == {1, 2, 3}
 
-    def test_decorator_edit_judges_the_decorated_method(self, git_repo, working_tree, line_scopes):
-        source = "class Order:\n    @property\n    def total(self):\n        return 1\n"
+    def test_decorator_edit_takes_in_the_decorated_method(
+        self, git_repo, working_tree, line_scopes
+    ):
+        source = textwrap.dedent("""\
+            class Order:
+                @property
+                def total(self):
+                    return 1
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("@property", "@cached_property"))
@@ -274,178 +244,77 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {2, 3, 4}
+        assert classification.context_lines("a.py") == {2, 3, 4}
 
-    def test_class_body_edit_judges_the_class_decorators_with_its_header(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "@dataclass\nclass Order:\n    def tax(self):\n        return 0\n\n    rate = 1\n"
+    def test_module_level_edit_takes_in_no_scope(self, git_repo, working_tree, line_scopes):
+        source = textwrap.dedent("""\
+            RATE = 1
+
+
+            def tax():
+                return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("rate = 1", "rate = 2"))
+        git_repo.write("a.py", source.replace("RATE = 1", "RATE = 2"))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 6}
+        assert classification.context_lines("a.py") == frozenset()
 
-    def test_multi_line_statement_edit_judges_the_whole_statement(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "RATES = {\n    'net': 1,\n    'gross': 2,\n}\nTAX = 3\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("'gross': 2", "'gross': 4"))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 3, 4}
-
-    def test_multi_line_statement_edit_in_a_class_body_judges_the_header_and_statement(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = (
-            "class Order:\n    def tax(self):\n        return 0\n\n"
-            "    rates = (\n        1,\n        2,\n    )\n"
-        )
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("        2,", "        4,"))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 5, 6, 7, 8}
-
-    def test_removed_method_judges_the_class_header_not_the_method_before_it(
-        self, git_repo, working_tree, line_scopes
-    ):
+    def test_method_added_to_a_class_takes_in_the_method(self, git_repo, working_tree, line_scopes):
         git_repo.write(
             "a.py",
-            "class Order:\n    def total(self):\n        raise ValueError\n\n"
-            "    def tax(self):\n        return 0\n",
+            textwrap.dedent("""\
+                class Order:
+                    def total(self):
+                        return 1
+            """),
         )
         git_repo.commit("Add a")
-        git_repo.write("a.py", "class Order:\n    def total(self):\n        raise ValueError\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        kinds = classification.touched_kinds("a.py")
-        assert classification.judged_lines("a.py", frozenset()) == {1}
-        assert kinds is not None
-        assert ChangeKind.RETURN_YIELD in kinds
-        assert ChangeKind.RAISE not in kinds
-
-    def test_removed_first_member_judges_the_class_header_not_the_class(
-        self, git_repo, working_tree, line_scopes
-    ):
         git_repo.write(
             "a.py",
-            "class Order:\n    rate = 1\n\n    def tax(self):\n        return 0\n",
+            textwrap.dedent("""\
+                class Order:
+                    def total(self):
+                        return 1
+
+                    def tax(self):
+                        return 0
+            """),
         )
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "class Order:\n\n    def tax(self):\n        return 0\n")
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1}
+        assert classification.context_lines("a.py") == {5, 6}
 
-    def test_removed_line_in_a_function_judges_the_function(
-        self, git_repo, working_tree, line_scopes
-    ):
-        git_repo.write("a.py", "def tax():\n    log()\n    return 0\n\n\nRATE = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "def tax():\n    return 0\n\n\nRATE = 1\n")
+    def test_new_file_takes_in_each_scope(self, git_repo, working_tree, line_scopes):
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                RATE = 2
 
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2}
-
-    def test_removed_module_level_statement_judges_no_line_beside_it(
-        self, git_repo, working_tree, line_scopes
-    ):
-        git_repo.write("a.py", "def tax():\n    return 0\n\n\nRATE = 1\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "def tax():\n    return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == frozenset()
-
-    def test_removed_line_of_a_multi_line_statement_judges_the_rest_of_the_statement(
-        self, git_repo, working_tree, line_scopes
-    ):
-        git_repo.write("a.py", "TAX = 3\nRATES = (\n    1,\n    2,\n)\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "TAX = 3\nRATES = (\n    1,\n)\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {2, 3, 4}
-
-    def test_removal_judges_its_context_where_earlier_changes_moved_it(
-        self, git_repo, working_tree, line_scopes
-    ):
-        git_repo.write("a.py", "A = 1\n\n\ndef tax():\n    log()\n    return 0\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "A = 1\nB = 2\nC = 3\n\n\ndef tax():\n    return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {2, 3, 6, 7}
-
-    def test_handler_header_edit_judges_the_handler_and_the_block_it_guards(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = (
-            "try:\n    load()\nexcept KeyError:\n    pass\n"
-            "except ValueError:\n    retry()\nfinally:\n    close()\n"
+                def tax():
+                    return 0
+            """),
         )
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("except ValueError:", "except TypeError:"))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 5, 6}
+        assert classification.context_lines("a.py") == {4, 5}
 
-    def test_handler_is_judged_with_its_own_try_block_not_a_nested_one(
+    def test_comment_edit_takes_in_the_function_around_it(
         self, git_repo, working_tree, line_scopes
     ):
-        source = (
-            "try:\n    load()\nexcept KeyError:\n    try:\n        fetch()\n"
-            "    except OSError:\n        pass\nexcept ValueError:\n    retry()\n"
-        )
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("except ValueError:", "except TypeError:"))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 8, 9}
-
-    def test_else_header_edit_judges_only_its_clause(self, git_repo, working_tree, line_scopes):
-        source = "if fast:\n    run()\nelif slow:\n    wait()\nelse:\n    stop()\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("elif slow:", "elif late:"))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {3, 4}
-
-    def test_comment_edit_judges_only_the_comment(self, git_repo, working_tree, line_scopes):
-        source = "def tax():\n    # net\n    return 0\n"
+        source = textwrap.dedent("""\
+            def tax():
+                # net
+                return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("# net", "# gross"))
@@ -453,22 +322,17 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {2}
+        assert classification.context_lines("a.py") == {1, 2, 3}
         assert classification.touched_kinds("a.py") == {ChangeKind.COMMENT, ChangeKind.ANY}
 
-    def test_removed_comment_judges_no_code(self, git_repo, working_tree, line_scopes):
-        git_repo.write("a.py", "def tax():\n    # net\n    return 0\n")
-        git_repo.commit("Add a")
-        git_repo.write("a.py", "def tax():\n    return 0\n")
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == frozenset()
-        assert classification.touched_kinds("a.py") == {ChangeKind.COMMENT, ChangeKind.ANY}
-
-    def test_docstring_edit_judges_only_the_docstring(self, git_repo, working_tree, line_scopes):
-        source = 'def tax():\n    """Net tax."""\n    return 0\n'
+    def test_docstring_edit_touches_only_the_docstring_kind(
+        self, git_repo, working_tree, line_scopes
+    ):
+        source = textwrap.dedent('''\
+            def tax():
+                """Net tax."""
+                return 0
+        ''')
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("Net", "Gross"))
@@ -476,11 +340,16 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {2}
         assert classification.touched_kinds("a.py") == {ChangeKind.DOCSTRING, ChangeKind.ANY}
 
     def test_module_docstring_edit_touches_no_code_kind(self, git_repo, working_tree, line_scopes):
-        source = '"""Pricing.\n\nRates.\n"""  # doc\nRATE = 1\n'
+        source = textwrap.dedent('''\
+            """Pricing.
+
+            Rates.
+            """  # doc
+            RATE = 1
+        ''')
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("Rates.", "Tax rates."))
@@ -488,11 +357,17 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {3}
         assert classification.touched_kinds("a.py") == {ChangeKind.DOCSTRING, ChangeKind.ANY}
 
     def test_docstring_after_a_shebang_is_a_docstring(self, git_repo, working_tree, line_scopes):
-        source = '#!/usr/bin/env python\n"""Pricing.\n\nRates.\n"""\nRATE = 1\n'
+        source = textwrap.dedent('''\
+            #!/usr/bin/env python
+            """Pricing.
+
+            Rates.
+            """
+            RATE = 1
+        ''')
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("Rates.", "Tax rates."))
@@ -500,26 +375,19 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {4}
         assert classification.touched_kinds("a.py") == {ChangeKind.DOCSTRING, ChangeKind.ANY}
 
-    def test_comment_edit_takes_in_no_trigger_node_around_it(
+    def test_removed_line_in_a_function_takes_in_the_rest_of_the_function(
         self, git_repo, working_tree, line_scopes
     ):
-        source = "if fast:\n    # net\n    run()\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("net", "gross"))
+        source = textwrap.dedent("""\
+            def tax():
+                log()
+                return 0
 
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset({ChangeKind.CONTROL_FLOW})) == {2}
-
-    def test_removed_statement_in_a_module_level_block_judges_the_block_header(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "if debug:\n    log()\n    run()\nelse:\n    stop()\n"
+            RATE = 1
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.write("a.py", source.replace("    log()\n", ""))
@@ -527,27 +395,116 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1}
+        assert classification.context_lines("a.py") == {1, 2}
 
-    def test_removed_handler_judges_its_try_and_the_block_it_guarded(
+    def test_removed_comment_takes_in_the_rest_of_the_function(
         self, git_repo, working_tree, line_scopes
     ):
-        source = "try:\n    load()\nexcept KeyError:\n    pass\nfinally:\n    close()\n"
+        source = textwrap.dedent("""\
+            def tax():
+                # net
+                return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("except KeyError:\n    pass\n", ""))
+        git_repo.write("a.py", source.replace("    # net\n", ""))
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2}
+        assert classification.context_lines("a.py") == {1, 2}
+        assert classification.touched_kinds("a.py") == {ChangeKind.COMMENT, ChangeKind.ANY}
 
-    def test_removal_in_a_renamed_file_judges_its_context(
+    def test_removed_method_takes_in_no_kept_line_and_touches_its_kinds(
         self, git_repo, working_tree, line_scopes
     ):
-        source = (
-            "".join(f"X{i} = {i}\n" for i in range(20)) + "def tax():\n    log()\n    return 0\n"
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                class Order:
+                    def total(self):
+                        raise ValueError
+
+                    def tax(self):
+                        return 0
+            """),
         )
+        git_repo.commit("Add a")
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                class Order:
+                    def total(self):
+                        raise ValueError
+            """),
+        )
+
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
+        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
+
+        kinds = classification.touched_kinds("a.py")
+        assert classification.context_lines("a.py") == frozenset()
+        assert kinds is not None
+        assert ChangeKind.RETURN_YIELD in kinds
+        assert ChangeKind.RAISE not in kinds
+
+    def test_removed_module_level_statement_takes_in_no_scope(
+        self, git_repo, working_tree, line_scopes
+    ):
+        function = textwrap.dedent("""\
+            def tax():
+                return 0
+        """)
+        git_repo.write("a.py", function + "\n\nRATE = 1\n")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", function)
+
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
+        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
+
+        assert classification.context_lines("a.py") == frozenset()
+
+    def test_removal_takes_in_its_function_where_earlier_changes_moved_it(
+        self, git_repo, working_tree, line_scopes
+    ):
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                A = 1
+
+
+                def tax():
+                    log()
+                    return 0
+            """),
+        )
+        git_repo.commit("Add a")
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                A = 1
+                B = 2
+                C = 3
+
+
+                def tax():
+                    return 0
+            """),
+        )
+
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
+        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
+
+        assert classification.context_lines("a.py") == {6, 7}
+
+    def test_removal_in_a_renamed_file_takes_in_its_function(
+        self, git_repo, working_tree, line_scopes
+    ):
+        source = "".join(f"X{i} = {i}\n" for i in range(20)) + textwrap.dedent("""\
+            def tax():
+                log()
+                return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.git("mv", "a.py", "b.py")
@@ -556,7 +513,7 @@ class TestChangeClassifier:
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("b.py", frozenset()) == {21, 22}
+        assert classification.context_lines("b.py") == {21, 22}
         assert ChangeKind.DEFINITION_ADDED_OR_REMOVED not in (
             classification.touched_kinds("b.py") or ()
         )
@@ -564,63 +521,32 @@ class TestChangeClassifier:
     def test_renamed_file_keeps_its_base_beside_a_new_file_at_its_old_path(
         self, git_repo, working_tree, line_scopes
     ):
-        source = (
-            "".join(f"X{i} = {i}\n" for i in range(20)) + "def tax():\n    log()\n    return 0\n"
-        )
+        source = "".join(f"X{i} = {i}\n" for i in range(20)) + textwrap.dedent("""\
+            def tax():
+                log()
+                return 0
+        """)
         git_repo.write("a.py", source)
         git_repo.commit("Add a")
         git_repo.git("mv", "a.py", "0.py")
         git_repo.write("0.py", source.replace("    log()\n", ""))
-        git_repo.write("a.py", "def rate():\n    return 1\n")
+        git_repo.write(
+            "a.py",
+            textwrap.dedent("""\
+                def rate():
+                    return 1
+            """),
+        )
 
         classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
-        assert classification.judged_lines("0.py", frozenset()) == {21, 22}
+        assert classification.context_lines("0.py") == {21, 22}
         assert ChangeKind.DEFINITION_ADDED_OR_REMOVED not in (
             classification.touched_kinds("0.py") or ()
         )
 
-    def test_removed_one_line_handler_judges_its_try_and_the_block_it_guarded(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "try:\n    load()\n    run()\nexcept KeyError: pass\nclose()\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("except KeyError: pass\n", ""))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 2, 3}
-
-    def test_removed_function_in_a_module_level_block_judges_the_block_header(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "if typing:\n    def f():\n        load()\n    rate = 1\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("    def f():\n        load()\n", ""))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1}
-
-    def test_class_body_edit_no_statement_holds_judges_the_class_header_and_the_line(
-        self, git_repo, working_tree, line_scopes
-    ):
-        source = "class A:\n    x = 1\n    y = 2\n\n    def g(self):\n        pass\n"
-        git_repo.write("a.py", source)
-        git_repo.commit("Add a")
-        git_repo.write("a.py", source.replace("    y = 2\n", "    y =\n"))
-
-        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
-        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
-
-        assert classification.judged_lines("a.py", frozenset()) == {1, 3}
-
-    def test_file_without_change_kinds_judges_its_changed_points(
+    def test_file_without_a_syntax_table_takes_in_no_context(
         self, git_repo, working_tree, line_scopes, make_file_classification
     ):
         git_repo.write("a.md", "one\ntwo\nthree\nfour\nfive\n")
@@ -631,5 +557,5 @@ class TestChangeClassifier:
         classification = classifier.classify(line_scopes.changed_lines("HEAD"))
 
         assert classification == Classification(
-            {"a.md": make_file_classification(touched_kinds=None, context_lines=frozenset({1, 3}))}
+            {"a.md": make_file_classification(touched_kinds=None, context_lines=frozenset())}
         )

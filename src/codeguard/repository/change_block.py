@@ -6,13 +6,6 @@ from codeguard.repository.diff_row import AddedRow, DiffRow, RemovedRow
 
 
 @dataclass(frozen=True)
-class Removal:
-    shown_before: int
-    reported_line: int
-    rows: tuple[RemovedRow, ...]
-
-
-@dataclass(frozen=True)
 class ChangeBlock:
     head_before: int
     added: tuple[AddedRow, ...]
@@ -41,22 +34,7 @@ class ChangeBlock:
         return frozenset(row.head_line for row in self.added if row.text.holds_code)
 
     @property
-    def removal(self) -> Removal | None:
-        removed_code = tuple(row for row in self.removed if row.text.holds_code)
-        if not removed_code:
-            return None
-        return Removal(
-            shown_before=self.head_before + 1,
-            reported_line=min(self.added_lines, default=self._line_before),
-            rows=removed_code,
-        )
-
-    @property
     def deletion_point(self) -> int | None:
-        if self.added_lines or self.removal is None:
+        if self.added_lines or not any(row.text.holds_code for row in self.removed):
             return None
-        return self._line_before
-
-    @property
-    def _line_before(self) -> int:
         return max(self.head_before, 1)
