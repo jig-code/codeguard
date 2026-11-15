@@ -7,6 +7,8 @@ from codeguard.repository.change_block import ChangeBlock
 from codeguard.repository.diff_row import AddedRow, DiffRow, KeptRow, RemovedRow, RowText
 
 _PLAIN_CONTEXT = 3
+# git calls a file binary when a NUL byte falls in its first 8000 bytes.
+_BINARY_SNIFF_BYTES = 8000
 
 
 @dataclass(frozen=True)
@@ -15,7 +17,6 @@ class FileDiff:
     added_lines: frozenset[int]
     deletion_points: frozenset[int]
     head_lines_by_base_line: Mapping[int, int]
-    removed_base_lines: frozenset[int]
     rows: tuple[DiffRow, ...]
 
     @classmethod
@@ -31,19 +32,14 @@ class FileDiff:
             head_lines_by_base_line={
                 row.base_line: row.head_line for row in rows if isinstance(row, KeptRow)
             },
-            removed_base_lines=frozenset(
-                row.base_line for row in rows if isinstance(row, RemovedRow)
-            ),
             rows=rows,
         )
 
     @classmethod
     def from_new_file(cls, content: bytes) -> Self:
-        lines = content.split(b"\n")
-        if lines[-1] == b"":
-            lines.pop()
         return cls.from_whole_file_rows(
-            None, (AddedRow(number, RowText.of_line(line)) for number, line in enumerate(lines, 1))
+            None,
+            (AddedRow(number, text) for number, text in enumerate(RowText.lines_of(content), 1)),
         )
 
     @property
@@ -72,9 +68,11 @@ class FileDiff:
     def unified(self, file: str, head: bytes, context_lines: frozenset[int]) -> str:
         """The unified diff of the file, whose hunks show the kept head lines in
         `context_lines` and the plain context around each changed row."""
-        head_rows = head.split(b"\n")
-        shown = self._shown_rows(context_lines)
         base = f"a/{self.base_path}" if self.base_path is not None else "/dev/null"
+        if b"\0" in head[:_BINARY_SNIFF_BYTES]:
+            return f"Binary files {base} and b/{file} differ\n"
+        head_texts = RowText.lines_of(head)
+        shown = self._shown_rows(context_lines)
         text = [f"--- {base}\n", f"+++ b/{file}\n"]
         numbered = enumerate(_numbered(self.rows))
         for in_hunk, hunk in groupby(numbered, key=lambda item: item[0] in shown):
@@ -89,7 +87,7 @@ class FileDiff:
                 f"@@ -{_hunk_range(base_start, base_count)} "
                 f"+{_hunk_range(head_start, head_count)} @@\n"
             )
-            text.extend(_diff_line(row, head_rows) for row in rows)
+            text.extend(_diff_line(row, head_texts) for row in rows)
         return "".join(text)
 
     def _shown_rows(self, context_lines: frozenset[int]) -> set[int]:
@@ -118,12 +116,13 @@ def _hunk_range(start: int, count: int) -> str:
     return f"{start},{count}"
 
 
-def _diff_line(row: DiffRow, head_rows: list[bytes]) -> str:
+def _diff_line(row: DiffRow, head_texts: list[RowText]) -> str:
     match row:
         case KeptRow():
-            mark, text = " ", RowText.of_line(head_rows[row.head_line - 1])
+            mark, text = " ", head_texts[row.head_line - 1]
         case AddedRow():
             mark, text = "+", row.text
         case RemovedRow():
             mark, text = "-", row.text
-    return f"{mark}{text.content.decode(errors='replace')}\n"
+    line = f"{mark}{text.content.decode(errors='replace')}\n"
+    return line if text.ends_with_newline else f"{line}\\ No newline at end of file\n"

@@ -21,7 +21,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset(),
             rows=tuple(rows),
             head_lines_by_base_line={1: 1, 2: 2},
-            removed_base_lines=frozenset(),
         )
 
     def test_code_replaced_by_blank_lines_is_a_deletion_point_after_the_line_before_it(self):
@@ -40,7 +39,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset({1}),
             rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 3},
-            removed_base_lines=frozenset({2}),
         )
 
     def test_removed_blank_lines_are_not_a_deletion_point(self):
@@ -54,7 +52,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset(),
             rows=tuple(rows),
             head_lines_by_base_line={1: 1, 2: 2, 4: 3},
-            removed_base_lines=frozenset({3}),
         )
 
     def test_code_replaced_by_a_blank_first_line_is_a_deletion_point_on_line_1(self):
@@ -68,7 +65,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset({1}),
             rows=tuple(rows),
             head_lines_by_base_line={2: 2},
-            removed_base_lines=frozenset({1}),
         )
 
     def test_removed_lines_are_a_deletion_point_after_the_line_before_them(self):
@@ -82,10 +78,9 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset({1}),
             rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 2},
-            removed_base_lines=frozenset({2}),
         )
 
-    def test_kept_head_lines_leave_out_removed_base_lines(self):
+    def test_kept_head_lines_leave_out_removed_rows(self):
         rows = [KeptRow(1, 1), RemovedRow(2, RowText(b"b = 1")), KeptRow(3, 2)]
 
         diff = FileDiff.from_whole_file_rows("a.py", rows)
@@ -108,7 +103,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset(),
             rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 3},
-            removed_base_lines=frozenset({2}),
         )
 
     def test_each_change_block_is_placed_by_the_line_before_it(self):
@@ -128,7 +122,6 @@ class TestFileDiffFromWholeFileRows:
             deletion_points=frozenset({1, 3}),
             rows=tuple(rows),
             head_lines_by_base_line={2: 1, 3: 3},
-            removed_base_lines=frozenset({1, 4}),
         )
 
 
@@ -150,7 +143,6 @@ class TestFileDiffFromNewFile:
                 AddedRow(3, RowText(b"b = 1")),
             ),
             head_lines_by_base_line={},
-            removed_base_lines=frozenset(),
         )
 
     def test_new_file_without_a_final_newline_adds_its_last_line(self):
@@ -158,9 +150,11 @@ class TestFileDiffFromNewFile:
             base_path=None,
             added_lines=frozenset({1, 2}),
             deletion_points=frozenset(),
-            rows=(AddedRow(1, RowText(b"a = 1")), AddedRow(2, RowText(b"b = 1"))),
+            rows=(
+                AddedRow(1, RowText(b"a = 1")),
+                AddedRow(2, RowText(b"b = 1", ends_with_newline=False)),
+            ),
             head_lines_by_base_line={},
-            removed_base_lines=frozenset(),
         )
 
     def test_new_file_of_only_blank_lines_adds_no_lines(self):
@@ -170,5 +164,4 @@ class TestFileDiffFromNewFile:
             deletion_points=frozenset(),
             rows=(AddedRow(1, RowText(b"")), AddedRow(2, RowText(b"  "))),
             head_lines_by_base_line={},
-            removed_base_lines=frozenset(),
         )

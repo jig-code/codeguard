@@ -200,6 +200,95 @@ class TestJudgeRequest:
                 @@ -0,0 +1,2 @@
                 +DISCOUNT = 5
                 +TAX = 2
+                \\ No newline at end of file
+            """),
+        )
+
+    def test_all_lines_of_a_binary_file_is_git_binary_files_line(
+        self, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00")
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "logo.png",
+            AllLines(("logo.png",)),
+            Classification(),
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "logo.png", "Binary files /dev/null and b/logo.png differ\n"
+        )
+
+    def test_untracked_binary_file_is_git_binary_files_line(
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_skill
+    ):
+        content = b"\x89PNG\r\n\x1a\n\x00\x00"
+        (tmp_path / "logo.png").write_bytes(content)
+        scope = make_new_file_changed_lines(file="logo.png", content=content)
+
+        request = JudgeRequest.of_change(
+            make_binding(), WorkingTree.at(tmp_path), "logo.png", scope, Classification()
+        )
+
+        assert request == JudgeRequest(
+            make_skill(), "logo.png", "Binary files /dev/null and b/logo.png differ\n"
+        )
+
+    def test_change_that_only_adds_a_final_newline_marks_the_removed_line_without_one(
+        self, make_changed_lines, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2\n")
+        scope = make_changed_lines(
+            file="pricing.py",
+            rows=[
+                KeptRow(1, 1),
+                RemovedRow(2, RowText(b"TAX = 2", ends_with_newline=False)),
+                AddedRow(2, RowText(b"TAX = 2")),
+            ],
+        )
+
+        request = JudgeRequest.of_change(
+            make_binding(), WorkingTree.at(tmp_path), "pricing.py", scope, Classification()
+        )
+
+        assert request == JudgeRequest(
+            make_skill(),
+            "pricing.py",
+            textwrap.dedent("""\
+                --- a/pricing.py
+                +++ b/pricing.py
+                @@ -1,2 +1,2 @@
+                 DISCOUNT = 5
+                -TAX = 2
+                \\ No newline at end of file
+                +TAX = 2
+            """),
+        )
+
+    def test_kept_last_line_without_a_final_newline_is_marked(
+        self, make_changed_lines, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2")
+        scope = make_changed_lines(
+            file="pricing.py", rows=[AddedRow(1, RowText(b"DISCOUNT = 5")), KeptRow(1, 2)]
+        )
+
+        request = JudgeRequest.of_change(
+            make_binding(), WorkingTree.at(tmp_path), "pricing.py", scope, Classification()
+        )
+
+        assert request == JudgeRequest(
+            make_skill(),
+            "pricing.py",
+            textwrap.dedent("""\
+                --- a/pricing.py
+                +++ b/pricing.py
+                @@ -1 +1,2 @@
+                +DISCOUNT = 5
+                 TAX = 2
+                \\ No newline at end of file
             """),
         )
 
@@ -218,7 +307,13 @@ class TestJudgeRequest:
         assert request == JudgeRequest(
             make_skill(),
             "pricing.py",
-            "--- /dev/null\n+++ b/pricing.py\n@@ -0,0 +1 @@\n+rates.py\n",
+            textwrap.dedent("""\
+                --- /dev/null
+                +++ b/pricing.py
+                @@ -0,0 +1 @@
+                +rates.py
+                \\ No newline at end of file
+            """),
         )
 
     def test_kept_line_ends_only_at_a_newline(
