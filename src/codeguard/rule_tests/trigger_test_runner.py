@@ -27,7 +27,7 @@ class _CaseCheck:
         return self.case.inputs.edits(self.prefix)
 
     def problem(self, changed: ChangedLines, classification: Classification) -> str | None:
-        rule = self.binding.skill.name
+        rule = self.binding.judge_rule.name
         file = self.case.inputs.file
         expected = self.case.expected_output
         if not self.binding.files([file]):
@@ -60,7 +60,9 @@ class TriggerTestRunner:
             ruleset = self.ruleset.load()
         except ConfigError as error:
             return RuleTestResult(warnings=(f"trigger tests not run: {error}",))
-        bindings = {binding.skill.name: binding for binding in Bindings.from_rulesets([ruleset])}
+        bindings = {
+            binding.judge_rule.name: binding for binding in Bindings.from_rulesets([ruleset])
+        }
         named = [(file.relative_to(self.root), dataset) for file, dataset in evals]
         unknown = [
             f"{where}: no judge rule {dataset.name}"

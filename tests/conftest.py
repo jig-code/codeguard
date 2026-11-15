@@ -8,6 +8,7 @@ from factories.changed_lines import MakeChangedLines, MakeNewFileChangedLines
 from factories.classification import MakeFileClassification
 from factories.diagnostic import MakeDiagnostic, MakeViolation
 from factories.judge_request import MakeJudgeRequest
+from factories.judge_rule import MakeBinding, MakeJudgeRule
 from factories.line_range import MakeLineRange
 from factories.rule_eval import (
     MakeEditCase,
@@ -18,7 +19,6 @@ from factories.rule_eval import (
     MakeVerdict,
 )
 from factories.ruleset import MakeBindingConfig, MakeRuleset
-from factories.skill import MakeBinding, MakeSkill
 from git_repo import GitRepo
 from pytest_factoryboy import register
 
@@ -27,7 +27,7 @@ from codeguard.config import JudgeProvider
 register(MakeLineRange)
 register(MakeDiagnostic)
 register(MakeViolation)
-register(MakeSkill)
+register(MakeJudgeRule)
 register(MakeBinding)
 register(MakeBindingConfig)
 register(MakeRuleset)

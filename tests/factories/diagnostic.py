@@ -2,8 +2,8 @@ import factory
 
 from codeguard.review import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.judge import Violation
+from factories.judge_rule import MakeJudgeRule
 from factories.line_range import MakeLineRange
-from factories.skill import MakeSkill
 
 
 class MakeDiagnostic(factory.Factory):
@@ -18,13 +18,13 @@ class MakeDiagnostic(factory.Factory):
             note=None,
         )
         judged = factory.Trait(
-            rule=factory.LazyFunction(lambda: MakeSkill().name),
+            rule=factory.LazyFunction(lambda: MakeJudgeRule().name),
             note=None,
             category=Category.JUDGED,
             confidence=1.0,
         )
         judge_error = factory.Trait(
-            rule=factory.LazyFunction(lambda: MakeSkill().name),
+            rule=factory.LazyFunction(lambda: MakeJudgeRule().name),
             lines=None,
             message="The judge call failed, so this rule was not checked.",
             note="claude exited with 1.",

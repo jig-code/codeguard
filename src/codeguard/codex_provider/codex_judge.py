@@ -49,7 +49,7 @@ class CodexJudge:
             self.processes,
             logfire.span(
                 "codex judges {rule} on {file}",
-                rule=request.skill.name,
+                rule=request.judge_rule.name,
                 file=request.file,
                 model=self.model,
             ) as span,

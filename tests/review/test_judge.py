@@ -14,10 +14,12 @@ THRESHOLD = 0.9
 
 class TestJudgeRequest:
     def test_prompt_holds_the_named_convention_then_the_changes(
-        self, make_skill, make_judge_request
+        self, make_judge_rule, make_judge_request
     ):
-        skill = make_skill(name="pricing", text="Prices are integers.\n")
-        request = make_judge_request(skill=skill, file="pricing.py", changes="+     1\tA = 1\n")
+        judge_rule = make_judge_rule(name="pricing", text="Prices are integers.\n")
+        request = make_judge_request(
+            judge_rule=judge_rule, file="pricing.py", changes="+     1\tA = 1\n"
+        )
 
         assert request.prompt == (
             '<rule name="pricing">\nPrices are integers.\n</rule>\n\n'
@@ -25,7 +27,7 @@ class TestJudgeRequest:
         )
 
     def test_judged_lines_are_numbered_with_their_file_line_numbers(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         returned = b"    return total - DISCOUNT"
         (tmp_path / "pricing.py").write_text(
@@ -58,13 +60,13 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(),
+            make_judge_rule(),
             "pricing.py",
             "      4\tdef discounted(total):\n+     5\t    return total - DISCOUNT\n",
         )
 
     def test_removed_rows_come_before_the_line_after_them_with_their_reported_line(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2\n")
         scope = make_changed_lines(
@@ -82,13 +84,13 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(),
+            make_judge_rule(),
             "pricing.py",
             "      1\tDISCOUNT = 5\n-     1\tFEE = 1\n      2\tTAX = 2\n",
         )
 
     def test_removed_row_that_is_not_utf_8_is_shown_replace_decoded(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
         scope = make_changed_lines(
@@ -105,11 +107,11 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tFEE = '\ufffd'\n"
+            make_judge_rule(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tFEE = '\ufffd'\n"
         )
 
     def test_rows_removed_from_the_end_of_the_file_come_last(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
         scope = make_changed_lines(
@@ -126,11 +128,11 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tTAX = 2\n"
+            make_judge_rule(), "pricing.py", "      1\tDISCOUNT = 5\n-     1\tTAX = 2\n"
         )
 
     def test_shown_lines_take_in_the_nodes_of_the_rule_triggers(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         added = b"    x = 1"
         (tmp_path / "pricing.py").write_text(
@@ -160,12 +162,12 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(),
+            make_judge_rule(),
             "pricing.py",
             "      1\ttry:\n+     2\t    x = 1\n      3\texcept:\n      4\t    pass\n",
         )
 
-    def test_all_lines_is_the_whole_file_changed(self, tmp_path, make_binding, make_skill):
+    def test_all_lines_is_the_whole_file_changed(self, tmp_path, make_binding, make_judge_rule):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\nTAX = 2")
 
         request = JudgeRequest.of_change(
@@ -177,7 +179,7 @@ class TestJudgeRequest:
         )
 
         assert request == JudgeRequest(
-            make_skill(), "pricing.py", "+     1\tDISCOUNT = 5\n+     2\tTAX = 2\n"
+            make_judge_rule(), "pricing.py", "+     1\tDISCOUNT = 5\n+     2\tTAX = 2\n"
         )
 
     def test_changed_point_past_the_end_of_the_file_is_left_out(
@@ -186,7 +188,7 @@ class TestJudgeRequest:
         make_file_classification,
         tmp_path,
         make_binding,
-        make_skill,
+        make_judge_rule,
     ):
         (tmp_path / "pricing.py").write_text("DISCOUNT = 5\n")
         scope = make_new_file_changed_lines(
@@ -206,10 +208,10 @@ class TestJudgeRequest:
             Classification({"pricing.py": classified}),
         )
 
-        assert request == JudgeRequest(make_skill(), "pricing.py", "+     1\tDISCOUNT = 5\n")
+        assert request == JudgeRequest(make_judge_rule(), "pricing.py", "+     1\tDISCOUNT = 5\n")
 
     def test_symlink_is_shown_as_its_link_text(
-        self, make_new_file_changed_lines, tmp_path, make_binding, make_skill
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_judge_rule
     ):
         (tmp_path / "rates.py").write_text("RATE = 2\n")
         link = "rates.py"
@@ -220,10 +222,10 @@ class TestJudgeRequest:
             make_binding(), WorkingTree.at(tmp_path), "pricing.py", scope, Classification()
         )
 
-        assert request == JudgeRequest(make_skill(), "pricing.py", "+     1\trates.py\n")
+        assert request == JudgeRequest(make_judge_rule(), "pricing.py", "+     1\trates.py\n")
 
     def test_lines_are_numbered_as_git_numbers_them(
-        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_skill
+        self, make_changed_lines, make_file_classification, tmp_path, make_binding, make_judge_rule
     ):
         added = b"TAX = 2"
         (tmp_path / "pricing.py").write_bytes(b"DISCOUNT = 5\f\n" + added + b"\n")
@@ -240,12 +242,12 @@ class TestJudgeRequest:
             Classification({"pricing.py": classified}),
         )
 
-        assert request == JudgeRequest(make_skill(), "pricing.py", "+     2\tTAX = 2\n")
+        assert request == JudgeRequest(make_judge_rule(), "pricing.py", "+     2\tTAX = 2\n")
 
     def test_instructions_are_the_same_for_every_rule_and_file(
-        self, make_skill, make_judge_request
+        self, make_judge_rule, make_judge_request
     ):
-        request = make_judge_request(skill=make_skill(name="pricing"), file="pricing.py")
+        request = make_judge_request(judge_rule=make_judge_rule(name="pricing"), file="pricing.py")
 
         assert request.instructions == INSTRUCTIONS
 
@@ -306,7 +308,7 @@ class TestVerdict:
             f"[{diagnostic.id}]"
         )
 
-    def test_diagnostic_has_the_binding_skill_and_severity(
+    def test_diagnostic_has_the_binding_rule_and_severity(
         self, make_violation, make_binding, make_diagnostic
     ):
         verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))

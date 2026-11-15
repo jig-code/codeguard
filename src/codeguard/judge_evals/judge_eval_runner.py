@@ -33,7 +33,9 @@ class JudgeEvalRunner:
     def case_names(self) -> dict[str, tuple[str, ...]]:
         cases = {dataset.name: dataset.cases for _, dataset in rule_evals(self.ruleset.root)}
         return {
-            binding.skill.name: tuple(case.name for case in cases.get(binding.skill.name, ()))
+            binding.judge_rule.name: tuple(
+                case.name for case in cases.get(binding.judge_rule.name, ())
+            )
             for binding in Bindings.from_rulesets(
                 [self.ruleset.load()], self.judge_config.choice, self.judge_override
             )
@@ -80,7 +82,7 @@ class JudgeEvalRunner:
 
     def _bindings(self, ruleset: Ruleset) -> dict[str, Binding]:
         return {
-            binding.skill.name: binding
+            binding.judge_rule.name: binding
             for binding in Bindings.from_rulesets(
                 [ruleset], self.judge_config.choice, self.judge_override
             )

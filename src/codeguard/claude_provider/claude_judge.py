@@ -41,7 +41,7 @@ class ClaudeJudge:
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
             "claude judges {rule} on {file}",
-            rule=request.skill.name,
+            rule=request.judge_rule.name,
             file=request.file,
             model=self.model,
         ) as span:

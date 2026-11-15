@@ -12,7 +12,7 @@ from codeguard.line_range import LineRange
 from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
-from codeguard.review.skill import Skill
+from codeguard.review.judge_rule import JudgeRule
 from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
@@ -21,7 +21,7 @@ INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
 
 @dataclass(frozen=True)
 class JudgeRequest:
-    skill: Skill
+    judge_rule: JudgeRule
     file: str
     changes: str
 
@@ -50,7 +50,7 @@ class JudgeRequest:
             if number in shown and number <= len(content):
                 mark = "+" if added is None or number in added else " "
                 rows.append(f"{mark}{number:>6}\t{content[number - 1]}\n")
-        return cls(binding.skill, file, "".join(rows))
+        return cls(binding.judge_rule, file, "".join(rows))
 
     @property
     def instructions(self) -> str:
@@ -59,7 +59,7 @@ class JudgeRequest:
     @property
     def prompt(self) -> str:
         return (
-            f'<rule name="{self.skill.name}">\n{self.skill.text}</rule>\n\n'
+            f'<rule name="{self.judge_rule.name}">\n{self.judge_rule.text}</rule>\n\n'
             f'<changes path="{self.file}">\n{self.changes}</changes>\n'
         )
 

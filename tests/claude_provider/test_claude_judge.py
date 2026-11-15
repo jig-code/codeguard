@@ -127,7 +127,7 @@ class TestClaudeJudge:
 
         assert finished_span_attributes(capfire, "claude judges {rule} on {file}") == [
             {
-                "rule": request.skill.name,
+                "rule": request.judge_rule.name,
                 "file": "a.py",
                 "model": MODEL,
                 "returncode": 0,
@@ -427,7 +427,7 @@ class TestClaudeJudge:
         argv = json.loads(arguments.read_text())["arguments"]
         assert argv[argv.index("--tools") + 1] == "Read,Grep,Glob"
 
-    def test_claude_gets_the_skill_as_the_prompt(
+    def test_claude_gets_the_request_prompt(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request
     ):
         judge = ClaudeJudge(tmp_path, MODEL, processes, fake_claude_executable)

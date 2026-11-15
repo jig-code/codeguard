@@ -47,7 +47,7 @@ class CachedJudge:
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
-            "judge {rule} on {file}", rule=request.skill.name, file=request.file
+            "judge {rule} on {file}", rule=request.judge_rule.name, file=request.file
         ) as span:
             key = self._key(request)
             stored = self._entry(key)
@@ -88,7 +88,7 @@ class CachedJudge:
         parts = (
             self.version,
             self.identity,
-            request.skill.text,
+            request.judge_rule.text,
             request.file,
             _digest(request.changes.encode()),
             self._digest_of(request.file) or "",
