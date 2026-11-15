@@ -46,7 +46,9 @@ class TestBinding:
 
         assert files == ["a.py", "app/b.rb"]
 
-    def test_from_config_has_its_severity(self, make_binding, make_binding_config, make_judge_rule):
+    def test_from_config_builds_the_binding_its_config_describes(
+        self, make_binding, make_binding_config, make_judge_rule
+    ):
         config = make_binding_config(severity=Severity.WARNING)
 
         binding = Binding.from_config(RULE_NAME, config, make_judge_rule(), JudgeChoice())

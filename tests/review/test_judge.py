@@ -308,7 +308,7 @@ class TestVerdict:
             f"[{diagnostic.id}]"
         )
 
-    def test_diagnostic_has_the_binding_skill_and_severity(
+    def test_diagnostic_has_the_binding_rule_and_severity(
         self, make_violation, make_binding, make_diagnostic
     ):
         verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))

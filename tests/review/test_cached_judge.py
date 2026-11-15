@@ -157,7 +157,9 @@ class TestCachedJudge:
 
         assert wrapped.received == [request, request]
 
-    def test_changed_skill_text_is_judged_again(self, orders, store, make_judge_rule, total_change):
+    def test_changed_judge_rule_text_is_judged_again(
+        self, orders, store, make_judge_rule, total_change
+    ):
         wrapped = RecordingJudge()
         judge = cached(orders, store, wrapped)
         judge.judge(total_change)

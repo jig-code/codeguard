@@ -92,6 +92,12 @@ Rule test warnings, such as broad triggers, are advisory: they don't fail a chan
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
 tests. `-n 8` only sets how many run at once: any number gives the same result.
 
+The judge row and `codeguard review` call Gemini, so they need its credentials
+([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In an environment whose
+proxy injects the Vertex AI credentials, run them as
+`CODEGUARD_JUDGE__GEMINI__PROJECT=<project> CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`,
+where `<project>` is your Google Cloud project.
+
 codeguard ships no rules, so `codeguard rules test` and `codeguard rules eval` don't
 run here. The rules in `evals/judge/` are fixtures for codeguard's own tests, and the
 rules codeguard reviews itself with are tested in their package's CI.
