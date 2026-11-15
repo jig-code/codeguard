@@ -93,10 +93,10 @@ The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the 
 tests. The judge row needs Gemini credentials
 ([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In a Claude Code cloud
 session whose network policy injects credentials for `aiplatform.googleapis.com`, run
-its commands as `CODEGUARD_JUDGE__GEMINI__PROJECT=730802237087
-CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`: the proxy supplies the real
-key, and `proxy-injected` is a placeholder. `-n 8` only sets how many run at once: any
-number gives the same result.
+its commands as `CODEGUARD_JUDGE__GEMINI__PROJECT=<project>
+CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`, where `<project>` is your
+Google Cloud project: the proxy supplies the real key, and `proxy-injected` is a
+placeholder. `-n 8` only sets how many run at once: any number gives the same result.
 
 codeguard ships no rules, so `codeguard rules test` and `codeguard rules eval` don't
 run here. The rules in `evals/judge/` are fixtures for codeguard's own tests, and the
