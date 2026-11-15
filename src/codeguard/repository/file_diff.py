@@ -66,8 +66,6 @@ class FileDiff:
         )
 
     def unified(self, file: str, head: bytes, context_lines: frozenset[int]) -> str:
-        """The unified diff of the file, whose hunks show the kept head lines in
-        `context_lines` and the plain context around each changed row."""
         base = f"a/{self.base_path}" if self.base_path is not None else "/dev/null"
         if b"\0" in head[:_BINARY_SNIFF_BYTES]:
             return f"Binary files {base} and b/{file} differ\n"

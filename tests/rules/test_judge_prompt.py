@@ -1,14 +1,10 @@
 import shutil
 import subprocess
 import sys
-from collections.abc import Iterator
 from pathlib import Path
 
-import logfire
 import pytest
 import yaml
-from logfire.testing import CaptureLogfire
-from pydantic_ai import Agent
 from spans import finished_span_attributes
 
 from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider
@@ -60,13 +56,6 @@ def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(judges, "_JUDGEMENT_CACHE_DIR", tmp_path / "judgements")
 
 
-@pytest.fixture
-def instrumented_agents(capfire: CaptureLogfire) -> Iterator[None]:
-    logfire.instrument_pydantic_ai()
-    yield
-    Agent.instrument_all(False)
-
-
 class TestJudgePrompt:
     @pytest.mark.parametrize("judge_override", [JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)])
     def test_claude_cli_override_judges_with_the_cli_default_model(self, judged_evals: Path):
@@ -111,7 +100,6 @@ class TestJudgePrompt:
     @pytest.mark.llm
     @pytest.mark.usefixtures("this_machines_gemini_sign_in")
     @pytest.mark.parametrize(("rule", "case"), JUDGED_CASES)
-    @pytest.mark.usefixtures("instrumented_agents")
     def test_review_reaches_each_case_verdict(
         self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path, capfire
     ):
@@ -123,12 +111,6 @@ class TestJudgePrompt:
         telemetry = finished_span_attributes(capfire, "codex judges {rule} on {file}")
         if telemetry:
             listing += f"\nJudge telemetry: {telemetry!r}"
-        verdicts = [
-            span.get("final_result")
-            for span in finished_span_attributes(capfire, "invoke_agent agent")
-        ]
-        if verdicts:
-            listing += f"\nJudge verdicts: {verdicts!r}"
         errors = [
             diagnostic
             for diagnostic in review.diagnostics

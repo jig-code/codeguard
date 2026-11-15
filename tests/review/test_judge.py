@@ -258,6 +258,20 @@ class TestJudgeRequest:
             make_judge_rule(), "logo.png", "Binary files /dev/null and b/logo.png differ\n"
         )
 
+    def test_changed_binary_file_is_git_binary_files_line_from_its_base_path(
+        self, make_changed_lines, tmp_path, make_binding, make_judge_rule
+    ):
+        (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x01")
+        scope = make_changed_lines(file="logo.png", base_path="icon.png")
+
+        request = JudgeRequest.of_change(
+            make_binding(), WorkingTree.at(tmp_path), "logo.png", scope, Classification()
+        )
+
+        assert request == JudgeRequest(
+            make_judge_rule(), "logo.png", "Binary files a/icon.png and b/logo.png differ\n"
+        )
+
     def test_change_that_only_adds_a_final_newline_marks_the_removed_line_without_one(
         self, make_changed_lines, tmp_path, make_binding, make_judge_rule
     ):

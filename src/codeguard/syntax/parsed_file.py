@@ -22,7 +22,6 @@ class ParsedFile:
         return tuple(node.text for node in self.of_kind(NodeKind.DEFINITION))
 
     def scope_lines(self, points: frozenset[int]) -> frozenset[int]:
-        """The lines of the innermost scope around each point."""
         scopes = self.of_kind(NodeKind.SCOPE)
         return frozenset(
             line
