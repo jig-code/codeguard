@@ -365,7 +365,7 @@ class TestRulesetLoader:
             'rule: placement\npaths: ["**"]\ntriggers: [any]\n'
         )
 
-        ruleset = RulesetLoader(root=tmp_path / "python").load()
+        ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
 
         assert ruleset == Ruleset(
             name=None,
@@ -456,7 +456,31 @@ class TestRulesetLoader:
             "no judge rule rules/judge/responsibility-placement.md"
         )
 
-    def test_binding_naming_a_skill_is_an_error(self, repo):
+    def test_package_skill_directory_is_under_the_package(self, tmp_path, make_judge_rule):
+        (tmp_path / "python/skills/placement").mkdir(parents=True)
+        (tmp_path / "python/skills/placement/SKILL.md").write_text(make_judge_rule().text)
+        (tmp_path / "python/bindings").mkdir()
+        (tmp_path / "python/bindings/placement.yaml").write_text(
+            'skill: python/skills/placement\npaths: ["**"]\ntriggers: [any]\n'
+        )
+
+        ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
+
+        assert ruleset == Ruleset(
+            name=None,
+            root=tmp_path / "python",
+            bindings=BindingsConfig(
+                {
+                    "placement.yaml": BindingConfig(
+                        triggers=frozenset({"any"}),
+                        skill=tmp_path / "python/skills/placement",
+                        paths=("**",),
+                    )
+                }
+            ),
+        )
+
+    def test_missing_skill_directory_is_an_error(self, repo):
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
@@ -467,6 +491,5 @@ class TestRulesetLoader:
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.placement.yaml: Value error, skill is no longer supported: "
-            "move the rule to rules/judge/<id>.md and name it with rule: <id>"
+            "  bindings.placement.yaml.skill: Path does not point to a directory"
         )

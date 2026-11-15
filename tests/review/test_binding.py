@@ -1,5 +1,5 @@
 from codeguard.config import JudgeChoice, JudgeProvider, RuleOverride, RulesetConfig
-from codeguard.review import Binding, Bindings, JudgeRule, Severity
+from codeguard.review import Binding, Bindings, Severity
 
 RULE_NAME = "responsibility-placement"
 
@@ -224,12 +224,26 @@ class TestBindingsJudge:
         assert bindings == (make_binding(judge=override),)
 
 
-class TestJudgeRule:
-    def test_from_file_keeps_the_text_unparsed(self, tmp_path, make_judge_rule):
+class TestBindingsJudgeRule:
+    def test_rule_file_text_reaches_the_judge_unparsed(
+        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+    ):
         text = f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}"
-        file = tmp_path / f"{RULE_NAME}.md"
-        file.write_text(text)
+        write_judge_rule(tmp_path, text)
 
-        judge_rule = JudgeRule.from_file(RULE_NAME, file)
+        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path)])
 
-        assert judge_rule == make_judge_rule(text=text)
+        assert bindings == (make_binding(judge_rule__text=text),)
+
+    def test_skill_file_reaches_the_judge_without_its_frontmatter(
+        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+    ):
+        skill = tmp_path / "skills" / RULE_NAME
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}")
+
+        bindings = Bindings.from_rulesets(
+            [make_ruleset(root=tmp_path, binding__rule=None, binding__skill=skill)]
+        )
+
+        assert bindings == (make_binding(),)

@@ -25,16 +25,54 @@ def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
 
 
 class TestBindingsConfig:
-    def test_skill_is_an_error(self):
+    def test_skill_directory_is_under_the_working_tree(self, tmp_path):
+        (tmp_path / "placement").mkdir()
+        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+
+        bindings = BindingsConfig.model_validate(
+            {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}},
+            context={"working_tree": tmp_path},
+        )
+
+        assert bindings.root["placement.yaml"] == BindingConfig(
+            skill=tmp_path / "placement", paths=("**",), triggers=frozenset({"any"})
+        )
+
+    def test_skill_directory_names_the_rule(self, tmp_path):
+        (tmp_path / "placement").mkdir()
+        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+
+        binding = BindingConfig(skill=tmp_path / "placement", paths=("**",))
+
+        assert binding.rule_id == "placement"
+
+    def test_skill_directory_without_skill_file_is_an_error(self, tmp_path):
+        (tmp_path / "placement").mkdir()
+
         with pytest.raises(ValidationError) as error:
             BindingsConfig.model_validate(
-                {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}}
+                {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}},
+                context={"working_tree": tmp_path},
             )
 
-        assert messages(error) == [
-            "Value error, skill is no longer supported: move the rule to "
-            "rules/judge/<id>.md and name it with rule: <id>"
-        ]
+        assert messages(error) == [f"Value error, {tmp_path}/placement has no SKILL.md"]
+
+    def test_binding_naming_a_rule_and_a_skill_is_an_error(self, tmp_path):
+        (tmp_path / "placement").mkdir()
+        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+
+        with pytest.raises(ValidationError) as error:
+            BindingConfig.model_validate(
+                {"rule": "placement", "skill": tmp_path / "placement", "paths": ["**"]}
+            )
+
+        assert messages(error) == ["Value error, name the rule with rule: <id>"]
+
+    def test_binding_naming_no_rule_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            BindingConfig.model_validate({"paths": ["**"]})
+
+        assert messages(error) == ["Value error, name the rule with rule: <id>"]
 
     def test_retired_disable_skips_is_ignored(self):
         bindings = BindingsConfig.model_validate(

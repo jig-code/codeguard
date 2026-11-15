@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
-from codeguard.config import JUDGE_RULE_DIR, ConfigError, RulesetLoader
+from codeguard.config import ConfigError, RulesetLoader
 from codeguard.rule_tests.rule_test_result import RuleTestResult
 
 # A `## Why` heading followed by text before the next heading of its level or above.
@@ -33,12 +33,12 @@ class MissingWhy:
             # BroadTriggers already reports an invalid ruleset.
             return RuleTestResult()
         judged = sorted(
-            binding.rule
+            binding.rule_id
             for binding in ruleset.bindings.root.values()
-            if not has_why_section(ruleset.judge_rule_file(binding.rule).read_text())
+            if not has_why_section(ruleset.judge_rule_text(binding))
         )
         missing = (
-            *(f"{rule}: no ## Why section in {JUDGE_RULE_DIR}/{rule}.md" for rule in judged),
+            *(f"{rule}: no ## Why section in its rule file" for rule in judged),
             *(f"{rule}: no metadata.why" for rule in ruleset.pattern_rules_without_why()),
         )
         if self.mode is MissingWhyMode.FAIL:

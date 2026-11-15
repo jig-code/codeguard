@@ -1,10 +1,11 @@
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from codeguard.config.binding_config import BindingConfig
+from codeguard.config.binding_config import SKILL_FILE, BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.gate_rule import GateRule
@@ -22,6 +23,8 @@ JUDGE_EVAL_DIR = "rule-evals"
 BINDINGS_DIR = "bindings"
 JUDGE_RULE_DIR = "rules/judge"
 JUDGE_RULE_SUFFIX = ".md"
+SKILLS_DIR = "skills"
+_FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 
 
 def judge_rule_file(root: Path, rule: str) -> Path:
@@ -59,10 +62,18 @@ class Ruleset:
         return rule_id if self.name is None else f"{self.name}/{rule_id}"
 
     def judged_rule_ids(self) -> frozenset[str]:
-        return frozenset(binding.rule for binding in self.bindings.root.values())
+        return frozenset(binding.rule_id for binding in self.bindings.root.values())
 
-    def judge_rule_file(self, rule: str) -> Path:
-        return judge_rule_file(self.root, rule)
+    def judge_rule_file(self, binding: BindingConfig) -> Path:
+        if binding.skill is not None:
+            return binding.skill / SKILL_FILE
+        return judge_rule_file(self.root, binding.rule_id)
+
+    def judge_rule_text(self, binding: BindingConfig) -> str:
+        text = self.judge_rule_file(binding).read_text()
+        if binding.skill is not None:
+            return _FRONTMATTER.sub("", text, count=1)
+        return text
 
     def pattern_rule_ids(self) -> frozenset[str]:
         return frozenset(rule.id for rule in self._pattern_rules())
@@ -103,11 +114,11 @@ class Ruleset:
 
     def selected_bindings(self) -> dict[str, BindingConfig]:
         return {
-            self.qualified_rule_id(binding.rule): self._qualified(
-                self.selection.apply(binding.rule, binding)
+            self.qualified_rule_id(binding.rule_id): self._qualified(
+                self.selection.apply(binding.rule_id, binding)
             )
             for binding in self.bindings.root.values()
-            if not self.excludes(binding.rule)
+            if not self.excludes(binding.rule_id)
         }
 
     def _qualified(self, binding: BindingConfig) -> BindingConfig:

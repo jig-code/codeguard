@@ -24,6 +24,7 @@ _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
 
 @dataclass(frozen=True)
 class RulesetLoader:
+    repo: Path
     root: Path
     name: str | None = None
     selection: RulesetConfig = field(default_factory=RulesetConfig)
@@ -33,6 +34,7 @@ class RulesetLoader:
     @classmethod
     def local(cls, working_tree: Path) -> Self:
         return cls(
+            repo=working_tree,
             root=working_tree / CONFIG_DIR,
             files=frozenset({PurePath(CONFIG_FILE).name}),
         )
@@ -55,7 +57,9 @@ class RulesetLoader:
             file: document for file, document in documents.items() if file not in pattern_documents
         }
         try:
-            bindings = BindingsConfig.model_validate(judge_documents)
+            bindings = BindingsConfig.model_validate(
+                judge_documents, context={"working_tree": self.repo}
+            )
             pattern_bindings = PatternBindingsConfig.model_validate(pattern_documents)
         except ValidationError as error:
             raise ConfigError.invalid(self.root, error, prefix="bindings") from error
@@ -93,7 +97,7 @@ class RulesetLoader:
         return [
             f"bindings.{file}.rule: no judge rule {path.relative_to(self.root)}"
             for file, binding in ruleset.bindings.root.items()
-            if not (path := ruleset.judge_rule_file(binding.rule)).is_file()
+            if binding.skill is None and not (path := ruleset.judge_rule_file(binding)).is_file()
         ]
 
     def _shared_ids(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:

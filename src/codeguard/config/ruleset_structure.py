@@ -10,6 +10,7 @@ from codeguard.config.ruleset import (
     LEGACY_PATTERN_TEST_DIR,
     PATTERN_RULE_DIR,
     RULE_TEST_DIR,
+    SKILLS_DIR,
     SNAPSHOT_DIR,
 )
 
@@ -22,6 +23,7 @@ _DIRECTORIES = frozenset(
         JUDGE_EVAL_DIR,
         JUDGE_RULE_DIR,
         BINDINGS_DIR,
+        SKILLS_DIR,
     }
 )
 _PARENTS = frozenset(str(PurePath(directory).parent) for directory in _DIRECTORIES) - {"."}

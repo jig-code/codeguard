@@ -73,7 +73,7 @@ class Bindings(tuple[Binding, ...]):
             Binding.from_config(
                 rule,
                 binding,
-                JudgeRule.from_file(binding.rule, ruleset.judge_rule_file(binding.rule)),
+                JudgeRule(name=binding.rule_id, text=ruleset.judge_rule_text(binding)),
                 judge_override
                 if judge_override.provider
                 else binding.judge.over(project_judge).over(ruleset.package_judge),

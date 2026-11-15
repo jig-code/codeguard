@@ -41,8 +41,30 @@ class TestMissingWhy:
         judge_rule(rule)
 
         assert check(repo) == RuleTestResult(
-            warnings=("placement: no ## Why section in rules/judge/placement.md",)
+            warnings=("placement: no ## Why section in its rule file",)
         )
+
+    def test_skill_directory_without_a_why_warns(self, repo):
+        repo.write(".codeguard/skills/placement/SKILL.md", f"---\nname: placement\n---\n{RULE}")
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .codeguard/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+        )
+
+        assert check(repo) == RuleTestResult(
+            warnings=("placement: no ## Why section in its rule file",)
+        )
+
+    def test_skill_directory_with_a_why_passes(self, repo):
+        repo.write(
+            ".codeguard/skills/placement/SKILL.md", f"---\nname: placement\n---\n{RULE}{WHY}"
+        )
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'skill: .codeguard/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+        )
+
+        assert check(repo) == RuleTestResult()
 
     def test_why_section_may_end_in_a_source(self, repo, judge_rule):
         judge_rule(RULE + WHY + "\nSource: https://example.com/style-guide#placement\n")
@@ -67,7 +89,7 @@ class TestMissingWhy:
 
         assert result == RuleTestResult(
             problems=(
-                "placement: no ## Why section in rules/judge/placement.md",
+                "placement: no ## Why section in its rule file",
                 "no-print: no metadata.why",
             )
         )

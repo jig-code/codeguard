@@ -1258,7 +1258,6 @@ class TestTestCommand:
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
             f"warning: triggers not checked: {repo.root}/.codeguard is invalid:\n"
-            "  bindings.broken.yaml.rule: Field required\n"
             "  bindings.broken.yaml.paths: Field required\n"
             "  bindings.broken.yaml.path: Extra inputs are not permitted\n"
         )

@@ -1,18 +1,31 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pathlib import Path
+from typing import Self
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    DirectoryPath,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.judge_config import JudgeChoice, JudgeProvider
 from codeguard.config.severity import Severity
 
+# A rule package that has not moved to rules/judge/<id>.md still binds a skill directory.
+SKILL_FILE = "SKILL.md"
 # Released rule packages still set it, from when evals judged code variants.
 _RETIRED_FIELDS = frozenset({"disable_skips"})
-_SKILL_KEY = "skill"
 
 
 class BindingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    rule: str
+    rule: str | None = None
+    skill: DirectoryPath | None = None
     paths: tuple[str, ...] = Field(min_length=1)
     exclude_paths: tuple[str, ...] = ()
     severity: Severity = Severity.ERROR
@@ -24,6 +37,13 @@ class BindingConfig(BaseModel):
     def judge(self) -> JudgeChoice:
         return JudgeChoice(provider=self.provider, model=self.model)
 
+    @property
+    def rule_id(self) -> str:
+        if self.skill is not None:
+            return self.skill.name
+        assert self.rule is not None
+        return self.rule
+
     @model_validator(mode="before")
     @classmethod
     def drop_retired_fields(cls, data: object) -> object:
@@ -31,12 +51,23 @@ class BindingConfig(BaseModel):
             return data
         return {key: value for key, value in data.items() if key not in _RETIRED_FIELDS}
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
+    def validate_one_rule(self) -> Self:
+        if (self.rule is None) == (self.skill is None):
+            raise ValueError("name the rule with rule: <id>")
+        return self
+
+    @field_validator("skill", mode="before")
     @classmethod
-    def reject_skill(cls, data: object) -> object:
-        if isinstance(data, dict) and _SKILL_KEY in data:
-            raise ValueError(
-                "skill is no longer supported: move the rule to rules/judge/<id>.md "
-                "and name it with rule: <id>"
-            )
-        return data
+    def resolve_skill_in_working_tree(cls, skill: object, info: ValidationInfo) -> object:
+        if not isinstance(skill, str | Path):
+            return skill
+        working_tree = (info.context or {}).get("working_tree", Path())
+        return working_tree / skill
+
+    @field_validator("skill")
+    @classmethod
+    def validate_skill_file_exists(cls, skill: Path | None) -> Path | None:
+        if skill is not None and not (skill / SKILL_FILE).is_file():
+            raise ValueError(f"{skill} has no {SKILL_FILE}")
+        return skill
