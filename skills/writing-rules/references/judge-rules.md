@@ -105,14 +105,16 @@ into every language. In each language, with each case's `file` in that language,
 - a `valid` and `invalid` pair for each example in the language's supplement;
 - an `invalid` case that breaks the convention with a construct neither `SKILL.md` nor
   the supplement shows, chosen the same way: list the constructs both files show, and
-  pick one that isn't on the list. Don't translate another language's case for it: that
+  pick one that isn't on the list. `SKILL.md`'s `## Violation` section counts: a
+  construct it names is shown. Don't translate another language's case for it: that
   case was chosen against another supplement;
 - a case whose violation shows only with the code around the change, if the language has
   no change kinds (every language but Python, today). There the judge sees only the
   changed lines, so an edit inside a long function is judged without the function.
 
 Write a case whose outcome doesn't depend on the language, such as values that match by
-coincidence, in one language only.
+coincidence, in one language only. Before you copy a case into a second language, ask
+whether its outcome could differ there; if it can't, the copy tests nothing new.
 
 For example, extending the error-handling rule above to TypeScript, whose supplement
 shows `.catch(() => {})` as a violation, adds TypeScript cases for:
