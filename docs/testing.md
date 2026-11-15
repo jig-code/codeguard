@@ -90,13 +90,13 @@ Rule test warnings, such as broad triggers, are advisory: they don't fail a chan
 | The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 2 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md) | Same |
 
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
-tests. The judge row needs Gemini credentials
-([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In a Claude Code cloud
-session whose network policy injects credentials for `aiplatform.googleapis.com`, run
-its commands as `CODEGUARD_JUDGE__GEMINI__PROJECT=<project>
-CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`, where `<project>` is your
-Google Cloud project: the proxy supplies the real key, and `proxy-injected` is a
-placeholder. `-n 8` only sets how many run at once: any number gives the same result.
+tests. `-n 8` only sets how many run at once: any number gives the same result.
+
+The judge row and `codeguard review` call Gemini, so they need its credentials
+([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In an environment whose
+proxy injects the Vertex AI credentials, run them as
+`CODEGUARD_JUDGE__GEMINI__PROJECT=<project> CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`,
+where `<project>` is your Google Cloud project.
 
 codeguard ships no rules, so `codeguard rules test` and `codeguard rules eval` don't
 run here. The rules in `evals/judge/` are fixtures for codeguard's own tests, and the
