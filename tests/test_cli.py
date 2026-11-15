@@ -175,10 +175,10 @@ class TestReviewCommand:
     def test_review_checks_a_gemini_bindings_sign_in_even_when_no_rule_matches_the_change(
         self, repo, tmp_path, make_judge_rule
     ):
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
+            'rule: placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
             "provider: gemini\nmodel: gemini-judge-test\n",
         )
         repo.write("a.py", "x = 1\n")
@@ -355,10 +355,10 @@ class TestReviewOfDeletedCode:
     def test_violation_on_the_class_that_lost_a_method_is_reported(
         self, repo, tmp_path, make_judge_rule
     ):
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
         )
         repo.write(
             "service.py",
@@ -411,15 +411,15 @@ class TestReviewOfDeletedCode:
 
 class TestReviewDryRun:
     def test_lists_judge_calls_without_calling_claude(self, repo, tmp_path, make_judge_rule):
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
         )
-        repo.write(".claude/skills/class-shape/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/class-shape.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/class-shape.yaml",
-            'skill: .claude/skills/class-shape\npaths: ["**/*.py"]\ntriggers: [class-header]\n',
+            'rule: class-shape\npaths: ["**/*.py"]\ntriggers: [class-header]\n',
         )
         repo.write("a.py", "x = 1\n")
         repo.write("b.rb", "x = 1\n")
@@ -456,10 +456,10 @@ class TestReviewDryRun:
     def test_lists_gemini_judge_calls_without_a_gemini_sign_in(
         self, repo, tmp_path, make_judge_rule
     ):
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
             "provider: gemini\nmodel: gemini-judge-test\n",
         )
         repo.write("a.py", "x = 1\n")
@@ -670,13 +670,13 @@ class TestReviewHost:
 
 
 def judged_repo(repo: GitRepo, tmp_path: Path, make_judge_rule) -> Path:
-    """Bind a skill to every Python file, change a.py, and put a failing claude on PATH."""
-    repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+    """Bind a rule to every Python file, change a.py, and put a failing claude on PATH."""
+    repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
     repo.write(
         ".codeguard/bindings/placement.yaml",
-        'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+        'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
     )
-    repo.commit("Bind the skill")
+    repo.commit("Bind the rule")
     repo.write("a.py", "x = 1\n")
     bin_dir = FAKE_CLAUDE.parent
     configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
@@ -915,7 +915,7 @@ class TestEvalCommand:
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
-            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            'rule: responsibility-placement\npaths: ["**/*.py"]\n'
             "triggers: [any]\nprovider: gemini\nmodel: gemini-4-argon\n",
         )
         bin_dir = recording_claude(tmp_path, [])
@@ -937,7 +937,7 @@ class TestEvalCommand:
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
-            'skill: python/skills/responsibility-placement\npaths: ["**/*.py"]\n'
+            'rule: responsibility-placement\npaths: ["**/*.py"]\n'
             "triggers: [any]\nprovider: gemini\nmodel: gemini-judge-test\n",
         )
 
@@ -961,10 +961,10 @@ class TestEvalCommand:
         self, tmp_path, tmp_path_factory, make_judge_rule
     ):
         package = invoice_package(tmp_path_factory)
-        package.write("python/skills/naming/SKILL.md", make_judge_rule().text)
+        package.write("python/rules/judge/naming.md", make_judge_rule().text)
         package.write(
             "python/bindings/naming.yaml",
-            'skill: python/skills/naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
+            'rule: naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
             "provider: gemini\nmodel: gemini-judge-test\n",
         )
         naming_case = {
@@ -1258,7 +1258,7 @@ class TestTestCommand:
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
             f"warning: triggers not checked: {repo.root}/.codeguard is invalid:\n"
-            "  bindings.broken.yaml.skill: Field required\n"
+            "  bindings.broken.yaml.rule: Field required\n"
             "  bindings.broken.yaml.paths: Field required\n"
             "  bindings.broken.yaml.path: Extra inputs are not permitted\n"
         )
@@ -1266,10 +1266,10 @@ class TestTestCommand:
 
     def test_broad_triggers_are_a_warning(self, repo, make_judge_rule):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any, fixture]\n',
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any, fixture]\n',
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
@@ -1326,10 +1326,10 @@ class TestTestCommand:
 
     def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_judge_rule):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
-        repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [comment]\n',
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [comment]\n',
         )
         repo.write(
             ".codeguard/rule-evals/placement.yaml",

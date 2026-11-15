@@ -14,9 +14,8 @@ development loop, and by reviewing every change against those rules when the age
 and in CI. Rules cover architecture and design as well as code-level practice. Each rule
 is defined once and applies wherever code is written or reviewed.
 
-- Prevention: the agent loads the skill for a file before it edits that file.
-- Correction: every change is reviewed by deterministic checks and an LLM judge. The
-  review runs when the agent stops and in CI, and errors block.
+Every change is reviewed by deterministic checks and an LLM judge. The review runs when
+the agent stops and in CI, and errors block.
 
 codeguard has no rules and no languages built in. Projects and rule packages supply all
 of them.
@@ -29,9 +28,10 @@ by exactly one rule, of one of two kinds:
 - A pattern rule is an ast-grep rule, for a requirement that can be checked mechanically.
   Only code checks it, never a model. Its note explains why the requirement exists and
   how to fix a violation.
-- A judge rule is a skill (`SKILL.md`), for a requirement that needs judgment. The skill
-  states the requirement and why it matters. The writing agent loads that text and the
-  judge grades against the same text. There is no separate rubric.
+- A judge rule is one plain Markdown file, `rules/judge/<id>.md`, for a requirement that
+  needs judgment: a title, one sentence stating the requirement, and a `## Why` section
+  saying why it matters. Every binding names it with `rule: <id>`. The judge grades
+  against the file's text, which it gets unparsed. There is no separate rubric.
 
 Rules live in a project's `.codeguard/` directory or come from rule packages fetched from
 git and pinned to a tag. Every surface reviews with the same rules.
@@ -114,18 +114,17 @@ the code refer to.
 **Single source**
 
 1. Each requirement is written in exactly one place: a pattern rule when it can be
-   checked mechanically, otherwise skill prose. Never both, never copied. A pattern rule is
-   checked only by code, never by an LLM.
-2. Everything the judge enforces is in the skill the writing agent loads. The writing
-   agent may get extra guidance the judge doesn't enforce. There is no separate review
-   rubric.
+   checked mechanically, otherwise a judge rule's file. Never both, never copied. A
+   pattern rule is checked only by code, never by an LLM.
+2. Everything the judge enforces for a rule is in its rule file, `rules/judge/<id>.md`,
+   and the judge gets that file's text unparsed. There is no separate review rubric.
 3. Each file-to-rule mapping is defined in exactly one place: the bindings.
 
 **The same review locally and in CI**
 
 4. Local and CI reviews run the same engine: the same routing, checks, judge template and
    diagnostic schema.
-5. Every judge input is deterministic: the same files and skill version give the same
+5. Every judge input is deterministic: the same files and rule file give the same
    prompt on every surface and machine. What the judge reads with its tools comes from the
    same files on every surface. Providers with file-read tracking record those dependencies.
    The verdict itself may vary,
@@ -177,7 +176,7 @@ the code refer to.
       doesn't make its untouched `except` part of the change). The judge may read them as
       context.
 21. The judge reports violations, never fixes. At Stop, the agent's session decides the
-    fix; CI only reports. Skill text states what breaks the rule, not how to change the
+    fix; CI only reports. A rule file states what breaks the rule, not how to change the
     code.
 
 **Scale and cost**

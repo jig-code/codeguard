@@ -42,7 +42,6 @@ class TestPackages:
 
         rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
 
-        skill = package.root / "python/skills/responsibility-placement"
         assert rulesets == (
             Ruleset(
                 name="example/python",
@@ -50,7 +49,9 @@ class TestPackages:
                 bindings=BindingsConfig(
                     {
                         "responsibility-placement.yaml": BindingConfig(
-                            triggers=frozenset({"any"}), skill=skill, paths=("**/*.py",)
+                            triggers=frozenset({"any"}),
+                            rule="responsibility-placement",
+                            paths=("**/*.py",),
                         )
                     }
                 ),
@@ -66,7 +67,6 @@ class TestPackages:
 
         rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
 
-        skill = package.root / "python/skills/responsibility-placement"
         assert rulesets == (
             Ruleset(
                 name="example/python",
@@ -74,7 +74,7 @@ class TestPackages:
                 bindings=BindingsConfig(
                     {
                         "responsibility-placement.yaml": make_binding_config(
-                            skill=skill, paths=("**/*.py",)
+                            rule="responsibility-placement", paths=("**/*.py",)
                         )
                     }
                 ),
@@ -105,7 +105,6 @@ class TestPackages:
 
         rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
 
-        skill = repo.root / "rules/python/skills/responsibility-placement"
         assert rulesets == (
             Ruleset(
                 name="example/python",
@@ -113,7 +112,7 @@ class TestPackages:
                 bindings=BindingsConfig(
                     {
                         "responsibility-placement.yaml": make_binding_config(
-                            skill=skill, paths=("**/*.py",)
+                            rule="responsibility-placement", paths=("**/*.py",)
                         )
                     }
                 ),

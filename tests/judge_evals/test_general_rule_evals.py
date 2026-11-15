@@ -2,7 +2,7 @@ from general_rule import (
     EVAL,
     PYTHON_CASE,
     RULE,
-    SKILL_DIR,
+    RULE_FILE,
     TYPESCRIPT_CASE,
     case,
     write_general_rule,
@@ -21,10 +21,10 @@ def binding(repo):
 
 
 class TestGeneralRuleVersion:
-    def test_rewording_the_skill_changes_the_rule_version(self, repo):
+    def test_rewording_the_rule_changes_the_rule_version(self, repo):
         write_general_rule(repo)
         before = binding(repo)
-        repo.write(f"{SKILL_DIR}/SKILL.md", "# Knowledge stated once, reworded\n")
+        repo.write(RULE_FILE, "# Knowledge stated once, reworded\n")
 
         after = binding(repo)
 

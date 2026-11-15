@@ -70,13 +70,13 @@ def claude_bin() -> Path:
     return FAKE_CLAUDE.parent
 
 
-def bind_skill(repo, make_judge_rule) -> None:
-    repo.write(".claude/skills/placement/SKILL.md", make_judge_rule().text)
+def bind_rule(repo, make_judge_rule) -> None:
+    repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
     repo.write(
         ".codeguard/bindings/placement.yaml",
-        'skill: .claude/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+        'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
     )
-    repo.commit("Bind the skill")
+    repo.commit("Bind the rule")
 
 
 def run_stop_hook(
@@ -238,7 +238,7 @@ class TestStopHook:
     def test_low_confidence_finding_goes_to_the_user(
         self, repo, claude_bin, make_judge_rule, make_diagnostic
     ):
-        bind_skill(repo, make_judge_rule)
+        bind_rule(repo, make_judge_rule)
         repo.write("a.py", "x = 1\ny = 2\n")
         violation = {"file": "a.py", "lines": {"start": 1, "end": 2}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
@@ -258,7 +258,7 @@ class TestStopHook:
         assert response == {"systemMessage": f"codeguard warnings:\n{finding}"}
 
     def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, claude_bin, make_judge_rule):
-        bind_skill(repo, make_judge_rule)
+        bind_rule(repo, make_judge_rule)
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
 

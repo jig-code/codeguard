@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Self
 
 from codeguard.config import (
-    SKILL_FILE,
     BindingConfig,
     JudgeChoice,
     JudgeModel,
@@ -28,10 +27,12 @@ class Binding:
     exclude_paths: tuple[str, ...] = ()
 
     @classmethod
-    def from_config(cls, rule: str, binding: BindingConfig, judge: JudgeChoice) -> Self:
+    def from_config(
+        cls, rule: str, binding: BindingConfig, judge_rule: JudgeRule, judge: JudgeChoice
+    ) -> Self:
         return cls(
             rule=rule,
-            judge_rule=JudgeRule.from_file(binding.skill.name, binding.skill / SKILL_FILE),
+            judge_rule=judge_rule,
             paths=binding.paths,
             severity=binding.severity,
             judge=judge,
@@ -72,6 +73,7 @@ class Bindings(tuple[Binding, ...]):
             Binding.from_config(
                 rule,
                 binding,
+                JudgeRule.from_file(binding.rule, ruleset.judge_rule_file(binding.rule)),
                 judge_override
                 if judge_override.provider
                 else binding.judge.over(project_judge).over(ruleset.package_judge),

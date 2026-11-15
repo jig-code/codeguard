@@ -1,4 +1,4 @@
-from codeguard.config.binding_config import SKILL_FILE, BindingConfig
+from codeguard.config.binding_config import BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.config import Config
@@ -24,6 +24,7 @@ from codeguard.config.pattern_binding_config import PatternBindingConfig, Patter
 from codeguard.config.ruleset import (
     GATE_DIR,
     JUDGE_EVAL_DIR,
+    JUDGE_RULE_DIR,
     LEGACY_PATTERN_TEST_DIR,
     PATTERN_RULE_DIR,
     RULE_TEST_DIR,
@@ -41,12 +42,12 @@ __all__ = [
     "CONFIG_FILE",
     "GATE_DIR",
     "JUDGE_EVAL_DIR",
+    "JUDGE_RULE_DIR",
     "LANGUAGES",
     "ModelFamily",
     "LEGACY_PATTERN_TEST_DIR",
     "PATTERN_RULE_DIR",
     "RULE_TEST_DIR",
-    "SKILL_FILE",
     "SNAPSHOT_DIR",
     "BindingConfig",
     "BindingsConfig",

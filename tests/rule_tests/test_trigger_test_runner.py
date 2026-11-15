@@ -10,12 +10,10 @@ EVAL_FILE = ".codeguard/rule-evals/enum-usage.yaml"
 
 @pytest.fixture
 def enum_rule(repo):
-    repo.write(
-        ".codeguard/skills/enum-usage/SKILL.md", "---\nname: enum-usage\n---\n# Enum usage\n"
-    )
+    repo.write(".codeguard/rules/judge/enum-usage.md", "# Enum usage\n")
     repo.write(
         ".codeguard/bindings/enum-usage.yaml",
-        'skill: .codeguard/skills/enum-usage\npaths: ["**/*.py"]\n'
+        'rule: enum-usage\npaths: ["**/*.py"]\n'
         'exclude_paths: ["**/test_*.py"]\ntriggers: [enum-value, definition-added-or-removed]\n',
     )
     repo.write(

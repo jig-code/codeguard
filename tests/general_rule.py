@@ -1,10 +1,10 @@
 from git_repo import GitRepo
 
 RULE = "knowledge-stated-once"
-SKILL_DIR = f".codeguard/skills/{RULE}"
+RULE_FILE = f".codeguard/rules/judge/{RULE}.md"
 BINDING = f".codeguard/bindings/{RULE}.yaml"
 EVAL = f".codeguard/rule-evals/{RULE}.yaml"
-GENERAL_SKILL = (
+GENERAL_RULE = (
     "# Knowledge stated once\n\nEach piece of knowledge has one home in the code.\n\n"
     "## Why\n\nTwo copies of one fact drift apart when only one is changed.\n"
 )
@@ -24,5 +24,5 @@ TYPESCRIPT_CASE = case("a repeated status literal in a script", "orders.ts", "co
 
 def write_general_rule(repo: GitRepo, binding: str = BOTH_LANGUAGES) -> None:
     """A rule for Python and TypeScript files."""
-    repo.write(f"{SKILL_DIR}/SKILL.md", GENERAL_SKILL)
-    repo.write(BINDING, f"skill: {SKILL_DIR}\n{binding}")
+    repo.write(RULE_FILE, GENERAL_RULE)
+    repo.write(BINDING, f"rule: {RULE}\n{binding}")

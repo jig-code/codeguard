@@ -1,13 +1,12 @@
 from codeguard.config import JudgeChoice, JudgeProvider, RuleOverride, RulesetConfig
 from codeguard.review import Binding, Bindings, JudgeRule, Severity
 
-SKILL_NAME = "responsibility-placement"
+RULE_NAME = "responsibility-placement"
 
 
-def write_skill(tmp_path, text: str):
-    (tmp_path / SKILL_NAME).mkdir()
-    (tmp_path / SKILL_NAME / "SKILL.md").write_text(text)
-    return tmp_path / SKILL_NAME
+def write_judge_rule(tmp_path, text: str) -> None:
+    (tmp_path / "rules/judge").mkdir(parents=True)
+    (tmp_path / f"rules/judge/{RULE_NAME}.md").write_text(text)
 
 
 class TestBinding:
@@ -26,12 +25,11 @@ class TestBinding:
         assert files == ["app/a.py"]
 
     def test_from_config_has_its_exclude_paths(
-        self, tmp_path, make_binding, make_binding_config, make_judge_rule
+        self, make_binding, make_binding_config, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
-        config = make_binding_config(skill=skill, exclude_paths=("tests/**",))
+        config = make_binding_config(exclude_paths=("tests/**",))
 
-        binding = Binding.from_config(SKILL_NAME, config, JudgeChoice())
+        binding = Binding.from_config(RULE_NAME, config, make_judge_rule(), JudgeChoice())
 
         assert binding == make_binding(exclude_paths=("tests/**",))
 
@@ -42,23 +40,17 @@ class TestBinding:
 
         assert files == ["a.py", "app/b.rb"]
 
-    def test_from_config_builds_its_skill(
-        self, tmp_path, make_binding, make_binding_config, make_judge_rule
-    ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
-        config = make_binding_config(skill=skill, severity=Severity.WARNING)
+    def test_from_config_has_its_severity(self, make_binding, make_binding_config, make_judge_rule):
+        config = make_binding_config(severity=Severity.WARNING)
 
-        binding = Binding.from_config(SKILL_NAME, config, JudgeChoice())
+        binding = Binding.from_config(RULE_NAME, config, make_judge_rule(), JudgeChoice())
 
         assert binding == make_binding(severity=Severity.WARNING)
 
-    def test_from_config_has_its_judge(
-        self, tmp_path, make_binding, make_binding_config, make_judge_rule
-    ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+    def test_from_config_has_its_judge(self, make_binding, make_binding_config, make_judge_rule):
         judge = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="gpt-6-luna")
 
-        binding = Binding.from_config(SKILL_NAME, make_binding_config(skill=skill), judge)
+        binding = Binding.from_config(RULE_NAME, make_binding_config(), make_judge_rule(), judge)
 
         assert binding == make_binding(judge=judge)
 
@@ -67,67 +59,65 @@ class TestBindings:
     def test_from_rulesets_builds_each_binding(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(binding__skill=skill)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path)])
 
         assert bindings == (make_binding(),)
 
     def test_packaged_binding_is_named_by_its_ruleset(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, name="example/python")]
-        )
+        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path, name="example/python")])
 
-        assert bindings == (make_binding(rule=f"example/python/{SKILL_NAME}"),)
+        assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
     def test_excluded_binding_is_dropped(self, tmp_path, make_ruleset, make_judge_rule):
-        skill = write_skill(tmp_path, make_judge_rule().text)
-        selection = RulesetConfig(exclude=(SKILL_NAME,))
+        write_judge_rule(tmp_path, make_judge_rule().text)
+        selection = RulesetConfig(exclude=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, name="example/python", selection=selection)]
+            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
     def test_binding_left_out_of_include_is_dropped(self, tmp_path, make_ruleset, make_judge_rule):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         selection = RulesetConfig(include=("another-rule",))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, name="example/python", selection=selection)]
+            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
     def test_included_binding_is_kept(self, tmp_path, make_binding, make_ruleset, make_judge_rule):
-        skill = write_skill(tmp_path, make_judge_rule().text)
-        selection = RulesetConfig(include=(SKILL_NAME,))
+        write_judge_rule(tmp_path, make_judge_rule().text)
+        selection = RulesetConfig(include=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, name="example/python", selection=selection)]
+            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
         )
 
-        assert bindings == (make_binding(rule=f"example/python/{SKILL_NAME}"),)
+        assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
     def test_override_replaces_the_binding_fields(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         override = RuleOverride(paths=("app/**",), severity=Severity.WARNING)
-        selection = RulesetConfig(rules={SKILL_NAME: override})
+        selection = RulesetConfig(rules={RULE_NAME: override})
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, name="example/python", selection=selection)]
+            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
         )
 
         assert bindings == (
             make_binding(
-                rule=f"example/python/{SKILL_NAME}",
+                rule=f"example/python/{RULE_NAME}",
                 paths=("app/**",),
                 severity=Severity.WARNING,
             ),
@@ -136,10 +126,10 @@ class TestBindings:
     def test_override_replaces_the_excluded_paths(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
-        selection = RulesetConfig(rules={SKILL_NAME: RuleOverride(exclude_paths=())})
+        write_judge_rule(tmp_path, make_judge_rule().text)
+        selection = RulesetConfig(rules={RULE_NAME: RuleOverride(exclude_paths=())})
         ruleset = make_ruleset(
-            binding__skill=skill, binding__exclude_paths=("tests/**",), selection=selection
+            root=tmp_path, binding__exclude_paths=("tests/**",), selection=selection
         )
 
         assert Bindings.from_rulesets([ruleset]) == (make_binding(),)
@@ -149,24 +139,22 @@ class TestBindingsJudge:
     def test_package_default_judges_its_rules(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
 
-        bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, package_judge=package)]
-        )
+        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path, package_judge=package)])
 
         assert bindings == (make_binding(judge=package),)
 
     def test_project_default_wins_over_the_package_default(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, package_judge=package)], project
+            [make_ruleset(root=tmp_path, package_judge=package)], project
         )
 
         assert bindings == (make_binding(judge=project),)
@@ -174,10 +162,10 @@ class TestBindingsJudge:
     def test_binding_wins_over_the_project_default(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            binding__skill=skill,
+            root=tmp_path,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -191,12 +179,10 @@ class TestBindingsJudge:
     def test_provider_and_model_each_come_from_the_first_level_naming_it(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         package = JudgeChoice(model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK)
-        ruleset = make_ruleset(
-            binding__skill=skill, binding__model="bound-model", package_judge=package
-        )
+        ruleset = make_ruleset(root=tmp_path, binding__model="bound-model", package_judge=package)
 
         bindings = Bindings.from_rulesets([ruleset], project)
 
@@ -207,12 +193,12 @@ class TestBindingsJudge:
     def test_project_model_runs_on_the_package_provider(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(binding__skill=skill, package_judge=package)], project
+            [make_ruleset(root=tmp_path, package_judge=package)], project
         )
 
         assert bindings == (
@@ -224,10 +210,10 @@ class TestBindingsJudge:
     def test_override_naming_a_provider_replaces_every_level(
         self, tmp_path, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = write_skill(tmp_path, make_judge_rule().text)
+        write_judge_rule(tmp_path, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            binding__skill=skill,
+            root=tmp_path,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -239,10 +225,11 @@ class TestBindingsJudge:
 
 
 class TestJudgeRule:
-    def test_from_file_drops_the_frontmatter(self, tmp_path, make_judge_rule):
-        file = tmp_path / "SKILL.md"
-        file.write_text(f"---\nname: {SKILL_NAME}\n---\n{make_judge_rule().text}")
+    def test_from_file_keeps_the_text_unparsed(self, tmp_path, make_judge_rule):
+        text = f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}"
+        file = tmp_path / f"{RULE_NAME}.md"
+        file.write_text(text)
 
-        judge_rule = JudgeRule.from_file(SKILL_NAME, file)
+        judge_rule = JudgeRule.from_file(RULE_NAME, file)
 
-        assert judge_rule == make_judge_rule()
+        assert judge_rule == make_judge_rule(text=text)

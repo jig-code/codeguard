@@ -4,7 +4,7 @@ from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, EvalSelection
 from codeguard.rule_tests import RuleTestResult
 
-ENUM_SKILL = "# Enum usage\n\nPass the enum member, never a bare literal.\n"
+ENUM_RULE = "# Enum usage\n\nPass the enum member, never a bare literal.\n"
 INVALID_EVAL = """\
 cases:
   - name: a literal
@@ -18,10 +18,10 @@ cases:
 
 @pytest.fixture
 def enum_rule(repo):
-    repo.write(".codeguard/skills/enum-usage/SKILL.md", f"---\nname: enum-usage\n---\n{ENUM_SKILL}")
+    repo.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
     repo.write(
         ".codeguard/bindings/enum-usage.yaml",
-        'skill: .codeguard/skills/enum-usage\npaths: ["**/*.py"]\ntriggers: [any]\n',
+        'rule: enum-usage\npaths: ["**/*.py"]\ntriggers: [any]\n',
     )
 
 

@@ -12,18 +12,18 @@ from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
-from codeguard.config.pattern_binding_config import PatternBindingsConfig
-from codeguard.config.ruleset import BINDINGS_DIR, Ruleset
+from codeguard.config.pattern_binding_config import PatternBindingConfig, PatternBindingsConfig
+from codeguard.config.ruleset import BINDINGS_DIR, Ruleset, judge_rule_file
 from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
-_PATTERN_BINDING_KEY = "rule"
+_RULE_KEY = "rule"
+_PATTERN_BINDING_KEYS = frozenset(PatternBindingConfig.model_fields)
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
 
 
 @dataclass(frozen=True)
 class RulesetLoader:
-    repo: Path
     root: Path
     name: str | None = None
     selection: RulesetConfig = field(default_factory=RulesetConfig)
@@ -33,7 +33,6 @@ class RulesetLoader:
     @classmethod
     def local(cls, working_tree: Path) -> Self:
         return cls(
-            repo=working_tree,
             root=working_tree / CONFIG_DIR,
             files=frozenset({PurePath(CONFIG_FILE).name}),
         )
@@ -50,17 +49,13 @@ class RulesetLoader:
             if path.suffix in _BINDING_FILE_SUFFIXES
         }
         pattern_documents = {
-            file: document
-            for file, document in documents.items()
-            if isinstance(document, dict) and _PATTERN_BINDING_KEY in document
+            file: document for file, document in documents.items() if self._binds_pattern(document)
         }
-        skill_documents = {
+        judge_documents = {
             file: document for file, document in documents.items() if file not in pattern_documents
         }
         try:
-            bindings = BindingsConfig.model_validate(
-                skill_documents, context={"working_tree": self.repo}
-            )
+            bindings = BindingsConfig.model_validate(judge_documents)
             pattern_bindings = PatternBindingsConfig.model_validate(pattern_documents)
         except ValidationError as error:
             raise ConfigError.invalid(self.root, error, prefix="bindings") from error
@@ -78,12 +73,28 @@ class RulesetLoader:
             raise ConfigError.invalid(self.root, error, prefix="gates") from error
         self._raise_problems(
             [
+                *self._missing_judge_rules(ruleset),
                 *self._unbound_pattern_rules(ruleset),
                 *self._unknown_triggers(ruleset, gates),
                 *self._shared_ids(ruleset, gates),
             ]
         )
         return ruleset
+
+    def _binds_pattern(self, document: object) -> bool:
+        return (
+            isinstance(document, dict)
+            and _RULE_KEY in document
+            and document.keys() <= _PATTERN_BINDING_KEYS
+            and not judge_rule_file(self.root, str(document[_RULE_KEY])).is_file()
+        )
+
+    def _missing_judge_rules(self, ruleset: Ruleset) -> list[str]:
+        return [
+            f"bindings.{file}.rule: no judge rule {path.relative_to(self.root)}"
+            for file, binding in ruleset.bindings.root.items()
+            if not (path := ruleset.judge_rule_file(binding.rule)).is_file()
+        ]
 
     def _shared_ids(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:
         if not gates:

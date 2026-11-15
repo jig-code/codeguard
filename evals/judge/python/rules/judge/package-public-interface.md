@@ -1,8 +1,3 @@
----
-name: package-public-interface
-description: Code outside a package imports from the package root.
----
-
 # Package public interface
 
 Code outside a package imports what the package exports from the package root, not from the module that defines it.

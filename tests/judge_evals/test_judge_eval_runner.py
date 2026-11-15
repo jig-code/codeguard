@@ -13,14 +13,14 @@ from codeguard.rule_tests import RuleTestResult
 @pytest.fixture
 def enum_rule(repo):
     repo.write(
-        ".codeguard/skills/enum-usage/SKILL.md",
-        "---\nname: enum-usage\n---\n# Enum usage\n\nPass the enum member, never a bare literal.\n",
+        ".codeguard/rules/judge/enum-usage.md",
+        "# Enum usage\n\nPass the enum member, never a bare literal.\n",
     )
     repo.write(
         ".codeguard/bindings/enum-usage.yaml",
         yaml.safe_dump(
             {
-                "skill": ".codeguard/skills/enum-usage",
+                "rule": "enum-usage",
                 "paths": ["**/*.py"],
                 "triggers": ["any"],
                 "model": "claude-haiku-5-5",

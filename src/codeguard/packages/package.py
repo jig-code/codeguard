@@ -28,7 +28,6 @@ class Package:
 
     def ruleset_loader(self, name: str, selection: RulesetConfig | None = None) -> RulesetLoader:
         return RulesetLoader(
-            repo=self.root,
             root=self.root / name,
             name=f"{self.manifest.name}/{name}",
             selection=selection or RulesetConfig(),

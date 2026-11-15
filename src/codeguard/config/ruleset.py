@@ -20,7 +20,12 @@ SNAPSHOT_DIR = f"{RULE_TEST_DIR}/__snapshots__"
 LEGACY_PATTERN_TEST_DIR = f"{RULE_TEST_DIR}/pattern"
 JUDGE_EVAL_DIR = "rule-evals"
 BINDINGS_DIR = "bindings"
-SKILLS_DIR = "skills"
+JUDGE_RULE_DIR = "rules/judge"
+JUDGE_RULE_SUFFIX = ".md"
+
+
+def judge_rule_file(root: Path, rule: str) -> Path:
+    return root / JUDGE_RULE_DIR / f"{rule}{JUDGE_RULE_SUFFIX}"
 
 
 class _PatternRule(BaseModel):
@@ -54,7 +59,10 @@ class Ruleset:
         return rule_id if self.name is None else f"{self.name}/{rule_id}"
 
     def judged_rule_ids(self) -> frozenset[str]:
-        return frozenset(binding.skill.name for binding in self.bindings.root.values())
+        return frozenset(binding.rule for binding in self.bindings.root.values())
+
+    def judge_rule_file(self, rule: str) -> Path:
+        return judge_rule_file(self.root, rule)
 
     def pattern_rule_ids(self) -> frozenset[str]:
         return frozenset(rule.id for rule in self._pattern_rules())
@@ -95,11 +103,11 @@ class Ruleset:
 
     def selected_bindings(self) -> dict[str, BindingConfig]:
         return {
-            self.qualified_rule_id(binding.skill.name): self._qualified(
-                self.selection.apply(binding.skill.name, binding)
+            self.qualified_rule_id(binding.rule): self._qualified(
+                self.selection.apply(binding.rule, binding)
             )
             for binding in self.bindings.root.values()
-            if not self.excludes(binding.skill.name)
+            if not self.excludes(binding.rule)
         }
 
     def _qualified(self, binding: BindingConfig) -> BindingConfig:

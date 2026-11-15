@@ -15,7 +15,7 @@ class TestRulesetStructure:
             "rule-tests/__snapshots__",
             "rule-evals",
             "bindings",
-            "skills",
+            "rules/judge",
         )
         (tmp_path / "rule-tests/no-print-test.yml").write_text("id: no-print\n")
 
