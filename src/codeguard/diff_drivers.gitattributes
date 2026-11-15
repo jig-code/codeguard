@@ -1,3 +1,0 @@
-*.py diff=python
-*.pyi diff=python
-*.rb diff=ruby
