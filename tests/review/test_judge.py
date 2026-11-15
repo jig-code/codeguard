@@ -204,7 +204,7 @@ class TestJudgeRequest:
             """),
         )
 
-    def test_all_lines_of_a_binary_file_is_git_binary_files_line(
+    def test_binary_file_is_shown_as_git_binary_files_line(
         self, tmp_path, make_binding, make_skill
     ):
         (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00")
@@ -220,6 +220,28 @@ class TestJudgeRequest:
         assert request == JudgeRequest(
             make_skill(), "logo.png", "Binary files /dev/null and b/logo.png differ\n"
         )
+
+    @pytest.mark.parametrize(
+        ("leading_bytes", "changes"),
+        [
+            (7999, "Binary files /dev/null and b/data.txt differ\n"),
+            (8000, f"--- /dev/null\n+++ b/data.txt\n@@ -0,0 +1 @@\n+{'a' * 8000}\0\n"),
+        ],
+    )
+    def test_file_is_binary_only_with_a_nul_in_its_first_8000_bytes(
+        self, leading_bytes, changes, tmp_path, make_binding, make_skill
+    ):
+        (tmp_path / "data.txt").write_bytes(b"a" * leading_bytes + b"\0\n")
+
+        request = JudgeRequest.of_change(
+            make_binding(),
+            WorkingTree.at(tmp_path),
+            "data.txt",
+            AllLines(("data.txt",)),
+            Classification(),
+        )
+
+        assert request == JudgeRequest(make_skill(), "data.txt", changes)
 
     def test_untracked_binary_file_is_git_binary_files_line(
         self, make_new_file_changed_lines, tmp_path, make_binding, make_skill
