@@ -18,6 +18,8 @@ from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
 _RULE_KEY = "rule"
+# A binding naming a skill as well is a judge binding, so its own validation reports it.
+_SKILL_KEY = "skill"
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
 
 
@@ -85,7 +87,9 @@ class RulesetLoader:
         named = {
             file: document[_RULE_KEY]
             for file, document in documents.items()
-            if isinstance(document, dict) and isinstance(document.get(_RULE_KEY), str)
+            if isinstance(document, dict)
+            and isinstance(document.get(_RULE_KEY), str)
+            and _SKILL_KEY not in document
         }
         pattern_ids = Ruleset(name=self.name, root=self.root).pattern_rule_ids() if named else set()
         self._raise_problems(
@@ -100,7 +104,7 @@ class RulesetLoader:
         return pattern, judge
 
     def _route_problem(self, file: str, rule: str, is_pattern_rule: bool) -> str | None:
-        if rule in {"", ".", ".."} or "/" in rule or "\\" in rule:
+        if "/" in rule or "\\" in rule:
             return f"bindings.{file}.rule: {rule!r} is not a rule id"
         path = judge_rule_file(self.root, rule)
         expected = path.relative_to(self.root)

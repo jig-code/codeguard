@@ -445,16 +445,36 @@ class TestRulesetLoader:
             "both rules/judge/no-print.md and pattern rule no-print have this id"
         )
 
-    def test_rule_id_that_is_a_path_is_an_error(self, repo, make_judge_rule):
+    @pytest.mark.parametrize(
+        "rule", ["../../../placement", "..\\..\\..\\placement"], ids=["slash", "backslash"]
+    )
+    def test_rule_id_that_is_a_path_is_an_error(self, repo, make_judge_rule, rule):
         repo.write("placement.md", make_judge_rule().text)
-        repo.write(BINDING, 'rule: ../../../placement\npaths: ["**"]\ntriggers: [any]\n')
+        repo.write(BINDING, f'rule: {rule}\npaths: ["**"]\ntriggers: [any]\n')
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.placement.yaml.rule: '../../../placement' is not a rule id"
+            f"  bindings.placement.yaml.rule: {rule!r} is not a rule id"
+        )
+
+    def test_binding_naming_a_pattern_rule_and_a_skill_is_an_error(self, repo, make_judge_rule):
+        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        repo.write(".codeguard/skills/no-print/SKILL.md", make_judge_rule().text)
+        repo.write(
+            ".codeguard/bindings/no-print.yaml",
+            'rule: no-print\nskill: .codeguard/skills/no-print\npaths: ["**"]\n',
+        )
+
+        with pytest.raises(ConfigError) as error:
+            RulesetLoader.local(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  bindings.no-print.yaml: Value error, rule and skill both name a rule: "
+            "keep only rule"
         )
 
     def test_pattern_rule_bound_twice_is_an_error(self, repo):

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from packaging.version import Version
 from pydantic import ValidationError
@@ -24,25 +26,27 @@ def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
     return [problem["msg"] for problem in error.value.errors()]
 
 
-class TestBindingsConfig:
-    def test_skill_directory_is_under_the_working_tree(self, tmp_path):
-        (tmp_path / "placement").mkdir()
-        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+@pytest.fixture
+def placement_skill(tmp_path) -> Path:
+    """An old-format judge rule: a skill directory holding its SKILL.md."""
+    (tmp_path / "placement").mkdir()
+    (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+    return tmp_path / "placement"
 
+
+class TestBindingsConfig:
+    def test_skill_directory_is_under_the_working_tree(self, tmp_path, placement_skill):
         bindings = BindingsConfig.model_validate(
             {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}},
             context={"working_tree": tmp_path},
         )
 
         assert bindings.root["placement.yaml"] == BindingConfig(
-            skill=tmp_path / "placement", paths=("**",), triggers=frozenset({"any"})
+            skill=placement_skill, paths=("**",), triggers=frozenset({"any"})
         )
 
-    def test_skill_directory_names_the_rule(self, tmp_path):
-        (tmp_path / "placement").mkdir()
-        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
-
-        binding = BindingConfig(skill=tmp_path / "placement", paths=("**",))
+    def test_skill_directory_names_the_rule(self, placement_skill):
+        binding = BindingConfig(skill=placement_skill, paths=("**",))
 
         assert binding.rule_id == "placement"
 
@@ -57,13 +61,10 @@ class TestBindingsConfig:
 
         assert messages(error) == [f"Value error, {tmp_path}/placement has no SKILL.md"]
 
-    def test_binding_naming_a_rule_and_a_skill_is_an_error(self, tmp_path):
-        (tmp_path / "placement").mkdir()
-        (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
-
+    def test_binding_naming_a_rule_and_a_skill_is_an_error(self, placement_skill):
         with pytest.raises(ValidationError) as error:
             BindingConfig.model_validate(
-                {"rule": "placement", "skill": tmp_path / "placement", "paths": ["**"]}
+                {"rule": "placement", "skill": placement_skill, "paths": ["**"]}
             )
 
         assert messages(error) == ["Value error, rule and skill both name a rule: keep only rule"]

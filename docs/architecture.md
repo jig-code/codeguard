@@ -64,7 +64,7 @@ from the syntax table in [`syntax/`](../src/codeguard/syntax/).
   fails to read what an obvious case needs, that is a finding about the model, not a
   reason to change the prompt.
 - Each provider runs isolated (#6): no user or project config, instructions, hooks,
-  plugins, memory or other skills reach it, so a verdict depends only on the rule and the
+  plugins, memory or skills reach it, so a verdict depends only on the rule and the
   repository.
 - The judge reports violations, never fixes (#21), with a reason for its verdict as
   context for whoever troubleshoots it, and a confidence on a fixed scale stated in the
@@ -130,8 +130,8 @@ the code refer to.
    The verdict itself may vary,
    within the bounds #8 sets.
 6. The judge sees only what the harness passes it and what it reads with read-only tools
-   from the review's files. No user or project config, CLAUDE.md, hooks, plugins or other
-   skills reach it.
+   from the review's files. No user or project config, CLAUDE.md, hooks, plugins or skills
+   reach it.
 
 **Deterministic except where stated**
 
