@@ -38,7 +38,7 @@ model whatever its binding names ([CLI](cli.md#eval)); reviews still use the bin
 Set a judge rule's binding to `codex-cli` and name its model:
 
 ```yaml
-skill: .codeguard/skills/responsibility-placement
+rule: responsibility-placement
 paths: ["app/**/*.py"]
 provider: codex-cli
 model: gpt-6-luna
@@ -54,7 +54,7 @@ profile id or ARN ([Bedrock](#bedrock)). This path uses metered AWS billing and 
 invoke the Codex CLI:
 
 ```yaml
-skill: .codeguard/skills/responsibility-placement
+rule: responsibility-placement
 paths: ["app/**/*.py"]
 provider: bedrock
 model: us.openai.gpt-6-luna
@@ -66,7 +66,7 @@ A judge rule whose binding sets `provider: gemini` is judged with Gemini on Goog
 (Vertex AI):
 
 ```yaml
-skill: .codeguard/skills/responsibility-placement
+rule: responsibility-placement
 paths: ["app/**/*.py"]
 provider: gemini
 model: gemini-4-argon
