@@ -12,13 +12,12 @@ from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
-from codeguard.config.pattern_binding_config import PatternBindingConfig, PatternBindingsConfig
+from codeguard.config.pattern_binding_config import PatternBindingsConfig
 from codeguard.config.ruleset import BINDINGS_DIR, Ruleset, judge_rule_file
 from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
 _RULE_KEY = "rule"
-_PATTERN_BINDING_KEYS = frozenset(PatternBindingConfig.model_fields)
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
 
 
@@ -50,12 +49,7 @@ class RulesetLoader:
             for path in sorted(bindings_dir.rglob("*"))
             if path.suffix in _BINDING_FILE_SUFFIXES
         }
-        pattern_documents = {
-            file: document for file, document in documents.items() if self._binds_pattern(document)
-        }
-        judge_documents = {
-            file: document for file, document in documents.items() if file not in pattern_documents
-        }
+        pattern_documents, judge_documents = self._route(documents)
         try:
             bindings = BindingsConfig.model_validate(
                 judge_documents, context={"working_tree": self.repo}
@@ -77,44 +71,50 @@ class RulesetLoader:
             raise ConfigError.invalid(self.root, error, prefix="gates") from error
         self._raise_problems(
             [
-                *self._missing_judge_rules(ruleset),
-                *self._unbound_pattern_rules(ruleset),
                 *self._unknown_triggers(ruleset, gates),
                 *self._shared_ids(ruleset, gates),
             ]
         )
         return ruleset
 
-    def _binds_pattern(self, document: object) -> bool:
-        return (
-            isinstance(document, dict)
-            and _RULE_KEY in document
-            and document.keys() <= _PATTERN_BINDING_KEYS
-            and not judge_rule_file(self.root, str(document[_RULE_KEY])).is_file()
-        )
+    def _route(self, documents: dict[str, object]) -> tuple[dict[str, object], dict[str, object]]:
+        """Split binding documents into pattern bindings and judge bindings.
 
-    def _missing_judge_rules(self, ruleset: Ruleset) -> list[str]:
-        return [
-            f"bindings.{file}.rule: no judge rule {path.relative_to(self.root)}"
-            for file, binding in ruleset.bindings.root.items()
-            if binding.skill is None and not (path := ruleset.judge_rule_file(binding)).is_file()
-        ]
+        Both kinds name their rule with `rule:`, so the rule it names decides the kind.
+        """
+        named = {
+            file: document[_RULE_KEY]
+            for file, document in documents.items()
+            if isinstance(document, dict) and isinstance(document.get(_RULE_KEY), str)
+        }
+        pattern_ids = Ruleset(name=self.name, root=self.root).pattern_rule_ids() if named else set()
+        self._raise_problems(
+            [
+                problem
+                for file, rule in named.items()
+                if (problem := self._route_problem(file, rule, rule in pattern_ids))
+            ]
+        )
+        pattern = {file: documents[file] for file, rule in named.items() if rule in pattern_ids}
+        judge = {file: document for file, document in documents.items() if file not in pattern}
+        return pattern, judge
+
+    def _route_problem(self, file: str, rule: str, is_pattern_rule: bool) -> str | None:
+        if rule in {"", ".", ".."} or "/" in rule or "\\" in rule:
+            return f"bindings.{file}.rule: {rule!r} is not a rule id"
+        path = judge_rule_file(self.root, rule)
+        expected = path.relative_to(self.root)
+        if path.is_file() and is_pattern_rule:
+            return f"bindings.{file}.rule: both {expected} and pattern rule {rule} have this id"
+        if not path.is_file() and not is_pattern_rule:
+            return f"bindings.{file}.rule: no judge rule {expected} or pattern rule {rule}"
+        return None
 
     def _shared_ids(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:
         if not gates:
             return []
         shared = sorted(ruleset.pattern_rule_ids() & gates.keys())
         return [f"gates.{gate}: a pattern rule has this id" for gate in shared]
-
-    def _unbound_pattern_rules(self, ruleset: Ruleset) -> list[str]:
-        if not ruleset.pattern_bindings.root:
-            return []
-        rules = ruleset.pattern_rule_ids()
-        return [
-            f"bindings.{file}.rule: no pattern rule {binding.rule}"
-            for file, binding in ruleset.pattern_bindings.root.items()
-            if binding.rule not in rules
-        ]
 
     def _unknown_triggers(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:
         if not ruleset.bindings.root:

@@ -66,7 +66,7 @@ class TestBindingsConfig:
                 {"rule": "placement", "skill": tmp_path / "placement", "paths": ["**"]}
             )
 
-        assert messages(error) == ["Value error, name the rule with rule: <id>"]
+        assert messages(error) == ["Value error, rule and skill both name a rule: keep only rule"]
 
     def test_binding_naming_no_rule_is_an_error(self):
         with pytest.raises(ValidationError) as error:

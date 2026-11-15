@@ -1,4 +1,10 @@
-from codeguard.config import JudgeChoice, JudgeProvider, RuleOverride, RulesetConfig
+from codeguard.config import (
+    JudgeChoice,
+    JudgeProvider,
+    RuleOverride,
+    RulesetConfig,
+    RulesetLoader,
+)
 from codeguard.review import Binding, Bindings, Severity
 
 RULE_NAME = "responsibility-placement"
@@ -247,3 +253,25 @@ class TestBindingsJudgeRule:
         )
 
         assert bindings == (make_binding(),)
+
+    def test_ruleset_may_bind_rule_files_and_skill_directories_together(
+        self, tmp_path, make_binding, make_judge_rule
+    ):
+        naming = make_judge_rule(name="naming", text="# Naming\n\nNames say what a value is.\n")
+        write_judge_rule(tmp_path / "python", make_judge_rule().text)
+        (tmp_path / "python/skills/naming").mkdir(parents=True)
+        (tmp_path / "python/skills/naming/SKILL.md").write_text(
+            f"---\nname: naming\n---\n{naming.text}"
+        )
+        (tmp_path / "python/bindings").mkdir()
+        (tmp_path / "python/bindings/naming.yaml").write_text(
+            'skill: python/skills/naming\npaths: ["**"]\n'
+        )
+        (tmp_path / "python/bindings/placement.yaml").write_text(
+            f'rule: {RULE_NAME}\npaths: ["**"]\n'
+        )
+        ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
+
+        bindings = Bindings.from_rulesets([ruleset])
+
+        assert bindings == (make_binding(judge_rule=naming), make_binding())

@@ -416,7 +416,7 @@ class TestRulesetLoader:
             }
         )
 
-    def test_binding_for_a_missing_pattern_rule_is_an_error(self, repo):
+    def test_binding_for_a_missing_rule_names_both_places_it_could_be(self, repo):
         repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
         repo.write(".codeguard/bindings/no-prnt.yaml", 'rule: no-prnt\npaths: ["**"]\n')
 
@@ -425,7 +425,36 @@ class TestRulesetLoader:
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.no-prnt.yaml.rule: no pattern rule no-prnt"
+            "  bindings.no-prnt.yaml.rule: no judge rule rules/judge/no-prnt.md "
+            "or pattern rule no-prnt"
+        )
+
+    def test_rule_id_of_both_a_judge_rule_and_a_pattern_rule_is_an_error(
+        self, repo, make_judge_rule
+    ):
+        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        repo.write(".codeguard/rules/judge/no-print.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/no-print.yaml", 'rule: no-print\npaths: ["**"]\n')
+
+        with pytest.raises(ConfigError) as error:
+            RulesetLoader.local(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  bindings.no-print.yaml.rule: "
+            "both rules/judge/no-print.md and pattern rule no-print have this id"
+        )
+
+    def test_rule_id_that_is_a_path_is_an_error(self, repo, make_judge_rule):
+        repo.write("placement.md", make_judge_rule().text)
+        repo.write(BINDING, 'rule: ../../../placement\npaths: ["**"]\ntriggers: [any]\n')
+
+        with pytest.raises(ConfigError) as error:
+            RulesetLoader.local(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  bindings.placement.yaml.rule: '../../../placement' is not a rule id"
         )
 
     def test_pattern_rule_bound_twice_is_an_error(self, repo):
@@ -452,8 +481,8 @@ class TestRulesetLoader:
 
         assert str(error.value) == (
             f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.placement.yaml.rule: "
-            "no judge rule rules/judge/responsibility-placement.md"
+            "  bindings.placement.yaml.rule: no judge rule "
+            "rules/judge/responsibility-placement.md or pattern rule responsibility-placement"
         )
 
     def test_package_skill_directory_is_under_the_package(self, tmp_path, make_judge_rule):

@@ -53,7 +53,9 @@ class BindingConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_one_rule(self) -> Self:
-        if (self.rule is None) == (self.skill is None):
+        if self.rule is not None and self.skill is not None:
+            raise ValueError("rule and skill both name a rule: keep only rule")
+        if self.rule is None and self.skill is None:
             raise ValueError("name the rule with rule: <id>")
         return self
 
