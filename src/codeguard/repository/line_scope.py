@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Protocol, Self
 
 from codeguard.line_range import LineRange
-from codeguard.repository.change_block import Removal
 from codeguard.repository.file_diff import FileDiff
 from codeguard.repository.libgit2 import Libgit2
 from codeguard.repository.working_tree import WorkingTree
@@ -15,9 +14,7 @@ class LineScope(Protocol):
 
     def covers(self, file: str, lines: LineRange | None) -> bool: ...
 
-    def added_lines(self, file: str) -> frozenset[int] | None: ...
-
-    def removals_in(self, file: str) -> tuple[Removal, ...]: ...
+    def file_diff(self, file: str) -> FileDiff | None: ...
 
 
 @dataclass(frozen=True)
@@ -29,11 +26,8 @@ class ChangedLines:
     def files(self) -> tuple[str, ...]:
         return tuple(sorted(self.diffs))
 
-    def added_lines(self, file: str) -> frozenset[int]:
-        return self.diffs[file].added_lines
-
-    def removals_in(self, file: str) -> tuple[Removal, ...]:
-        return self.diffs[file].removals
+    def file_diff(self, file: str) -> FileDiff:
+        return self.diffs[file]
 
     def covers(self, file: str, lines: LineRange | None) -> bool:
         if file not in self.diffs:
@@ -50,11 +44,8 @@ class AllLines:
     def covers(self, file: str, lines: LineRange | None) -> bool:
         return True
 
-    def added_lines(self, file: str) -> frozenset[int] | None:
+    def file_diff(self, file: str) -> FileDiff | None:
         return None
-
-    def removals_in(self, file: str) -> tuple[Removal, ...]:
-        return ()
 
 
 @dataclass(frozen=True)

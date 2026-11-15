@@ -21,40 +21,15 @@ class ParsedFile:
     def definitions(self) -> tuple[str, ...]:
         return tuple(node.text for node in self.of_kind(NodeKind.DEFINITION))
 
-    def judged_lines(
-        self, points: frozenset[int], replaced: frozenset[int] = frozenset()
-    ) -> frozenset[int]:
-        scopes = self._standing(NodeKind.SCOPE, replaced)
-        members = self._standing(NodeKind.MEMBER_LIST, replaced)
-        statements = _Statements(
-            self.of_kind(NodeKind.STATEMENT),
-            self.of_kind(NodeKind.HANDLER),
-            self.of_kind(NodeKind.GUARDED_BLOCK),
-            self.of_kind(NodeKind.BLOCK),
-            replaced,
-        )
+    def scope_lines(self, points: frozenset[int]) -> frozenset[int]:
+        """The lines of the innermost scope around each point."""
+        scopes = self.of_kind(NodeKind.SCOPE)
         return frozenset(
             line
             for point in points
-            for line in (
-                {point}
-                if point in self._prose_only_lines
-                else _context_lines(scopes, members, statements, point)
-            )
+            if (innermost := min(_spanning(scopes, point), key=_length, default=None))
+            for line in innermost.lines
         )
-
-    def kind_lines(
-        self, points: frozenset[int], replaced: frozenset[int] = frozenset()
-    ) -> dict[str, frozenset[int]]:
-        spans: dict[str, set[int]] = {}
-        for node in self.nodes:
-            if (
-                not isinstance(node.kind, NodeKind)
-                and any(self._touches(node, point) for point in points)
-                and not _wholly_replaced(node, replaced)
-            ):
-                spans.setdefault(node.kind, set()).update(node.lines)
-        return {kind: frozenset(lines) for kind, lines in spans.items()}
 
     def touched_kinds(
         self,
@@ -90,9 +65,6 @@ class ParsedFile:
         for node, text in sorted(replacements, key=lambda pair: pair[0].start, reverse=True):
             content = content[: node.start] + text + content[node.end :]
         return content
-
-    def _standing(self, kind: NodeKind, replaced: frozenset[int]) -> list[SyntaxNode]:
-        return [node for node in self.of_kind(kind) if not _wholly_replaced(node, replaced)]
 
     def _kinds_spanning(self, line: int) -> set[str]:
         found: set[str] = {
@@ -140,95 +112,8 @@ class ParsedFile:
         return Counter(node.text for node in self.of_kind(NodeKind.SCOPE_NAME))
 
 
-@dataclass(frozen=True)
-class _Statements:
-    nodes: list[SyntaxNode]
-    handlers: list[SyntaxNode]
-    guarded: list[SyntaxNode]
-    blocks: list[SyntaxNode]
-    replaced: frozenset[int]
-
-    def lines_around(self, point: int, scope: SyntaxNode | None) -> set[int]:
-        around = [
-            node
-            for node in self.nodes
-            if node.spans(point) and (scope is None or _within(node, scope))
-        ]
-        statement = min(around, key=_length) if around else None
-        if statement is None:
-            return {point}
-        if _wholly_replaced(statement, self.replaced):
-            gone = max(
-                (node for node in around if _wholly_replaced(node, self.replaced)), key=_length
-            )
-            return self._kept_around(gone, point, scope)
-        return {*statement.lines, *self._handler_try_and_guarded_block(statement)}
-
-    def _kept_around(self, gone: SyntaxNode, point: int, scope: SyntaxNode | None) -> set[int]:
-        if guarded := self._handler_try_and_guarded_block(gone):
-            return set(guarded)
-        return self._owner_header(gone, point, scope)
-
-    def _owner_header(self, gone: SyntaxNode, point: int, scope: SyntaxNode | None) -> set[int]:
-        owners = [
-            node
-            for node in self.nodes
-            if _encloses(node, gone)
-            and not _wholly_replaced(node, self.replaced)
-            and (scope is None or _within(node, scope))
-        ]
-        if not owners:
-            return {point}
-        owner = min(owners, key=_length)
-        blocks = [
-            block
-            for block in self.blocks
-            if _encloses(owner, block)
-            and block.spans(point)
-            and not _wholly_replaced(block, self.replaced)
-        ]
-        body = min(blocks, key=_length).start_line if blocks else owner.start_line
-        return set(_header_lines(owner, body))
-
-    def _handler_try_and_guarded_block(self, statement: SyntaxNode) -> range:
-        if not any(_same(statement, handler) for handler in self.handlers):
-            return range(0)
-        owners = [node for node in self.nodes if _encloses(node, statement)]
-        if not owners:
-            return range(0)
-        owner = min(owners, key=_length)
-        blocks = [
-            block
-            for block in self.guarded
-            if _encloses(owner, block) and not _wholly_replaced(block, self.replaced)
-        ]
-        if not blocks:
-            return range(0)
-        return range(owner.start_line, min(blocks, key=lambda block: block.start).end_line + 1)
-
-
-def _context_lines(
-    scopes: list[SyntaxNode], members: list[SyntaxNode], statements: _Statements, point: int
-) -> set[int]:
-    enclosing = [scope for scope in scopes if scope.spans(point)]
-    innermost = min(enclosing, key=_size) if enclosing else None
-    if innermost is None:
-        return statements.lines_around(point, None)
-    body = next(
-        (node for node in members if node.spans(point) and _is_own_member_list(innermost, node)),
-        None,
-    )
-    if body is None:
-        return set(innermost.lines)
-    return {*_header_lines(innermost, body.start_line), *statements.lines_around(point, body)}
-
-
-def _header_lines(node: SyntaxNode, body_start: int) -> range:
-    return range(node.start_line, max(body_start, node.start_line + 1))
-
-
-def _size(node: SyntaxNode) -> int:
-    return node.end_line - node.start_line
+def _spanning(nodes: list[SyntaxNode], line: int) -> list[SyntaxNode]:
+    return [node for node in nodes if node.spans(line)]
 
 
 def _length(node: SyntaxNode) -> int:
@@ -241,15 +126,3 @@ def _same(node: SyntaxNode, other: SyntaxNode) -> bool:
 
 def _encloses(outer: SyntaxNode, inner: SyntaxNode) -> bool:
     return outer.start <= inner.start and inner.end <= outer.end and not _same(outer, inner)
-
-
-def _within(node: SyntaxNode, scope: SyntaxNode) -> bool:
-    return scope.start_line <= node.start_line and node.end_line <= scope.end_line
-
-
-def _is_own_member_list(scope: SyntaxNode, members: SyntaxNode) -> bool:
-    return _within(members, scope) and not _within(scope, members)
-
-
-def _wholly_replaced(node: SyntaxNode, replaced: frozenset[int]) -> bool:
-    return bool(replaced) and replaced.issuperset(node.lines)

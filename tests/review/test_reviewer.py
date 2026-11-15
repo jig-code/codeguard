@@ -47,7 +47,11 @@ class TestReviewer:
         assert result == Review(
             diagnostics=(make_diagnostic(), make_diagnostic(judged=True, file="b.py"))
         )
-        assert judge.received == [make_judge_request(file="b.py", changes="+     1\tx = 1\n")]
+        assert judge.received == [
+            make_judge_request(
+                file="b.py", changes="--- /dev/null\n+++ b/b.py\n@@ -0,0 +1 @@\n+x = 1\n"
+            )
+        ]
 
     def test_violations_on_unchanged_lines_are_not_reported(
         self, repo, make_violation, make_binding
@@ -160,4 +164,6 @@ class TestReviewer:
         assert result == Review(
             diagnostics=(make_diagnostic(judged=True, lines__start=2, lines__end=2),)
         )
-        assert judge.received == [make_judge_request(changes="+     2\tx = 1\n")]
+        assert judge.received == [
+            make_judge_request(changes="--- a/a.py\n+++ b/a.py\n@@ -1 +1,2 @@\n print(1)\n+x = 1\n")
+        ]

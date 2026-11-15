@@ -1,6 +1,6 @@
 import textwrap
 
-from codeguard.repository import AddedRow, FileDiff, KeptRow, Removal, RemovedRow, RowText
+from codeguard.repository import AddedRow, FileDiff, KeptRow, RemovedRow, RowText
 
 
 class TestFileDiffFromWholeFileRows:
@@ -19,7 +19,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset({4, 5}),
             deletion_points=frozenset(),
-            removals=(),
+            rows=tuple(rows),
             head_lines_by_base_line={1: 1, 2: 2},
             removed_base_lines=frozenset(),
         )
@@ -38,9 +38,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset(),
             deletion_points=frozenset({1}),
-            removals=(
-                Removal(shown_before=2, reported_line=1, rows=(RemovedRow(2, RowText(b"b = 1")),)),
-            ),
+            rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 3},
             removed_base_lines=frozenset({2}),
         )
@@ -54,7 +52,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset(),
             deletion_points=frozenset(),
-            removals=(),
+            rows=tuple(rows),
             head_lines_by_base_line={1: 1, 2: 2, 4: 3},
             removed_base_lines=frozenset({3}),
         )
@@ -68,11 +66,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset(),
             deletion_points=frozenset({1}),
-            removals=(
-                Removal(
-                    shown_before=1, reported_line=1, rows=(RemovedRow(1, RowText(b"import os")),)
-                ),
-            ),
+            rows=tuple(rows),
             head_lines_by_base_line={2: 2},
             removed_base_lines=frozenset({1}),
         )
@@ -86,9 +80,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset(),
             deletion_points=frozenset({1}),
-            removals=(
-                Removal(shown_before=2, reported_line=1, rows=(RemovedRow(2, RowText(b"b = 1")),)),
-            ),
+            rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 2},
             removed_base_lines=frozenset({2}),
         )
@@ -114,9 +106,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset({2}),
             deletion_points=frozenset(),
-            removals=(
-                Removal(shown_before=2, reported_line=2, rows=(RemovedRow(2, RowText(b"b = 1")),)),
-            ),
+            rows=tuple(rows),
             head_lines_by_base_line={1: 1, 3: 3},
             removed_base_lines=frozenset({2}),
         )
@@ -136,10 +126,7 @@ class TestFileDiffFromWholeFileRows:
             base_path="a.py",
             added_lines=frozenset({2}),
             deletion_points=frozenset({1, 3}),
-            removals=(
-                Removal(shown_before=1, reported_line=1, rows=(RemovedRow(1, RowText(b"a = 1")),)),
-                Removal(shown_before=4, reported_line=3, rows=(RemovedRow(4, RowText(b"d = 1")),)),
-            ),
+            rows=tuple(rows),
             head_lines_by_base_line={2: 1, 3: 3},
             removed_base_lines=frozenset({1, 4}),
         )
@@ -157,7 +144,11 @@ class TestFileDiffFromNewFile:
             base_path=None,
             added_lines=frozenset({1, 3}),
             deletion_points=frozenset(),
-            removals=(),
+            rows=(
+                AddedRow(1, RowText(b"a = 1")),
+                AddedRow(2, RowText(b"")),
+                AddedRow(3, RowText(b"b = 1")),
+            ),
             head_lines_by_base_line={},
             removed_base_lines=frozenset(),
         )
@@ -167,7 +158,7 @@ class TestFileDiffFromNewFile:
             base_path=None,
             added_lines=frozenset({1, 2}),
             deletion_points=frozenset(),
-            removals=(),
+            rows=(AddedRow(1, RowText(b"a = 1")), AddedRow(2, RowText(b"b = 1"))),
             head_lines_by_base_line={},
             removed_base_lines=frozenset(),
         )
@@ -177,7 +168,7 @@ class TestFileDiffFromNewFile:
             base_path=None,
             added_lines=frozenset(),
             deletion_points=frozenset(),
-            removals=(),
+            rows=(AddedRow(1, RowText(b"")), AddedRow(2, RowText(b"  "))),
             head_lines_by_base_line={},
             removed_base_lines=frozenset(),
         )

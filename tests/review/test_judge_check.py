@@ -151,7 +151,9 @@ class TestJudgeCheck:
 
         assert set(judge.received) == {
             make_judge_request(),
-            make_judge_request(file="b.py", changes="+     1\tx = 1\n"),
+            make_judge_request(
+                file="b.py", changes="--- /dev/null\n+++ b/b.py\n@@ -0,0 +1 @@\n+x = 1\n"
+            ),
         }
 
     def test_judge_gets_the_changed_function_of_the_file(
@@ -162,29 +164,26 @@ class TestJudgeCheck:
         make_binding,
         make_judge_request,
     ):
-        returned = b"    return total - DISCOUNT"
+        returned = b"    return total - discount"
         (tmp_path / "pricing.py").write_text(
             textwrap.dedent("""\
                 DISCOUNT = 5
 
 
                 def discounted(total):
-                    return total - DISCOUNT
+                    rate = DISCOUNT
+                    base = 100
+                    discount = rate * base
+                    return total - discount
             """)
         )
         judge = RecordingJudge()
         scope = make_changed_lines(
             file="pricing.py",
-            rows=[
-                KeptRow(1, 1),
-                KeptRow(2, 2),
-                KeptRow(3, 3),
-                KeptRow(4, 4),
-                AddedRow(5, RowText(returned)),
-            ],
+            rows=[*(KeptRow(line, line) for line in range(1, 8)), AddedRow(8, RowText(returned))],
         )
         classification = Classification(
-            {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
+            {"pricing.py": make_file_classification(context_lines=frozenset({4, 5, 6, 7, 8}))}
         )
 
         JudgeCheck(
@@ -194,7 +193,16 @@ class TestJudgeCheck:
         assert judge.received == [
             make_judge_request(
                 file="pricing.py",
-                changes="      4\tdef discounted(total):\n+     5\t    return total - DISCOUNT\n",
+                changes=textwrap.dedent("""\
+                    --- a/pricing.py
+                    +++ b/pricing.py
+                    @@ -4,4 +4,5 @@
+                     def discounted(total):
+                         rate = DISCOUNT
+                         base = 100
+                         discount = rate * base
+                    +    return total - discount
+                """),
             )
         ]
 
@@ -270,7 +278,11 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, Classification()
         ).check(["a.md"])
 
-        assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
+        assert judge.received == [
+            make_judge_request(
+                file="a.md", changes="--- /dev/null\n+++ b/a.md\n@@ -0,0 +1 @@\n+# A\n"
+            )
+        ]
 
     def test_binding_without_triggers_judges_every_changed_file(
         self,

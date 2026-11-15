@@ -24,8 +24,6 @@ class TestSyntaxScanner:
                 SyntaxNode(NodeKind.NAME, 28, 30, "os", start_line=2, end_line=2),
                 SyntaxNode(NodeKind.NAME, 31, 34, "sep", start_line=2, end_line=2),
                 SyntaxNode(NodeKind.DEFINITION, 20, 25, "total", start_line=2, end_line=2),
-                SyntaxNode(NodeKind.STATEMENT, 0, 9, "import os", start_line=1, end_line=1),
-                SyntaxNode(NodeKind.STATEMENT, 20, 34, "total = os.sep", start_line=2, end_line=2),
             },
         )
 

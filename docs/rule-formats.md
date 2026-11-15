@@ -85,7 +85,8 @@ A path without an extension, like `src/**`, matches every language.
   needs an `invalid` case.
 - Triggers work per file: a change kind in any language, a gate only in its `language`.
   Only Python has change kinds and gates so far: on a file in another language, every
-  trigger fires, and the judge is sent the changed lines without the code around them.
+  trigger fires, and the judge is sent the diff with three lines around each change, without
+  the function or class around it.
 
 ## The rule eval
 
