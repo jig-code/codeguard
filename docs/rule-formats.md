@@ -19,11 +19,13 @@ Rule and gate ids are unique within a ruleset.
 
 ## A judge rule's binding
 
-A judge rule's binding names its `skill`, from the package root (in a project, from the
-repository root, such as `.codeguard/skills/<id>`), and where and when it runs:
+A judge rule is one plain Markdown file, `rules/judge/<id>.md` in its ruleset (in a
+project, `.codeguard/rules/judge/<id>.md`): a title, one sentence stating the
+requirement, and a `## Why` section saying why it matters. The judge gets its text
+unparsed. Its binding names it with `rule: <id>`, and says where and when it runs:
 
 ```yaml
-skill: python/skills/mock-only-at-boundary
+rule: mock-only-at-boundary
 paths: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py", "**/conftest.py"]
 triggers: [mock-use]
 ```
@@ -36,7 +38,7 @@ provider: gemini                  # default: claude-cli; or codex-cli, gemini, b
 model: gemini-4-argon             # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
-A judge rule's id is its skill's directory name.
+A judge rule's id is its file's name, without `.md`.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
 whose [changed lines](how-a-review-works.md#what-a-review-reports) fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before
@@ -188,7 +190,7 @@ reason for each case it judged, then one line per failure.
 | Input | From |
 |---|---|
 | The edits, the files around them and their expected reviews | the rule eval, `rule-evals/<id>.yaml` |
-| The convention | the skill |
+| The convention | the rule file, `rules/judge/<id>.md` |
 | Paths and triggers | the binding |
 | Provider and model | the binding, or `--provider` and `--model` |
 | The confidence threshold, and Gemini's calls at once | the caller's `.codeguard/config.yaml` |
