@@ -67,14 +67,11 @@ Why: it was only needed because of the old testing approach, and under the testi
 
 Why: re-running them after a merge spends model calls on what the pull request already judged.
 
-## 16. An internal error fails loud
+## 16. An internal error never fails closed
 
-- An internal error shows a visible message and records an error span. It does not fail closed.
-- A failed judge call takes the rule's severity: a `warning` rule can't block when it runs, so it doesn't block when it fails.
-- Locally, judge errors go to the developer and never to the agent, and a failed judge call never blocks the agent's stop. Rule errors still block every stop until fixed.
-- In CI a judge error fails the review unless a per-PR label bypasses it.
+- An internal error never blocks all work because something broke.
 
-Why: the agent can't fix a judge error, and a per-PR label shows each bypass in the PR's history.
+Why: a broken hook would stop all work.
 
 ## 17. A review's time limit is set in the config
 
@@ -82,22 +79,15 @@ Why: the agent can't fix a judge error, and a per-PR label shows each bypass in 
 
 Why: a stuck `claude` call hung the CI review for 30 minutes and reported nothing, and the workflow's timeout can't read the config.
 
-## 18. Evals never use the verdict cache
+## 19. Low-confidence findings go to the user, not the agent
 
-- Evals never use the verdict cache, and `--repeat` is the number of independent runs.
-
-Why: an eval tests the rule, not the code.
-
-## 19. Only high-confidence violations block
-
-- A high-confidence violation blocks. A low-confidence one is reported.
-- Low-confidence findings go to the user, not the agent, through the Stop `systemMessage`. Stop `additionalContext` is not used.
+- Low-confidence findings go to the user through the Stop `systemMessage`. Stop `additionalContext` is not used.
 
 Why: `additionalContext` continues the turn, so it would act as a block.
 
-## 21. Each rule is judged in its own request
+## 21. Concerns are never batched into one judge request
 
-- Each concern is one judge request, run in parallel. Several concerns are never batched into one request.
+- Several concerns are never batched into one judge request.
 
 Why: several concerns in one request hurt each rule's accuracy.
 
@@ -123,23 +113,15 @@ Why: user and uncommitted scopes never reach CI.
 
 Why: the range only chose a tag when someone ran `codeguard update`, which saves little for a project with one package it upgrades on purpose.
 
-## 26. The judge reads other files itself with tools
+## 26. codeguard computes no cross-file context for the judge
 
-- The judge reads other files with its own tools. codeguard computes no cross-file context kinds.
+- codeguard computes no cross-file context kinds. The judge reads other files itself.
 
 Why: reading a named file is deterministic for a commit, and recording the files read keeps the cache correct.
 
-## 27. The judge prompt embeds only what the judge will certainly have to read
+## 28. The judge gets a standard unified diff
 
-- The prompt embeds what the judge will certainly have to read and nothing it only might need. The judge reads the rest when the convention needs more.
-- The prompt describes the context and the tools. It never directs which files the judge reads.
-
-Why: deferring a required read to a tool call isn't cheaper, because the judge reads the same lines and adds a turn.
-
-## 28. The judge gets a unified diff with function context
-
-- The judge is sent the change as a git unified diff with function context, in place of codeguard's own excerpt. Hunk headers mark every gap.
-- Every judged change is sent with the smallest enclosing function or class for each changed line, found with ast-grep.
+- The judge is sent the change as a git unified diff with function context, never an excerpt codeguard builds itself.
 
 Why: a custom excerpt reinvents diffs, and function context appears with the change as it does in a GitHub review.
 
@@ -152,24 +134,21 @@ Why: a git library numbers every diff line on both sides, includes untracked con
 ## 30. A judged violation names a line range
 
 - A violation names the start and end lines of the code that breaks the rule.
-- A review keeps a judged violation when a changed line or a deletion point is among its lines, as it keeps a pattern rule's range.
 - A rule broken by code in two places reports the range of the copy the change added and names the other copy in its message. Only changed lines decide what a review keeps.
 
 Why: architecture rules are often violated by more than one line.
 
-## 34. The judge never proposes fixes
+## 34. Eval cases carry no expected reason
 
-- The judge reports violations and never proposes fixes. A pattern rule keeps its note, which its author wrote.
-- Eval cases carry no expected reason and no model call compares reasons. Evals check verdict and lines, and the report prints the judge's reason for every case.
+- Eval cases carry no expected reason, and no model call compares reasons. Evals check verdict and lines, and the report prints the judge's reason for every case.
 
-Why: the judge's fix notes were flagged by the next pass and stalled the rule fixes.
+Why: the judge's reason is context for a person troubleshooting, not a result to check.
 
-## 35. Confidence is certainty after reading, not how much was read
+## 35. Reading other code never lowers confidence
 
-- Confidence is the judge's assessment of how accurate its verdict is. The threshold is a separate blocking policy.
-- Confidence is about how certain the verdict is after the judge has read whatever it needed, never about how much it read. Reading other code never lowers it.
+- Confidence is about how certain the verdict is after the judge has read whatever it needed, never about how much it read.
 
-Why: without anchors, scores sat at 0.80 to 0.88 and invalid cases failed the 0.9 threshold.
+Why: without this, a judge that reads more reports less confidence in the same verdict.
 
 ## 37. The CLI judge omits the model when none is configured
 
@@ -340,29 +319,24 @@ Why: a verdict repeated in names and comments has nothing checking that they agr
 
 Why: tags and per-PR merges made each engine change take several PRs and a release before the rules could use it.
 
-## 87. codeguard's workflows follow GitHub's secure-use practices
+## 90. A removed feature returns as its own feature
 
-- A workflow uses least-privilege permissions, job timeouts and no persisted checkout credentials.
-
-## 90. Adapters import nothing from codeguard
-
-- Adapters import nothing from codeguard, so they can ship separately.
-- Build the simplest thing first. A feature removed under this rule returns as its own feature when it is needed.
+- Build the simplest thing first. A feature built and then removed returns as its own feature when it is needed.
 
 ## 94. Bindings route by `paths` until a binding needs a detector
 
 - Routing by framework through `detects` (ast-grep framework detectors) is designed, not built, and `paths` stays required until a binding needs a detector.
 
-## 97. codeguard plans to run claude through the Agent SDK
+## 97. codeguard runs claude through the Agent SDK
 
-- codeguard runs `claude` through the Agent SDK instead of parsing `stream-json`. This is not built yet.
+- codeguard runs `claude` through the Agent SDK instead of parsing `stream-json`.
 - The Agent SDK only runs `claude`. Agent SDK tools and the Messages API stay rejected for searches.
 
 Why: `stream-json` isn't documented as stable.
 
 ## 98. Duplicated skill-eval graders stay copies, checked in CI
 
-- The writing-rules skill's eval cases keep their own copies of a duplicated grader, and a CI check fails when copies of one grader differ. The check is not built yet.
+- The writing-rules skill's eval cases keep their own copies of a duplicated grader, and a CI check fails when copies of one grader differ.
 - Symlinks and a copy script are rejected.
 
 Why: the eval tool has no shared graders, symlinks aren't documented and could silently skip, and a copy script goes stale.
@@ -370,7 +344,7 @@ Why: the eval tool has no shared graders, symlinks aren't documented and could s
 ## 99. codeguard keeps private rules for dogfooding
 
 - codeguard ships no public rules, but it keeps private rules for dogfooding. The first is a rule that enforces the architecture's judge contract against the judge prompt.
-- This bends the invariant that the framework has no rules built in. The exception is recorded as a decision when the work starts. The work is deferred.
+- This bends the invariant that the framework has no rules built in. The exception is recorded as a decision when the work starts.
 
 ## 102. Docs and commits use a placeholder for the Google Cloud project
 
