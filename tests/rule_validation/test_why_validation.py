@@ -1,7 +1,7 @@
 import pytest
 from rules_package import NO_PRINT_RULE, PLACEMENT_RULE
 
-from codeguard.config import RulesetLoader
+from codeguard.config import ConfigError, RulesetLoader
 from codeguard.rule_tests import RuleTestResult
 from codeguard.rule_validation import WhyValidation, WhyValidationMode
 
@@ -22,9 +22,6 @@ class TestWhyValidationMode:
     )
     def test_mode_decides_how_the_missing_whys_are_reported(self, mode, expected):
         assert mode.result(MISSING) == expected
-
-    def test_failing_report_fails_the_run(self):
-        assert not WhyValidationMode.FAIL.result(MISSING).passed
 
 
 class TestWhyValidation:
@@ -57,9 +54,24 @@ class TestWhyValidation:
         )
 
     @pytest.mark.parametrize("mode", list(WhyValidationMode))
-    def test_invalid_ruleset_reports_nothing(self, directory, mode):
-        directory.write(".codeguard/rules/pattern/bad.yml", "bogus: 1\n")
+    def test_ruleset_that_does_not_load_reports_nothing(self, directory, mode):
+        directory.write(".codeguard/bindings/naming.yaml", f"rule: naming\n{BINDING}")
 
         result = WhyValidation(RulesetLoader.local(directory.root), mode).run()
 
         assert result == RuleTestResult()
+
+    @pytest.mark.parametrize("mode", list(WhyValidationMode))
+    def test_pattern_rule_whose_why_is_not_text_is_a_config_error(self, directory, mode):
+        directory.write(
+            ".codeguard/rules/pattern/no-print.yml",
+            "id: no-print\nlanguage: python\nmetadata:\n  why: 1\nrule:\n  pattern: print()\n",
+        )
+
+        with pytest.raises(ConfigError) as error:
+            WhyValidation(RulesetLoader.local(directory.root), mode).run()
+
+        assert str(error.value) == (
+            f"{directory.root}/.codeguard is invalid:\n"
+            "  rules.metadata.why: Input should be a valid string"
+        )

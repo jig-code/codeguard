@@ -20,6 +20,9 @@ class TestJudgeRule:
         assert rule.says_why
 
     def test_why_section_may_end_in_a_source(self, make_judge_rule):
-        text = make_judge_rule().text + "\nSource: https://example.com/style-guide#placement\n"
+        rule = make_judge_rule(
+            text="# Placement\n\nA method lives on its type.\n\n## Why\n\nIt stays with its data.\n"
+            "\nSource: https://example.com/style-guide#placement\n"
+        )
 
-        assert make_judge_rule(text=text).says_why
+        assert rule.says_why

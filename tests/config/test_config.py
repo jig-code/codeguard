@@ -514,7 +514,24 @@ class TestRuleset:
 
         rules = make_ruleset(root=directory.root).pattern_rules()
 
-        assert [rule.id for rule in rules] == ["no-print"]
+        assert rules == [
+            PatternRule.model_validate(
+                {
+                    "id": "no-print",
+                    "metadata": {
+                        "why": "Print output skips the log levels and handlers production reads."
+                    },
+                }
+            )
+        ]
+
+    def test_malformed_pattern_rule_file_is_a_config_error(self, directory, make_ruleset):
+        directory.write("rules/pattern/bad.yml", "bogus: 1\n")
+
+        with pytest.raises(ConfigError) as error:
+            make_ruleset(root=directory.root).pattern_rules()
+
+        assert str(error.value) == f"{directory.root} is invalid:\n  rules.id: Field required"
 
     def test_rule_file_text_reaches_the_judge_unparsed(
         self, directory, make_ruleset, make_binding_config, make_judge_rule
@@ -562,7 +579,13 @@ class TestPatternRule:
         with pytest.raises(ValidationError) as error:
             PatternRule.model_validate({"id": "no-print", "metadata": {"why": 1}})
 
-        assert messages(error) == ["Input should be a valid string"]
+        assert error.value.errors(include_url=False, include_input=False) == [
+            {
+                "type": "string_type",
+                "loc": ("metadata", "why"),
+                "msg": "Input should be a valid string",
+            }
+        ]
 
 
 class TestJudgeChoice:

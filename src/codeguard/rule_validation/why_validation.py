@@ -31,7 +31,6 @@ class WhyValidation:
     def run(self) -> RuleTestResult:
         try:
             ruleset = self.ruleset.load()
-            pattern_rules = ruleset.pattern_rules()
         except ConfigError:
             # BroadTriggers already reports an invalid ruleset.
             return RuleTestResult()
@@ -45,7 +44,7 @@ class WhyValidation:
                 ),
                 *(
                     f"{rule.id}: no metadata.why"
-                    for rule in sorted(pattern_rules, key=lambda rule: rule.id)
+                    for rule in sorted(ruleset.pattern_rules(), key=lambda rule: rule.id)
                     if not rule.says_why
                 ),
             )
