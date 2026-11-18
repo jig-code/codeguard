@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from packaging.version import Version
 from pydantic import ValidationError
+from rules_package import NO_PRINT_RULE
 
 from codeguard.config import (
     BindingConfig,
@@ -21,7 +22,6 @@ from codeguard.config import (
 )
 
 CPUS = 7
-PATTERN_RULE = "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$ARGS)\n"
 
 
 def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
@@ -506,7 +506,7 @@ class TestRuleset:
         assert judge == override
 
     def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
-        directory.write("rules/pattern/no-print.yml", PATTERN_RULE)
+        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE)
         directory.write(
             "gates/enum-value.yml",
             "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
@@ -514,7 +514,7 @@ class TestRuleset:
 
         rules = make_ruleset(root=directory.root).pattern_rules()
 
-        assert rules == [PatternRule(id="no-print")]
+        assert [rule.id for rule in rules] == ["no-print"]
 
     def test_rule_file_text_reaches_the_judge_unparsed(
         self, directory, make_ruleset, make_binding_config, make_judge_rule
@@ -543,22 +543,26 @@ class TestRuleset:
 class TestPatternRule:
     @pytest.mark.parametrize(
         "metadata",
-        [
-            None,
-            {"source": "https://example.com"},
-            {"why": ""},
-            {"why": "  "},
-            {"why": 1},
-        ],
-        ids=["no-metadata", "source-only", "empty-why", "blank-why", "why-not-text"],
+        [None, {"source": "https://example.com"}, {"why": ""}, {"why": "  "}],
+        ids=["no-metadata", "source-only", "empty-why", "blank-why"],
     )
     def test_pattern_rule_without_a_why_text_does_not_say_why(self, metadata):
-        assert not PatternRule(id="no-print", metadata=metadata).says_why
+        rule = PatternRule.model_validate({"id": "no-print", "metadata": metadata})
+
+        assert not rule.says_why
 
     def test_pattern_rule_with_a_why_says_why(self):
-        rule = PatternRule(id="no-print", metadata={"why": "Print skips the log levels."})
+        rule = PatternRule.model_validate(
+            {"id": "no-print", "metadata": {"why": "Print skips the log levels."}}
+        )
 
         assert rule.says_why
+
+    def test_why_that_is_not_text_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            PatternRule.model_validate({"id": "no-print", "metadata": {"why": 1}})
+
+        assert messages(error) == ["Input should be a valid string"]
 
 
 class TestJudgeChoice:

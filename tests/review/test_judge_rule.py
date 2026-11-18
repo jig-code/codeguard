@@ -13,7 +13,11 @@ class TestJudgeRule:
         assert not rule.says_why
 
     def test_rule_with_a_why_section_says_why(self, make_judge_rule):
-        assert make_judge_rule().says_why
+        rule = make_judge_rule(
+            text="# Placement\n\nA method lives on its type.\n\n## Why\n\nIt stays with its data.\n"
+        )
+
+        assert rule.says_why
 
     def test_why_section_may_end_in_a_source(self, make_judge_rule):
         text = make_judge_rule().text + "\nSource: https://example.com/style-guide#placement\n"

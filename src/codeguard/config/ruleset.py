@@ -3,10 +3,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+from pydantic import ValidationError
 
 from codeguard.config.binding_config import LEGACY_SKILL_FILE, BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
+from codeguard.config.config_error import ConfigError
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.path_scope import PathScope
@@ -67,12 +69,15 @@ class Ruleset:
 
     def pattern_rules(self) -> list[PatternRule]:
         rule_dir = self.root / PATTERN_RULE_DIR
-        return [
-            PatternRule.model_validate(document)
-            for path in sorted(rule_dir.rglob("*.y*ml"))
-            for document in yaml.safe_load_all(path.read_text())
-            if document
-        ]
+        try:
+            return [
+                PatternRule.model_validate(document)
+                for path in sorted(rule_dir.rglob("*.y*ml"))
+                for document in yaml.safe_load_all(path.read_text())
+                if document
+            ]
+        except ValidationError as error:
+            raise ConfigError.invalid(self.root, error, prefix="rules") from error
 
     def gates(self) -> dict[str, GateRule]:
         gate_dir = self.root / GATE_DIR

@@ -62,7 +62,7 @@ class RulesetLoader:
         }
         rule_by_file = _rules_named_alone(documents)
         unbound = Ruleset(name=self.name, root=self.root)
-        pattern_ids = self._pattern_rule_ids(unbound) if rule_by_file else frozenset()
+        pattern_ids = unbound.pattern_rule_ids() if rule_by_file else frozenset()
         self._raise_problems(self._routing_problems(unbound, rule_by_file, pattern_ids))
         pattern_documents = {
             file: documents[file] for file, rule in rule_by_file.items() if rule in pattern_ids
@@ -105,12 +105,6 @@ class RulesetLoader:
             for file, rule in rule_by_file.items()
             if (problem := self._route_problem(ruleset, file, rule, rule in pattern_ids))
         ]
-
-    def _pattern_rule_ids(self, ruleset: Ruleset) -> frozenset[str]:
-        try:
-            return ruleset.pattern_rule_ids()
-        except ValidationError as error:
-            raise ConfigError.invalid(self.root, error, prefix="rules") from error
 
     def _route_problem(
         self, ruleset: Ruleset, file: str, rule: str, is_pattern_rule: bool
