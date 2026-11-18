@@ -41,17 +41,6 @@ class TestGeneralRuleEvals:
             f"{RULE} (typescript) on claude-cli's default model",
         ]
 
-    def test_a_single_language_rule_keeps_one_report(self, directory):
-        directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f'rule: {RULE}\npaths: ["**/*.py"]\ntriggers: [string-literal]\n')
-        directory.write(EVAL, f"cases:\n{PYTHON_CASE}")
-
-        result = self.run(directory, RecordingJudge())
-
-        assert [report.name for report in result.reports] == [
-            f"{RULE} on claude-cli's default model"
-        ]
-
 
 class TestGeneralRuleCoverage:
     def test_each_language_the_paths_name_needs_an_invalid_case(self, directory):

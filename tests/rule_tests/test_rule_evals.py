@@ -1,8 +1,9 @@
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from codeguard.config import ConfigError
-from codeguard.rule_tests import RuleEval, rule_evals
+from codeguard.rule_tests import EditCase, RuleEval, rule_evals
 
 
 class TestRuleEvals:
@@ -212,3 +213,65 @@ class TestEditReview:
         )
 
         assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
+
+
+class TestEditCase:
+    @staticmethod
+    def problems(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
+        return [problem["msg"] for problem in error.value.errors()]
+
+    def test_unchanged_files_may_not_list_the_edited_file(self):
+        with pytest.raises(ValidationError) as error:
+            EditCase(after="label = status.value", unchanged={"module.py": "label = status.name"})
+
+        assert self.problems(error) == ["Value error, unchanged lists the edited file module.py"]
+
+    @pytest.mark.parametrize("path", ["/etc/module.py", "../module.py", "./module.py", "."])
+    def test_unchanged_path_must_be_a_normalized_path_inside_the_repository(self, path):
+        with pytest.raises(ValidationError) as error:
+            EditCase(after="label = status.value", unchanged={path: "label = status.name"})
+
+        assert self.problems(error) == [f"Value error, {path} is not a normalized relative path"]
+
+    def test_edited_file_must_be_inside_the_repository(self):
+        with pytest.raises(ValidationError) as error:
+            EditCase(file="../module.py", after="label = status.value")
+
+        assert self.problems(error) == [
+            "Value error, ../module.py is not a normalized relative path"
+        ]
+
+    def test_unchanged_path_may_not_be_inside_git(self):
+        with pytest.raises(ValidationError) as error:
+            EditCase(after="label = status.value", unchanged={".git/config": "[core]"})
+
+        assert self.problems(error) == ["Value error, .git/config is inside .git"]
+
+
+class TestRuleEvalByLanguage:
+    def test_rule_naming_several_languages_is_split_into_one_eval_per_language(
+        self, make_rule_eval_case
+    ):
+        python = make_rule_eval_case(name="a status literal", inputs__file="orders.py")
+        typescript = make_rule_eval_case(
+            name="a status literal in a script", inputs__file="orders.ts"
+        )
+        rule_eval = RuleEval(name="knowledge-stated-once", cases=(python, typescript))
+
+        split = rule_eval.by_language(frozenset({"python", "typescript"}))
+
+        assert split == (
+            ("python", RuleEval(name="knowledge-stated-once (python)", cases=(python,))),
+            (
+                "typescript",
+                RuleEval(name="knowledge-stated-once (typescript)", cases=(typescript,)),
+            ),
+        )
+
+    def test_rule_naming_one_language_keeps_one_eval(self, make_rule_eval_case):
+        python = make_rule_eval_case(name="a status literal", inputs__file="orders.py")
+        rule_eval = RuleEval(name="knowledge-stated-once", cases=(python,))
+
+        split = rule_eval.by_language(frozenset({"python"}))
+
+        assert split == (("python", rule_eval),)

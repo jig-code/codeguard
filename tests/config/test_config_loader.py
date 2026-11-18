@@ -1,5 +1,4 @@
 import os
-from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -8,7 +7,6 @@ import pytest
 from codeguard.config import (
     BindingConfig,
     BindingsConfig,
-    ChangeKind,
     Config,
     ConfigError,
     ConfigLoader,
@@ -220,58 +218,6 @@ class TestRulesetLoader:
             "is bound more than once: placement.yaml, placement.yml"
         )
 
-    def test_loads_the_binding_model(self, repo, make_judge_rule):
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(
-            BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
-            "model: claude-haiku-5-5\n",
-        )
-
-        ruleset = RulesetLoader.local(repo.root).load()
-
-        assert ruleset.bindings.root["placement.yaml"].model == "claude-haiku-5-5"
-
-    def test_loads_the_binding_provider(self, repo, make_judge_rule, make_binding_config):
-        model = "gemini-judge-test"
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(
-            BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
-            f"provider: gemini\nmodel: {model}\n",
-        )
-
-        ruleset = RulesetLoader.local(repo.root).load()
-
-        assert ruleset.bindings.root["placement.yaml"] == make_binding_config(
-            rule="responsibility-placement",
-            provider=JudgeProvider.GEMINI,
-            model=model,
-        )
-
-    def test_loads_the_binding_triggers(self, repo, make_judge_rule):
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(
-            BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
-            "triggers: [class-header, fixture]\n",
-        )
-
-        ruleset = RulesetLoader.local(repo.root).load()
-
-        assert ruleset.bindings.root["placement.yaml"].triggers == {
-            ChangeKind.CLASS_HEADER,
-            ChangeKind.FIXTURE,
-        }
-
-    def test_binding_without_triggers_triggers_on_any_change(self, repo, make_judge_rule):
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(BINDING, 'rule: responsibility-placement\npaths: ["**"]\n')
-
-        ruleset = RulesetLoader.local(repo.root).load()
-
-        assert ruleset.bindings.root["placement.yaml"].triggers == {ChangeKind.ANY}
-
     def test_trigger_that_is_no_change_kind_or_gate_is_an_error(self, repo, make_judge_rule):
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
@@ -300,26 +246,6 @@ class TestRulesetLoader:
         assert ruleset.selected_bindings()["responsibility-placement"].triggers == {
             "gate:enum-value"
         }
-
-    def test_ci_only_rule_is_selected_in_ci(self, repo, make_judge_rule):
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(BINDING, 'rule: responsibility-placement\npaths: ["**"]\n')
-        ruleset = replace(
-            RulesetLoader.local(repo.root).load(), selection=RulesetConfig(ci_only=True)
-        )
-
-        assert list(ruleset.selected_bindings()) == ["responsibility-placement"]
-
-    def test_ci_only_rule_is_not_selected_when_skipped(self, repo, make_judge_rule):
-        repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(BINDING, 'rule: responsibility-placement\npaths: ["**"]\n')
-        ruleset = replace(
-            RulesetLoader.local(repo.root).load(),
-            selection=RulesetConfig(ci_only=True),
-            skip_ci_only=True,
-        )
-
-        assert ruleset.selected_bindings() == {}
 
     def test_gate_named_after_a_change_kind_is_an_error(self, repo, make_judge_rule):
         repo.write(JUDGE_RULE, make_judge_rule().text)
@@ -552,3 +478,22 @@ class TestRulesetLoader:
             f"{repo.root}/.codeguard is invalid:\n"
             "  bindings.placement.yaml.skill: Path does not point to a directory"
         )
+
+    def test_ruleset_may_bind_rule_files_and_skill_directories_together(
+        self, directory, make_judge_rule
+    ):
+        naming = make_judge_rule(name="naming", text="# Naming\n\nNames say what a value is.\n")
+        directory.write("python/rules/judge/responsibility-placement.md", make_judge_rule().text)
+        directory.write("python/skills/naming/SKILL.md", f"---\nname: naming\n---\n{naming.text}")
+        directory.write(
+            "python/bindings/naming.yaml", 'skill: python/skills/naming\npaths: ["**"]\n'
+        )
+        directory.write(
+            "python/bindings/placement.yaml", 'rule: responsibility-placement\npaths: ["**"]\n'
+        )
+
+        ruleset = RulesetLoader(repo=directory.root, root=directory.root / "python").load()
+
+        by_file = ruleset.bindings.root
+        assert ruleset.judge_rule_text(by_file["naming.yaml"]) == naming.text
+        assert ruleset.judge_rule_text(by_file["placement.yaml"]) == make_judge_rule().text

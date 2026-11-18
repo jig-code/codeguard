@@ -119,6 +119,13 @@ class Ruleset:
             if not self.excludes(binding.rule_id)
         }
 
+    def judge_choice(
+        self, binding: BindingConfig, project_judge: JudgeChoice, judge_override: JudgeChoice
+    ) -> JudgeChoice:
+        if judge_override.provider:
+            return judge_override
+        return binding.judge.over(project_judge).over(self.package_judge)
+
     def _qualified(self, binding: BindingConfig) -> BindingConfig:
         triggers = frozenset(self.qualified_trigger(trigger) for trigger in binding.triggers)
         return binding.model_copy(update={"triggers": triggers})

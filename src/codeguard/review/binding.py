@@ -74,9 +74,7 @@ class Bindings(tuple[Binding, ...]):
                 rule,
                 binding,
                 ruleset,
-                judge_override
-                if judge_override.provider
-                else binding.judge.over(project_judge).over(ruleset.package_judge),
+                ruleset.judge_choice(binding, project_judge, judge_override),
             )
             for ruleset in rulesets
             for rule, binding in ruleset.selected_bindings().items()

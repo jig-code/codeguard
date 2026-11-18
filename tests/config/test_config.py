@@ -68,6 +68,23 @@ class TestBindingsConfig:
 
         assert messages(error) == ["Value error, rule and skill both name a rule: keep only rule"]
 
+    def test_binding_reads_its_provider_model_and_triggers(self, make_binding_config):
+        binding = BindingConfig.model_validate(
+            {
+                "rule": "responsibility-placement",
+                "paths": ["**"],
+                "triggers": ["class-header", "fixture"],
+                "provider": "gemini",
+                "model": "gemini-judge-test",
+            }
+        )
+
+        assert binding == make_binding_config(
+            triggers=frozenset({"class-header", "fixture"}),
+            provider=JudgeProvider.GEMINI,
+            model="gemini-judge-test",
+        )
+
     def test_binding_naming_no_rule_is_an_error(self):
         with pytest.raises(ValidationError) as error:
             BindingConfig.model_validate({"paths": ["**"]})
@@ -373,6 +390,141 @@ class TestRulesetConfig:
         )
 
         assert binding.judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="a-bound-model")
+
+
+class TestRuleset:
+    def test_packaged_rule_is_named_by_its_ruleset(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(name="example/python")
+
+        assert ruleset.selected_bindings() == {
+            "example/python/responsibility-placement": make_binding_config()
+        }
+
+    def test_excluded_rule_is_dropped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(exclude=("responsibility-placement",)))
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_rule_left_out_of_include_is_dropped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(include=("another-rule",)))
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_included_rule_is_kept(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(selection=RulesetConfig(include=("responsibility-placement",)))
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_override_replaces_the_binding_fields(self, make_ruleset, make_binding_config):
+        override = RuleOverride(paths=("app/**",), severity=Severity.WARNING)
+        ruleset = make_ruleset(
+            selection=RulesetConfig(rules={"responsibility-placement": override})
+        )
+
+        assert ruleset.selected_bindings() == {
+            "responsibility-placement": make_binding_config(
+                paths=("app/**",), severity=Severity.WARNING
+            )
+        }
+
+    def test_override_replaces_the_excluded_paths(self, make_ruleset, make_binding_config):
+        override = RuleOverride(exclude_paths=())
+        ruleset = make_ruleset(
+            binding__exclude_paths=("tests/**",),
+            selection=RulesetConfig(rules={"responsibility-placement": override}),
+        )
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_ci_only_rule_is_selected_in_ci(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(selection=RulesetConfig(ci_only=True))
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_ci_only_rule_is_not_selected_when_skipped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(ci_only=True), skip_ci_only=True)
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_package_default_judges_its_rules(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
+        ruleset = make_ruleset(package_judge=package)
+
+        judge = ruleset.judge_choice(make_binding_config(), JudgeChoice(), JudgeChoice())
+
+        assert judge == package
+
+    def test_project_default_wins_over_the_package_default(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        ruleset = make_ruleset(package_judge=package)
+
+        judge = ruleset.judge_choice(make_binding_config(), project, JudgeChoice())
+
+        assert judge == project
+
+    def test_binding_wins_over_the_project_default(self, make_ruleset, make_binding_config):
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        binding = make_binding_config(provider=JudgeProvider.GEMINI, model="bound-model")
+
+        judge = make_ruleset().judge_choice(binding, project, JudgeChoice())
+
+        assert judge == JudgeChoice(provider=JudgeProvider.GEMINI, model="bound-model")
+
+    def test_provider_and_model_each_come_from_the_first_level_naming_it(
+        self, make_ruleset, make_binding_config
+    ):
+        package = JudgeChoice(model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK)
+        binding = make_binding_config(model="bound-model")
+
+        judge = make_ruleset(package_judge=package).judge_choice(binding, project, JudgeChoice())
+
+        assert judge == JudgeChoice(provider=JudgeProvider.BEDROCK, model="bound-model")
+
+    def test_project_model_runs_on_the_package_provider(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(model="project-model")
+
+        judge = make_ruleset(package_judge=package).judge_choice(
+            make_binding_config(), project, JudgeChoice()
+        )
+
+        assert judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="project-model")
+
+    def test_override_naming_a_provider_replaces_every_level(
+        self, make_ruleset, make_binding_config
+    ):
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        binding = make_binding_config(provider=JudgeProvider.GEMINI, model="bound-model")
+        override = JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)
+
+        judge = make_ruleset().judge_choice(binding, project, override)
+
+        assert judge == override
+
+    def test_rule_file_text_reaches_the_judge_unparsed(
+        self, directory, make_ruleset, make_binding_config, make_judge_rule
+    ):
+        text = f"---\nname: responsibility-placement\n---\n{make_judge_rule().text}"
+        directory.write("rules/judge/responsibility-placement.md", text)
+
+        judge_text = make_ruleset(root=directory.root).judge_rule_text(make_binding_config())
+
+        assert judge_text == text
+
+    def test_skill_file_reaches_the_judge_without_its_frontmatter(
+        self, directory, make_ruleset, make_binding_config, make_judge_rule
+    ):
+        directory.write(
+            "skills/placement/SKILL.md",
+            f"---\nname: placement\n---\n{make_judge_rule().text}",
+        )
+        binding = make_binding_config(rule=None, skill=directory.root / "skills/placement")
+
+        judge_text = make_ruleset(root=directory.root).judge_rule_text(binding)
+
+        assert judge_text == make_judge_rule().text
 
 
 class TestJudgeChoice:
