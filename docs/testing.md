@@ -78,6 +78,11 @@ test, in code the change leaves untouched and doesn't take part in, so the revie
 leave it unreported. Keep that violation small and plain, and let it break no other
 rule, so nothing else in the fixture obscures the behavior under test.
 
+A test states each expectation once, where its framework keeps it: a rule eval case in
+its expected outcome, a pattern or gate test case by its place in the valid or invalid
+list. A case's name or comment states only its situation, never the harm or the why:
+the rule's Why holds that.
+
 Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
 
 ## Changing codeguard
