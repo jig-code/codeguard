@@ -1,8 +1,9 @@
 # Decisions
 
-The decisions that shape codeguard and still hold. Each record states the decision as plain
-statements, and a Why when the decision came with a reason. A decision that replaces an
-earlier one replaces the record. The current design is in [architecture](architecture.md).
+The decisions about codeguard itself that still hold: its code, design, configuration, tests
+and CI. Each record states the decision as plain statements, and a Why when the decision came
+with a reason. A decision that replaces an earlier one replaces the record. The current design
+is in [architecture](architecture.md).
 
 ## 1. codeguard is built as the framework's first wired surface
 
@@ -34,13 +35,6 @@ Why: "guard" read as security and undersold a tool that guides the agent before 
 - It does not adopt Continue, CodeRabbit, Bugbot, Anthropic's `code-review` plugin or another existing reviewer.
 
 Why: none of them uses one convention source for both writing and review, and adopting one means conforming to its rule format.
-
-## 6. An existing tool or library is used, never rebuilt
-
-- Before building something, check what the adopted library or tool already supports.
-- Do not rebuild what it already does.
-
-Why: Craig, "there should be a decision that we don't reinvent things."
 
 ## 7. codeguard is verified only by its own tests and evals
 
@@ -414,14 +408,10 @@ Why: Craig, "if specific tools are used or referenced, that is going to break if
 
 Why: Craig, "The skill writes the rule, the evals verify that a rule was written that follows the instructions of the skill and that is it."
 
-## 62. Skills follow Anthropic's skill guidance
+## 62. codeguard's test skills live in `.claude/skills/`
 
-- A skill has a short `SKILL.md`, detail in linked files inside the skill folder, and only what Claude doesn't already know. It says what it does, not what it doesn't.
-- A skill holds no history. It can state the why, which is the impact.
-- A rule is absolute with no exception, or it is written as a conditional ("use X unless Y").
-- The test-quality and pytest-factoryboy skills are codeguard's test governance. They live in `.claude/skills/`, not `skills/`, which ships in the plugin.
-
-Why: Craig, "skills don't include history. they can include 'why' to follow them, but that is the impact, not a history lesson."
+- The test-quality and pytest-factoryboy skills are codeguard's test governance.
+- They live in `.claude/skills/`, not `skills/`, which ships in the plugin.
 
 ## 63. Testing text lives in the testing docs
 
@@ -431,28 +421,12 @@ Why: Craig, "skills don't include history. they can include 'why' to follow them
 
 Why: the text is about testing, and keeping testing policy in one doc means the two can't drift.
 
-## 64. One pass verifies a change and the rest of N proves it stable
-
-- Every live-model check runs once to verify a change. Once that passes with nothing changed since, the stability check runs N-1 more. Any change restarts at one pass.
-- Each live-model CI check is two jobs. The validity job runs one pass and fails fast. The reliability job starts only when it passes, runs N-1, never fails fast, reports every case's pass rate and gates on N of N.
-- Locally the one pass may stop at the first failure, and the N-1 run always completes.
-
-Why: Craig, "one pass to verify a change, multiple passes to verify its stable. That needs to be applied everywhere."
-
 ## 65. Every eval case's bar is 3 of 3
 
 - Every eval case passes 3 runs of 3: judge rule evals, the judge's LLM tests and the skill evals. That is 1 run to verify the change, then 2 more.
 - A doc's command runs one eval to verify the change, then `--repeat 2`. A doc never gives `--repeat 3`. "3 runs of 3" names only the bar.
 
 Why: Craig, "we are only going to use 3/3 for all cases."
-
-## 66. Changed code passes its checks locally before any push
-
-- Before any push to GitHub, changed code passes locally every check that its rows in the testing guide name. That covers pytest and the offline checks, `codeguard review`, the live-model passes, `codeguard rules test` and `codeguard rules eval` for rules, and the skill evals for a skill or eval change.
-- CI is the full-suite regression check. It never stands in for a local check.
-- A push to a new `backup/` branch with no pull request is exempt.
-
-Why: Craig, "we shouldn't pay for a full test for code that was changed but never tested locally."
 
 ## 67. An eval case has one clear answer
 
@@ -498,50 +472,9 @@ Why: Craig, "ask a judge to judge one thing at a time to get the best accuracy."
 
 Why: Craig, "These are tests aren't they? Name them like tests."
 
-## 72. Tests are deterministic
-
-- A test's result never depends on the machine, clock or environment it runs on.
-- A test fixes such an input to a value it chooses, distinct from every other value the code could return.
-- Live-model evals are measured by repeated runs and aren't covered here.
-
-Why: Craig, "if this ran on a machine with 2 cpus and it took the gemini path it would incorrectly pass."
-
-## 73. A test targets the type that owns the behaviour
-
-- Each test targets the type that owns the behaviour it checks, through that type's own interface. A test of an orchestrator checks only the orchestration.
-- Code that a test writes across several lines is an indented triple-quoted block in the test body, not one string with escaped newlines. A test about the escape characters themselves keeps them.
-
-Why: escaped `\n` strings packing several lines are hard to read.
-
-## 74. Code comments say why
-
-- A comment is minimal and explains why. It never explains how a host or the code works.
-- A comment or docstring stays only when it states what the code can't and is unlikely to drift.
-- A comment that narrates the code is deleted. One that makes up for a name or design is replaced by a better name or design.
-
-Why: Craig, "comments are not a substitute for documentation or poor design."
-
 ## 75. Work touching pydantic-ai follows its documented practice
 
 - Work that touches pydantic-ai follows the framework's current documented practice, checked through the Context7 connector.
-
-## 76. Docs are an entry point plus one page per reader
-
-- `README.md` is the entry point: what codeguard is, why, a short quick start and links. Everything else lives in `docs/`, one page per audience and type.
-- A page says only what code, config files and workflows can't, and each fact has one page.
-- Design docs explain why. How-to pages cover the public interface only, never how the internals work.
-- Docs hold guidance. History lives elsewhere and is linked.
-
-Why: Craig, "a lot of information ... and not for a single audience. that makes it hard to discover the information the person is looking for."
-
-## 77. Docs don't restate what lives elsewhere
-
-- Docs don't describe codeguard's own workflows. A reader who needs CI's mechanics reads `.github/workflows/`.
-- Docs don't explain how a dependency or host works, such as GitHub Actions, Claude Code, Codex, `claude plugin eval`, ast-grep or a provider's SDK. They say what codeguard needs from it and link the vendor's page.
-- Docs name a variable and what it sets, never a value set outside the repository.
-- `docs/architecture.md` states each invariant once, in Invariants, and the other sections restate none.
-
-Why: Craig, "Redundant docs are a drift risk and not helpful."
 
 ## 78. No betterwithranch references remain
 
@@ -557,49 +490,6 @@ Why: Craig, "there shouldn't be any references to betterwithranch remaining."
 
 Why: tags and per-PR merges made each engine change take several PRs and a release before the rules could use it.
 
-## 80. Every change reaches main through a pull request
-
-- Every change reaches main through a pull request with green CI. There are no direct pushes or merges to main.
-- Craig reviews and merges a pull request once its CI is green.
-- A pushed PR branch takes main by merging main into it, never by rebasing, so every push is a plain fast-forward and never a force-push.
-
-Why: trunk-based work needs one integration point.
-
-## 81. Each PR passes CI on its own
-
-- A PR merges only with its own CI green. A failure it shows is fixed in that PR, or the case is skipped there, naming the PR that restores it.
-- A later PR is never counted on to turn an earlier one green.
-- A codeguard change to the rule package format keeps reading the old format alongside the new until codeguard-rules has moved. A later codeguard PR then drops the old format. Only rule processing reads both.
-
-Why: Craig, "the red case should be fixed in 45 or skipped pending 55."
-
-## 82. A PR description follows the template
-
-- A PR description follows `.github/pull_request_template.md` and describes the change as it stands.
-- It states the final head's results against the bar and nothing else. It leaves out commit lists, extraction or porting history and the checks CI already shows.
-
-Why: Craig, "that's not what a PR description is supposed to do."
-
-## 83. A doc edit ships with the change it describes
-
-- A doc edit goes in the PR whose change it describes, not in a docs-only PR. A feature's docs are written first on the feature's branch as its spec, its code follows, and they ship together in one PR.
-
-Why: Craig, "we don't need docs only PRs for simple doc edits."
-
-## 84. A rename that comes with edits is its own PR
-
-- A file that is renamed or moved and also edited goes in its own rename-only PR that merges first. The edits follow in a later PR.
-- A change split from an open PR for scope goes in a new PR from main that merges first, and the open PRs then merge main and follow it. An open PR isn't merged with code a later PR is planned to fix.
-
-Why: Craig, "delete and add does not capture the history cleanly."
-
-## 86. A PR doesn't fix violations already on main
-
-- A PR fixes what it adds or changes, not violations already on main, even in a file it touches. Reviews flag only the PR's own lines.
-- Older code that predates a standard is brought in line in its own PR.
-
-Why: Craig, "we don't need to change existing violations."
-
 ## 87. codeguard's workflows follow GitHub's secure-use practices
 
 - A workflow uses least-privilege permissions, job timeouts and no persisted checkout credentials, and pins the version of Claude Code it runs.
@@ -612,10 +502,10 @@ Why: Craig, "make sure that we are also using github workflow best practices."
 
 - `codeguard rules test` and `codeguard rules eval` are the subcommands, with no old top-level aliases.
 
-## 89. Variable names say what uses them and how
+## 89. The skill evals' variables are named for what uses them and how
 
-- A CI variable's name says what uses it and what its value is used as. A variable that feeds a flag taking a model id or a profile is named `MODEL`.
 - The skill evals' variables are `SKILL_EVALS_AGENT_BEDROCK_MODEL` and `SKILL_EVALS_GRADER_BEDROCK_MODEL`.
+- They feed Claude Code's `--model`, which takes a model id or a profile, so they are named `MODEL`.
 
 Why: Craig, "I can't tell if this is for running codeguard, pytest evals, or the plugin skill evals. a name that describes it would clear that up."
 
