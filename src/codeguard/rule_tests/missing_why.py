@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -13,6 +14,13 @@ class MissingWhyMode(StrEnum):
     WARN = "warn"
     FAIL = "fail"
     OFF = "off"
+
+    def result(self, missing: tuple[str, ...]) -> RuleTestResult:
+        if self is MissingWhyMode.FAIL:
+            return RuleTestResult(problems=missing)
+        if self is MissingWhyMode.WARN:
+            return RuleTestResult(warnings=missing)
+        return RuleTestResult()
 
 
 @dataclass(frozen=True)
@@ -32,18 +40,24 @@ class MissingWhy:
         except ConfigError:
             # BroadTriggers already reports an invalid ruleset.
             return RuleTestResult()
-        judged = sorted(
-            binding.rule_id
+        judge_rules = {
+            binding.rule_id: ruleset.judge_rule_text(binding)
             for binding in ruleset.bindings.root.values()
-            if not has_why_section(ruleset.judge_rule_text(binding))
-        )
-        missing = (
-            *(f"{rule}: no ## Why section in its rule file" for rule in judged),
-            *(f"{rule}: no metadata.why" for rule in ruleset.pattern_rules_without_why()),
-        )
-        if self.mode is MissingWhyMode.FAIL:
-            return RuleTestResult(problems=missing)
-        return RuleTestResult(warnings=missing)
+        }
+        return self.mode.result(rules_without_why(judge_rules, ruleset.pattern_rules_without_why()))
+
+
+def rules_without_why(
+    judge_rules: Mapping[str, str], pattern_rules_without_why: Iterable[str]
+) -> tuple[str, ...]:
+    return (
+        *(
+            f"{rule}: no ## Why section in its rule file"
+            for rule, text in sorted(judge_rules.items())
+            if not has_why_section(text)
+        ),
+        *(f"{rule}: no metadata.why" for rule in pattern_rules_without_why),
+    )
 
 
 def has_why_section(rule: str) -> bool:

@@ -2,12 +2,11 @@ import pytest
 
 from codeguard.config import RulesetLoader
 from codeguard.rule_tests import MissingWhy, MissingWhyMode, RuleTestResult
-from codeguard.rule_tests.missing_why import has_why_section
+from codeguard.rule_tests.missing_why import has_why_section, rules_without_why
 
 RULE = "# Placement\n\nA method lives on the type whose data it reads.\n"
 PATTERN_RULE = "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$ARGS)\n"
 RULE_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
-SKILL_BINDING = 'skill: .codeguard/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
 NO_WHY_WARNING = "placement: no ## Why section in its rule file"
 
 
@@ -33,89 +32,54 @@ class TestHasWhySection:
         assert has_why_section(rule)
 
 
-class TestMissingWhy:
-    def test_judge_rule_with_a_why_passes(self, directory, make_judge_rule):
-        directory.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        directory.write(".codeguard/bindings/placement.yaml", RULE_BINDING)
+class TestRulesWithoutWhy:
+    def test_judge_rule_without_a_why_is_reported(self):
+        assert rules_without_why({"placement": RULE}, ()) == (NO_WHY_WARNING,)
 
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
+    def test_judge_rule_with_a_why_is_not_reported(self, make_judge_rule):
+        assert rules_without_why({"placement": make_judge_rule().text}, ()) == ()
 
-        assert result == RuleTestResult()
+    def test_pattern_rule_without_a_why_is_reported(self):
+        assert rules_without_why({}, ["no-print"]) == ("no-print: no metadata.why",)
 
-    def test_judge_rule_without_a_why_warns(self, directory):
-        directory.write(".codeguard/rules/judge/placement.md", RULE)
-        directory.write(".codeguard/bindings/placement.yaml", RULE_BINDING)
+    def test_judge_rules_come_first_sorted_by_id_then_pattern_rules(self):
+        missing = rules_without_why({"placement": RULE, "naming": RULE}, ["no-print"])
 
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
-
-        assert result == RuleTestResult(warnings=(NO_WHY_WARNING,))
-
-    def test_skill_directory_without_a_why_warns(self, directory):
-        directory.write(
-            ".codeguard/skills/placement/SKILL.md", f"---\nname: placement\n---\n{RULE}"
-        )
-        directory.write(".codeguard/bindings/placement.yaml", SKILL_BINDING)
-
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
-
-        assert result == RuleTestResult(warnings=(NO_WHY_WARNING,))
-
-    def test_skill_directory_with_a_why_passes(self, directory, make_judge_rule):
-        directory.write(
-            ".codeguard/skills/placement/SKILL.md",
-            f"---\nname: placement\n---\n{make_judge_rule().text}",
-        )
-        directory.write(".codeguard/bindings/placement.yaml", SKILL_BINDING)
-
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
-
-        assert result == RuleTestResult()
-
-    def test_pattern_rule_with_a_why_passes(self, directory):
-        directory.write(
-            ".codeguard/rules/pattern/no-print.yml",
-            PATTERN_RULE + "metadata:\n  why: Print skips the log levels.\n",
+        assert missing == (
+            "naming: no ## Why section in its rule file",
+            NO_WHY_WARNING,
+            "no-print: no metadata.why",
         )
 
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
-
-    @pytest.mark.parametrize(
-        "metadata",
-        ["", "metadata:\n  source: https://example.com\n", "metadata:\n  why: ''\n"],
-        ids=["no-metadata", "source-only", "empty-why"],
-    )
-    def test_pattern_rule_without_a_why_warns(self, directory, metadata):
-        directory.write(".codeguard/rules/pattern/no-print.yml", PATTERN_RULE + metadata)
-
-        result = MissingWhy(RulesetLoader.local(directory.root)).run()
+class TestMissingWhyMode:
+    def test_warn_mode_reports_as_warnings(self):
+        result = MissingWhyMode.WARN.result(("no-print: no metadata.why",))
 
         assert result == RuleTestResult(warnings=("no-print: no metadata.why",))
 
-    def test_fail_mode_fails_each_rule_without_a_why(self, directory):
+    def test_fail_mode_reports_as_problems_that_fail_the_run(self):
+        result = MissingWhyMode.FAIL.result(("no-print: no metadata.why",))
+
+        assert result == RuleTestResult(problems=("no-print: no metadata.why",))
+        assert not result.passed
+
+    def test_off_mode_reports_nothing(self):
+        assert MissingWhyMode.OFF.result(("no-print: no metadata.why",)) == RuleTestResult()
+
+
+class TestMissingWhy:
+    def test_judge_rules_and_pattern_rules_of_a_ruleset_without_a_why_are_reported(self, directory):
         directory.write(".codeguard/rules/judge/placement.md", RULE)
         directory.write(".codeguard/bindings/placement.yaml", RULE_BINDING)
         directory.write(".codeguard/rules/pattern/no-print.yml", PATTERN_RULE)
 
-        result = MissingWhy(RulesetLoader.local(directory.root), MissingWhyMode.FAIL).run()
+        result = MissingWhy(RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(problems=(NO_WHY_WARNING, "no-print: no metadata.why"))
-        assert not result.passed
+        assert result == RuleTestResult(warnings=(NO_WHY_WARNING, "no-print: no metadata.why"))
 
-    def test_off_mode_reports_nothing(self, directory):
-        directory.write(".codeguard/rules/judge/placement.md", RULE)
+    def test_invalid_ruleset_reports_nothing(self, directory):
         directory.write(".codeguard/bindings/placement.yaml", RULE_BINDING)
-
-        result = MissingWhy(RulesetLoader.local(directory.root), MissingWhyMode.OFF).run()
-
-        assert result == RuleTestResult()
-
-    def test_a_gate_needs_no_why(self, directory):
-        directory.write(
-            ".codeguard/gates/enum-value.yml",
-            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
-        )
 
         result = MissingWhy(RulesetLoader.local(directory.root)).run()
 

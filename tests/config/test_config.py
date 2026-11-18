@@ -20,6 +20,7 @@ from codeguard.config import (
 )
 
 CPUS = 7
+PATTERN_RULE = "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$ARGS)\n"
 
 
 def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
@@ -502,6 +503,38 @@ class TestRuleset:
         judge = make_ruleset().judge_choice(binding, project, override)
 
         assert judge == override
+
+    def test_pattern_rule_with_a_why_has_none_missing(self, directory, make_ruleset):
+        directory.write(
+            "rules/pattern/no-print.yml",
+            PATTERN_RULE + "metadata:\n  why: Print skips the log levels.\n",
+        )
+
+        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
+
+        assert missing == ()
+
+    @pytest.mark.parametrize(
+        "metadata",
+        ["", "metadata:\n  source: https://example.com\n", "metadata:\n  why: ''\n"],
+        ids=["no-metadata", "source-only", "empty-why"],
+    )
+    def test_pattern_rule_without_a_why_is_missing_one(self, directory, make_ruleset, metadata):
+        directory.write("rules/pattern/no-print.yml", PATTERN_RULE + metadata)
+
+        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
+
+        assert missing == ("no-print",)
+
+    def test_a_gate_is_not_a_pattern_rule(self, directory, make_ruleset):
+        directory.write(
+            "gates/enum-value.yml",
+            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+        )
+
+        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
+
+        assert missing == ()
 
     def test_rule_file_text_reaches_the_judge_unparsed(
         self, directory, make_ruleset, make_binding_config, make_judge_rule
