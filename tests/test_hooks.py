@@ -15,6 +15,7 @@ pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
 PROJECT = Path(__file__).resolve().parent.parent
 SCRIPTS = sysconfig.get_path("scripts")
+PLACEMENT_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
 UNDER_TEST = {"CODEGUARD": str(Path(SCRIPTS) / "codeguard")}
 UV = Path(shutil.which("uv") or "uv")
 CLAUDE_CODE_COMMAND = 'uv run --quiet --script "${CLAUDE_PLUGIN_ROOT}/hooks/stop.py" claude-code'
@@ -227,8 +228,11 @@ class TestStopHook:
         }
 
     def test_low_confidence_finding_goes_to_the_user(
-        self, repo, bound_judge_rule, claude_bin, make_diagnostic
+        self, repo, make_judge_rule, claude_bin, make_diagnostic
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\ny = 2\n")
         violation = {"file": "a.py", "lines": {"start": 1, "end": 2}, "message": "Move it."}
         configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
@@ -247,9 +251,10 @@ class TestStopHook:
 
         assert response == {"systemMessage": f"codeguard warnings:\n{finding}"}
 
-    def test_judge_error_on_an_error_rule_goes_to_the_user(
-        self, repo, bound_judge_rule, claude_bin
-    ):
+    def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, make_judge_rule, claude_bin):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
 

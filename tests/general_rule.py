@@ -1,5 +1,3 @@
-from git_repo import GitRepo
-
 RULE = "knowledge-stated-once"
 RULE_FILE = f".codeguard/rules/judge/{RULE}.md"
 BINDING = f".codeguard/bindings/{RULE}.yaml"
@@ -20,9 +18,3 @@ def case(name: str, file: str, after: str, outcome: str = "invalid") -> str:
 
 PYTHON_CASE = case("a repeated status literal", "orders.py", 'STATUS = "shipped"')
 TYPESCRIPT_CASE = case("a repeated status literal in a script", "orders.ts", "const s = 'shipped';")
-
-
-def write_general_rule(repo: GitRepo, binding: str = BOTH_LANGUAGES) -> None:
-    """A rule for Python and TypeScript files."""
-    repo.write(RULE_FILE, GENERAL_RULE)
-    repo.write(BINDING, f"rule: {RULE}\n{binding}")

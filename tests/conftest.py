@@ -19,7 +19,7 @@ from factories.rule_eval import (
     MakeVerdict,
 )
 from factories.ruleset import MakeBindingConfig, MakeRuleset
-from git_repo import GitRepo
+from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
@@ -96,6 +96,11 @@ def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def directory(tmp_path: Path) -> Directory:
+    return Directory(tmp_path.resolve())
+
+
+@pytest.fixture
 def git_repo(tmp_path: Path) -> GitRepo:
     return GitRepo.init(tmp_path.resolve())
 
@@ -130,16 +135,6 @@ def repo(tmp_path: Path) -> GitRepo:
     )
     git_repo.commit("Add rules")
     return git_repo
-
-
-@pytest.fixture
-def bound_judge_rule(repo: GitRepo, make_judge_rule) -> None:
-    repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-    repo.write(
-        ".codeguard/bindings/placement.yaml",
-        'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
-    )
-    repo.commit("Bind the rule")
 
 
 @pytest.fixture

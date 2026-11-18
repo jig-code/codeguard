@@ -24,6 +24,7 @@ CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 BUNDLED_AST_GREP = metadata.version("ast-grep-cli")
 NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
 NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
+PLACEMENT_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
 TRACEBACK_HEADING = "Traceback (most recent call last):\n"
 PASSING_NO_PRINT_TEST_REPORT = (
     "Running 1 tests\n"
@@ -518,8 +519,11 @@ class TestReviewJsonFormat:
         assert result.returncode == 1
 
     def test_low_confidence_finding_is_a_warning_with_its_confidence(
-        self, repo, bound_judge_rule, tmp_path, make_diagnostic
+        self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
@@ -539,8 +543,11 @@ class TestReviewJsonFormat:
         assert result.returncode == 0
 
     def test_failed_judge_call_is_a_judge_error(
-        self, repo, bound_judge_rule, tmp_path, make_diagnostic
+        self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
@@ -568,8 +575,11 @@ class TestReviewJsonFormat:
 
 class TestReviewJudgeCache:
     def test_cached_verdict_is_reused_until_a_file_the_judge_read_changes(
-        self, repo, bound_judge_rule, tmp_path
+        self, repo, make_judge_rule, tmp_path
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
@@ -592,8 +602,11 @@ class TestReviewJudgeCache:
 
     @pytest.mark.parametrize("search", ["Grep", "Glob"])
     def test_cached_verdict_is_reused_until_a_file_a_search_found_changes(
-        self, repo, bound_judge_rule, tmp_path, search
+        self, repo, make_judge_rule, tmp_path, search
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
@@ -620,7 +633,10 @@ class TestReviewJudgeCache:
 
 
 class TestReviewJudgeErrorsAsWarnings:
-    def test_judge_error_fails_the_review_without_the_flag(self, repo, bound_judge_rule, tmp_path):
+    def test_judge_error_fails_the_review_without_the_flag(self, repo, make_judge_rule, tmp_path):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
@@ -630,7 +646,10 @@ class TestReviewJudgeErrorsAsWarnings:
         assert result.stdout.startswith("a.py: error placement: The judge call failed")
         assert result.returncode == 1
 
-    def test_judge_error_is_a_warning_with_the_flag(self, repo, bound_judge_rule, tmp_path):
+    def test_judge_error_is_a_warning_with_the_flag(self, repo, make_judge_rule, tmp_path):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
@@ -641,8 +660,11 @@ class TestReviewJudgeErrorsAsWarnings:
         assert result.returncode == 0
 
     def test_rule_violation_still_fails_the_review_with_the_flag(
-        self, repo, bound_judge_rule, tmp_path, make_diagnostic
+        self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
