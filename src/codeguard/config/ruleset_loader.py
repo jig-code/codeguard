@@ -13,7 +13,7 @@ from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.pattern_binding_config import PatternBindingsConfig
-from codeguard.config.ruleset import BINDINGS_DIR, Ruleset, judge_rule_file
+from codeguard.config.ruleset import BINDINGS_DIR, Ruleset, judge_rule_path
 from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
@@ -91,7 +91,12 @@ class RulesetLoader:
             and isinstance(document.get(_RULE_KEY), str)
             and _SKILL_KEY not in document
         }
-        pattern_ids = Ruleset(name=self.name, root=self.root).pattern_rule_ids() if named else set()
+        try:
+            pattern_ids = (
+                Ruleset(name=self.name, root=self.root).pattern_rule_ids() if named else set()
+            )
+        except ValidationError as error:
+            raise ConfigError.invalid(self.root, error, prefix="rules") from error
         self._raise_problems(
             [
                 problem
@@ -106,7 +111,7 @@ class RulesetLoader:
     def _route_problem(self, file: str, rule: str, is_pattern_rule: bool) -> str | None:
         if "/" in rule or "\\" in rule:
             return f"bindings.{file}.rule: {rule!r} is not a rule id"
-        path = judge_rule_file(self.root, rule)
+        path = judge_rule_path(self.root, rule)
         expected = path.relative_to(self.root)
         if path.is_file() and is_pattern_rule:
             return f"bindings.{file}.rule: both {expected} and pattern rule {rule} have this id"

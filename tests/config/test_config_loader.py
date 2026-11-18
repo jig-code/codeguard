@@ -445,6 +445,16 @@ class TestRulesetLoader:
             "both rules/judge/no-print.md and pattern rule no-print have this id"
         )
 
+    def test_malformed_pattern_rule_file_is_a_config_error(self, repo, make_judge_rule):
+        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+        repo.write(".codeguard/rules/pattern/bad.yaml", "bogus: 1\n")
+        repo.write(".codeguard/bindings/placement.yaml", 'rule: placement\npaths: ["**"]\n')
+
+        with pytest.raises(ConfigError) as error:
+            RulesetLoader.local(repo.root).load()
+
+        assert str(error.value) == f"{repo.root}/.codeguard is invalid:\n  rules.id: Field required"
+
     @pytest.mark.parametrize(
         "rule", ["../../../placement", "..\\..\\..\\placement"], ids=["slash", "backslash"]
     )
