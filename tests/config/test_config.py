@@ -14,6 +14,7 @@ from codeguard.config import (
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
+    PatternRule,
     RuleOverride,
     RulesetConfig,
     Severity,
@@ -504,37 +505,16 @@ class TestRuleset:
 
         assert judge == override
 
-    def test_pattern_rule_with_a_why_has_none_missing(self, directory, make_ruleset):
-        directory.write(
-            "rules/pattern/no-print.yml",
-            PATTERN_RULE + "metadata:\n  why: Print skips the log levels.\n",
-        )
-
-        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
-
-        assert missing == ()
-
-    @pytest.mark.parametrize(
-        "metadata",
-        ["", "metadata:\n  source: https://example.com\n", "metadata:\n  why: ''\n"],
-        ids=["no-metadata", "source-only", "empty-why"],
-    )
-    def test_pattern_rule_without_a_why_is_missing_one(self, directory, make_ruleset, metadata):
-        directory.write("rules/pattern/no-print.yml", PATTERN_RULE + metadata)
-
-        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
-
-        assert missing == ("no-print",)
-
-    def test_a_gate_is_not_a_pattern_rule(self, directory, make_ruleset):
+    def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
+        directory.write("rules/pattern/no-print.yml", PATTERN_RULE)
         directory.write(
             "gates/enum-value.yml",
             "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
         )
 
-        missing = make_ruleset(root=directory.root).pattern_rules_without_why()
+        rules = make_ruleset(root=directory.root).pattern_rules()
 
-        assert missing == ()
+        assert rules == [PatternRule(id="no-print")]
 
     def test_rule_file_text_reaches_the_judge_unparsed(
         self, directory, make_ruleset, make_binding_config, make_judge_rule
@@ -558,6 +538,27 @@ class TestRuleset:
         judge_text = make_ruleset(root=directory.root).judge_rule_text(binding)
 
         assert judge_text == make_judge_rule().text
+
+
+class TestPatternRule:
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            None,
+            {"source": "https://example.com"},
+            {"why": ""},
+            {"why": "  "},
+            {"why": 1},
+        ],
+        ids=["no-metadata", "source-only", "empty-why", "blank-why", "why-not-text"],
+    )
+    def test_pattern_rule_without_a_why_text_does_not_say_why(self, metadata):
+        assert not PatternRule(id="no-print", metadata=metadata).says_why
+
+    def test_pattern_rule_with_a_why_says_why(self):
+        rule = PatternRule(id="no-print", metadata={"why": "Print skips the log levels."})
+
+        assert rule.says_why
 
 
 class TestJudgeChoice:

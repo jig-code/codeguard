@@ -21,6 +21,7 @@ from codeguard.config.package_config import (
 )
 from codeguard.config.path_scope import PathScope
 from codeguard.config.pattern_binding_config import PatternBindingConfig, PatternBindingsConfig
+from codeguard.config.pattern_rule import PatternRule
 from codeguard.config.ruleset import (
     GATE_DIR,
     JUDGE_EVAL_DIR,
@@ -68,6 +69,7 @@ __all__ = [
     "PathScope",
     "PatternBindingConfig",
     "PatternBindingsConfig",
+    "PatternRule",
     "RuleOverride",
     "Ruleset",
     "RulesetConfig",

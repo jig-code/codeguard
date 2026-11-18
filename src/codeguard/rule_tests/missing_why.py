@@ -1,13 +1,9 @@
-import re
-from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
+from codeguard.review import Bindings
 from codeguard.rule_tests.rule_test_result import RuleTestResult
-
-# A `## Why` heading followed by text before the next heading of its level or above.
-_WHY_SECTION = re.compile(r"^##[ \t]+Why[ \t]*\n(?P<body>(?:(?!#{1,2}[ \t]).*\n?)*)", re.MULTILINE)
 
 
 class MissingWhyMode(StrEnum):
@@ -33,33 +29,23 @@ class MissingWhy:
     mode: MissingWhyMode = MissingWhyMode.WARN
 
     def run(self) -> RuleTestResult:
-        if self.mode is MissingWhyMode.OFF:
-            return RuleTestResult()
         try:
             ruleset = self.ruleset.load()
         except ConfigError:
             # BroadTriggers already reports an invalid ruleset.
             return RuleTestResult()
-        judge_rules = {
-            binding.rule_id: ruleset.judge_rule_text(binding)
-            for binding in ruleset.bindings.root.values()
-        }
-        return self.mode.result(rules_without_why(judge_rules, ruleset.pattern_rules_without_why()))
-
-
-def rules_without_why(
-    judge_rules: Mapping[str, str], pattern_rules_without_why: Iterable[str]
-) -> tuple[str, ...]:
-    return (
-        *(
-            f"{rule}: no ## Why section in its rule file"
-            for rule, text in sorted(judge_rules.items())
-            if not has_why_section(text)
-        ),
-        *(f"{rule}: no metadata.why" for rule in pattern_rules_without_why),
-    )
-
-
-def has_why_section(rule: str) -> bool:
-    match = _WHY_SECTION.search(rule)
-    return match is not None and bool(match.group("body").strip())
+        judge_rules = sorted(
+            (binding.judge_rule for binding in Bindings.from_rulesets([ruleset])),
+            key=lambda rule: rule.name,
+        )
+        pattern_rules = sorted(ruleset.pattern_rules(), key=lambda rule: rule.id)
+        return self.mode.result(
+            (
+                *(
+                    f"{rule.name}: no ## Why section in its rule file"
+                    for rule in judge_rules
+                    if not rule.says_why
+                ),
+                *(f"{rule.id}: no metadata.why" for rule in pattern_rules if not rule.says_why),
+            )
+        )

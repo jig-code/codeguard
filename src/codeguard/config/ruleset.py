@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, ConfigDict
 
 from codeguard.config.binding_config import LEGACY_SKILL_FILE, BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
@@ -12,6 +11,7 @@ from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.path_scope import PathScope
 from codeguard.config.pattern_binding_config import PatternBindingsConfig
+from codeguard.config.pattern_rule import PatternRule
 from codeguard.config.ruleset_config import RulesetConfig
 
 PATTERN_RULE_DIR = "rules/pattern"
@@ -24,17 +24,6 @@ BINDINGS_DIR = "bindings"
 JUDGE_RULE_DIR = "rules/judge"
 SKILLS_DIR = "skills"
 _FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
-
-
-class _PatternRule(BaseModel):
-    model_config = ConfigDict(extra="ignore", frozen=True)
-
-    id: str
-    metadata: dict[str, object] | None = None
-
-    @property
-    def why(self) -> object:
-        return (self.metadata or {}).get("why")
 
 
 @dataclass(frozen=True)
@@ -74,21 +63,12 @@ class Ruleset:
         return text
 
     def pattern_rule_ids(self) -> frozenset[str]:
-        return frozenset(rule.id for rule in self._pattern_rules())
+        return frozenset(rule.id for rule in self.pattern_rules())
 
-    def pattern_rules_without_why(self) -> tuple[str, ...]:
-        return tuple(
-            sorted(
-                rule.id
-                for rule in self._pattern_rules()
-                if not (isinstance(rule.why, str) and rule.why.strip())
-            )
-        )
-
-    def _pattern_rules(self) -> list[_PatternRule]:
+    def pattern_rules(self) -> list[PatternRule]:
         rule_dir = self.root / PATTERN_RULE_DIR
         return [
-            _PatternRule.model_validate(document)
+            PatternRule.model_validate(document)
             for path in sorted(rule_dir.rglob("*.y*ml"))
             for document in yaml.safe_load_all(path.read_text())
             if document
