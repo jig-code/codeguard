@@ -26,10 +26,6 @@ SKILLS_DIR = "skills"
 _FRONTMATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 
 
-def judge_rule_path(root: Path, rule: str) -> Path:
-    return root / JUDGE_RULE_DIR / f"{rule}.md"
-
-
 class _PatternRule(BaseModel):
     model_config = ConfigDict(extra="ignore", frozen=True)
 
@@ -63,10 +59,13 @@ class Ruleset:
     def judged_rule_ids(self) -> frozenset[str]:
         return frozenset(binding.rule_id for binding in self.bindings.root.values())
 
+    def judge_rule_path(self, rule: str) -> Path:
+        return self.root / JUDGE_RULE_DIR / f"{rule}.md"
+
     def _judge_rule_file(self, binding: BindingConfig) -> Path:
         if binding.skill is not None:
             return binding.skill / LEGACY_SKILL_FILE
-        return judge_rule_path(self.root, binding.rule_id)
+        return self.judge_rule_path(binding.rule_id)
 
     def judge_rule_text(self, binding: BindingConfig) -> str:
         text = self._judge_rule_file(binding).read_text()

@@ -133,6 +133,16 @@ def repo(tmp_path: Path) -> GitRepo:
 
 
 @pytest.fixture
+def bound_judge_rule(repo: GitRepo, make_judge_rule) -> None:
+    repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
+    repo.write(
+        ".codeguard/bindings/placement.yaml",
+        'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+    )
+    repo.commit("Bind the rule")
+
+
+@pytest.fixture
 def store(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Cache]:
     with Cache(tmp_path_factory.mktemp("judgements")) as cache:
         yield cache

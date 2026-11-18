@@ -27,11 +27,14 @@ class TestBinding:
         assert files == ["app/a.py"]
 
     def test_from_config_has_its_exclude_paths(
-        self, make_binding, make_binding_config, make_judge_rule
+        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
     ):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         config = make_binding_config(exclude_paths=("tests/**",))
 
-        binding = Binding.from_config(RULE_NAME, config, make_judge_rule(), JudgeChoice())
+        binding = Binding.from_config(
+            RULE_NAME, config, make_ruleset(root=repo.root), JudgeChoice()
+        )
 
         assert binding == make_binding(exclude_paths=("tests/**",))
 
@@ -43,18 +46,26 @@ class TestBinding:
         assert files == ["a.py", "app/b.rb"]
 
     def test_from_config_builds_the_binding_its_config_describes(
-        self, make_binding, make_binding_config, make_judge_rule
+        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
     ):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         config = make_binding_config(severity=Severity.WARNING)
 
-        binding = Binding.from_config(RULE_NAME, config, make_judge_rule(), JudgeChoice())
+        binding = Binding.from_config(
+            RULE_NAME, config, make_ruleset(root=repo.root), JudgeChoice()
+        )
 
         assert binding == make_binding(severity=Severity.WARNING)
 
-    def test_from_config_has_its_judge(self, make_binding, make_binding_config, make_judge_rule):
+    def test_from_config_has_its_judge(
+        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
+    ):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         judge = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="gpt-6-luna")
 
-        binding = Binding.from_config(RULE_NAME, make_binding_config(), make_judge_rule(), judge)
+        binding = Binding.from_config(
+            RULE_NAME, make_binding_config(), make_ruleset(root=repo.root), judge
+        )
 
         assert binding == make_binding(judge=judge)
 

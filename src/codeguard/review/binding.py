@@ -28,11 +28,11 @@ class Binding:
 
     @classmethod
     def from_config(
-        cls, rule: str, binding: BindingConfig, judge_rule: JudgeRule, judge: JudgeChoice
+        cls, rule: str, binding: BindingConfig, ruleset: Ruleset, judge: JudgeChoice
     ) -> Self:
         return cls(
             rule=rule,
-            judge_rule=judge_rule,
+            judge_rule=JudgeRule(name=binding.rule_id, text=ruleset.judge_rule_text(binding)),
             paths=binding.paths,
             severity=binding.severity,
             judge=judge,
@@ -73,7 +73,7 @@ class Bindings(tuple[Binding, ...]):
             Binding.from_config(
                 rule,
                 binding,
-                JudgeRule(name=binding.rule_id, text=ruleset.judge_rule_text(binding)),
+                ruleset,
                 judge_override
                 if judge_override.provider
                 else binding.judge.over(project_judge).over(ruleset.package_judge),

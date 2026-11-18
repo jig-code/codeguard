@@ -13,10 +13,10 @@ class BindingsConfig(RootModel[dict[str, BindingConfig]]):
     def validate_rules_bound_once(
         cls, bindings: dict[str, BindingConfig]
     ) -> dict[str, BindingConfig]:
-        files: defaultdict[str, list[str]] = defaultdict(list)
+        bound_in_by_rule: defaultdict[str, list[str]] = defaultdict(list)
         for file, binding in bindings.items():
-            files[binding.rule_id].append(file)
-        for rule, bound_in in files.items():
+            bound_in_by_rule[binding.rule_id].append(file)
+        for rule, bound_in in bound_in_by_rule.items():
             if len(bound_in) > 1:
                 raise ValueError(f"rule {rule} is bound more than once: {', '.join(bound_in)}")
         return bindings

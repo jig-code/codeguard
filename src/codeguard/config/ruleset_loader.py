@@ -13,13 +13,23 @@ from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import JudgeChoice
 from codeguard.config.pattern_binding_config import PatternBindingsConfig
-from codeguard.config.ruleset import BINDINGS_DIR, Ruleset, judge_rule_path
+from codeguard.config.ruleset import BINDINGS_DIR, Ruleset
 from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
 _RULE_KEY = "rule"
 _SKILL_KEY = "skill"
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
+
+
+def _rules_named_alone(documents: Mapping[str, object]) -> dict[str, str]:
+    return {
+        file: document[_RULE_KEY]
+        for file, document in documents.items()
+        if isinstance(document, dict)
+        and isinstance(document.get(_RULE_KEY), str)
+        and _SKILL_KEY not in document
+    }
 
 
 @dataclass(frozen=True)
@@ -50,7 +60,16 @@ class RulesetLoader:
             for path in sorted(bindings_dir.rglob("*"))
             if path.suffix in _BINDING_FILE_SUFFIXES
         }
-        pattern_documents, judge_documents = self._split_pattern_and_judge_documents(documents)
+        rule_by_file = _rules_named_alone(documents)
+        unbound = Ruleset(name=self.name, root=self.root)
+        pattern_ids = self._pattern_rule_ids(unbound) if rule_by_file else frozenset()
+        self._raise_problems(self._routing_problems(unbound, rule_by_file, pattern_ids))
+        pattern_documents = {
+            file: documents[file] for file, rule in rule_by_file.items() if rule in pattern_ids
+        }
+        judge_documents = {
+            file: document for file, document in documents.items() if file not in pattern_documents
+        }
         try:
             bindings = BindingsConfig.model_validate(
                 judge_documents, context={"working_tree": self.repo}
@@ -78,37 +97,27 @@ class RulesetLoader:
         )
         return ruleset
 
-    def _split_pattern_and_judge_documents(
-        self, documents: dict[str, object]
-    ) -> tuple[dict[str, object], dict[str, object]]:
-        rule_only = {
-            file: document[_RULE_KEY]
-            for file, document in documents.items()
-            if isinstance(document, dict)
-            and isinstance(document.get(_RULE_KEY), str)
-            and _SKILL_KEY not in document
-        }
+    def _routing_problems(
+        self, ruleset: Ruleset, rule_by_file: Mapping[str, str], pattern_ids: frozenset[str]
+    ) -> list[str]:
+        return [
+            problem
+            for file, rule in rule_by_file.items()
+            if (problem := self._route_problem(ruleset, file, rule, rule in pattern_ids))
+        ]
+
+    def _pattern_rule_ids(self, ruleset: Ruleset) -> frozenset[str]:
         try:
-            pattern_ids = (
-                Ruleset(name=self.name, root=self.root).pattern_rule_ids() if rule_only else set()
-            )
+            return ruleset.pattern_rule_ids()
         except ValidationError as error:
             raise ConfigError.invalid(self.root, error, prefix="rules") from error
-        self._raise_problems(
-            [
-                problem
-                for file, rule in rule_only.items()
-                if (problem := self._route_problem(file, rule, rule in pattern_ids))
-            ]
-        )
-        pattern = {file: documents[file] for file, rule in rule_only.items() if rule in pattern_ids}
-        judge = {file: document for file, document in documents.items() if file not in pattern}
-        return pattern, judge
 
-    def _route_problem(self, file: str, rule: str, is_pattern_rule: bool) -> str | None:
+    def _route_problem(
+        self, ruleset: Ruleset, file: str, rule: str, is_pattern_rule: bool
+    ) -> str | None:
         if "/" in rule or "\\" in rule:
             return f"bindings.{file}.rule: {rule!r} is not a rule id"
-        path = judge_rule_path(self.root, rule)
+        path = ruleset.judge_rule_path(rule)
         expected = path.relative_to(self.root)
         if path.is_file() and is_pattern_rule:
             return f"bindings.{file}.rule: both {expected} and pattern rule {rule} have this id"
