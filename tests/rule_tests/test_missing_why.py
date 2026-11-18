@@ -5,7 +5,6 @@ from codeguard.rule_tests import MissingWhy, MissingWhyMode, RuleTestResult
 from codeguard.rule_tests.missing_why import has_why_section
 
 RULE = "# Placement\n\nA method lives on the type whose data it reads.\n"
-WHY = "\n## Why\n\nLogic away from its data is missed when the data changes.\n"
 PATTERN_RULE = "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$ARGS)\n"
 RULE_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
 SKILL_BINDING = 'skill: .codeguard/skills/placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
@@ -14,29 +13,29 @@ NO_WHY_WARNING = "placement: no ## Why section in its rule file"
 
 class TestHasWhySection:
     @pytest.mark.parametrize(
-        ("rule", "expected"),
+        "rule",
         [
-            (RULE, False),
-            (RULE + "\n## Why\n\n", False),
-            (RULE + "\n## Why\n## Examples\n\nship(Status.SHIPPED)\n", False),
-            (RULE + WHY, True),
-            (RULE + WHY + "\nSource: https://example.com/style-guide#placement\n", True),
+            RULE,
+            RULE + "\n## Why\n\n",
+            RULE + "\n## Why\n## Examples\n\nship(Status.SHIPPED)\n",
         ],
-        ids=[
-            "no-section",
-            "empty-section",
-            "section-without-text",
-            "section-with-text",
-            "section-ending-in-a-source",
-        ],
+        ids=["no-section", "empty-section", "section-without-text"],
     )
-    def test_a_why_section_needs_text_before_the_next_heading(self, rule, expected):
-        assert has_why_section(rule) is expected
+    def test_a_rule_without_a_why_text_has_no_why_section(self, rule):
+        assert not has_why_section(rule)
+
+    def test_a_why_section_with_text_is_a_why_section(self, make_judge_rule):
+        assert has_why_section(make_judge_rule().text)
+
+    def test_why_section_may_end_in_a_source(self, make_judge_rule):
+        rule = make_judge_rule().text + "\nSource: https://example.com/style-guide#placement\n"
+
+        assert has_why_section(rule)
 
 
 class TestMissingWhy:
-    def test_judge_rule_with_a_why_passes(self, git_repo):
-        git_repo.write(".codeguard/rules/judge/placement.md", RULE + WHY)
+    def test_judge_rule_with_a_why_passes(self, git_repo, make_judge_rule):
+        git_repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         git_repo.write(".codeguard/bindings/placement.yaml", RULE_BINDING)
 
         result = MissingWhy(RulesetLoader.local(git_repo.root)).run()
@@ -51,18 +50,24 @@ class TestMissingWhy:
 
         assert result == RuleTestResult(warnings=(NO_WHY_WARNING,))
 
-    @pytest.mark.parametrize(
-        ("rule", "expected"),
-        [(RULE, RuleTestResult(warnings=(NO_WHY_WARNING,))), (RULE + WHY, RuleTestResult())],
-        ids=["without-a-why", "with-a-why"],
-    )
-    def test_skill_directory_is_checked_for_a_why(self, git_repo, rule, expected):
-        git_repo.write(".codeguard/skills/placement/SKILL.md", f"---\nname: placement\n---\n{rule}")
+    def test_skill_directory_without_a_why_warns(self, git_repo):
+        git_repo.write(".codeguard/skills/placement/SKILL.md", f"---\nname: placement\n---\n{RULE}")
         git_repo.write(".codeguard/bindings/placement.yaml", SKILL_BINDING)
 
         result = MissingWhy(RulesetLoader.local(git_repo.root)).run()
 
-        assert result == expected
+        assert result == RuleTestResult(warnings=(NO_WHY_WARNING,))
+
+    def test_skill_directory_with_a_why_passes(self, git_repo, make_judge_rule):
+        git_repo.write(
+            ".codeguard/skills/placement/SKILL.md",
+            f"---\nname: placement\n---\n{make_judge_rule().text}",
+        )
+        git_repo.write(".codeguard/bindings/placement.yaml", SKILL_BINDING)
+
+        result = MissingWhy(RulesetLoader.local(git_repo.root)).run()
+
+        assert result == RuleTestResult()
 
     def test_pattern_rule_with_a_why_passes(self, git_repo):
         git_repo.write(

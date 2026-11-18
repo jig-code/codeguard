@@ -27,13 +27,13 @@ class TestBinding:
         assert files == ["app/a.py"]
 
     def test_from_config_has_its_exclude_paths(
-        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         config = make_binding_config(exclude_paths=("tests/**",))
 
         binding = Binding.from_config(
-            RULE_NAME, config, make_ruleset(root=repo.root), JudgeChoice()
+            RULE_NAME, config, make_ruleset(root=git_repo.root), JudgeChoice()
         )
 
         assert binding == make_binding(exclude_paths=("tests/**",))
@@ -46,25 +46,25 @@ class TestBinding:
         assert files == ["a.py", "app/b.rb"]
 
     def test_from_config_builds_the_binding_its_config_describes(
-        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         config = make_binding_config(severity=Severity.WARNING)
 
         binding = Binding.from_config(
-            RULE_NAME, config, make_ruleset(root=repo.root), JudgeChoice()
+            RULE_NAME, config, make_ruleset(root=git_repo.root), JudgeChoice()
         )
 
         assert binding == make_binding(severity=Severity.WARNING)
 
     def test_from_config_has_its_judge(
-        self, repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_binding_config, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         judge = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="gpt-6-luna")
 
         binding = Binding.from_config(
-            RULE_NAME, make_binding_config(), make_ruleset(root=repo.root), judge
+            RULE_NAME, make_binding_config(), make_ruleset(root=git_repo.root), judge
         )
 
         assert binding == make_binding(judge=judge)
@@ -72,62 +72,62 @@ class TestBinding:
 
 class TestBindings:
     def test_from_rulesets_builds_each_binding(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=git_repo.root)])
 
         assert bindings == (make_binding(),)
 
     def test_packaged_binding_is_named_by_its_ruleset(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root, name="example/python")])
+        bindings = Bindings.from_rulesets([make_ruleset(root=git_repo.root, name="example/python")])
 
         assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
-    def test_excluded_binding_is_dropped(self, repo, make_ruleset, make_judge_rule):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+    def test_excluded_binding_is_dropped(self, git_repo, make_ruleset, make_judge_rule):
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(exclude=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
+            [make_ruleset(root=git_repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
-    def test_binding_left_out_of_include_is_dropped(self, repo, make_ruleset, make_judge_rule):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+    def test_binding_left_out_of_include_is_dropped(self, git_repo, make_ruleset, make_judge_rule):
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(include=("another-rule",))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
+            [make_ruleset(root=git_repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
-    def test_included_binding_is_kept(self, repo, make_binding, make_ruleset, make_judge_rule):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+    def test_included_binding_is_kept(self, git_repo, make_binding, make_ruleset, make_judge_rule):
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(include=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
+            [make_ruleset(root=git_repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
     def test_override_replaces_the_binding_fields(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         override = RuleOverride(paths=("app/**",), severity=Severity.WARNING)
         selection = RulesetConfig(rules={RULE_NAME: override})
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
+            [make_ruleset(root=git_repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == (
@@ -139,12 +139,12 @@ class TestBindings:
         )
 
     def test_override_replaces_the_excluded_paths(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(rules={RULE_NAME: RuleOverride(exclude_paths=())})
         ruleset = make_ruleset(
-            root=repo.root, binding__exclude_paths=("tests/**",), selection=selection
+            root=git_repo.root, binding__exclude_paths=("tests/**",), selection=selection
         )
 
         assert Bindings.from_rulesets([ruleset]) == (make_binding(),)
@@ -152,35 +152,35 @@ class TestBindings:
 
 class TestBindingsJudge:
     def test_package_default_judges_its_rules(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root, package_judge=package)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=git_repo.root, package_judge=package)])
 
         assert bindings == (make_binding(judge=package),)
 
     def test_project_default_wins_over_the_package_default(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, package_judge=package)], project
+            [make_ruleset(root=git_repo.root, package_judge=package)], project
         )
 
         assert bindings == (make_binding(judge=project),)
 
     def test_binding_wins_over_the_project_default(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            root=repo.root,
+            root=git_repo.root,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -192,12 +192,14 @@ class TestBindingsJudge:
         )
 
     def test_provider_and_model_each_come_from_the_first_level_naming_it(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK)
-        ruleset = make_ruleset(root=repo.root, binding__model="bound-model", package_judge=package)
+        ruleset = make_ruleset(
+            root=git_repo.root, binding__model="bound-model", package_judge=package
+        )
 
         bindings = Bindings.from_rulesets([ruleset], project)
 
@@ -206,14 +208,14 @@ class TestBindingsJudge:
         )
 
     def test_project_model_runs_on_the_package_provider(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=repo.root, package_judge=package)], project
+            [make_ruleset(root=git_repo.root, package_judge=package)], project
         )
 
         assert bindings == (
@@ -223,12 +225,12 @@ class TestBindingsJudge:
         )
 
     def test_override_naming_a_provider_replaces_every_level(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
+        git_repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            root=repo.root,
+            root=git_repo.root,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -241,45 +243,40 @@ class TestBindingsJudge:
 
 class TestBindingsJudgeRule:
     def test_rule_file_text_reaches_the_judge_unparsed(
-        self, repo, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
         text = f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}"
-        repo.write(JUDGE_RULE_FILE, text)
+        git_repo.write(JUDGE_RULE_FILE, text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=git_repo.root)])
 
         assert bindings == (make_binding(judge_rule__text=text),)
 
     def test_skill_file_reaches_the_judge_without_its_frontmatter(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, git_repo, make_binding, make_ruleset, make_judge_rule
     ):
-        skill = tmp_path / "skills" / RULE_NAME
-        skill.mkdir(parents=True)
-        (skill / "SKILL.md").write_text(f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}")
+        skill = git_repo.root / "skills" / RULE_NAME
+        git_repo.write(
+            f"skills/{RULE_NAME}/SKILL.md", f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}"
+        )
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, binding__rule=None, binding__skill=skill)]
+            [make_ruleset(root=git_repo.root, binding__rule=None, binding__skill=skill)]
         )
 
         assert bindings == (make_binding(),)
 
     def test_ruleset_may_bind_rule_files_and_skill_directories_together(
-        self, repo, make_binding, make_judge_rule
+        self, git_repo, make_binding, make_judge_rule
     ):
         naming = make_judge_rule(name="naming", text="# Naming\n\nNames say what a value is.\n")
-        repo.write(f"python/{JUDGE_RULE_FILE}", make_judge_rule().text)
-        (repo.root / "python/skills/naming").mkdir(parents=True)
-        (repo.root / "python/skills/naming/SKILL.md").write_text(
-            f"---\nname: naming\n---\n{naming.text}"
+        git_repo.write(f"python/{JUDGE_RULE_FILE}", make_judge_rule().text)
+        git_repo.write("python/skills/naming/SKILL.md", f"---\nname: naming\n---\n{naming.text}")
+        git_repo.write(
+            "python/bindings/naming.yaml", 'skill: python/skills/naming\npaths: ["**"]\n'
         )
-        (repo.root / "python/bindings").mkdir()
-        (repo.root / "python/bindings/naming.yaml").write_text(
-            'skill: python/skills/naming\npaths: ["**"]\n'
-        )
-        (repo.root / "python/bindings/placement.yaml").write_text(
-            f'rule: {RULE_NAME}\npaths: ["**"]\n'
-        )
-        ruleset = RulesetLoader(repo=repo.root, root=repo.root / "python").load()
+        git_repo.write("python/bindings/placement.yaml", f'rule: {RULE_NAME}\npaths: ["**"]\n')
+        ruleset = RulesetLoader(repo=git_repo.root, root=git_repo.root / "python").load()
 
         bindings = Bindings.from_rulesets([ruleset])
 

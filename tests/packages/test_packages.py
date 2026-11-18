@@ -6,7 +6,6 @@ from packaging.version import Version
 from rules_package import write_package
 
 from codeguard.config import (
-    BindingConfig,
     BindingsConfig,
     ConfigError,
     JudgeChoice,
@@ -37,7 +36,9 @@ def fetch(tmp_path) -> GitFetch:
 
 
 class TestPackages:
-    def test_opted_in_ruleset_is_named_by_package_and_ruleset(self, repo, package, fetch):
+    def test_opted_in_ruleset_is_named_by_package_and_ruleset(
+        self, repo, package, fetch, make_binding_config
+    ):
         config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
 
         rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
@@ -47,13 +48,7 @@ class TestPackages:
                 name="example/python",
                 root=package.root / "python",
                 bindings=BindingsConfig(
-                    {
-                        "responsibility-placement.yaml": BindingConfig(
-                            triggers=frozenset({"any"}),
-                            rule="responsibility-placement",
-                            paths=("**/*.py",),
-                        )
-                    }
+                    {"responsibility-placement.yaml": make_binding_config(paths=("**/*.py",))}
                 ),
             ),
         )
@@ -72,11 +67,7 @@ class TestPackages:
                 name="example/python",
                 root=package.root / "python",
                 bindings=BindingsConfig(
-                    {
-                        "responsibility-placement.yaml": make_binding_config(
-                            rule="responsibility-placement", paths=("**/*.py",)
-                        )
-                    }
+                    {"responsibility-placement.yaml": make_binding_config(paths=("**/*.py",))}
                 ),
                 package_judge=JudgeChoice(provider=JudgeProvider.BEDROCK, model="a-model"),
             ),
@@ -110,11 +101,7 @@ class TestPackages:
                 name="example/python",
                 root=repo.root / "rules/python",
                 bindings=BindingsConfig(
-                    {
-                        "responsibility-placement.yaml": make_binding_config(
-                            rule="responsibility-placement", paths=("**/*.py",)
-                        )
-                    }
+                    {"responsibility-placement.yaml": make_binding_config(paths=("**/*.py",))}
                 ),
             ),
         )
