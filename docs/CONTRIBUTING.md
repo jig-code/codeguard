@@ -7,6 +7,8 @@ covers, read it and check the change against it.
 
 [Testing](testing.md#changing-codeguard) says which checks a change to codeguard needs.
 
+[Decisions](decisions.md) records the decisions that still hold and why; record a new one there.
+
 ## Run the tests
 
 ```sh
