@@ -38,7 +38,7 @@ Why: none of them uses one convention source for both writing and review, and ad
 ## 6. An existing tool or library is used, never rebuilt
 
 - Before building something, check what the adopted library or tool already supports.
-- Drop any option that rebuilds what it does.
+- Do not rebuild what it already does.
 
 Why: Craig, "there should be a decision that we don't reinvent things."
 
@@ -297,12 +297,6 @@ Why: Craig, "bedrock is a configuration provider. env vars for codeguard shouldn
 
 Why: otherwise a user cannot specify what credentials codeguard gets versus direct use of the provider's own tools.
 
-## 41. Local Gemini runs use the network secret
-
-- Where the environment's network secret signs in to Gemini, local Gemini runs use it, with `CODEGUARD_JUDGE__GEMINI__PROJECT=<project>` and the dummy key `CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected`, and every `GOOGLE_*` variable unset. Credentials are never added.
-
-Why: Craig, "It should be using the network secret."
-
 ## 42. codeguard uses one Gemini model and supports only the current one
 
 - codeguard defaults to, documents and tests with one Gemini model, the one its rule bindings use, currently `gemini-4-argon`.
@@ -351,35 +345,6 @@ Why: Craig, "if a rule should be CI only, that should be an option in the main c
 - `include` lists the only rules that run and can't be combined with `exclude`. `include: []` runs nothing.
 
 Why: Craig, "I would expect an empty set to include nothing, not everything."
-
-## 49. A rule package's CI tests every supported model
-
-- The rule package's CI runs a matrix over the supported models, Gemini on Vertex and Haiku 5.5 on Bedrock, overriding bindings.
-- A rule works whichever model an app picks, so the rule packages carry no model bindings and the package default is Haiku 5.5.
-- CI re-runs every judge rule 3 times only when the codeguard version it tests with changes.
-
-Why: a rule must work whichever model an app picks.
-
-## 50. The rules package pins codeguard by full SHA, moved when the writing-rules skill changes
-
-- codeguard-rules pins codeguard by a full commit SHA. The pin moves when codeguard's writing-rules skill changes, not whenever main moves.
-- Rule results measured at a pin with the current skill stand.
-- A branch runs no live-model evals whose results a later pin move would force it to redo.
-
-Why: Craig, "we just need to make sure that it has the latest writing rules skill", and "do not run evals on any branches if you are going to need to rerun them after the pin is moved. that's just wasted effort and cost".
-
-## 51. Rulesets are per language
-
-- A pattern rule matches one language, so a language-specific form of a general convention lives in that language's ruleset, under the convention's own id.
-- There is no language suffix in `general`.
-
-Why: a pattern rule matches one language, and a suffix mixed pattern rules into a judge-rule ruleset.
-
-## 52. Pattern rules run over codeguard in codeguard-rules' CI
-
-- Pattern rules are also run over codeguard's own code in codeguard-rules' CI.
-
-Why: pattern rule tests had only made-up cases, and six false positives shipped.
 
 ## 53. One eval framework serves codeguard's judge evals and package evals
 
@@ -435,7 +400,7 @@ Why: Craig, "there is no limit to how many rules code can break, but rules canno
 ## 60. A convention that isn't codeguard's is declined without naming a tool
 
 - When a convention is the kind typically given to a class of tool, such as a linter, type checker, import linter or language server, it is not codeguard's. The agent writes no rule and says it isn't codeguard's responsibility.
-- The skill describes tools by class, with no table of tools. Nothing names a tool, rule or setting: not the skill, eval cases, graders, PR text or instructions to workers.
+- The skill describes tools by class, with no table of tools. Nothing names a tool, rule or setting: not the skill, eval cases, graders or PR text.
 - Eval fixtures configure no third-party tool.
 
 Why: Craig, "if specific tools are used or referenced, that is going to break if a different, similar tool is chosen instead."
@@ -594,7 +559,7 @@ Why: tags and per-PR merges made each engine change take several PRs and a relea
 ## 80. Every change reaches main through a pull request
 
 - Every change reaches main through a pull request with green CI. There are no direct pushes or merges to main.
-- A worker opens the pull request, gets CI green and stops. Craig reviews and merges.
+- Craig reviews and merges a pull request once its CI is green.
 - A pushed PR branch takes main by merging main into it, never by rebasing, so every push is a plain fast-forward and never a force-push.
 
 Why: trunk-based work needs one integration point.
@@ -626,14 +591,6 @@ Why: Craig, "we don't need docs only PRs for simple doc edits."
 - A change split from an open PR for scope goes in a new PR from main that merges first, and the open PRs then merge main and follow it. An open PR isn't merged with code a later PR is planned to fix.
 
 Why: Craig, "delete and add does not capture the history cleanly."
-
-## 85. A PR is reviewed for simplicity and against every skill before it is called ready
-
-- Before a PR is called ready, a fresh reviewer checks the whole diff against main for simplicity and against every quality and testing skill that applies, line by line, including docstrings and comments. Its findings are fixed first.
-- For Python changes the checks include test-quality, pytest-factoryboy and python-code-quality, loaded from otter's `.claude/skills/` and skipping its otter-only parts, until codeguard's rules replace it.
-- A codeguard worker loads the test-quality and pytest-factoryboy skills before it writes or changes a test.
-
-Why: Craig, "i shouldn't have to catch issues like that in my review."
 
 ## 86. A PR doesn't fix violations already on main
 
@@ -736,3 +693,11 @@ Why: a rule is then judged with the model its evals pass on.
 ## 101. Invariants keep their numbers
 
 - The architecture's invariants keep their numbers. Invariant 10 is retired and not reused.
+
+## 102. Docs and commits use a placeholder for the Google Cloud project
+
+- Docs write `CODEGUARD_JUDGE__GEMINI__PROJECT=<project>` and the dummy key `proxy-injected`, never a real key or our project number.
+- The placeholder governs every new file, commit and PR text.
+- main's history is not rewritten for earlier commits that held the number: it is an identifier, not a credential, because using the project still needs the key or the proxy's sign-in.
+
+Why: Craig, "The public testing guide should not list our project number. it should use a placeholder."
