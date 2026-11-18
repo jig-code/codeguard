@@ -18,7 +18,6 @@ from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
 _RULE_KEY = "rule"
-# A binding naming a skill as well is a judge binding, so its own validation reports it.
 _SKILL_KEY = "skill"
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
 
@@ -51,7 +50,7 @@ class RulesetLoader:
             for path in sorted(bindings_dir.rglob("*"))
             if path.suffix in _BINDING_FILE_SUFFIXES
         }
-        pattern_documents, judge_documents = self._route(documents)
+        pattern_documents, judge_documents = self._split_pattern_and_judge_documents(documents)
         try:
             bindings = BindingsConfig.model_validate(
                 judge_documents, context={"working_tree": self.repo}
@@ -79,12 +78,10 @@ class RulesetLoader:
         )
         return ruleset
 
-    def _route(self, documents: dict[str, object]) -> tuple[dict[str, object], dict[str, object]]:
-        """Split binding documents into pattern bindings and judge bindings.
-
-        Both kinds name their rule with `rule:`, so the rule it names decides the kind.
-        """
-        named = {
+    def _split_pattern_and_judge_documents(
+        self, documents: dict[str, object]
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        rule_only = {
             file: document[_RULE_KEY]
             for file, document in documents.items()
             if isinstance(document, dict)
@@ -93,18 +90,18 @@ class RulesetLoader:
         }
         try:
             pattern_ids = (
-                Ruleset(name=self.name, root=self.root).pattern_rule_ids() if named else set()
+                Ruleset(name=self.name, root=self.root).pattern_rule_ids() if rule_only else set()
             )
         except ValidationError as error:
             raise ConfigError.invalid(self.root, error, prefix="rules") from error
         self._raise_problems(
             [
                 problem
-                for file, rule in named.items()
+                for file, rule in rule_only.items()
                 if (problem := self._route_problem(file, rule, rule in pattern_ids))
             ]
         )
-        pattern = {file: documents[file] for file, rule in named.items() if rule in pattern_ids}
+        pattern = {file: documents[file] for file, rule in rule_only.items() if rule in pattern_ids}
         judge = {file: document for file, document in documents.items() if file not in pattern}
         return pattern, judge
 

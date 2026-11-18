@@ -670,7 +670,6 @@ class TestReviewHost:
 
 
 def judged_repo(repo: GitRepo, tmp_path: Path, make_judge_rule) -> Path:
-    """Bind a rule to every Python file, change a.py, and put a failing claude on PATH."""
     repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
     repo.write(
         ".codeguard/bindings/placement.yaml",

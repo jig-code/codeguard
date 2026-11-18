@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from codeguard.config.binding_config import SKILL_FILE, BindingConfig
+from codeguard.config.binding_config import LEGACY_SKILL_FILE, BindingConfig
 from codeguard.config.bindings_config import BindingsConfig
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.gate_rule import GateRule
@@ -65,7 +65,7 @@ class Ruleset:
 
     def _judge_rule_file(self, binding: BindingConfig) -> Path:
         if binding.skill is not None:
-            return binding.skill / SKILL_FILE
+            return binding.skill / LEGACY_SKILL_FILE
         return judge_rule_path(self.root, binding.rule_id)
 
     def judge_rule_text(self, binding: BindingConfig) -> str:

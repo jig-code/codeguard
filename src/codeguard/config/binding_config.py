@@ -15,8 +15,7 @@ from codeguard.config.change_kind import ChangeKind
 from codeguard.config.judge_config import JudgeChoice, JudgeProvider
 from codeguard.config.severity import Severity
 
-# A rule package that has not moved to rules/judge/<id>.md still binds a skill directory.
-SKILL_FILE = "SKILL.md"
+LEGACY_SKILL_FILE = "SKILL.md"
 # Released rule packages still set it, from when evals judged code variants.
 _RETIRED_FIELDS = frozenset({"disable_skips"})
 
@@ -70,6 +69,6 @@ class BindingConfig(BaseModel):
     @field_validator("skill")
     @classmethod
     def validate_skill_file_exists(cls, skill: Path | None) -> Path | None:
-        if skill is not None and not (skill / SKILL_FILE).is_file():
-            raise ValueError(f"{skill} has no {SKILL_FILE}")
+        if skill is not None and not (skill / LEGACY_SKILL_FILE).is_file():
+            raise ValueError(f"{skill} has no {LEGACY_SKILL_FILE}")
         return skill

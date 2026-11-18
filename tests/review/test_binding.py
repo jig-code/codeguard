@@ -8,11 +8,7 @@ from codeguard.config import (
 from codeguard.review import Binding, Bindings, Severity
 
 RULE_NAME = "responsibility-placement"
-
-
-def write_judge_rule(tmp_path, text: str) -> None:
-    (tmp_path / "rules/judge").mkdir(parents=True)
-    (tmp_path / f"rules/judge/{RULE_NAME}.md").write_text(text)
+JUDGE_RULE_FILE = f"rules/judge/{RULE_NAME}.md"
 
 
 class TestBinding:
@@ -65,62 +61,62 @@ class TestBinding:
 
 class TestBindings:
     def test_from_rulesets_builds_each_binding(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root)])
 
         assert bindings == (make_binding(),)
 
     def test_packaged_binding_is_named_by_its_ruleset(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path, name="example/python")])
+        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root, name="example/python")])
 
         assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
-    def test_excluded_binding_is_dropped(self, tmp_path, make_ruleset, make_judge_rule):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+    def test_excluded_binding_is_dropped(self, repo, make_ruleset, make_judge_rule):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(exclude=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
+            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
-    def test_binding_left_out_of_include_is_dropped(self, tmp_path, make_ruleset, make_judge_rule):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+    def test_binding_left_out_of_include_is_dropped(self, repo, make_ruleset, make_judge_rule):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(include=("another-rule",))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
+            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == ()
 
-    def test_included_binding_is_kept(self, tmp_path, make_binding, make_ruleset, make_judge_rule):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+    def test_included_binding_is_kept(self, repo, make_binding, make_ruleset, make_judge_rule):
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(include=(RULE_NAME,))
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
+            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == (make_binding(rule=f"example/python/{RULE_NAME}"),)
 
     def test_override_replaces_the_binding_fields(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         override = RuleOverride(paths=("app/**",), severity=Severity.WARNING)
         selection = RulesetConfig(rules={RULE_NAME: override})
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, name="example/python", selection=selection)]
+            [make_ruleset(root=repo.root, name="example/python", selection=selection)]
         )
 
         assert bindings == (
@@ -132,12 +128,12 @@ class TestBindings:
         )
 
     def test_override_replaces_the_excluded_paths(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         selection = RulesetConfig(rules={RULE_NAME: RuleOverride(exclude_paths=())})
         ruleset = make_ruleset(
-            root=tmp_path, binding__exclude_paths=("tests/**",), selection=selection
+            root=repo.root, binding__exclude_paths=("tests/**",), selection=selection
         )
 
         assert Bindings.from_rulesets([ruleset]) == (make_binding(),)
@@ -145,35 +141,35 @@ class TestBindings:
 
 class TestBindingsJudge:
     def test_package_default_judges_its_rules(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path, package_judge=package)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root, package_judge=package)])
 
         assert bindings == (make_binding(judge=package),)
 
     def test_project_default_wins_over_the_package_default(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, package_judge=package)], project
+            [make_ruleset(root=repo.root, package_judge=package)], project
         )
 
         assert bindings == (make_binding(judge=project),)
 
     def test_binding_wins_over_the_project_default(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            root=tmp_path,
+            root=repo.root,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -185,12 +181,12 @@ class TestBindingsJudge:
         )
 
     def test_provider_and_model_each_come_from_the_first_level_naming_it(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(model="package-model")
         project = JudgeChoice(provider=JudgeProvider.BEDROCK)
-        ruleset = make_ruleset(root=tmp_path, binding__model="bound-model", package_judge=package)
+        ruleset = make_ruleset(root=repo.root, binding__model="bound-model", package_judge=package)
 
         bindings = Bindings.from_rulesets([ruleset], project)
 
@@ -199,14 +195,14 @@ class TestBindingsJudge:
         )
 
     def test_project_model_runs_on_the_package_provider(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
         project = JudgeChoice(model="project-model")
 
         bindings = Bindings.from_rulesets(
-            [make_ruleset(root=tmp_path, package_judge=package)], project
+            [make_ruleset(root=repo.root, package_judge=package)], project
         )
 
         assert bindings == (
@@ -216,12 +212,12 @@ class TestBindingsJudge:
         )
 
     def test_override_naming_a_provider_replaces_every_level(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
-        write_judge_rule(tmp_path, make_judge_rule().text)
+        repo.write(JUDGE_RULE_FILE, make_judge_rule().text)
         project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
         ruleset = make_ruleset(
-            root=tmp_path,
+            root=repo.root,
             binding__provider=JudgeProvider.GEMINI,
             binding__model="bound-model",
         )
@@ -234,12 +230,12 @@ class TestBindingsJudge:
 
 class TestBindingsJudgeRule:
     def test_rule_file_text_reaches_the_judge_unparsed(
-        self, tmp_path, make_binding, make_ruleset, make_judge_rule
+        self, repo, make_binding, make_ruleset, make_judge_rule
     ):
         text = f"---\nname: {RULE_NAME}\n---\n{make_judge_rule().text}"
-        write_judge_rule(tmp_path, text)
+        repo.write(JUDGE_RULE_FILE, text)
 
-        bindings = Bindings.from_rulesets([make_ruleset(root=tmp_path)])
+        bindings = Bindings.from_rulesets([make_ruleset(root=repo.root)])
 
         assert bindings == (make_binding(judge_rule__text=text),)
 
@@ -257,22 +253,22 @@ class TestBindingsJudgeRule:
         assert bindings == (make_binding(),)
 
     def test_ruleset_may_bind_rule_files_and_skill_directories_together(
-        self, tmp_path, make_binding, make_judge_rule
+        self, repo, make_binding, make_judge_rule
     ):
         naming = make_judge_rule(name="naming", text="# Naming\n\nNames say what a value is.\n")
-        write_judge_rule(tmp_path / "python", make_judge_rule().text)
-        (tmp_path / "python/skills/naming").mkdir(parents=True)
-        (tmp_path / "python/skills/naming/SKILL.md").write_text(
+        repo.write(f"python/{JUDGE_RULE_FILE}", make_judge_rule().text)
+        (repo.root / "python/skills/naming").mkdir(parents=True)
+        (repo.root / "python/skills/naming/SKILL.md").write_text(
             f"---\nname: naming\n---\n{naming.text}"
         )
-        (tmp_path / "python/bindings").mkdir()
-        (tmp_path / "python/bindings/naming.yaml").write_text(
+        (repo.root / "python/bindings").mkdir()
+        (repo.root / "python/bindings/naming.yaml").write_text(
             'skill: python/skills/naming\npaths: ["**"]\n'
         )
-        (tmp_path / "python/bindings/placement.yaml").write_text(
+        (repo.root / "python/bindings/placement.yaml").write_text(
             f'rule: {RULE_NAME}\npaths: ["**"]\n'
         )
-        ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
+        ruleset = RulesetLoader(repo=repo.root, root=repo.root / "python").load()
 
         bindings = Bindings.from_rulesets([ruleset])
 

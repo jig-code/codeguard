@@ -28,7 +28,6 @@ def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
 
 @pytest.fixture
 def placement_skill(tmp_path) -> Path:
-    """An old-format judge rule: a skill directory holding its SKILL.md."""
     (tmp_path / "placement").mkdir()
     (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
     return tmp_path / "placement"
