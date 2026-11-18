@@ -688,3 +688,51 @@ Why: each process waits on the network and costs about 270 MB of memory, so the 
 - The judge prompt is tested by codeguard's LLM tests, `pytest -m llm`, not by `codeguard eval`, which is a client command for a project's own rules.
 
 Why: the judge prompt is codeguard's, so its check is a codeguard test.
+
+## 94. Bindings route by `paths` until a binding needs a detector
+
+- A binding routes files to rules by `paths`, which is required.
+- Routing by framework through `detects` (ast-grep framework detectors) is designed, not built, and `paths` stays required until a binding needs a detector.
+
+## 95. The judge's prompt is ordered so concerns on one file share the cache
+
+- The judge's system prompt holds what every concern on a file shares, so concerns on one file share the cached prefix.
+- The rule is not part of the shared prefix.
+
+Why: putting the rule before the code wrote the file to the cache at the write price on every call.
+
+## 96. The first judge call for a prefix finishes before the others on it start
+
+- The first call for a cached prefix finishes before the other calls that share the prefix start.
+
+Why: waiting one call's latency saves a file-sized cache write on every other concern.
+
+## 97. codeguard plans to run claude through the Agent SDK
+
+- codeguard runs `claude` through the Agent SDK instead of parsing `stream-json`. This is not built yet: the claude CLI provider still runs the CLI with `stream-json`.
+- The Agent SDK only runs `claude`. Agent SDK tools and the Messages API stay rejected for searches.
+
+Why: `stream-json` isn't documented as stable.
+
+## 98. Duplicated skill-eval graders stay copies, checked in CI
+
+- The writing-rules skill's eval cases keep their own copies of a duplicated grader, and a CI check fails when copies of one grader differ. The check is not built yet.
+- Symlinks and a copy script are rejected.
+
+Why: the eval tool has no shared graders, symlinks aren't documented and could silently skip, and a copy script goes stale.
+
+## 99. codeguard keeps private rules for dogfooding
+
+- codeguard ships no public rules, but it keeps private rules for dogfooding. The first is a rule bound to `judge.md` that enforces the architecture's judge contract.
+- This bends the invariant that the framework has no rules built in. The exception is recorded as a decision when the work starts. The work is deferred.
+
+## 100. A project can't override a binding's provider or model
+
+- A project can override a binding's `paths`, `exclude_paths`, `severity` and `ci_only`, but not its `provider` or `model`. This stands until the queued binding-override work ships.
+- Still open: whether an overridden model needs a rule eval pass on it, and how a project shows that.
+
+Why: a rule is then judged with the model its evals pass on.
+
+## 101. Invariants keep their numbers
+
+- The architecture's invariants keep their numbers. Invariant 10 is retired and not reused.
