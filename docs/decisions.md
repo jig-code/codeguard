@@ -446,12 +446,13 @@ Why: Craig, "one pass to verify a change, multiple passes to verify its stable. 
 
 Why: Craig, "we are only going to use 3/3 for all cases."
 
-## 66. Tests pass locally before any push
+## 66. Changed code passes its checks locally before any push
 
-- Before any push to GitHub, the tests the change affects run locally and pass: pytest and the offline checks for code, `codeguard rules test` and `codeguard rules eval` for rules, and the skill evals for a skill or eval change. CI confirms; it doesn't find failures.
+- Before any push to GitHub, changed code passes locally every check that its rows in the testing guide name. That covers pytest and the offline checks, `codeguard review`, the live-model passes, `codeguard rules test` and `codeguard rules eval` for rules, and the skill evals for a skill or eval change.
+- CI is the full-suite regression check. It never stands in for a local check.
 - A push to a new `backup/` branch with no pull request is exempt.
 
-Why: Craig, "run tests locally instead of burning github action minutes on every change."
+Why: Craig, "we shouldn't pay for a full test for code that was changed but never tested locally."
 
 ## 67. An eval case has one clear answer
 
