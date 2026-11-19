@@ -1,11 +1,11 @@
 from typing import Protocol
 
-from codeguard.rule_validation.validation_result import ValidationResult
+from codeguard.rule_tests.rule_test_result import RuleTestResult
 
 
-class Validation(Protocol):
-    def run(self) -> ValidationResult: ...
+class TestRunner(Protocol):
+    def run(self) -> RuleTestResult: ...
 
 
-class SnapshotValidation(Validation, Protocol):
-    def update_snapshots(self) -> ValidationResult: ...
+class SnapshotTestRunner(TestRunner, Protocol):
+    def update_snapshots(self) -> RuleTestResult: ...

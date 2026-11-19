@@ -1,46 +1,42 @@
 from dataclasses import dataclass, field
 
-from codeguard.rule_validation import RuleValidations, ValidationResult
+from codeguard.rule_tests import RuleTestResult, RuleTests
 
 
 @dataclass
-class RecordingValidation:
-    result: ValidationResult
+class RecordingRunner:
+    result: RuleTestResult
     calls: list[str] = field(default_factory=list)
 
-    def run(self) -> ValidationResult:
+    def run(self) -> RuleTestResult:
         self.calls.append("run")
         return self.result
 
 
 @dataclass
-class RecordingSnapshotValidation(RecordingValidation):
-    def update_snapshots(self) -> ValidationResult:
+class RecordingSnapshotRunner(RecordingRunner):
+    def update_snapshots(self) -> RuleTestResult:
         self.calls.append("update_snapshots")
         return self.result
 
 
-class TestRuleValidations:
-    def test_update_snapshots_updates_snapshot_validations_and_runs_the_others(self):
-        snapshot_validation = RecordingSnapshotValidation(ValidationResult(problems=("stale",)))
-        validation = RecordingValidation(ValidationResult(warnings=("broad",)))
+class TestRuleTests:
+    def test_update_snapshots_updates_snapshot_runners_and_runs_the_others(self):
+        snapshot_runner = RecordingSnapshotRunner(RuleTestResult(problems=("stale",)))
+        runner = RecordingRunner(RuleTestResult(warnings=("broad",)))
 
-        result = RuleValidations(
-            snapshot_validations=[snapshot_validation], validations=[validation]
-        ).update_snapshots()
+        result = RuleTests(snapshot_runners=[snapshot_runner], runners=[runner]).update_snapshots()
 
-        assert snapshot_validation.calls == ["update_snapshots"]
-        assert validation.calls == ["run"]
-        assert result == ValidationResult(problems=("stale",), warnings=("broad",))
+        assert snapshot_runner.calls == ["update_snapshots"]
+        assert runner.calls == ["run"]
+        assert result == RuleTestResult(problems=("stale",), warnings=("broad",))
 
-    def test_run_runs_every_validation(self):
-        snapshot_validation = RecordingSnapshotValidation(ValidationResult(failed=True))
-        validation = RecordingValidation(ValidationResult())
+    def test_run_runs_every_runner(self):
+        snapshot_runner = RecordingSnapshotRunner(RuleTestResult(failed=True))
+        runner = RecordingRunner(RuleTestResult())
 
-        result = RuleValidations(
-            snapshot_validations=[snapshot_validation], validations=[validation]
-        ).run()
+        result = RuleTests(snapshot_runners=[snapshot_runner], runners=[runner]).run()
 
-        assert snapshot_validation.calls == ["run"]
-        assert validation.calls == ["run"]
-        assert result == ValidationResult(failed=True)
+        assert snapshot_runner.calls == ["run"]
+        assert runner.calls == ["run"]
+        assert result == RuleTestResult(failed=True)

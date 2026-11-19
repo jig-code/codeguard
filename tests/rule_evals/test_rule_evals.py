@@ -3,7 +3,7 @@ import yaml
 from pydantic import ValidationError
 
 from codeguard.config import ConfigError
-from codeguard.rule_evals import EditCase, RuleEval, rule_evals
+from codeguard.rule_tests import EditCase, RuleEval, rule_evals
 
 
 class TestRuleEvals:

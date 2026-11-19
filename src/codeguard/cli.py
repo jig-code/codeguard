@@ -83,24 +83,24 @@ def main() -> int:
     )
     review_command.set_defaults(run=_review)
 
-    validate_command = commands.add_parser(
+    test_command = commands.add_parser(
         "test",
         help="Test the rules themselves, with no model call: pattern rule and gate tests, and "
         "each judge rule's triggers on its eval cases. For whoever writes rules.",
     )
-    validate_command.add_argument(
+    test_command.add_argument(
         "package",
         nargs="?",
         type=Path,
         help="Test the rule package in this directory. Default: the current repository.",
     )
-    validate_command.add_argument(
+    test_command.add_argument(
         "--update-all",
         "-U",
         action="store_true",
         help="Regenerate snapshots and remove entries for cases that no longer exist.",
     )
-    validate_command.add_argument(
+    test_command.add_argument(
         "--missing-why",
         type=WhyValidationMode,
         choices=list(WhyValidationMode),
@@ -108,7 +108,7 @@ def main() -> int:
         help="Report each rule that doesn't say why it exists as a warning, as a failure, "
         "or not at all. Default: warn.",
     )
-    validate_command.set_defaults(run=_validate)
+    test_command.set_defaults(run=_test)
 
     eval_command = commands.add_parser(
         "eval",
@@ -242,9 +242,9 @@ def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> LineScope:
     )
 
 
-def _validate(args: argparse.Namespace) -> int:
-    validations = Rules(_working_tree(args.package)).validations(args.missing_why)
-    result = validations.update_snapshots() if args.update_all else validations.run()
+def _test(args: argparse.Namespace) -> int:
+    tests = Rules(_working_tree(args.package)).tests(args.missing_why)
+    result = tests.update_snapshots() if args.update_all else tests.run()
     result.write(sys.stdout)
     return _EXIT_PASSED if result.passed else _EXIT_FAILED
 

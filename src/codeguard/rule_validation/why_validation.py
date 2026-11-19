@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
 from codeguard.review import Bindings
-from codeguard.rule_validation.validation_result import ValidationResult
+from codeguard.rule_tests import RuleTestResult
 
 
 class WhyValidationMode(StrEnum):
@@ -11,12 +11,12 @@ class WhyValidationMode(StrEnum):
     FAIL = "fail"
     OFF = "off"
 
-    def result(self, missing: tuple[str, ...]) -> ValidationResult:
+    def result(self, missing: tuple[str, ...]) -> RuleTestResult:
         if self is WhyValidationMode.FAIL:
-            return ValidationResult(problems=missing)
+            return RuleTestResult(problems=missing)
         if self is WhyValidationMode.WARN:
-            return ValidationResult(warnings=missing)
-        return ValidationResult()
+            return RuleTestResult(warnings=missing)
+        return RuleTestResult()
 
 
 @dataclass(frozen=True)
@@ -28,12 +28,12 @@ class WhyValidation:
     ruleset: RulesetLoader
     mode: WhyValidationMode = WhyValidationMode.WARN
 
-    def run(self) -> ValidationResult:
+    def run(self) -> RuleTestResult:
         try:
             ruleset = self.ruleset.load()
         except ConfigError:
-            # BroadTriggersValidation already reports an invalid ruleset.
-            return ValidationResult()
+            # BroadTriggers already reports an invalid ruleset.
+            return RuleTestResult()
         judge_rules = (binding.judge_rule for binding in Bindings.from_rulesets([ruleset]))
         return self.mode.result(
             (

@@ -21,32 +21,32 @@ class Layout:
         return self.ruleset / PATTERN_RULE_DIR
 
     @property
-    def case_dirs(self) -> list[Path]:
+    def test_dirs(self) -> list[Path]:
         candidates = (self.ruleset / RULE_TEST_DIR, self.ruleset / LEGACY_PATTERN_TEST_DIR)
         return [directory for directory in candidates if directory.is_dir()]
 
     @property
-    def validated_rule_dirs(self) -> list[Path]:
+    def tested_rule_dirs(self) -> list[Path]:
         candidates = (self.rule_dir, self.ruleset / GATE_DIR)
         return [directory for directory in candidates if directory.is_dir()]
 
     def has_rules(self) -> bool:
         return self.rule_dir.is_dir()
 
-    def has_cases(self) -> bool:
-        return bool(self.validated_rule_dirs) and bool(self.case_dirs)
+    def has_tests(self) -> bool:
+        return bool(self.tested_rule_dirs) and bool(self.test_dirs)
 
     def scan_config(self) -> AbstractContextManager[Path]:
         return self._config([self.rule_dir])
 
-    def validation_config(self) -> AbstractContextManager[Path]:
-        return self._config(self.validated_rule_dirs)
+    def test_config(self) -> AbstractContextManager[Path]:
+        return self._config(self.tested_rule_dirs)
 
     @contextmanager
     def _config(self, rule_dirs: Sequence[Path]) -> Iterator[Path]:
         settings = {
             "ruleDirs": [str(directory) for directory in rule_dirs],
-            "testConfigs": [{"testDir": str(directory)} for directory in self.case_dirs],
+            "testConfigs": [{"testDir": str(directory)} for directory in self.test_dirs],
         }
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "sgconfig.yml"

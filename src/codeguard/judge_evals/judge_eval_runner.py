@@ -14,8 +14,7 @@ from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.judge_evals.judge_eval_result import JudgeEvalResult, RuleEvalReport
 from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.review import Binding, Bindings
-from codeguard.rule_evals import EditCase, EditReview, RuleEval, rule_evals
-from codeguard.rule_validation import ValidationResult
+from codeguard.rule_tests import EditCase, EditReview, RuleEval, RuleTestResult, rule_evals
 from codeguard.syntax import SyntaxScanner
 
 
@@ -69,7 +68,7 @@ class JudgeEvalRunner:
         ]
         scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
         reports = asyncio.run(self._evaluate_all(experiments, scanner))
-        return JudgeEvalResult(reports=tuple(reports), checks=ValidationResult(problems=unknown))
+        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
 
     def _selected_evals(self) -> list[tuple[Path, RuleEval]]:
         evals = [

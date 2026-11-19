@@ -2,7 +2,8 @@ import pytest
 from rules_package import NO_PRINT_RULE, PLACEMENT_RULE
 
 from codeguard.config import ConfigError, RulesetLoader
-from codeguard.rule_validation import ValidationResult, WhyValidation, WhyValidationMode
+from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import WhyValidation, WhyValidationMode
 
 MISSING = ("naming: no ## Why section in its rule file", "no-breakpoint: no metadata.why")
 NO_WHY_RULE = "# A rule\n\nIt gives no reason.\n"
@@ -13,9 +14,9 @@ class TestWhyValidationMode:
     @pytest.mark.parametrize(
         ("mode", "expected"),
         [
-            (WhyValidationMode.WARN, ValidationResult(warnings=MISSING)),
-            (WhyValidationMode.FAIL, ValidationResult(problems=MISSING)),
-            (WhyValidationMode.OFF, ValidationResult()),
+            (WhyValidationMode.WARN, RuleTestResult(warnings=MISSING)),
+            (WhyValidationMode.FAIL, RuleTestResult(problems=MISSING)),
+            (WhyValidationMode.OFF, RuleTestResult()),
         ],
         ids=["warn", "fail", "off"],
     )
@@ -43,7 +44,7 @@ class TestWhyValidation:
 
         result = WhyValidation(RulesetLoader.local(directory.root)).run()
 
-        assert result == ValidationResult(
+        assert result == RuleTestResult(
             warnings=(
                 "apple: no ## Why section in its rule file",
                 "zebra: no ## Why section in its rule file",
@@ -58,7 +59,7 @@ class TestWhyValidation:
 
         result = WhyValidation(RulesetLoader.local(directory.root), mode).run()
 
-        assert result == ValidationResult()
+        assert result == RuleTestResult()
 
     @pytest.mark.parametrize("mode", list(WhyValidationMode))
     def test_pattern_rule_whose_why_is_not_text_is_a_config_error(self, directory, mode):

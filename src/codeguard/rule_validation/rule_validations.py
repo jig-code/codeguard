@@ -1,24 +1,24 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from codeguard.rule_validation.validation import SnapshotValidation, Validation
-from codeguard.rule_validation.validation_result import ValidationResult
+from codeguard.rule_tests.rule_test_result import RuleTestResult
+from codeguard.rule_tests.test_runner import SnapshotTestRunner, TestRunner
 
 
 @dataclass(frozen=True)
-class RuleValidations:
-    snapshot_validations: Sequence[SnapshotValidation]
-    validations: Sequence[Validation]
+class RuleTests:
+    snapshot_runners: Sequence[SnapshotTestRunner]
+    runners: Sequence[TestRunner]
 
-    def run(self) -> ValidationResult:
-        return ValidationResult.merge(
-            validation.run() for validation in (*self.snapshot_validations, *self.validations)
+    def run(self) -> RuleTestResult:
+        return RuleTestResult.merge(
+            runner.run() for runner in (*self.snapshot_runners, *self.runners)
         )
 
-    def update_snapshots(self) -> ValidationResult:
-        return ValidationResult.merge(
+    def update_snapshots(self) -> RuleTestResult:
+        return RuleTestResult.merge(
             (
-                *(validation.update_snapshots() for validation in self.snapshot_validations),
-                *(validation.run() for validation in self.validations),
+                *(runner.update_snapshots() for runner in self.snapshot_runners),
+                *(runner.run() for runner in self.runners),
             )
         )

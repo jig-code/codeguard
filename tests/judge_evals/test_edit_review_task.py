@@ -2,7 +2,7 @@ from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.ast_grep import AstGrep
 from codeguard.judge_evals import EditReviewTask
-from codeguard.rule_evals import EditReview, Outcome
+from codeguard.rule_tests import EditReview, Outcome
 from codeguard.syntax import SyntaxScanner
 
 

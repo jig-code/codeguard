@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Self
 
 from codeguard.repository import ChangedLines, LineScopes, WorkingTree
-from codeguard.rule_evals.rule_eval import EditCase
+from codeguard.rule_tests.rule_eval import EditCase
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
 

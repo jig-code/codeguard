@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from codeguard.config import ChangeKind, ConfigError, RulesetLoader
-from codeguard.rule_validation.validation_result import ValidationResult
+from codeguard.rule_tests.rule_test_result import RuleTestResult
 
 _BROAD = frozenset(
     {
@@ -14,15 +14,15 @@ _BROAD = frozenset(
 
 
 @dataclass(frozen=True)
-class BroadTriggersValidation:
+class BroadTriggers:
     ruleset: RulesetLoader
 
-    def run(self) -> ValidationResult:
+    def run(self) -> RuleTestResult:
         try:
             bindings = self.ruleset.load().bindings.root.values()
         except ConfigError as error:
-            return ValidationResult(failed=False, warnings=(f"triggers not checked: {error}",))
-        return ValidationResult(
+            return RuleTestResult(failed=False, warnings=(f"triggers not checked: {error}",))
+        return RuleTestResult(
             failed=False,
             warnings=tuple(
                 f"{binding.rule_id}: broad triggers {', '.join(sorted(broad))}; "
