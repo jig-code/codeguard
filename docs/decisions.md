@@ -114,33 +114,27 @@ Why: architecture rules are often violated by more than one line.
 
 - codeguard keeps private rules for dogfooding, though it ships no public rules.
 
-## 19. codeguard runs claude through its SDK
-
-- codeguard runs `claude` through its SDK, not by parsing the CLI's output stream.
-
-Why: the stream isn't documented as stable.
-
-## 20. Evals run on pull requests, not on pushes to main
+## 19. Evals run on pull requests, not on pushes to main
 
 - Evals run only on pull requests, not on pushes to main.
 
 Why: re-running them after a merge spends model calls the pull request already spent.
 
-## 21. The writing-rules skill only writes the rule
+## 20. The writing-rules skill only writes the rule
 
 - The writing-rules skill holds only how to write the rule.
 - It holds no running of tests or evals, and no examples.
 
 Why: the skill writes the rule, and the evals verify the rule follows the skill.
 
-## 22. Duplicated skill-eval graders stay copies
+## 21. Duplicated skill-eval graders stay copies
 
 - Each skill-eval case keeps its own copy of a duplicated grader.
 - A CI check compares the copies.
 
 Why: the eval tool has no shared graders.
 
-## 23. An advisory rule check is not a pydantic validator
+## 22. An advisory rule check is not a pydantic validator
 
 - A fact about a rule lives on the rule type.
 - A thin validation reads it and applies warn, fail or off.
