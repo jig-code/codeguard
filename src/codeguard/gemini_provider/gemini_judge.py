@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx2
 import logfire
 from google.genai.types import ThinkingLevel
-from pydantic import BaseModel, JsonValue
+from pydantic import BaseModel, JsonValue, ValidationError
 from pydantic_ai import (
     Agent,
     NativeOutput,
@@ -128,6 +128,12 @@ class GeminiJudge:
             if _timed_out(error):
                 raise self._timed_out() from error
             raise JudgeProcessError(f"{self.model} failed: {error.message}") from error
+        except ValidationError as error:
+            # The SDK validated a request it was given, which no other call shares.
+            raise JudgeProcessError(
+                f"{self.model} couldn't send the request: {error.title} rejected "
+                f"{error.error_count()} field(s)."
+            ) from error
         return result.output
 
     def _settings(self, _: RunContext[object]) -> GoogleModelSettings:

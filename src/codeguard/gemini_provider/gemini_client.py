@@ -2,11 +2,12 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 
 import httpx2
 from google.auth.exceptions import GoogleAuthError
 from google.genai import Client
-from google.genai.types import HttpOptions
+from google.genai.types import GenerateContentConfig, GenerateContentResponse, HttpOptions
 from google.oauth2.service_account import Credentials
 from pydantic import SecretStr
 from pydantic_ai.models import Model, create_async_httpx2_client
@@ -16,6 +17,17 @@ from pydantic_ai.providers.google_cloud import GoogleCloudProvider
 from codeguard.review import JudgeProcessError
 
 _CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+
+_build_lock = Lock()
+
+
+# google-genai builds each model's validator the first time it is used, and judgements run on
+# threads. Two threads building the same model at once make validation fail, such as
+# `Extra inputs are not permitted` for the tools, so one thread builds them under a lock first.
+def build_models() -> None:
+    with _build_lock:
+        GenerateContentConfig.model_rebuild()
+        GenerateContentResponse.model_rebuild()
 
 
 @dataclass(frozen=True)
@@ -28,6 +40,7 @@ class VertexGemini:
 
     @asynccontextmanager
     async def __call__(self, model: str) -> AsyncIterator[Model]:
+        build_models()
         # Each judgement runs on its own event loop, so it gets its own HTTP client.
         async with create_async_httpx2_client(transport=self.transport) as http:
             with self._client(http) as client:

@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 
 import httpx2
 import pytest
-from pydantic import SecretStr
+from google.genai.types import GenerateContentConfig
+from pydantic import SecretStr, ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
@@ -323,6 +324,17 @@ class TestGeminiJudge:
         with pytest.raises(JudgeProcessError, match=f"^{MODEL} failed with 400: Bad request.$"):
             judge_with(tmp_path, models).judge(make_judge_request())
         assert models.answers == [unsent]
+
+    def test_request_the_sdk_rejects_is_a_judge_error(self, tmp_path, make_judge_request):
+        with pytest.raises(ValidationError) as rejected:
+            GenerateContentConfig.model_validate({"unknown": 1})
+        models = ScriptedGemini([rejected.value])
+
+        with pytest.raises(
+            JudgeProcessError,
+            match=f"^{MODEL} couldn't send the request: GenerateContentConfig rejected 1 field",
+        ):
+            judge_with(tmp_path, models).judge(make_judge_request())
 
     @pytest.mark.parametrize(
         "error",
