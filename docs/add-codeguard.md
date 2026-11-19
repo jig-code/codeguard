@@ -62,18 +62,26 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: jig-code/codeguard@v0.11.0
+      - id: auth
+        uses: google-github-actions/auth@v2
         with:
-          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+      - uses: jig-code/codeguard@v0.11.0
+        env:
+          CODEGUARD_JUDGE__PROVIDER: gemini
+          CODEGUARD_JUDGE__MODEL: gemini-4-argon
+          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
 then runs the rule tests. [`action.yml`](../action.yml) lists what else it takes.
 
-A judge rule bound to the `claude` CLI, the default, needs the token: create it with
-`claude setup-token` and store it as a repository secret. A rule bound to Gemini or
-Bedrock needs that provider's credentials in the job instead
-([Choose a judge](judges.md)).
+The action judges with whichever judge the project's configuration names, and takes no
+judge setting of its own. CI never uses the `claude` CLI, the default, so the job names a
+provider that runs in CI and that provider's credentials, in the variables codeguard reads
+([Choose a judge](judges.md)). The example judges with Gemini; for Bedrock, set the
+provider and model and give the job AWS credentials instead.
 
 The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
 the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call

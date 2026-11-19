@@ -47,6 +47,5 @@ For a private package in CI, pass the action a token that can read it:
 ```yaml
       - uses: jig-code/codeguard@v0.11.0
         with:
-          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           packages-token: ${{ secrets.CODEGUARD_PACKAGES_TOKEN }}
 ```
