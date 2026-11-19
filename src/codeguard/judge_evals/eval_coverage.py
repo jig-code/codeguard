@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.review import Bindings
-from codeguard.rule_tests import Outcome, RuleTestResult, rule_evals
+from codeguard.rule_evals import Outcome, rule_evals
+from codeguard.rule_validation import ValidationResult
 
 
 @dataclass(frozen=True)
@@ -11,7 +12,7 @@ class EvalCoverage:
     ruleset: RulesetLoader
     selection: EvalSelection = EvalSelection()
 
-    def run(self) -> RuleTestResult:
+    def run(self) -> ValidationResult:
         ruleset = self.ruleset.load()
         bindings = Bindings.from_rulesets([ruleset])
         languages = {binding.judge_rule.name: binding.languages for binding in bindings}
@@ -25,7 +26,7 @@ class EvalCoverage:
             )
         }
         # A rule whose paths name several languages needs an invalid case in each.
-        return RuleTestResult(
+        return ValidationResult(
             problems=tuple(
                 f"{name}: no eval with an invalid case"
                 for binding in bindings

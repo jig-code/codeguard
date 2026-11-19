@@ -5,7 +5,8 @@ from typing import Self, TextIO
 from pydantic_evals.reporting import EvaluationReport
 from rich.console import Console
 
-from codeguard.rule_tests import EditCase, EditReview, RuleTestResult
+from codeguard.rule_evals import EditCase, EditReview
+from codeguard.rule_validation import ValidationResult
 
 type RuleEvalReport = EvaluationReport[EditCase, EditReview, None]
 
@@ -13,14 +14,14 @@ type RuleEvalReport = EvaluationReport[EditCase, EditReview, None]
 @dataclass(frozen=True)
 class JudgeEvalResult:
     reports: tuple[RuleEvalReport, ...] = ()
-    checks: RuleTestResult = RuleTestResult()
+    checks: ValidationResult = ValidationResult()
 
     @classmethod
     def merge(cls, results: Iterable[Self]) -> Self:
         collected = list(results)
         return cls(
             reports=tuple(report for result in collected for report in result.reports),
-            checks=RuleTestResult.merge(result.checks for result in collected),
+            checks=ValidationResult.merge(result.checks for result in collected),
         )
 
     @property

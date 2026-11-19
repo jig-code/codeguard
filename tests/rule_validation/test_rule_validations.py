@@ -1,42 +1,46 @@
 from dataclasses import dataclass, field
 
-from codeguard.rule_tests import RuleTestResult, RuleTests
+from codeguard.rule_validation import RuleValidations, ValidationResult
 
 
 @dataclass
-class RecordingRunner:
-    result: RuleTestResult
+class RecordingValidation:
+    result: ValidationResult
     calls: list[str] = field(default_factory=list)
 
-    def run(self) -> RuleTestResult:
+    def run(self) -> ValidationResult:
         self.calls.append("run")
         return self.result
 
 
 @dataclass
-class RecordingSnapshotRunner(RecordingRunner):
-    def update_snapshots(self) -> RuleTestResult:
+class RecordingSnapshotValidation(RecordingValidation):
+    def update_snapshots(self) -> ValidationResult:
         self.calls.append("update_snapshots")
         return self.result
 
 
-class TestRuleTests:
-    def test_update_snapshots_updates_snapshot_runners_and_runs_the_others(self):
-        snapshot_runner = RecordingSnapshotRunner(RuleTestResult(problems=("stale",)))
-        runner = RecordingRunner(RuleTestResult(warnings=("broad",)))
+class TestRuleValidations:
+    def test_update_snapshots_updates_snapshot_validations_and_runs_the_others(self):
+        snapshot_validation = RecordingSnapshotValidation(ValidationResult(problems=("stale",)))
+        validation = RecordingValidation(ValidationResult(warnings=("broad",)))
 
-        result = RuleTests(snapshot_runners=[snapshot_runner], runners=[runner]).update_snapshots()
+        result = RuleValidations(
+            snapshot_validations=[snapshot_validation], validations=[validation]
+        ).update_snapshots()
 
-        assert snapshot_runner.calls == ["update_snapshots"]
-        assert runner.calls == ["run"]
-        assert result == RuleTestResult(problems=("stale",), warnings=("broad",))
+        assert snapshot_validation.calls == ["update_snapshots"]
+        assert validation.calls == ["run"]
+        assert result == ValidationResult(problems=("stale",), warnings=("broad",))
 
-    def test_run_runs_every_runner(self):
-        snapshot_runner = RecordingSnapshotRunner(RuleTestResult(failed=True))
-        runner = RecordingRunner(RuleTestResult())
+    def test_run_runs_every_validation(self):
+        snapshot_validation = RecordingSnapshotValidation(ValidationResult(failed=True))
+        validation = RecordingValidation(ValidationResult())
 
-        result = RuleTests(snapshot_runners=[snapshot_runner], runners=[runner]).run()
+        result = RuleValidations(
+            snapshot_validations=[snapshot_validation], validations=[validation]
+        ).run()
 
-        assert snapshot_runner.calls == ["run"]
-        assert runner.calls == ["run"]
-        assert result == RuleTestResult(failed=True)
+        assert snapshot_validation.calls == ["run"]
+        assert validation.calls == ["run"]
+        assert result == ValidationResult(failed=True)

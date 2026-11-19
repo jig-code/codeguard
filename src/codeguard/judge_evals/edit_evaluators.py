@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from codeguard.config import ChangeKind
-from codeguard.rule_tests import EditCase, EditReview, Outcome
+from codeguard.rule_evals import EditCase, EditReview, Outcome
 
 
 @dataclass

@@ -1,6 +1,6 @@
 import subprocess
 
-from codeguard.rule_tests import EditRepo
+from codeguard.rule_evals import EditRepo
 
 
 class TestEditRepo:

@@ -11,7 +11,7 @@ from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider
 from codeguard.packages import MANIFEST_FILE, Package
 from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Bindings, Category, Review
-from codeguard.rule_tests import EditCase, EditRepo, Outcome, RuleEvalCase, rule_evals
+from codeguard.rule_evals import EditCase, EditRepo, Outcome, RuleEvalCase, rule_evals
 from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"

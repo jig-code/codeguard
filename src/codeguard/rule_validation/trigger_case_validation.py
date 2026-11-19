@@ -5,9 +5,9 @@ from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, ConfigError, RulesetLoader
 from codeguard.repository import ChangedLines
 from codeguard.review import Binding, Bindings
-from codeguard.rule_tests.edit_repo import EditRepo
-from codeguard.rule_tests.rule_eval import EditCase, Outcome, RuleEvalCase, rule_evals
-from codeguard.rule_tests.rule_test_result import RuleTestResult
+from codeguard.rule_evals.edit_repo import EditRepo
+from codeguard.rule_evals.rule_eval import EditCase, Outcome, RuleEvalCase, rule_evals
+from codeguard.rule_validation.validation_result import ValidationResult
 from codeguard.syntax import Classification, SyntaxScanner
 
 
@@ -47,19 +47,19 @@ class _CaseCheck:
 
 
 @dataclass(frozen=True)
-class TriggerTestRunner:
+class TriggerCaseValidation:
     root: Path
     ruleset: RulesetLoader
     ast_grep: AstGrep = AstGrep()
 
-    def run(self) -> RuleTestResult:
+    def run(self) -> ValidationResult:
         evals = rule_evals(self.ruleset.root)
         if not evals:
-            return RuleTestResult()
+            return ValidationResult()
         try:
             ruleset = self.ruleset.load()
         except ConfigError as error:
-            return RuleTestResult(warnings=(f"trigger tests not run: {error}",))
+            return ValidationResult(warnings=(f"trigger tests not run: {error}",))
         bindings = {
             binding.judge_rule.name: binding for binding in Bindings.from_rulesets([ruleset])
         }
@@ -88,4 +88,4 @@ class TriggerTestRunner:
         failed = [
             problem for check in checks if (problem := check.problem(changed, classification))
         ]
-        return RuleTestResult(problems=(*unknown, *failed))
+        return ValidationResult(problems=(*unknown, *failed))

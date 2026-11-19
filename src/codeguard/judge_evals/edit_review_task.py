@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.repository import WorkingTree
 from codeguard.review import Binding, JudgeRequest
-from codeguard.rule_tests import EditCase, EditRepo, EditReview, JudgedViolation, Outcome
+from codeguard.rule_evals import EditCase, EditRepo, EditReview, JudgedViolation, Outcome
 from codeguard.syntax import SyntaxScanner
 
 
