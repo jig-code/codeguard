@@ -6,7 +6,7 @@ from recording_judge import FailingJudge, RecordingJudge, RecordingJudges
 from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider, RulesetLoader
 from codeguard.judge_evals import EvalSelection, JudgeEvalResult, JudgeEvalRunner
 from codeguard.review import Bindings
-from codeguard.rule_validation import RuleTestResult
+from codeguard.rule_validation import ValidationResult
 
 ENUM_RULE = "# Enum usage\n\nPass the enum member, never a bare literal.\n"
 ENUM_BINDING = yaml.safe_dump(
@@ -181,7 +181,7 @@ class TestJudgeEvalRunner:
         result = runner.run()
 
         assert result == JudgeEvalResult(
-            checks=RuleTestResult(
+            checks=ValidationResult(
                 problems=(".codeguard/rule-evals/enum-usage.yaml: no judge rule enum-usge",)
             )
         )

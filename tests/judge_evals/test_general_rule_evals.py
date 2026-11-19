@@ -13,7 +13,7 @@ from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, JudgeEvalRunner
-from codeguard.rule_validation import RuleTestResult, TriggerTestRunner
+from codeguard.rule_validation import TriggerCaseValidation, ValidationResult
 
 
 class TestGeneralRuleVersion:
@@ -50,7 +50,7 @@ class TestGeneralRuleCoverage:
 
         result = EvalCoverage(RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(f"{RULE} (typescript): no eval with an invalid case",)
         )
 
@@ -59,7 +59,7 @@ class TestGeneralRuleCoverage:
         directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
         directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
 
-        assert EvalCoverage(RulesetLoader.local(directory.root)).run() == RuleTestResult()
+        assert EvalCoverage(RulesetLoader.local(directory.root)).run() == ValidationResult()
 
 
 class TestGeneralRuleTriggers:
@@ -68,9 +68,9 @@ class TestGeneralRuleTriggers:
         directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
         directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
+        assert result == ValidationResult()
 
     def test_a_skipped_case_in_such_a_language_fails(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
@@ -79,9 +79,9 @@ class TestGeneralRuleTriggers:
             EVAL, "cases:\n" + case("a renamed script", "orders.ts", "let s = 1;", "skipped")
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(
                 f"{EVAL} a renamed script: orders.ts has no change kinds, "
                 f"so every {RULE} trigger fires on it",

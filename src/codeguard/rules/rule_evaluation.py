@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from codeguard.config import JudgeChoice
 from codeguard.judge_evals import EvalCoverage, EvalSelection, JudgeEvalResult, JudgeEvalRunner
-from codeguard.rule_validation import RuleTestResult
+from codeguard.rule_validation import ValidationResult
 from codeguard.rules.rules import Rules
 
 
@@ -46,7 +46,7 @@ class RuleEvaluation:
                     case_names[rule] = case_names.get(rule, ()) + cases
             problems = selection.problems(case_names)
             if problems:
-                return JudgeEvalResult(checks=RuleTestResult(problems=problems))
+                return JudgeEvalResult(checks=ValidationResult(problems=problems))
         rules.judges.require_sign_ins(
             model for _, runner in runners for model in runner.judge_models()
         )

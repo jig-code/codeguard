@@ -40,7 +40,7 @@ same branch.
 ## No production-sounding names for test shapes
 
 A test-only alias or structure that exists to shorten a helper call doesn't take a
-production-like name (`CaseVerdict = tuple[str, Outcome]` beside the real `EditReview`).
+production-like name (`CaseVerdict = tuple[str, Outcome]` beside the real `EditVerdict`).
 Spell the structure in the signature (`*verdicts: tuple[str, Outcome]`) or use the
 production type.
 

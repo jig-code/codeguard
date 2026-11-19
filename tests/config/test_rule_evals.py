@@ -2,7 +2,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from codeguard.config import ConfigError, EditCase, RuleEval, rule_evals
+from codeguard.config import ConfigError, FileEdit, RuleEval, RuleEvalReader
 
 
 class TestRuleEvals:
@@ -13,14 +13,14 @@ class TestRuleEvals:
             yaml.safe_dump({"cases": [case.model_dump(mode="json", exclude_defaults=True)]})
         )
 
-        evals = rule_evals(tmp_path)
+        evals = RuleEvalReader(tmp_path).read()
 
         assert evals == [
             (tmp_path / "rule-evals/enum-usage.yaml", RuleEval(name="enum-usage", cases=(case,)))
         ]
 
     def test_eval_file_violation_gives_its_lines_as_a_range(
-        self, tmp_path, make_edit_review, make_judged_violation
+        self, tmp_path, make_edit_verdict, make_judged_violation
     ):
         (tmp_path / "rule-evals").mkdir()
         (tmp_path / "rule-evals/enum-usage.yaml").write_text(
@@ -38,9 +38,9 @@ class TestRuleEvals:
             "          message: Pass the member.\n"
         )
 
-        [(_, rule_eval)] = rule_evals(tmp_path)
+        [(_, rule_eval)] = RuleEvalReader(tmp_path).read()
 
-        assert rule_eval.cases[0].expected_output == make_edit_review(
+        assert rule_eval.cases[0].expected_output == make_edit_verdict(
             violations=(make_judged_violation(lines__start=1, lines__end=2),)
         )
 
@@ -51,7 +51,7 @@ class TestRuleEvals:
             yaml.safe_dump({"cases": [case.model_dump(mode="json", exclude_defaults=True)]})
         )
 
-        evals = rule_evals(tmp_path)
+        evals = RuleEvalReader(tmp_path).read()
 
         assert evals == [
             (tmp_path / "rule-evals/enum-usage.yml", RuleEval(name="enum-usage", cases=(case,)))
@@ -68,7 +68,7 @@ class TestRuleEvals:
         )
 
         with pytest.raises(ConfigError) as error:
-            rule_evals(tmp_path)
+            RuleEvalReader(tmp_path).read()
 
         assert str(error.value) == (
             "a rule has one eval file; remove one of:\n"
@@ -85,7 +85,7 @@ class TestRuleEvals:
         (tmp_path / "rule-evals/enum-usage.yml").write_text(yaml.safe_dump({"cases": [case]}))
 
         with pytest.raises(ConfigError) as error:
-            rule_evals(tmp_path)
+            RuleEvalReader(tmp_path).read()
 
         assert str(error.value) == (
             "a rule has one eval file; remove one of:\n"
@@ -100,7 +100,7 @@ class TestRuleEvals:
         )
 
         with pytest.raises(ConfigError) as error:
-            rule_evals(tmp_path)
+            RuleEvalReader(tmp_path).read()
 
         assert str(error.value) == (
             f"{tmp_path}/rule-evals/enum-usage-eval.yml is a codeguard 0.4 rule eval; "
@@ -189,52 +189,52 @@ class TestRuleEvals:
         (tmp_path / "rule-evals/enum-usage.yaml").write_text(yaml.safe_dump(content))
 
         with pytest.raises(ConfigError) as raised:
-            rule_evals(tmp_path)
+            RuleEvalReader(tmp_path).read()
 
         assert str(raised.value) == f"{tmp_path}/rule-evals/enum-usage.yaml is invalid:\n  {error}"
 
 
-class TestEditReview:
+class TestEditVerdict:
     def test_listing_gives_a_violation_on_one_line_its_line(
-        self, make_edit_review, make_judged_violation
+        self, make_edit_verdict, make_judged_violation
     ):
-        review = make_edit_review(
+        review = make_edit_verdict(
             reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=2),)
         )
 
         assert review.listing == "\n  reason: Judged.\n  line 2 (0.90): Pass the member."
 
     def test_listing_gives_a_violation_over_several_lines_its_first_and_last_line(
-        self, make_edit_review, make_judged_violation
+        self, make_edit_verdict, make_judged_violation
     ):
-        review = make_edit_review(
+        review = make_edit_verdict(
             reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=4),)
         )
 
         assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
 
 
-class TestEditCase:
+class TestFileEdit:
     @staticmethod
     def problems(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
         return [problem["msg"] for problem in error.value.errors()]
 
     def test_unchanged_files_may_not_list_the_edited_file(self):
         with pytest.raises(ValidationError) as error:
-            EditCase(after="label = status.value", unchanged={"module.py": "label = status.name"})
+            FileEdit(after="label = status.value", unchanged={"module.py": "label = status.name"})
 
         assert self.problems(error) == ["Value error, unchanged lists the edited file module.py"]
 
     @pytest.mark.parametrize("path", ["/etc/module.py", "../module.py", "./module.py", "."])
     def test_unchanged_path_must_be_a_normalized_path_inside_the_repository(self, path):
         with pytest.raises(ValidationError) as error:
-            EditCase(after="label = status.value", unchanged={path: "label = status.name"})
+            FileEdit(after="label = status.value", unchanged={path: "label = status.name"})
 
         assert self.problems(error) == [f"Value error, {path} is not a normalized relative path"]
 
     def test_edited_file_must_be_inside_the_repository(self):
         with pytest.raises(ValidationError) as error:
-            EditCase(file="../module.py", after="label = status.value")
+            FileEdit(file="../module.py", after="label = status.value")
 
         assert self.problems(error) == [
             "Value error, ../module.py is not a normalized relative path"
@@ -242,9 +242,31 @@ class TestEditCase:
 
     def test_unchanged_path_may_not_be_inside_git(self):
         with pytest.raises(ValidationError) as error:
-            EditCase(after="label = status.value", unchanged={".git/config": "[core]"})
+            FileEdit(after="label = status.value", unchanged={".git/config": "[core]"})
 
         assert self.problems(error) == ["Value error, .git/config is inside .git"]
+
+    def test_before_files_leave_out_the_edited_file_a_new_file_lacks(self, make_file_edit):
+        edit = make_file_edit(file="module.py", before=None, unchanged={"util.py": "a = 1\n"})
+
+        assert edit.before_files() == {"util.py": "a = 1\n"}
+
+    def test_before_and_after_files_hold_each_text_under_the_prefix(self, make_file_edit):
+        edit = make_file_edit(
+            file="module.py",
+            before="count = 1\n",
+            after="count = 2\n",
+            unchanged={"util.py": "a = 1\n"},
+        )
+
+        assert edit.before_files("rule/1/") == {
+            "rule/1/util.py": "a = 1\n",
+            "rule/1/module.py": "count = 1\n",
+        }
+        assert edit.after_files("rule/1/") == {
+            "rule/1/util.py": "a = 1\n",
+            "rule/1/module.py": "count = 2\n",
+        }
 
 
 class TestRuleEvalByLanguage:

@@ -1,27 +1,27 @@
 from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import EditReview, Outcome
+from codeguard.config import EditVerdict, Outcome
 from codeguard.judge_evals import EditReviewTask
 from codeguard.syntax import SyntaxScanner
 
 
 class TestEditReviewTask:
     def test_file_outside_the_binding_paths_is_skipped_without_judging(
-        self, make_binding, make_edit_case
+        self, make_binding, make_file_edit
     ):
         judges = RecordingJudges(RecordingJudge())
         task = EditReviewTask(
             make_binding(paths=("src/**/*.py",)), judges, 0.9, SyntaxScanner(AstGrep(), {})
         )
 
-        review = task(make_edit_case(file="module.py"))
+        review = task(make_file_edit(file="module.py"))
 
-        assert review == EditReview(outcome=Outcome.SKIPPED)
+        assert review == EditVerdict(outcome=Outcome.SKIPPED)
         assert judges.created == []
 
     def test_change_outside_the_triggers_is_skipped_without_judging(
-        self, make_binding, make_edit_case
+        self, make_binding, make_file_edit
     ):
         judges = RecordingJudges(RecordingJudge())
         task = EditReviewTask(
@@ -31,13 +31,13 @@ class TestEditReviewTask:
             SyntaxScanner(AstGrep(), {}),
         )
 
-        review = task(make_edit_case(after="count = 1\n"))
+        review = task(make_file_edit(after="count = 1\n"))
 
-        assert review == EditReview(outcome=Outcome.SKIPPED)
+        assert review == EditVerdict(outcome=Outcome.SKIPPED)
         assert judges.created == []
 
     def test_change_of_only_blank_lines_is_skipped_without_judging(
-        self, make_binding, make_edit_case
+        self, make_binding, make_file_edit
     ):
         judges = RecordingJudges(RecordingJudge())
         task = EditReviewTask(
@@ -45,14 +45,14 @@ class TestEditReviewTask:
         )
 
         review = task(
-            make_edit_case(before="ship(status='shipped')\n", after="ship(status='shipped')\n\n\n")
+            make_file_edit(before="ship(status='shipped')\n", after="ship(status='shipped')\n\n\n")
         )
 
-        assert review == EditReview(outcome=Outcome.SKIPPED)
+        assert review == EditVerdict(outcome=Outcome.SKIPPED)
         assert judges.created == []
 
     def test_violation_at_the_threshold_is_invalid_with_the_kinds_on_its_line(
-        self, make_binding, make_edit_case, make_verdict, make_violation, make_judged_violation
+        self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
     ):
         violation = make_violation(file="module.py", message="Pass the member.", confidence=0.9)
         task = EditReviewTask(
@@ -62,9 +62,9 @@ class TestEditReviewTask:
             SyntaxScanner(AstGrep(), {}),
         )
 
-        review = task(make_edit_case())
+        review = task(make_file_edit())
 
-        assert review == EditReview(
+        assert review == EditVerdict(
             outcome=Outcome.INVALID,
             reason="The code breaks the convention.",
             violations=(
@@ -75,7 +75,7 @@ class TestEditReviewTask:
         )
 
     def test_violation_below_the_threshold_is_uncertain(
-        self, make_binding, make_edit_case, make_verdict, make_violation, make_judged_violation
+        self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
     ):
         violation = make_violation(file="module.py", message="Pass the member.", confidence=0.7)
         task = EditReviewTask(
@@ -85,9 +85,9 @@ class TestEditReviewTask:
             SyntaxScanner(AstGrep(), {}),
         )
 
-        review = task(make_edit_case())
+        review = task(make_file_edit())
 
-        assert review == EditReview(
+        assert review == EditVerdict(
             outcome=Outcome.UNCERTAIN,
             reason="The code breaks the convention.",
             violations=(
@@ -100,7 +100,7 @@ class TestEditReviewTask:
         )
 
     def test_no_violation_is_valid_with_the_judge_reason(
-        self, make_binding, make_edit_case, make_verdict
+        self, make_binding, make_file_edit, make_verdict
     ):
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
@@ -109,12 +109,12 @@ class TestEditReviewTask:
             SyntaxScanner(AstGrep(), {}),
         )
 
-        review = task(make_edit_case())
+        review = task(make_file_edit())
 
-        assert review == EditReview(outcome=Outcome.VALID, reason="The code keeps the convention.")
+        assert review == EditVerdict(outcome=Outcome.VALID, reason="The code keeps the convention.")
 
     def test_violation_whose_lines_take_in_a_changed_line_is_kept_with_their_kinds(
-        self, make_binding, make_edit_case, make_verdict, make_violation, make_judged_violation
+        self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
     ):
         violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
         task = EditReviewTask(
@@ -125,13 +125,13 @@ class TestEditReviewTask:
         )
 
         review = task(
-            make_edit_case(
+            make_file_edit(
                 before="ship(status=Status.SHIPPED)\nRATE = 2\n",
                 after="ship(status='shipped')\nRATE = 2\n",
             )
         )
 
-        assert review == EditReview(
+        assert review == EditVerdict(
             outcome=Outcome.INVALID,
             reason="The code breaks the convention.",
             violations=(
@@ -145,7 +145,7 @@ class TestEditReviewTask:
         )
 
     def test_violation_on_an_unchanged_line_is_dropped(
-        self, make_binding, make_edit_case, make_verdict, make_violation
+        self, make_binding, make_file_edit, make_verdict, make_violation
     ):
         violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
         task = EditReviewTask(
@@ -156,7 +156,7 @@ class TestEditReviewTask:
         )
 
         review = task(
-            make_edit_case(
+            make_file_edit(
                 before=(
                     "ship(status=Status.SHIPPED)\nhold(status=Status.HELD)\n"
                     "cancel(status=Status.CANCELLED)\n"
@@ -168,10 +168,12 @@ class TestEditReviewTask:
             )
         )
 
-        assert review == EditReview(outcome=Outcome.VALID, reason="The code breaks the convention.")
+        assert review == EditVerdict(
+            outcome=Outcome.VALID, reason="The code breaks the convention."
+        )
 
     def test_violation_in_another_file_is_dropped(
-        self, make_binding, make_edit_case, make_verdict, make_violation
+        self, make_binding, make_file_edit, make_verdict, make_violation
     ):
         violation = make_violation(file="other.py", confidence=0.9)
         task = EditReviewTask(
@@ -181,6 +183,8 @@ class TestEditReviewTask:
             SyntaxScanner(AstGrep(), {}),
         )
 
-        review = task(make_edit_case())
+        review = task(make_file_edit())
 
-        assert review == EditReview(outcome=Outcome.VALID, reason="The code breaks the convention.")
+        assert review == EditVerdict(
+            outcome=Outcome.VALID, reason="The code breaks the convention."
+        )

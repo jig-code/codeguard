@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 import sys
+from contextlib import AbstractContextManager
 from pathlib import Path
 
 import pytest
@@ -8,24 +9,23 @@ import yaml
 from spans import finished_span_attributes
 
 from codeguard.config import (
-    EditCase,
+    FileEdit,
     JudgeChoice,
     JudgeModel,
     JudgeProvider,
     Outcome,
     RuleEvalCase,
-    rule_evals,
+    RuleEvalReader,
 )
 from codeguard.packages import MANIFEST_FILE, Package
 from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Bindings, Category, Review
-from codeguard.rule_validation import EditRepo
 from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 CASES = [
     pytest.param(rule_eval.name, case, id=f"{rule_eval.name}: {case.name}")
-    for _, rule_eval in rule_evals(EVALS / "python")
+    for _, rule_eval in RuleEvalReader(EVALS / "python").read()
     for case in rule_eval.cases
 ]
 JUDGED_CASES = [
@@ -84,10 +84,10 @@ class TestJudgePrompt:
         )
         module = case.inputs.file.removesuffix(".py").replace("/", ".")
 
-        with EditRepo.of(case.inputs.edits()) as repo:
+        with WorkingTree.temporary(case.inputs.before_files(), case.inputs.after_files()) as tree:
             result = subprocess.run(
                 [sys.executable, "-c", f"__import__({module!r})"],
-                cwd=repo.root,
+                cwd=tree.root,
                 capture_output=True,
                 text=True,
                 check=False,
@@ -97,8 +97,7 @@ class TestJudgePrompt:
 
     @pytest.mark.parametrize(("rule", "case"), CASES)
     def test_triggers_fire_on_each_case_the_judge_sees(self, rule: str, case: RuleEvalCase):
-        with EditRepo.of(_edits(EVALS, rule, case.inputs)) as repo:
-            working_tree = WorkingTree.at(repo.root)
+        with _case_tree(EVALS, rule, case.inputs) as working_tree:
             plan = Rules(working_tree).plan(LineScopes.at(working_tree).changed_lines("HEAD"))
 
         triggered = [call.file for call in plan.calls if call.triggered]
@@ -111,8 +110,7 @@ class TestJudgePrompt:
     def test_review_reaches_each_case_verdict(
         self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path, capfire
     ):
-        with EditRepo.of(_edits(judged_evals, rule, case.inputs)) as repo:
-            working_tree = WorkingTree.at(repo.root)
+        with _case_tree(judged_evals, rule, case.inputs) as working_tree:
             review = Rules(working_tree).review(LineScopes.at(working_tree).changed_lines("HEAD"))
 
         listing = "\n".join(map(str, review.diagnostics))
@@ -128,7 +126,7 @@ class TestJudgePrompt:
         assert _outcome(review) is case.expected_output.outcome, listing
 
 
-def _edits(evals: Path, rule: str, inputs: EditCase) -> dict[str, EditCase]:
+def _case_tree(evals: Path, rule: str, inputs: FileEdit) -> AbstractContextManager[WorkingTree]:
     config = yaml.safe_dump(
         {
             "packages": [
@@ -136,12 +134,10 @@ def _edits(evals: Path, rule: str, inputs: EditCase) -> dict[str, EditCase]:
             ]
         }
     )
-    return {
-        ".codeguard/config.yaml": EditCase(
-            file=".codeguard/config.yaml", before=config, after=config
-        ),
-        **inputs.edits(),
-    }
+    return WorkingTree.temporary(
+        {".codeguard/config.yaml": config, **inputs.before_files()},
+        {".codeguard/config.yaml": config, **inputs.after_files()},
+    )
 
 
 def _outcome(review: Review) -> Outcome:

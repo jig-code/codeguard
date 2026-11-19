@@ -23,14 +23,14 @@ class AstGrepCommand:
             )
         return result.stdout
 
-    def test(self) -> bool:
-        return self._test()
+    def validate(self) -> bool:
+        return self._validate()
 
     def update_snapshots(self) -> bool:
-        return self._test("--update-all")
+        return self._validate("--update-all")
 
-    def _test(self, *options: str) -> bool:
-        with self.layout.test_config() as config:
+    def _validate(self, *options: str) -> bool:
+        with self.layout.case_config() as config:
             command = self._command(config, "test", *options)
             return subprocess.run(command, cwd=self.layout.root).returncode == 0
 

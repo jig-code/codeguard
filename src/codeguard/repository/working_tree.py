@@ -1,10 +1,22 @@
 import os
-from collections.abc import Sequence
+import tempfile
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
 from codeguard.repository.git import Git
+
+# A commit needs an author, and a temporary repository has no user config to take one from.
+_COMMIT_AUTHOR = (
+    "-c",
+    "user.name=codeguard",
+    "-c",
+    "user.email=codeguard@localhost",
+    "-c",
+    "commit.gpgsign=false",
+)
 
 
 @dataclass(frozen=True)
@@ -18,6 +30,20 @@ class WorkingTree:
     @classmethod
     def containing(cls, path: Path) -> Self:
         return cls.at(Path(Git(path).text("rev-parse", "--show-toplevel").strip()))
+
+    @classmethod
+    @contextmanager
+    def temporary(cls, before: Mapping[str, str], after: Mapping[str, str]) -> Iterator[Self]:
+        """A repository whose HEAD holds `before` and whose working tree holds `after`, so
+        the difference between them is an uncommitted change."""
+        with tempfile.TemporaryDirectory() as directory:
+            tree = cls.at(Path(directory))
+            tree.git.run("init")
+            tree._write(before)
+            tree.git.run("add", "--all")
+            tree.git.run(*_COMMIT_AUTHOR, "commit", "--allow-empty", "--message", "Before")
+            tree._write(after)
+            yield tree
 
     @property
     def root(self) -> Path:
@@ -44,6 +70,12 @@ class WorkingTree:
 
     def git_path(self, name: str) -> Path:
         return self.root / self.git.text("rev-parse", "--git-path", name).strip()
+
+    def _write(self, files: Mapping[str, str]) -> None:
+        for path, text in files.items():
+            file = self.root / path
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(text)
 
     def _files(self, *ls_files_args: str) -> set[str]:
         return {

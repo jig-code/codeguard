@@ -5,20 +5,20 @@ from codeguard.judge_evals import PartialEqualsExpected, ViolationsOnTriggers
 
 
 class TestPartialEqualsExpected:
-    def test_matching_outcome_passes(self, make_evaluator_context, make_edit_review):
+    def test_matching_outcome_passes(self, make_evaluator_context, make_edit_verdict):
         context = make_evaluator_context(
-            expected_output=make_edit_review(outcome=Outcome.VALID),
-            output=make_edit_review(outcome=Outcome.VALID, reason="The code keeps it."),
+            expected_output=make_edit_verdict(outcome=Outcome.VALID),
+            output=make_edit_verdict(outcome=Outcome.VALID, reason="The code keeps it."),
         )
 
         result = PartialEqualsExpected().evaluate(context)
 
         assert result == EvaluationReason(value=True)
 
-    def test_other_outcome_fails_with_the_review(self, make_evaluator_context, make_edit_review):
+    def test_other_outcome_fails_with_the_review(self, make_evaluator_context, make_edit_verdict):
         context = make_evaluator_context(
-            expected_output=make_edit_review(outcome=Outcome.INVALID),
-            output=make_edit_review(outcome=Outcome.VALID, reason="The code keeps it."),
+            expected_output=make_edit_verdict(outcome=Outcome.INVALID),
+            output=make_edit_verdict(outcome=Outcome.VALID, reason="The code keeps it."),
         )
 
         result = PartialEqualsExpected().evaluate(context)
@@ -29,11 +29,11 @@ class TestPartialEqualsExpected:
         )
 
     def test_expected_violation_is_compared_only_on_the_fields_it_lists(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            expected_output=make_edit_review(violations=(make_judged_violation(),)),
-            output=make_edit_review(
+            expected_output=make_edit_verdict(violations=(make_judged_violation(),)),
+            output=make_edit_verdict(
                 violations=(make_judged_violation(kinds=("call", "string-literal")),)
             ),
         )
@@ -52,10 +52,10 @@ class TestPartialEqualsExpected:
 
 class TestViolationsOnTriggers:
     def test_violation_on_a_trigger_passes(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            output=make_edit_review(
+            output=make_edit_verdict(
                 violations=(make_judged_violation(kinds=("call", "string-literal")),)
             )
         )
@@ -65,10 +65,10 @@ class TestViolationsOnTriggers:
         assert result == EvaluationReason(value=True)
 
     def test_violation_outside_the_triggers_fails_with_the_kinds_on_its_lines(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            output=make_edit_review(
+            output=make_edit_verdict(
                 violations=(
                     make_judged_violation(
                         lines__start=2, lines__end=4, kinds=("code", "number-literal")
@@ -87,10 +87,10 @@ class TestViolationsOnTriggers:
         )
 
     def test_violation_whose_later_lines_hold_a_trigger_passes_beside_one_sharing_its_first(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            output=make_edit_review(
+            output=make_edit_verdict(
                 violations=(
                     make_judged_violation(
                         lines__start=2, lines__end=4, kinds=("code", "string-literal")
@@ -105,10 +105,10 @@ class TestViolationsOnTriggers:
         assert result == EvaluationReason(value=True)
 
     def test_violation_below_the_threshold_passes(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            output=make_edit_review(
+            output=make_edit_verdict(
                 violations=(make_judged_violation(confidence=0.7, kinds=("number-literal",)),)
             )
         )
@@ -118,10 +118,10 @@ class TestViolationsOnTriggers:
         assert result == EvaluationReason(value=True)
 
     def test_binding_triggered_by_any_change_is_not_evaluated(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            output=make_edit_review(violations=(make_judged_violation(kinds=("code",)),))
+            output=make_edit_verdict(violations=(make_judged_violation(kinds=("code",)),))
         )
 
         result = ViolationsOnTriggers(("any",), 0.9).evaluate(context)
@@ -129,11 +129,11 @@ class TestViolationsOnTriggers:
         assert result == {}
 
     def test_case_expected_valid_is_not_evaluated(
-        self, make_evaluator_context, make_edit_review, make_judged_violation
+        self, make_evaluator_context, make_edit_verdict, make_judged_violation
     ):
         context = make_evaluator_context(
-            expected_output=make_edit_review(outcome=Outcome.VALID),
-            output=make_edit_review(violations=(make_judged_violation(kinds=("code",)),)),
+            expected_output=make_edit_verdict(outcome=Outcome.VALID),
+            output=make_edit_verdict(violations=(make_judged_violation(kinds=("code",)),)),
         )
 
         result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)

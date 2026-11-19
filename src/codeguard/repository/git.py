@@ -17,5 +17,8 @@ class Git:
             ["git", *args], cwd=self.root, stdout=subprocess.PIPE, text=True, check=True
         ).stdout
 
+    def run(self, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=self.root, capture_output=True, check=True)
+
     def paths(self, command: str, *args: str) -> set[str]:
         return set(self.text(command, "-z", *args).split("\0")) - {""}
