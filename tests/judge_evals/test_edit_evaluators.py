@@ -1,7 +1,7 @@
 from pydantic_evals.evaluators import EvaluationReason
 
+from codeguard.config import Outcome
 from codeguard.judge_evals import PartialEqualsExpected, ViolationsOnTriggers
-from codeguard.rule_tests import Outcome
 
 
 class TestPartialEqualsExpected:

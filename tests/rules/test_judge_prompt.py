@@ -7,11 +7,19 @@ import pytest
 import yaml
 from spans import finished_span_attributes
 
-from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider
+from codeguard.config import (
+    EditCase,
+    JudgeChoice,
+    JudgeModel,
+    JudgeProvider,
+    Outcome,
+    RuleEvalCase,
+    rule_evals,
+)
 from codeguard.packages import MANIFEST_FILE, Package
 from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Bindings, Category, Review
-from codeguard.rule_tests import EditCase, EditRepo, Outcome, RuleEvalCase, rule_evals
+from codeguard.rule_validation import EditRepo
 from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"

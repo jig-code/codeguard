@@ -1,6 +1,6 @@
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, EvalSelection
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import RuleTestResult
 
 ENUM_RULE = "# Enum usage\n\nPass the enum member, never a bare literal.\n"
 ENUM_BINDING = 'rule: enum-usage\npaths: ["**/*.py"]\ntriggers: [any]\n'

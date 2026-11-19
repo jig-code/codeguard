@@ -22,6 +22,15 @@ from codeguard.config.package_config import (
 from codeguard.config.path_scope import PathScope
 from codeguard.config.pattern_binding_config import PatternBindingConfig, PatternBindingsConfig
 from codeguard.config.pattern_rule import PatternRule
+from codeguard.config.rule_eval import (
+    EditCase,
+    EditReview,
+    JudgedViolation,
+    Outcome,
+    RuleEval,
+    RuleEvalCase,
+    rule_evals,
+)
 from codeguard.config.ruleset import (
     GATE_DIR,
     JUDGE_EVAL_DIR,
@@ -56,6 +65,8 @@ __all__ = [
     "Config",
     "ConfigError",
     "ConfigLoader",
+    "EditCase",
+    "EditReview",
     "ExactVersion",
     "GateRule",
     "GeminiSettings",
@@ -64,12 +75,16 @@ __all__ = [
     "JudgeConfig",
     "JudgeModel",
     "JudgeProvider",
+    "JudgedViolation",
+    "Outcome",
     "PackageConfig",
     "PathPackageConfig",
     "PathScope",
     "PatternBindingConfig",
     "PatternBindingsConfig",
     "PatternRule",
+    "RuleEval",
+    "RuleEvalCase",
     "RuleOverride",
     "Ruleset",
     "RulesetConfig",
@@ -79,4 +94,5 @@ __all__ = [
     "VersionRange",
     "language_of",
     "named_languages",
+    "rule_evals",
 ]

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from codeguard.pattern_rules.command import AstGrepCommand
 from codeguard.pattern_rules.layout import Layout
 from codeguard.pattern_rules.snapshots import SnapshotFile, Snapshots
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import RuleTestResult
 
 _NO_TESTS = RuleTestResult(failed=False)
 

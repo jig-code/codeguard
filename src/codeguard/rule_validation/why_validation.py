@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
 from codeguard.review import Bindings
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation.rule_test_result import RuleTestResult
 
 
 class WhyValidationMode(StrEnum):

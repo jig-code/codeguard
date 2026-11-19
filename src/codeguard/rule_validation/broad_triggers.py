@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from codeguard.config import ChangeKind, ConfigError, RulesetLoader
-from codeguard.rule_tests.rule_test_result import RuleTestResult
+from codeguard.rule_validation.rule_test_result import RuleTestResult
 
 _BROAD = frozenset(
     {

@@ -2,8 +2,8 @@ import factory
 from pydantic_evals.evaluators import EvaluatorContext
 from pydantic_evals.otel import SpanTree
 
+from codeguard.config import EditCase, EditReview, JudgedViolation, Outcome, RuleEvalCase
 from codeguard.review import Verdict
-from codeguard.rule_tests import EditCase, EditReview, JudgedViolation, Outcome, RuleEvalCase
 from factories.line_range import MakeLineRange
 
 

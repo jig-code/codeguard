@@ -2,12 +2,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import ChangeKind, ConfigError, RulesetLoader
+from codeguard.config import (
+    ChangeKind,
+    ConfigError,
+    EditCase,
+    Outcome,
+    RuleEvalCase,
+    RulesetLoader,
+    rule_evals,
+)
 from codeguard.repository import ChangedLines
 from codeguard.review import Binding, Bindings
-from codeguard.rule_tests.edit_repo import EditRepo
-from codeguard.rule_tests.rule_eval import EditCase, Outcome, RuleEvalCase, rule_evals
-from codeguard.rule_tests.rule_test_result import RuleTestResult
+from codeguard.rule_validation.edit_repo import EditRepo
+from codeguard.rule_validation.rule_test_result import RuleTestResult
 from codeguard.syntax import Classification, SyntaxScanner
 
 

@@ -5,7 +5,8 @@ from typing import Self, TextIO
 from pydantic_evals.reporting import EvaluationReport
 from rich.console import Console
 
-from codeguard.rule_tests import EditCase, EditReview, RuleTestResult
+from codeguard.config import EditCase, EditReview
+from codeguard.rule_validation import RuleTestResult
 
 type RuleEvalReport = EvaluationReport[EditCase, EditReview, None]
 

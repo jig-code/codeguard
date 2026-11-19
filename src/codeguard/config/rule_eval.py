@@ -5,7 +5,9 @@ from typing import Self
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
-from codeguard.config import JUDGE_EVAL_DIR, ConfigError, language_of
+from codeguard.config.config_error import ConfigError
+from codeguard.config.languages import language_of
+from codeguard.config.ruleset import JUDGE_EVAL_DIR
 from codeguard.line_range import LineRange
 
 _EVAL_FILE_SUFFIXES = (".yaml", ".yml")

@@ -1,7 +1,7 @@
 import yaml
 
 from codeguard.pattern_rules import Layout, PatternRuleTestRunner
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import RuleTestResult
 
 NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
 NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"

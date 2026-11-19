@@ -1,7 +1,7 @@
 import textwrap
 
 from codeguard.config import RulesetLoader
-from codeguard.rule_tests import RuleTestResult, TriggerTestRunner
+from codeguard.rule_validation import RuleTestResult, TriggerTestRunner
 
 EVAL_FILE = ".codeguard/rule-evals/enum-usage.yaml"
 

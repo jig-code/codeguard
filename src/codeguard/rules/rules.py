@@ -16,12 +16,13 @@ from codeguard.review import (
     Review,
     Reviewer,
 )
-from codeguard.rule_tests import (
+from codeguard.rule_validation import (
     BroadTriggers,
     RuleTests,
     TriggerTestRunner,
+    WhyValidation,
+    WhyValidationMode,
 )
-from codeguard.rule_validation import WhyValidation, WhyValidationMode
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
 from codeguard.syntax import ChangeClassifier, Classification

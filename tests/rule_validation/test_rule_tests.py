@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from codeguard.rule_tests import RuleTestResult, RuleTests
+from codeguard.rule_validation import RuleTestResult, RuleTests
 
 
 @dataclass

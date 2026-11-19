@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from codeguard.config import JudgeChoice
 from codeguard.judge_evals import EvalCoverage, EvalSelection, JudgeEvalResult, JudgeEvalRunner
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import RuleTestResult
 from codeguard.rules.rules import Rules
 
 

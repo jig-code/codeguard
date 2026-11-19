@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from codeguard.rule_tests.rule_test_result import RuleTestResult
-from codeguard.rule_tests.test_runner import SnapshotTestRunner, TestRunner
+from codeguard.rule_validation.rule_test_result import RuleTestResult
+from codeguard.rule_validation.test_runner import SnapshotTestRunner, TestRunner
 
 
 @dataclass(frozen=True)

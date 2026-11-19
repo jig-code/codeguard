@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from codeguard.config import RulesetLoader
+from codeguard.config import Outcome, RulesetLoader, rule_evals
 from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.review import Bindings
-from codeguard.rule_tests import Outcome, RuleTestResult, rule_evals
+from codeguard.rule_validation import RuleTestResult
 
 
 @dataclass(frozen=True)

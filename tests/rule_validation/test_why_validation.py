@@ -2,8 +2,7 @@ import pytest
 from rules_package import NO_PRINT_RULE, PLACEMENT_RULE
 
 from codeguard.config import ConfigError, RulesetLoader
-from codeguard.rule_tests import RuleTestResult
-from codeguard.rule_validation import WhyValidation, WhyValidationMode
+from codeguard.rule_validation import RuleTestResult, WhyValidation, WhyValidationMode
 
 MISSING = ("naming: no ## Why section in its rule file", "no-breakpoint: no metadata.why")
 NO_WHY_RULE = "# A rule\n\nIt gives no reason.\n"

@@ -13,7 +13,7 @@ from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, JudgeEvalRunner
-from codeguard.rule_tests import RuleTestResult, TriggerTestRunner
+from codeguard.rule_validation import RuleTestResult, TriggerTestRunner
 
 
 class TestGeneralRuleVersion:

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
+from codeguard.config import EditCase, EditReview, JudgedViolation, Outcome
 from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.repository import WorkingTree
 from codeguard.review import Binding, JudgeRequest
-from codeguard.rule_tests import EditCase, EditRepo, EditReview, JudgedViolation, Outcome
+from codeguard.rule_validation import EditRepo
 from codeguard.syntax import SyntaxScanner
 
 
