@@ -44,7 +44,7 @@ A package entry's `rulesets` lists the rulesets to run, or maps each to its sett
   wins, as with `severity`. It exists for rules too costly to judge every time an agent
   stops, such as a judge rule that reads widely: each Stop hook review spends the
   developer's own Claude subscription, while CI reviews each push to a PR with the
-  project's token. CI still fails the PR on the rule, so the agent meets it there
+  project's judge credentials. CI still fails the PR on the rule, so the agent meets it there
   instead of at Stop.
 - An unknown ruleset or rule id is an error.
 

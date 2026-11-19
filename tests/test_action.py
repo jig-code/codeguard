@@ -63,7 +63,6 @@ def github_values(labels: list[str]) -> dict[str, str]:
         "github.action_path": "/action",
         "inputs.base": "origin/main",
         "inputs.dry-run == 'true' && '--dry-run' || ''": "",
-        "inputs.claude-code-oauth-token": "",
         "inputs.logfire-token": "",
         f"contains(github.event.pull_request.labels.*.name, '{ALLOW_JUDGE_ERRORS_LABEL}')": str(
             ALLOW_JUDGE_ERRORS_LABEL in labels
