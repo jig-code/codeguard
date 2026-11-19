@@ -21,8 +21,8 @@ does against what the skill says. A case is one of two kinds:
 The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
-never check whether a rule the agent writes works, or whether its rule tests or rule
-evals pass: that is tested wherever the rule lives. When the agent declines a rule, they
+never check whether a rule the agent writes works, or whether it passes rule validation or
+its rule evals: that is tested wherever the rule lives. When the agent declines a rule, they
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.

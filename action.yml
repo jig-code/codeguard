@@ -1,5 +1,5 @@
 name: codeguard
-description: Check a pull request's changed files against the project's rules, and run the rule tests.
+description: Check a pull request's changed files against the project's rules, and validate the rules.
 inputs:
   base:
     description: Ref the changes are compared against. The checkout needs its history (fetch-depth 0).
@@ -45,7 +45,7 @@ runs:
       run: echo "::error::Install the codeguard plugin so your agent catches these before you push. See https://github.com/jig-code/codeguard#setup"
     - name: Test rules
       shell: bash
-      run: uv run --frozen --project "${{ github.action_path }}" codeguard test
+      run: uv run --frozen --project "${{ github.action_path }}" codeguard validate
     - name: Evaluate judge rules
       if: inputs.eval == 'true'
       shell: bash

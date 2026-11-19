@@ -1181,7 +1181,7 @@ def recorded_call(record: Path) -> dict[str, str | None]:
     }
 
 
-class TestTestCommand:
+class TestValidateCommand:
     def test_ast_grep_outside_the_package_range_exits_2(self, tmp_path):
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
@@ -1190,7 +1190,7 @@ class TestTestCommand:
         )
 
         result = subprocess.run(
-            [CODEGUARD, "test"], cwd=package.root, capture_output=True, text=True
+            [CODEGUARD, "validate"], cwd=package.root, capture_output=True, text=True
         )
 
         _, traceback = result.stderr.split(TRACEBACK_HEADING)
@@ -1207,7 +1207,7 @@ class TestTestCommand:
         package.write("python/rule-tests/triggers/no-print-test.yml", "id: no-print\n")
 
         result = subprocess.run(
-            [CODEGUARD, "test"], cwd=package.root, capture_output=True, text=True
+            [CODEGUARD, "validate"], cwd=package.root, capture_output=True, text=True
         )
 
         _, traceback = result.stderr.split(TRACEBACK_HEADING)
@@ -1217,7 +1217,7 @@ class TestTestCommand:
         ]
         assert result.returncode == 2
 
-    def test_package_repo_runs_each_ruleset_tests(self, tmp_path):
+    def test_package_repo_validates_each_ruleset(self, tmp_path):
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
         package.write(
@@ -1226,7 +1226,7 @@ class TestTestCommand:
         )
 
         result = subprocess.run(
-            [CODEGUARD, "test"], cwd=package.root, capture_output=True, text=True
+            [CODEGUARD, "validate"], cwd=package.root, capture_output=True, text=True
         )
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
@@ -1235,13 +1235,27 @@ class TestTestCommand:
         )
         assert result.returncode == 0
 
-    def test_passing_rule_tests_exit_0(self, repo):
+    def test_passing_validation_exit_0(self, repo):
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
+
+        assert result.stdout == PASSING_NO_PRINT_TEST_REPORT
+        assert result.stderr == ""
+        assert result.returncode == 0
+
+    def test_test_alias_validates_and_warns_it_is_deprecated(self, repo):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT
-        assert result.stderr == ""
+        assert result.stderr == (
+            "warning: codeguard test is deprecated and will be removed in the next release. "
+            "Use codeguard validate.\n"
+        )
         assert result.returncode == 0
 
     def test_stale_snapshot_entry_fails(self, repo):
@@ -1249,31 +1263,35 @@ class TestTestCommand:
             NO_PRINT_TEST,
             "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n",
         )
-        subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
+        subprocess.run([CODEGUARD, "validate", "--update-all"], cwd=repo.root, check=True)
         repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
 
-        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
 
         assert result.stdout.endswith(
             ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml: stale snapshot "
-            "entries for no-print. Run codeguard test --update-all.\n"
+            "entries for no-print. Run codeguard validate --update-all.\n"
         )
         assert result.returncode == 1
 
     def test_update_all_removes_snapshots_of_removed_tests(self, repo):
         repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
-        subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
+        subprocess.run([CODEGUARD, "validate", "--update-all"], cwd=repo.root, check=True)
         (repo.root / NO_PRINT_TEST).unlink()
 
-        subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
+        subprocess.run([CODEGUARD, "validate", "--update-all"], cwd=repo.root, check=True)
 
         assert not (repo.root / NO_PRINT_SNAPSHOT).exists()
 
-    def test_invalid_binding_does_not_stop_rule_tests(self, repo):
+    def test_invalid_binding_does_not_stop_validation(self, repo):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
         repo.write(".codeguard/bindings/broken.yaml", "path: [a.py]\n")
 
-        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
             f"warning: triggers not checked: {repo.root}/.codeguard is invalid:\n"
@@ -1290,7 +1308,9 @@ class TestTestCommand:
             'rule: placement\npaths: ["**/*.py"]\ntriggers: [any, fixture]\n',
         )
 
-        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
             "warning: placement: broad triggers any; "
@@ -1319,7 +1339,7 @@ class TestTestCommand:
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
 
         result = subprocess.run(
-            [CODEGUARD, "test", *options], cwd=repo.root, capture_output=True, text=True
+            [CODEGUARD, "validate", *options], cwd=repo.root, capture_output=True, text=True
         )
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + report
@@ -1336,7 +1356,7 @@ class TestTestCommand:
         )
 
         result = subprocess.run(
-            [CODEGUARD, "test", "--update-all"], cwd=repo.root, capture_output=True, text=True
+            [CODEGUARD, "validate", "--update-all"], cwd=repo.root, capture_output=True, text=True
         )
 
         assert (repo.root / ".codeguard/rule-tests/__snapshots__/enum-value-snapshot.yml").is_file()
@@ -1356,7 +1376,9 @@ class TestTestCommand:
             "    expected_output:\n      outcome: invalid\n",
         )
 
-        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
 
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + (
             ".codeguard/rule-evals/placement.yaml an assigned count: placement "
@@ -1365,10 +1387,12 @@ class TestTestCommand:
         )
         assert result.returncode == 1
 
-    def test_failing_rule_tests_exit_1(self, repo):
+    def test_failing_validation_exit_1(self, repo):
         repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
 
-        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+        result = subprocess.run(
+            [CODEGUARD, "validate"], cwd=repo.root, capture_output=True, text=True
+        )
 
         assert result.stdout == (
             "Running 1 tests\n"

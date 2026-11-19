@@ -76,7 +76,7 @@ jobs:
 ```
 
 The action reviews the files changed since the merge base with the PR's base branch,
-then runs the rule tests. [`action.yml`](../action.yml) lists what else it takes.
+then validates the rules. [`action.yml`](../action.yml) lists what else it takes.
 
 The action judges with whichever judge the project's configuration names, and takes no
 judge setting of its own. CI never uses the `claude` CLI, the default, so the job names a
@@ -135,7 +135,7 @@ everywhere, and a package release changes nothing until the project moves its `r
 Pin the action to a release tag, as above, for the same reason.
 
 Adopt each codeguard release and each rule package tag in its own PR, so whatever the
-upgrade changes in reviews and rule tests shows up there and nowhere else:
+upgrade changes in reviews and rule validation shows up there and nowhere else:
 
 - Move the action's tag (`jig-code/codeguard@v<version>`) to the new release.
 - Move a rule package's `ref` in `.codeguard/config.yaml` to its new tag.

@@ -27,7 +27,7 @@ Distinguish CodeGuard's repository tests from its rule-validation features:
 
 - `pytest` runs unit and integration tests with model-provider doubles.
 - `pytest -m llm` runs tests of the review pipeline with a real judge.
-- `codeguard test` and `codeguard eval` are product commands for validating rules.
+- `codeguard validate` and `codeguard eval` are product commands for validating rules.
   Running them manually can provide validation evidence for a change, but does not
   run CodeGuard's repository test suite.
 
@@ -35,10 +35,10 @@ Distinguish CodeGuard's repository tests from its rule-validation features:
 |---|---|---|---|
 | codeguard's tests | The CLI, config, triggers, hooks and judge, with no model | No | A test function |
 | LLM tests | The judge gives each fixture case its expected review from a real model | Yes, and verdicts can vary between runs | A fixture case |
-| Rule tests | Each pattern rule and gate matches the code it should, and each judge rule's triggers fire on the edits they should | No, and the result is the same every run | Code a rule or gate must or must not match, or a rule eval case, checked for its triggers only |
+| Rule validation | Each pattern rule and gate matches the code it should, and each judge rule's triggers fire on the edits they should | No, and the result is the same every run | Code a rule or gate must or must not match, or a rule eval case, checked for its triggers only |
 | Rule evals | Each judge rule's model gives each edit the review it should | Yes, and verdicts can vary between runs | A rule eval case |
 
-Rule tests and rule evals check the rules themselves. `codeguard review` is different: it
+Rule validation and rule evals check the rules themselves. `codeguard review` is different: it
 runs the rules on your code.
 
 ## The bar for a judge rule
@@ -78,7 +78,7 @@ test, in code the change leaves untouched and doesn't take part in, so the revie
 leave it unreported. Keep that violation small and plain, and let it break no other
 rule, so nothing else in the fixture obscures the behavior under test.
 
-Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
+Rule validation warnings, such as broad triggers, are advisory: they don't fail a change.
 
 CI runs the checks that call a model on pull requests, not on pushes to main, because
 re-running them after a merge spends model calls that the pull request already spent.

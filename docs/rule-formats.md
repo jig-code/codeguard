@@ -62,7 +62,7 @@ adding or removing blank lines fires no trigger, isn't judged and leaves no diag
 so the blank line before a new method doesn't make its class part of the change. A line
 holding only comments and docstrings touches only `comment` and `docstring`, not the
 function or class around it: prose breaks no code rule. A rule
-that needs every change says `triggers: [any]`; `codeguard test` warns on `any`, `code`,
+that needs every change says `triggers: [any]`; `codeguard validate` warns on `any`, `code`,
 `function-body` and `function-signature`. The built-in kinds are `comment`, `docstring`,
 `import`, `function-signature`, `function-body`, `test-function`, `fixture`, `helper-function`,
 `class-header`, `class-attribute`, `module-statement`, `annotation`, `call`,
@@ -159,7 +159,7 @@ held to the same bar.
 
 ## What makes a case fail
 
-`codeguard test` fails a case when:
+`codeguard validate` fails a case when:
 
 - its `file` is outside the binding's paths;
 - its edit changes no code;
