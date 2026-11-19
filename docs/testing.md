@@ -80,6 +80,9 @@ rule, so nothing else in the fixture obscures the behavior under test.
 
 Rule test warnings, such as broad triggers, are advisory: they don't fail a change.
 
+CI runs the checks that call a model on pull requests, not on pushes to main, because
+re-running them after a merge spends model calls that the pull request already spent.
+
 ## Changing codeguard
 
 | You change | It checks | CI runs | Locally, run |

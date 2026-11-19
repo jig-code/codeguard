@@ -14,12 +14,21 @@ development loop, and by reviewing every change against those rules when the age
 and in CI. Rules cover architecture and design as well as code-level practice. Each rule
 is defined once and applies wherever code is written or reviewed.
 
-- Prevention: the agent loads the skill for a file before it edits that file.
+- Prevention, giving the writing agent a rule's text before it edits, is a future
+  enhancement. See Non-goals.
 - Correction: every change is reviewed by deterministic checks and an LLM judge. The
   review runs when the agent stops and in CI, and errors block.
 
 codeguard has no rules and no languages built in. Projects and rule packages supply all
-of them.
+of them. codeguard keeps private rules of its own for dogfooding, and ships no public
+rules.
+
+### Non-goals
+
+- codeguard doesn't enforce that a skill is loaded before an edit, because enforcing a
+  skill load is out of scope and not important.
+- codeguard doesn't re-send a judge request that times out, because that would block CI
+  for minutes: a call that regularly takes over 60 seconds means something is wrong.
 
 ### Rules
 
@@ -55,8 +64,10 @@ because that file has to change anyway.
 
 **The judge** grades one rule against one file's change, through the `claude` or `codex`
 CLI, Gemini on Vertex AI or Amazon Bedrock. Its instructions are
-[`review/judge.md`](../src/codeguard/review/judge.md), and the changed code it gets comes
-from the syntax table in [`syntax/`](../src/codeguard/syntax/).
+[`review/judge.md`](../src/codeguard/review/judge.md). The change it gets is a standard
+unified diff with function context, and the syntax table in
+[`syntax/`](../src/codeguard/syntax/) finds the function or class around each changed
+line.
 
 - The prompt holds only what the judge will certainly have to read; the judge decides
   from the rule what else to read, and reads it with its tools. The prompt never says
@@ -71,6 +82,9 @@ from the syntax table in [`syntax/`](../src/codeguard/syntax/).
   verdict schema. The scale never rewards resemblance to an example, since rules hold
   none.
 - Output that fails the verdict schema fails the run loudly (#11).
+- The judge is sent a change as a standard unified diff with function context, never an
+  excerpt codeguard builds itself, because a custom excerpt reinvents diffs and context
+  with the change is how GitHub reviews work.
 - A configured model is passed to the provider by its full id; **The verdict cache**
   below says how that keys verdicts.
 
@@ -155,7 +169,8 @@ the code refer to.
     CI, a failed judge call fails the review unless the PR's label bypasses it: a bypass is
     explicit and per change, never the default.
 12. Write-time hooks block only for a failed deterministic check or a high-confidence
-    violation.
+    violation. Findings that don't block go only to the person, because anything sent to
+    the agent at Stop continues its turn and acts as a block.
 13. Severity decides blocking: an `error` blocks the Stop hook and CI; `warning`, `info`
     and `hint` never block. A pattern rule's severity is in its YAML; a judge rule's is its
     binding's (default `error`). A project may override a package rule's severity or

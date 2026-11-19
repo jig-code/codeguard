@@ -56,15 +56,19 @@ Diagnostics name a packaged rule by package, ruleset and id:
 Settings that decide what a review reports belong in the committed config, not in the
 environment, so CI and every machine review a commit the same way. Environment variables
 only choose the config file or the codeguard to run, choose and sign in the judge, or turn
-on telemetry:
+on telemetry.
+
+The variables a judge runs with are ones codeguard names and reads, never the
+provider's default variables, because otherwise a user couldn't give codeguard different
+credentials from the provider's own tools. A codeguard variable names no provider and a
+model is named once, because a provider is a configuration detail that names shouldn't
+leak.
 
 | Variable | Default | What it does |
 |---|---|---|
 | `CODEGUARD_CONFIG` | `.codeguard/config.yaml` | The config file to load, relative to the repository root, such as a gitignored `codeguard.local.yaml` for working on a local package. |
 | `CODEGUARD` | the codeguard the plugin ships | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
 | `CODEGUARD_JUDGE__PROVIDER`, `CODEGUARD_JUDGE__MODEL` | unset | Set `judge.provider` and `judge.model` in place of the config file's, such as for a CI job that judges with Bedrock while developers use the `claude` CLI. An empty variable counts as unset. |
-| `CLAUDE_CODE_OAUTH_TOKEN` | the `claude` CLI's own sign-in | The subscription token the judge runs with, in CI. |
-| `AWS_DEFAULT_REGION`, and the credentials boto3 finds | the AWS CLI's own | Where Bedrock runs and how it signs in; see [Bedrock](judges.md#bedrock). |
 | `CODEGUARD_JUDGE__GEMINI__PROJECT` | unset; judging with Gemini without it is a config error | The Google Cloud project Gemini runs in; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
 | `CODEGUARD_JUDGE__GEMINI__LOCATION` | `global` | The Vertex AI location Gemini runs in. |
 | `CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE`, `CODEGUARD_JUDGE__GEMINI__API_KEY` | unset; judging with Gemini without one is a config error | How Gemini signs in: a service account key file, or an API key. Setting both is a config error. These Gemini settings come from the environment only: `judge.gemini` in the config file is a config error. |
