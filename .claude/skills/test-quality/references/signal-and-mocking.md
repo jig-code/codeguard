@@ -75,11 +75,11 @@ hold:
    to code it doesn't target.
 
 Authorship decides ownership, not who runs the `join`. A SUT that joins sections authored
-elsewhere (a `SKILL.md` read verbatim by `JudgeRule.from_file`, the changes
+elsewhere (a rule file read verbatim by `Ruleset.judge_rule_text`, the changes
 `JudgeRequest.of_change` renders) owns only their selection and order. So asserting the
 `<rule name=...>` line of `JudgeRequest.prompt`, or one whole section extracted with a
 `_section_lines`-style helper, is the exception. Check: breaking the logic under test
-fails the assertion, and editing an unrelated rule's `SKILL.md` doesn't.
+fails the assertion, and editing an unrelated rule's file doesn't.
 
 Using `in` because you can't predict the SUT's own output is the smell; pin the value.
 

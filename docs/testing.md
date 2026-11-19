@@ -59,7 +59,7 @@ CI runs a rule's eval only for a change that can change its verdicts:
 
 | You change | Each case of the rule passes |
 |---|---|
-| The rule: its skill directory, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 3 runs of 3 |
+| The rule: its rule file, its binding (paths, triggers), or a gate its triggers name. Or the rule's eval cases | 3 runs of 3 |
 | The judge: codeguard's judge prompt, request, tools or harness, or the codeguard version a package or app tests with | 3 runs of 3 |
 
 Three clean runs catch a rule that a judge change has broken. No other change runs a
@@ -110,7 +110,7 @@ rules codeguard reviews itself with are tested in their package's CI.
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | A pattern rule, a gate or their tests | Each rule and gate matches its `invalid` snippets and none of its `valid` ones | `codeguard rules test` | Same |
-| A judge rule's skill directory, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
+| A judge rule's rule file, binding or rule eval, or a gate it uses | Each case's triggers, then each such rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval --rule <id>`, then `codeguard rules eval --rule <id> --repeat 2` | Same |
 | The codeguard version CI tests with | Each case's triggers, then every judge rule's verdicts: 1 run to verify the change, then 2 more | `codeguard rules test`, `codeguard rules eval`, then `codeguard rules eval --repeat 2` | Same |
 
 Run both commands at the package root; they cover every ruleset.

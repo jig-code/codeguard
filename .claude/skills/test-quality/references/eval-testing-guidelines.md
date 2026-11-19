@@ -41,8 +41,8 @@ says which changes need the LLM tests and how many runs.
 - Review through `Rules.review`, as above. Don't wrap the review in a shared runner class:
   a runner hides run options and tends to retry what raised.
 - Case inputs use different domains, phrasing and values from the examples in
-  `src/codeguard/review/judge.md` and the rule's `SKILL.md` (gate 6). A case that reuses
-  an example tests memorization.
+  `src/codeguard/review/judge.md` and the rule's file, `rules/judge/<id>.md` (gate 6). A
+  case that reuses an example tests memorization.
 
 ## The bar
 

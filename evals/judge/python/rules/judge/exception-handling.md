@@ -1,8 +1,3 @@
----
-name: exception-handling
-description: Never discard an exception.
----
-
 # Exception handling
 
 Never discard an exception. The violation is a handler, such as an `except` block,

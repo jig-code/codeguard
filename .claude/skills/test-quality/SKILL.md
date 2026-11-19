@@ -42,7 +42,8 @@ belongs to the `pytest-factoryboy` skill. Gates 5, 9, 11, 13, 14, 15 and 16 poin
    [signal-and-mocking.md](references/signal-and-mocking.md)
 5. **Reuse and construction hygiene:** `pytest-factoryboy`.
 6. **Eval inputs differ from instruction examples.** A case that reuses text from
-   `src/codeguard/review/judge.md` or the rule's `SKILL.md` tests memorization.
+   `src/codeguard/review/judge.md` or the rule's file, `rules/judge/<id>.md`, tests
+   memorization.
    [eval-testing-guidelines.md](references/eval-testing-guidelines.md)
 7. **LLM tests follow the eval guidelines.** Each fixture case is reviewed through
    `Rules.review`, as `codeguard review` does, against the outcome the case expects, with

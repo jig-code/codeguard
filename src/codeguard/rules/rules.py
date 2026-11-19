@@ -18,11 +18,10 @@ from codeguard.review import (
 )
 from codeguard.rule_tests import (
     BroadTriggers,
-    MissingWhy,
-    MissingWhyMode,
     RuleTests,
     TriggerTestRunner,
 )
+from codeguard.rule_validation import WhyValidation, WhyValidationMode
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
 from codeguard.syntax import ChangeClassifier, Classification
@@ -88,7 +87,7 @@ class Rules:
             )
         )
 
-    def tests(self, missing_why: MissingWhyMode = MissingWhyMode.WARN) -> RuleTests:
+    def tests(self, missing_why: WhyValidationMode = WhyValidationMode.WARN) -> RuleTests:
         root = self.working_tree.root
         loaders = self.resolver.own_rulesets
         return RuleTests(
@@ -102,7 +101,7 @@ class Rules:
                 for runner in (
                     BroadTriggers(loader),
                     TriggerTestRunner(root, loader, self.ast_grep),
-                    MissingWhy(loader, missing_why),
+                    WhyValidation(loader, missing_why),
                 )
             ],
         )

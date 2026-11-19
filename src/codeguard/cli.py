@@ -11,7 +11,7 @@ import pydantic_ai
 from codeguard.config import ConfigLoader, JudgeChoice, JudgeProvider
 from codeguard.file_lock import exclusive_lock
 from codeguard.repository import LineScope, LineScopes, WorkingTree
-from codeguard.rule_tests import MissingWhyMode
+from codeguard.rule_validation import WhyValidationMode
 from codeguard.rules import Rules, check_installed_evals
 
 _MODEL_HELP = (
@@ -102,9 +102,9 @@ def main() -> int:
     )
     test_command.add_argument(
         "--missing-why",
-        type=MissingWhyMode,
-        choices=list(MissingWhyMode),
-        default=MissingWhyMode.WARN,
+        type=WhyValidationMode,
+        choices=list(WhyValidationMode),
+        default=WhyValidationMode.WARN,
         help="Report each rule that doesn't say why it exists as a warning, as a failure, "
         "or not at all. Default: warn.",
     )
