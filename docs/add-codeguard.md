@@ -66,11 +66,12 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_environment_variables: false
       - uses: jig-code/codeguard@v0.11.0
         env:
           CODEGUARD_JUDGE__PROVIDER: gemini
           CODEGUARD_JUDGE__MODEL: gemini-4-argon
-          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
 ```
 
@@ -82,6 +83,10 @@ judge setting of its own. CI never uses the `claude` CLI, the default, so the jo
 provider that runs in CI and that provider's credentials, in the variables codeguard reads
 ([Choose a judge](judges.md)). The example judges with Gemini; for Bedrock, set the
 provider and model and give the job AWS credentials instead.
+
+The Google Cloud project is a repository secret, and the auth action exports no
+variables, because the job's log masks secrets but prints variables and the project the
+auth action exports.
 
 The `labeled` and `unlabeled` types re-run the review when an engineer adds or removes
 the `codeguard-allow-judge-errors` label, which lets one PR merge despite a judge call
