@@ -255,10 +255,9 @@ def _scope(working_tree: WorkingTree, args: argparse.Namespace) -> LineScope:
 
 def _validate(args: argparse.Namespace) -> int:
     if getattr(args, "deprecated_alias", None):
-        print(
+        sys.stderr.write(
             f"warning: codeguard {args.deprecated_alias} is deprecated and will be removed in "
-            "the next release. Use codeguard validate.",
-            file=sys.stderr,
+            "the next release. Use codeguard validate.\n"
         )
     validations = Rules(_working_tree(args.package)).validations(args.missing_why)
     result = validations.update_snapshots() if args.update_all else validations.run()

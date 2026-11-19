@@ -22,8 +22,8 @@ pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
 CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 BUNDLED_AST_GREP = metadata.version("ast-grep-cli")
-NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
-NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
+NO_PRINT_TEST = ".codeguard/pattern-cases/no-print-cases.yml"
+NO_PRINT_SNAPSHOT = ".codeguard/pattern-cases/__snapshots__/no-print-snapshot.yml"
 PLACEMENT_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
 TRACEBACK_HEADING = "Traceback (most recent call last):\n"
 PASSING_NO_PRINT_TEST_REPORT = (
@@ -1204,7 +1204,7 @@ class TestValidateCommand:
     def test_unexpected_ruleset_entry_exits_2(self, tmp_path):
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
-        package.write("python/rule-tests/triggers/no-print-test.yml", "id: no-print\n")
+        package.write("python/pattern-cases/triggers/no-print-cases.yml", "id: no-print\n")
 
         result = subprocess.run(
             [CODEGUARD, "validate"], cwd=package.root, capture_output=True, text=True
@@ -1213,7 +1213,7 @@ class TestValidateCommand:
         _, traceback = result.stderr.split(TRACEBACK_HEADING)
         assert traceback.splitlines()[-2:] == [
             f"codeguard.config.config_error.ConfigError: {package.root}/python is invalid:",
-            "  unexpected rule-tests/triggers",
+            "  unexpected pattern-cases/triggers",
         ]
         assert result.returncode == 2
 
@@ -1221,7 +1221,7 @@ class TestValidateCommand:
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
         package.write(
-            "python/rule-tests/no-print-test.yml",
+            "python/pattern-cases/no-print-cases.yml",
             "id: no-print\nvalid:\n  - logging.info(1)\n",
         )
 
@@ -1271,7 +1271,7 @@ class TestValidateCommand:
         )
 
         assert result.stdout.endswith(
-            ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml: stale snapshot "
+            ".codeguard/pattern-cases/__snapshots__/no-print-snapshot.yml: stale snapshot "
             "entries for no-print. Run codeguard validate --update-all.\n"
         )
         assert result.returncode == 1
@@ -1351,7 +1351,7 @@ class TestValidateCommand:
             "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
         )
         repo.write(
-            ".codeguard/rule-tests/enum-value-test.yml",
+            ".codeguard/pattern-cases/enum-value-cases.yml",
             "id: enum-value\nvalid:\n  - status.name\ninvalid:\n  - status.value\n",
         )
 
@@ -1359,7 +1359,9 @@ class TestValidateCommand:
             [CODEGUARD, "validate", "--update-all"], cwd=repo.root, capture_output=True, text=True
         )
 
-        assert (repo.root / ".codeguard/rule-tests/__snapshots__/enum-value-snapshot.yml").is_file()
+        assert (
+            repo.root / ".codeguard/pattern-cases/__snapshots__/enum-value-snapshot.yml"
+        ).is_file()
         assert result.returncode == 0
 
     def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_judge_rule):

@@ -45,7 +45,7 @@ whose [changed lines](how-a-review-works.md#what-a-review-reports) fall inside n
 triggers still load.
 
 A trigger is a gate or a built-in change kind. A gate is an ast-grep rule in
-`<ruleset>/gates/<id>.yml`, tested like a pattern rule by `rule-tests/<id>-test.yml`
+`<ruleset>/gates/<id>.yml`, checked like a pattern rule by `pattern-cases/<id>-cases.yml`
 (`invalid` cases are code the gate matches):
 
 ```yaml

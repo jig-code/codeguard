@@ -8,8 +8,10 @@ from codeguard.config.ruleset import (
     JUDGE_EVAL_DIR,
     JUDGE_RULE_DIR,
     LEGACY_PATTERN_TEST_DIR,
+    LEGACY_RULE_TEST_DIR,
+    LEGACY_SNAPSHOT_DIR,
+    PATTERN_CASE_DIR,
     PATTERN_RULE_DIR,
-    RULE_TEST_DIR,
     SKILLS_DIR,
     SNAPSHOT_DIR,
 )
@@ -19,6 +21,7 @@ _DIRECTORIES = frozenset(
         PATTERN_RULE_DIR,
         GATE_DIR,
         SNAPSHOT_DIR,
+        LEGACY_SNAPSHOT_DIR,
         LEGACY_PATTERN_TEST_DIR,
         JUDGE_EVAL_DIR,
         JUDGE_RULE_DIR,
@@ -26,6 +29,7 @@ _DIRECTORIES = frozenset(
         SKILLS_DIR,
     }
 )
+_CASE_DIRECTORIES = frozenset({PATTERN_CASE_DIR, LEGACY_RULE_TEST_DIR})
 _PARENTS = frozenset(str(PurePath(directory).parent) for directory in _DIRECTORIES) - {"."}
 
 
@@ -48,7 +52,7 @@ class RulesetStructure:
                 yield path
 
     def _allowed_file(self, path: str) -> bool:
-        return path in self.files or str(PurePath(path).parent) == RULE_TEST_DIR
+        return path in self.files or str(PurePath(path).parent) in _CASE_DIRECTORIES
 
 
 def _visible(directory: Path) -> list[Path]:

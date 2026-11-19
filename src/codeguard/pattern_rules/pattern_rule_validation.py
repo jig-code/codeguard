@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from codeguard.pattern_rules.command import AstGrepCommand
 from codeguard.pattern_rules.layout import Layout
+from codeguard.pattern_rules.legacy_case_layout import LegacyCaseLayout
 from codeguard.pattern_rules.snapshots import SnapshotFile, Snapshots
 from codeguard.rule_validation import ValidationResult
 
@@ -13,6 +14,12 @@ class PatternRuleValidation:
     layout: Layout
 
     def run(self) -> ValidationResult:
+        return ValidationResult.merge([self._legacy_layout_warnings(), self._run()])
+
+    def update_snapshots(self) -> ValidationResult:
+        return ValidationResult.merge([self._legacy_layout_warnings(), self._update_snapshots()])
+
+    def _run(self) -> ValidationResult:
         if not self.layout.has_cases():
             return _NO_CASES
         stale = self._stale()
@@ -23,12 +30,16 @@ class PatternRuleValidation:
             )
         return ValidationResult(failed=not self._command.validate())
 
-    def update_snapshots(self) -> ValidationResult:
+    def _update_snapshots(self) -> ValidationResult:
         if not self.layout.has_cases():
             return _NO_CASES
         for snapshot in self._stale():
             snapshot.path.unlink()
         return ValidationResult(failed=not self._command.update_snapshots())
+
+    def _legacy_layout_warnings(self) -> ValidationResult:
+        legacy = LegacyCaseLayout(self.layout.root, self.layout.ruleset)
+        return ValidationResult(warnings=legacy.warnings())
 
     def _stale(self) -> list[SnapshotFile]:
         return [
