@@ -2,13 +2,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import ChangeKind, ConfigError, RulesetLoader
-from codeguard.repository import ChangedLines
+from codeguard.config import (
+    ChangeKind,
+    ConfigError,
+    Outcome,
+    RuleEvalCase,
+    RuleEvalReader,
+    RulesetLoader,
+)
+from codeguard.repository import ChangedLines, LineScopes, WorkingTree
 from codeguard.review import Binding, Bindings
-from codeguard.rule_tests.edit_repo import EditRepo
-from codeguard.rule_tests.rule_eval import EditCase, Outcome, RuleEvalCase, rule_evals
-from codeguard.rule_tests.rule_test_result import RuleTestResult
-from codeguard.syntax import Classification, SyntaxScanner
+from codeguard.rule_validation.validation_result import ValidationResult
+from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
 
 
 @dataclass(frozen=True)
@@ -23,8 +28,12 @@ class _CaseCheck:
         return f"{self.prefix}{self.case.inputs.file}"
 
     @property
-    def edits(self) -> dict[str, EditCase]:
-        return self.case.inputs.edits(self.prefix)
+    def before_files(self) -> dict[str, str]:
+        return self.case.inputs.before_files(self.prefix)
+
+    @property
+    def after_files(self) -> dict[str, str]:
+        return self.case.inputs.after_files(self.prefix)
 
     def problem(self, changed: ChangedLines, classification: Classification) -> str | None:
         rule = self.binding.judge_rule.name
@@ -47,19 +56,19 @@ class _CaseCheck:
 
 
 @dataclass(frozen=True)
-class TriggerTestRunner:
+class TriggerCaseValidation:
     root: Path
     ruleset: RulesetLoader
     ast_grep: AstGrep = AstGrep()
 
-    def run(self) -> RuleTestResult:
-        evals = rule_evals(self.ruleset.root)
+    def run(self) -> ValidationResult:
+        evals = RuleEvalReader(self.ruleset.root).read()
         if not evals:
-            return RuleTestResult()
+            return ValidationResult()
         try:
             ruleset = self.ruleset.load()
         except ConfigError as error:
-            return RuleTestResult(warnings=(f"trigger tests not run: {error}",))
+            return ValidationResult(warnings=(f"trigger tests not run: {error}",))
         bindings = {
             binding.judge_rule.name: binding for binding in Bindings.from_rulesets([ruleset])
         }
@@ -80,12 +89,13 @@ class TriggerTestRunner:
             if dataset.name in bindings
             for number, case in enumerate(dataset.cases, start=1)
         ]
-        edits = {path: edit for check in checks for path, edit in check.edits.items()}
-        with EditRepo.of(edits) as repo:
-            changed = repo.changed_lines()
+        before = {path: text for check in checks for path, text in check.before_files.items()}
+        after = {path: text for check in checks for path, text in check.after_files.items()}
+        with WorkingTree.temporary(before, after) as tree:
+            changed = LineScopes.at(tree).changed_lines("HEAD")
             scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
-            classification = repo.classification(scanner, changed)
+            classification = ChangeClassifier(scanner, tree).classify(changed)
         failed = [
             problem for check in checks if (problem := check.problem(changed, classification))
         ]
-        return RuleTestResult(problems=(*unknown, *failed))
+        return ValidationResult(problems=(*unknown, *failed))

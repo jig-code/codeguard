@@ -1,7 +1,7 @@
 import textwrap
 
 from codeguard.config import RulesetLoader
-from codeguard.rule_tests import RuleTestResult, TriggerTestRunner
+from codeguard.rule_validation import TriggerCaseValidation, ValidationResult
 
 EVAL_FILE = ".codeguard/rule-evals/enum-usage.yaml"
 
@@ -29,7 +29,7 @@ def write_eval(directory, *cases: str) -> None:
     directory.write(EVAL_FILE, "cases:\n" + "".join(cases))
 
 
-class TestTriggerTestRunner:
+class TestTriggerCaseValidation:
     def test_invalid_case_whose_change_touches_a_gate_passes(self, directory):
         directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
         directory.write(".codeguard/bindings/enum-usage.yaml", ENUM_BINDING)
@@ -44,9 +44,9 @@ class TestTriggerTestRunner:
             ),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
+        assert result == ValidationResult()
 
     def test_invalid_case_whose_change_misses_the_triggers_fails_with_the_touched_kinds(
         self, directory
@@ -64,9 +64,9 @@ class TestTriggerTestRunner:
             ),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(
                 f"{EVAL_FILE} a count change: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value miss the change, which "
@@ -83,9 +83,9 @@ class TestTriggerTestRunner:
             case("reading the value", "skipped", "label = status.value\n"),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(
                 f"{EVAL_FILE} reading the value: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value fire on the change, which "
@@ -102,9 +102,9 @@ class TestTriggerTestRunner:
             case("a count change", "skipped", "count = 2\n", before="count = 1\n"),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
+        assert result == ValidationResult()
 
     def test_valid_case_whose_change_touches_a_gate_passes(self, directory):
         directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
@@ -112,9 +112,9 @@ class TestTriggerTestRunner:
         directory.write(".codeguard/gates/enum-value.yml", ENUM_GATE)
         write_eval(directory, case("reading the value", "valid", "label = status.value\n"))
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
+        assert result == ValidationResult()
 
     def test_valid_case_whose_change_misses_the_triggers_fails(self, directory):
         directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
@@ -122,9 +122,9 @@ class TestTriggerTestRunner:
         directory.write(".codeguard/gates/enum-value.yml", ENUM_GATE)
         write_eval(directory, case("a count change", "valid", "count = 2\n", before="count = 1\n"))
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(
                 f"{EVAL_FILE} a count change: enum-usage "
                 "triggers definition-added-or-removed, gate:enum-value miss the change, which "
@@ -148,9 +148,9 @@ class TestTriggerTestRunner:
             ),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult()
+        assert result == ValidationResult()
 
     def test_case_file_outside_the_binding_paths_fails(self, directory):
         directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
@@ -166,9 +166,9 @@ class TestTriggerTestRunner:
             ),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(
                 f"{EVAL_FILE} reading the value: "
                 "tests/test_status.py is outside the enum-usage paths",
@@ -189,9 +189,9 @@ class TestTriggerTestRunner:
             ),
         )
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(f"{EVAL_FILE} changes nothing: the case changes no code in module.py",),
         )
 
@@ -201,9 +201,9 @@ class TestTriggerTestRunner:
         directory.write(".codeguard/gates/enum-value.yml", ENUM_GATE)
         directory.write(".codeguard/rule-evals/enum-usag.yaml", "cases: []\n")
 
-        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+        result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-        assert result == RuleTestResult(
+        assert result == ValidationResult(
             problems=(".codeguard/rule-evals/enum-usag.yaml: no judge rule enum-usag",)
         )
 
@@ -212,6 +212,6 @@ def test_ruleset_without_evals_passes(directory):
     directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
     directory.write(".codeguard/bindings/enum-usage.yaml", ENUM_BINDING)
     directory.write(".codeguard/gates/enum-value.yml", ENUM_GATE)
-    result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
+    result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
-    assert result == RuleTestResult()
+    assert result == ValidationResult()

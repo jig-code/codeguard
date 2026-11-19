@@ -11,9 +11,9 @@ from factories.judge_request import MakeJudgeRequest
 from factories.judge_rule import MakeBinding, MakeJudgeRule
 from factories.line_range import MakeLineRange
 from factories.rule_eval import (
-    MakeEditCase,
-    MakeEditReview,
+    MakeEditVerdict,
     MakeEvaluatorContext,
+    MakeFileEdit,
     MakeJudgedViolation,
     MakeRuleEvalCase,
     MakeVerdict,
@@ -33,9 +33,9 @@ register(MakeBindingConfig)
 register(MakeRuleset)
 register(MakeJudgeRequest)
 register(MakeVerdict)
-register(MakeEditCase)
+register(MakeFileEdit)
 register(MakeJudgedViolation)
-register(MakeEditReview)
+register(MakeEditVerdict)
 register(MakeEvaluatorContext)
 register(MakeRuleEvalCase)
 register(MakeFileClassification)

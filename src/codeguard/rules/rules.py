@@ -3,7 +3,7 @@ from functools import cached_property
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigLoader, Ruleset
-from codeguard.pattern_rules import Layout, PatternRuleCheck, PatternRuleTestRunner
+from codeguard.pattern_rules import Layout, PatternRuleCheck, PatternRuleValidation
 from codeguard.repository import ChangedLines, LineScope, WorkingTree
 from codeguard.review import (
     Bindings,
@@ -16,12 +16,13 @@ from codeguard.review import (
     Review,
     Reviewer,
 )
-from codeguard.rule_tests import (
-    BroadTriggers,
-    RuleTests,
-    TriggerTestRunner,
+from codeguard.rule_validation import (
+    BroadTriggersValidation,
+    RuleValidations,
+    TriggerCaseValidation,
+    WhyValidation,
+    WhyValidationMode,
 )
-from codeguard.rule_validation import WhyValidation, WhyValidationMode
 from codeguard.rules.judges import Judges
 from codeguard.rules.ruleset_resolver import RulesetResolver
 from codeguard.syntax import ChangeClassifier, Classification
@@ -87,20 +88,22 @@ class Rules:
             )
         )
 
-    def tests(self, missing_why: WhyValidationMode = WhyValidationMode.WARN) -> RuleTests:
+    def validations(
+        self, missing_why: WhyValidationMode = WhyValidationMode.WARN
+    ) -> RuleValidations:
         root = self.working_tree.root
         loaders = self.resolver.own_rulesets
-        return RuleTests(
-            snapshot_runners=[
-                PatternRuleTestRunner(Layout(root, loader.root, self.ast_grep))
+        return RuleValidations(
+            snapshot_validations=[
+                PatternRuleValidation(Layout(root, loader.root, self.ast_grep))
                 for loader in loaders
             ],
-            runners=[
-                runner
+            validations=[
+                validation
                 for loader in loaders
-                for runner in (
-                    BroadTriggers(loader),
-                    TriggerTestRunner(root, loader, self.ast_grep),
+                for validation in (
+                    BroadTriggersValidation(loader),
+                    TriggerCaseValidation(root, loader, self.ast_grep),
                     WhyValidation(loader, missing_why),
                 )
             ],

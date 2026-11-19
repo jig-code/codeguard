@@ -14,8 +14,8 @@ packages to evaluate their judge rules.
 
 `tests/rules/test_judge_prompt.py` parametrizes one test over every judged case of the
 fixture rules' rule evals (`evals/judge/python/rule-evals/<rule>.yaml`). For each case it
-writes the case's edits into an `EditRepo`, with a `.codeguard/config.yaml` that includes
-only that rule, and reviews them with
+writes the case's edits into a `WorkingTree.temporary`, with a `.codeguard/config.yaml` that
+includes only that rule, and reviews them with
 `Rules(working_tree).review(working_tree.changed_lines("HEAD"))`: the path
 `codeguard review` takes, with the real judge the fixture package names. It asserts the
 review has no judge errors and that its outcome is the case's expected outcome.

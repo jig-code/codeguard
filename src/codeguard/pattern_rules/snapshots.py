@@ -8,7 +8,7 @@ from pydantic import BaseModel
 _SNAPSHOT_DIR = "__snapshots__"
 
 
-class _RuleTestFile(BaseModel):
+class _RuleCaseFile(BaseModel):
     id: str
     invalid: tuple[str, ...] = ()
 
@@ -42,14 +42,14 @@ class Snapshots:
     snapshots: tuple[SnapshotFile, ...]
 
     @classmethod
-    def load(cls, test_dir: Path) -> Self:
-        snapshot_paths = sorted((test_dir / _SNAPSHOT_DIR).glob("*.y*ml"))
-        test_paths = sorted(test_dir.glob("*.y*ml"))
-        tests = [
-            _RuleTestFile.model_validate(yaml.safe_load(path.read_text())) for path in test_paths
+    def load(cls, case_dir: Path) -> Self:
+        snapshot_paths = sorted((case_dir / _SNAPSHOT_DIR).glob("*.y*ml"))
+        case_paths = sorted(case_dir.glob("*.y*ml"))
+        case_files = [
+            _RuleCaseFile.model_validate(yaml.safe_load(path.read_text())) for path in case_paths
         ]
         return cls(
-            invalid_cases={test.id: frozenset(test.invalid) for test in tests},
+            invalid_cases={case_file.id: frozenset(case_file.invalid) for case_file in case_files},
             snapshots=tuple(SnapshotFile.load(path) for path in snapshot_paths),
         )
 

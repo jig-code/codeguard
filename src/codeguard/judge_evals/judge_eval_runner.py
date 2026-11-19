@@ -7,14 +7,24 @@ from pathlib import Path
 from pydantic_evals import Case, Dataset
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, Ruleset, RulesetLoader
+from codeguard.config import (
+    EditVerdict,
+    FileEdit,
+    JudgeChoice,
+    JudgeConfig,
+    JudgeModel,
+    RuleEval,
+    RuleEvalReader,
+    Ruleset,
+    RulesetLoader,
+)
 from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, ViolationsOnTriggers
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.judge_evals.judge_eval_result import JudgeEvalResult, RuleEvalReport
 from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.review import Binding, Bindings
-from codeguard.rule_tests import EditCase, EditReview, RuleEval, RuleTestResult, rule_evals
+from codeguard.rule_validation import ValidationResult
 from codeguard.syntax import SyntaxScanner
 
 
@@ -31,7 +41,9 @@ class JudgeEvalRunner:
     judge_override: JudgeChoice = JudgeChoice()
 
     def case_names(self) -> dict[str, tuple[str, ...]]:
-        cases = {dataset.name: dataset.cases for _, dataset in rule_evals(self.ruleset.root)}
+        cases = {
+            dataset.name: dataset.cases for _, dataset in RuleEvalReader(self.ruleset.root).read()
+        }
         return {
             binding.judge_rule.name: tuple(
                 case.name for case in cases.get(binding.judge_rule.name, ())
@@ -68,12 +80,12 @@ class JudgeEvalRunner:
         ]
         scanner = SyntaxScanner.for_rulesets(self.ast_grep, [ruleset])
         reports = asyncio.run(self._evaluate_all(experiments, scanner))
-        return JudgeEvalResult(reports=tuple(reports), checks=RuleTestResult(problems=unknown))
+        return JudgeEvalResult(reports=tuple(reports), checks=ValidationResult(problems=unknown))
 
     def _selected_evals(self) -> list[tuple[Path, RuleEval]]:
         evals = [
             (file, self._selected_cases(dataset))
-            for file, dataset in rule_evals(self.ruleset.root)
+            for file, dataset in RuleEvalReader(self.ruleset.root).read()
             if self.selection.selects_rule(dataset.name)
         ]
         if self.selection.cases:
@@ -106,7 +118,7 @@ class JudgeEvalRunner:
         self, rule_eval: RuleEval, binding: Binding, language: str | None, scanner: SyntaxScanner
     ) -> RuleEvalReport:
         model = binding.model
-        dataset = Dataset[EditCase, EditReview, None](
+        dataset = Dataset[FileEdit, EditVerdict, None](
             name=rule_eval.name,
             cases=[
                 Case(name=case.name, inputs=case.inputs, expected_output=case.expected_output)

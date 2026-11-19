@@ -3,38 +3,38 @@ from dataclasses import dataclass
 from codeguard.pattern_rules.command import AstGrepCommand
 from codeguard.pattern_rules.layout import Layout
 from codeguard.pattern_rules.snapshots import SnapshotFile, Snapshots
-from codeguard.rule_tests import RuleTestResult
+from codeguard.rule_validation import ValidationResult
 
-_NO_TESTS = RuleTestResult(failed=False)
+_NO_CASES = ValidationResult(failed=False)
 
 
 @dataclass(frozen=True)
-class PatternRuleTestRunner:
+class PatternRuleValidation:
     layout: Layout
 
-    def run(self) -> RuleTestResult:
-        if not self.layout.has_tests():
-            return _NO_TESTS
+    def run(self) -> ValidationResult:
+        if not self.layout.has_cases():
+            return _NO_CASES
         stale = self._stale()
         if stale:
-            return RuleTestResult(
+            return ValidationResult(
                 failed=False,
                 problems=tuple(snapshot.stale_problem(self.layout.root) for snapshot in stale),
             )
-        return RuleTestResult(failed=not self._command.test())
+        return ValidationResult(failed=not self._command.validate())
 
-    def update_snapshots(self) -> RuleTestResult:
-        if not self.layout.has_tests():
-            return _NO_TESTS
+    def update_snapshots(self) -> ValidationResult:
+        if not self.layout.has_cases():
+            return _NO_CASES
         for snapshot in self._stale():
             snapshot.path.unlink()
-        return RuleTestResult(failed=not self._command.update_snapshots())
+        return ValidationResult(failed=not self._command.update_snapshots())
 
     def _stale(self) -> list[SnapshotFile]:
         return [
             snapshot
-            for test_dir in self.layout.test_dirs
-            for snapshot in Snapshots.load(test_dir).stale()
+            for case_dir in self.layout.case_dirs
+            for snapshot in Snapshots.load(case_dir).stale()
         ]
 
     @property

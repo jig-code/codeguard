@@ -66,3 +66,37 @@ class TestWorkingTree:
         (git_repo.root / "link.py").symlink_to("target.py")
 
         assert WorkingTree.at(git_repo.root).contents("link.py") == b"target.py"
+
+    def test_temporary_tree_holds_the_after_text_over_the_committed_before_text(self):
+        with WorkingTree.temporary(
+            {"module.py": "count = 1\n"}, {"module.py": "count = 2\n"}
+        ) as tree:
+            committed = tree.git.text("show", "HEAD:module.py")
+            written = (tree.root / "module.py").read_text()
+
+        assert committed == "count = 1\n"
+        assert written == "count = 2\n"
+
+    def test_temporary_tree_commits_a_file_the_after_leaves_unchanged(self):
+        before = {
+            "shipping/__init__.py": "from shipping.status import Status\n",
+            "shipping/ship.py": "a = 1\n",
+        }
+        after = {**before, "shipping/ship.py": "a = 2\n"}
+
+        with WorkingTree.temporary(before, after) as tree:
+            status = tree.git.text("status", "--porcelain", "--untracked-files=all")
+
+        assert status == " M shipping/ship.py\n"
+
+    def test_temporary_tree_leaves_a_file_only_the_after_holds_untracked(self):
+        with WorkingTree.temporary({}, {"module.py": "count = 1\n"}) as tree:
+            status = tree.git.text("status", "--porcelain", "--untracked-files=all")
+
+        assert status == "?? module.py\n"
+
+    def test_temporary_tree_is_removed_once_its_block_ends(self):
+        with WorkingTree.temporary({}, {}) as tree:
+            pass
+
+        assert not tree.root.exists()

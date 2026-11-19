@@ -2,14 +2,13 @@ from dataclasses import dataclass
 
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
-from codeguard.config import ChangeKind
-from codeguard.rule_tests import EditCase, EditReview, Outcome
+from codeguard.config import ChangeKind, EditVerdict, FileEdit, Outcome
 
 
 @dataclass
-class PartialEqualsExpected(Evaluator[EditCase, EditReview, None]):
+class PartialEqualsExpected(Evaluator[FileEdit, EditVerdict, None]):
     def evaluate(
-        self, ctx: EvaluatorContext[EditCase, EditReview, None]
+        self, ctx: EvaluatorContext[FileEdit, EditVerdict, None]
     ) -> EvaluationReason | dict[str, bool]:
         if ctx.expected_output is None:
             return {}
@@ -24,12 +23,12 @@ class PartialEqualsExpected(Evaluator[EditCase, EditReview, None]):
 
 
 @dataclass
-class ViolationsOnTriggers(Evaluator[EditCase, EditReview, None]):
+class ViolationsOnTriggers(Evaluator[FileEdit, EditVerdict, None]):
     triggers: tuple[str, ...]
     confidence_threshold: float
 
     def evaluate(
-        self, ctx: EvaluatorContext[EditCase, EditReview, None]
+        self, ctx: EvaluatorContext[FileEdit, EditVerdict, None]
     ) -> EvaluationReason | dict[str, bool]:
         expected = ctx.expected_output.outcome if ctx.expected_output else None
         if (
@@ -60,7 +59,7 @@ def _described(fields: dict[str, object]) -> str:
     return ", ".join(f"{name} {value}" for name, value in fields.items())
 
 
-def _listed(review: EditReview, expected: EditReview) -> dict[str, object]:
+def _listed(review: EditVerdict, expected: EditVerdict) -> dict[str, object]:
     # The judge's reason is context for whoever reads the eval, printed with it, never compared.
     listed = expected.model_fields_set - {"reason"}
     fields: dict[str, object] = review.model_dump(mode="json", include=listed - {"violations"})
@@ -72,7 +71,7 @@ def _listed(review: EditReview, expected: EditReview) -> dict[str, object]:
     return fields
 
 
-def _violation_fields(expected: EditReview, index: int) -> set[str]:
+def _violation_fields(expected: EditVerdict, index: int) -> set[str]:
     if index < len(expected.violations):
         return set(expected.violations[index].model_fields_set)
     return {name for violation in expected.violations for name in violation.model_fields_set}

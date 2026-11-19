@@ -4,7 +4,7 @@ from typing import Self, TextIO
 
 
 @dataclass(frozen=True)
-class RuleTestResult:
+class ValidationResult:
     failed: bool = False
     problems: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()

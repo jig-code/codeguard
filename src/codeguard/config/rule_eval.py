@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Self
@@ -5,7 +6,9 @@ from typing import Self
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
-from codeguard.config import JUDGE_EVAL_DIR, ConfigError, language_of
+from codeguard.config.config_error import ConfigError
+from codeguard.config.languages import language_of
+from codeguard.config.ruleset import JUDGE_EVAL_DIR
 from codeguard.line_range import LineRange
 
 _EVAL_FILE_SUFFIXES = (".yaml", ".yml")
@@ -18,7 +21,7 @@ class Outcome(StrEnum):
     SKIPPED = "skipped"
 
 
-class EditCase(BaseModel):
+class FileEdit(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     file: str = "module.py"
@@ -42,12 +45,15 @@ class EditCase(BaseModel):
             raise ValueError(f"unchanged lists the edited file {self.file}")
         return self
 
-    def edits(self, prefix: str = "") -> dict[str, "EditCase"]:
-        unchanged = {
-            f"{prefix}{path}": EditCase(file=path, before=text, after=text)
-            for path, text in self.unchanged.items()
-        }
-        return {**unchanged, f"{prefix}{self.file}": self}
+    def before_files(self, prefix: str = "") -> dict[str, str]:
+        unchanged = {f"{prefix}{path}": text for path, text in self.unchanged.items()}
+        if self.before is None:
+            return unchanged
+        return {**unchanged, f"{prefix}{self.file}": self.before}
+
+    def after_files(self, prefix: str = "") -> dict[str, str]:
+        unchanged = {f"{prefix}{path}": text for path, text in self.unchanged.items()}
+        return {**unchanged, f"{prefix}{self.file}": self.after}
 
 
 class JudgedViolation(BaseModel):
@@ -59,7 +65,7 @@ class JudgedViolation(BaseModel):
     kinds: tuple[str, ...] | None = None
 
 
-class EditReview(BaseModel):
+class EditVerdict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     outcome: Outcome
@@ -80,12 +86,12 @@ class RuleEvalCase(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str
-    inputs: EditCase
-    expected_output: EditReview
+    inputs: FileEdit
+    expected_output: EditVerdict
 
     @field_validator("expected_output")
     @classmethod
-    def expects_a_clear_outcome(cls, expected: EditReview) -> EditReview:
+    def expects_a_clear_outcome(cls, expected: EditVerdict) -> EditVerdict:
         if expected.outcome is Outcome.UNCERTAIN:
             raise ValueError(
                 "a case expects invalid, valid or skipped; one the judge can't decide isn't "
@@ -95,7 +101,7 @@ class RuleEvalCase(BaseModel):
 
     @field_validator("expected_output")
     @classmethod
-    def expects_no_reason(cls, expected: EditReview) -> EditReview:
+    def expects_no_reason(cls, expected: EditVerdict) -> EditVerdict:
         if expected.reason is not None:
             raise ValueError(
                 "a case expects no reason: the judge's reason is printed with the eval for "
@@ -143,31 +149,36 @@ class RuleEval(BaseModel):
         return cases
 
 
-def rule_evals(ruleset: Path) -> list[tuple[Path, RuleEval]]:
-    directory = ruleset / JUDGE_EVAL_DIR
-    files = sorted(file for file in directory.glob("*") if file.suffix in _EVAL_FILE_SUFFIXES)
-    evals = [_load(file) for file in files]
-    names = [rule_eval.name for _, rule_eval in evals]
-    doubled = [file for file, rule_eval in evals if names.count(rule_eval.name) > 1]
-    if doubled:
-        raise ConfigError(
-            "a rule has one eval file; remove one of:" + "".join(f"\n  {file}" for file in doubled)
-        )
-    return evals
+@dataclass(frozen=True)
+class RuleEvalReader:
+    ruleset: Path
 
+    def read(self) -> list[tuple[Path, RuleEval]]:
+        directory = self.ruleset / JUDGE_EVAL_DIR
+        files = sorted(file for file in directory.glob("*") if file.suffix in _EVAL_FILE_SUFFIXES)
+        evals = [self._read_file(file) for file in files]
+        names = [rule_eval.name for _, rule_eval in evals]
+        doubled = [file for file, rule_eval in evals if names.count(rule_eval.name) > 1]
+        if doubled:
+            raise ConfigError(
+                "a rule has one eval file; remove one of:"
+                + "".join(f"\n  {file}" for file in doubled)
+            )
+        return evals
 
-def _load(file: Path) -> tuple[Path, RuleEval]:
-    try:
-        data = yaml.safe_load(file.read_text())
-    except yaml.YAMLError as error:
-        raise ConfigError(f"{file} is invalid:\n  {error}") from error
-    if isinstance(data, dict) and "id" in data:
-        raise ConfigError(
-            f"{file} is a codeguard 0.4 rule eval; convert it to rule-evals/<rule id>.yaml"
-        )
-    if isinstance(data, dict):
-        data = {"name": file.stem, **data}
-    try:
-        return file, RuleEval.model_validate(data)
-    except ValidationError as error:
-        raise ConfigError.invalid(file, error) from error
+    @staticmethod
+    def _read_file(file: Path) -> tuple[Path, RuleEval]:
+        try:
+            data = yaml.safe_load(file.read_text())
+        except yaml.YAMLError as error:
+            raise ConfigError(f"{file} is invalid:\n  {error}") from error
+        if isinstance(data, dict) and "id" in data:
+            raise ConfigError(
+                f"{file} is a codeguard 0.4 rule eval; convert it to rule-evals/<rule id>.yaml"
+            )
+        if isinstance(data, dict):
+            data = {"name": file.stem, **data}
+        try:
+            return file, RuleEval.model_validate(data)
+        except ValidationError as error:
+            raise ConfigError.invalid(file, error) from error
