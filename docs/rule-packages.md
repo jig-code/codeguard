@@ -28,7 +28,7 @@ tested the same way ([Write rules](write-rules.md)).
 
 ## CI and releases
 
-Run `codeguard test` and `codeguard eval` at the package root; they cover every ruleset.
+Run `codeguard validate` and `codeguard eval` at the package root; they cover every ruleset.
 Tag releases `v<major>.<minor>.<patch>`; projects name the tag as their `ref`.
 [jig-code/codeguard-rules](https://github.com/jig-code/codeguard-rules) is
 an example.

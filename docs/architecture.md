@@ -102,13 +102,14 @@ the cache themselves.
 or a pass. The only adapter is for the Stop hook, which blocks every time the agent stops
 while errors remain.
 
-**The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
-and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
-prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
+**The CLI** is the core interface: `review` reviews a changeset; `validate` checks
+pattern rules and gates against their cases, with no model; `eval` runs judge rule evals,
+repeated N times; `config` prints a setting. The plugin ships the CLI, and the GitHub
+Action runs it in CI.
 
 ### Testing a rule
 
-- Pattern rules and gates: `codeguard test`, with valid and invalid cases and snapshots.
+- Pattern rules and gates: `codeguard validate`, with valid and invalid cases and snapshots.
 - Judge rules: `codeguard eval`. Each case is a small fixture repository plus a change,
   with the expected violations. A case passes only when it gets the right verdict at 0.9
   or above on every run. The eval prints the judge's reason for every case, as context

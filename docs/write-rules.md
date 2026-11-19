@@ -29,8 +29,8 @@ rule moves between a project and a package unchanged.
 
 ## Why a rule exists
 
-Every rule says why it exists. `codeguard test` reports each rule without a why
-([`--missing-why`](cli.md#test)).
+Every rule says why it exists. `codeguard validate` reports each rule without a why
+([`--missing-why`](cli.md#validate)).
 
 ## The judge's model
 
@@ -43,9 +43,9 @@ binding and pass its rule eval again.
 That is for rules whose bar is passing on more than one model, such as a CI job per
 provider; it changes nothing a review judges with.
 
-## Test a rule
+## Validate a rule
 
-1. `codeguard test` checks pattern rules and gates against their tests, and judge rules'
+1. `codeguard validate` checks pattern rules and gates against their cases, and judge rules'
    triggers on their eval cases, with no model call. A pattern rule needs only this.
 2. For a judge rule, `codeguard eval` reviews every case once with the binding's model, the way
    `codeguard review` would, to verify the change.

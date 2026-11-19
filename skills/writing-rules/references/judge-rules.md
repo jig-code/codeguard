@@ -28,7 +28,7 @@ A violation outside the binding's `triggers` is never reported; codeguard's
 sees.
 
 - List the syntactic forms the violation takes, and give each one an `invalid` gate
-  test, so a gate that stops matching a form fails `codeguard test`.
+  test, so a gate that stops matching a form fails `codeguard validate`.
 - Gate on where a violation appears, not on the rule's topic: a rule about passing enum
   members needs a gate on literals, because the enum is defined elsewhere.
 - Gate on the narrowest node that holds the violation, such as the `except` clause

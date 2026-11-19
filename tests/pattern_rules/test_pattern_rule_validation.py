@@ -8,7 +8,7 @@ NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
 LEGACY_NO_PRINT_TEST = ".codeguard/rule-tests/pattern/no-print-test.yml"
 STALE_NO_PRINT_SNAPSHOT = (
     ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml: stale snapshot "
-    "entries for no-print. Run codeguard test --update-all."
+    "entries for no-print. Run codeguard validate --update-all."
 )
 
 

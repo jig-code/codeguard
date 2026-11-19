@@ -68,7 +68,7 @@ class TriggerCaseValidation:
         try:
             ruleset = self.ruleset.load()
         except ConfigError as error:
-            return ValidationResult(warnings=(f"trigger tests not run: {error}",))
+            return ValidationResult(warnings=(f"trigger validation not run: {error}",))
         bindings = {
             binding.judge_rule.name: binding for binding in Bindings.from_rulesets([ruleset])
         }

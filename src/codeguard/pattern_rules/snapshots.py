@@ -32,7 +32,7 @@ class SnapshotFile:
     def stale_problem(self, root: Path) -> str:
         return (
             f"{self.path.relative_to(root)}: stale snapshot entries for {self.rule}. "
-            "Run codeguard test --update-all."
+            "Run codeguard validate --update-all."
         )
 
 
