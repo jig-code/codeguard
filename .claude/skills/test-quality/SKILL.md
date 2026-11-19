@@ -102,8 +102,8 @@ For each test, check:
 
 ## References
 
-- [signal-and-mocking.md](references/signal-and-mocking.md): gates 2–4 and 8, with the
-  fakes codeguard tests use. Read when mocking, asserting or naming.
+- [signal-and-mocking.md](references/signal-and-mocking.md): gates 2–4, 8 and 18, with
+  the fakes codeguard tests use. Read when mocking, asserting or naming.
 - [redundant-tests.md](references/redundant-tests.md): gate 1, the three no-signal
   defects and when an integration test earns its level.
 - [helpers-and-results.md](references/helpers-and-results.md): gates 10, 12 and 17.
