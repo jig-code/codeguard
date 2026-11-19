@@ -17,8 +17,19 @@ from codeguard.config.ruleset import BINDINGS_DIR, Ruleset
 from codeguard.config.ruleset_config import RulesetConfig
 from codeguard.config.ruleset_structure import RulesetStructure
 
-_PATTERN_BINDING_KEY = "rule"
+_RULE_KEY = "rule"
+_SKILL_KEY = "skill"
 _BINDING_FILE_SUFFIXES = (".yaml", ".yml")
+
+
+def _rules_named_alone(documents: Mapping[str, object]) -> dict[str, str]:
+    return {
+        file: document[_RULE_KEY]
+        for file, document in documents.items()
+        if isinstance(document, dict)
+        and isinstance(document.get(_RULE_KEY), str)
+        and _SKILL_KEY not in document
+    }
 
 
 @dataclass(frozen=True)
@@ -49,17 +60,19 @@ class RulesetLoader:
             for path in sorted(bindings_dir.rglob("*"))
             if path.suffix in _BINDING_FILE_SUFFIXES
         }
+        rule_by_file = _rules_named_alone(documents)
+        unbound = Ruleset(name=self.name, root=self.root)
+        pattern_ids = unbound.pattern_rule_ids() if rule_by_file else frozenset()
+        self._raise_problems(self._routing_problems(unbound, rule_by_file, pattern_ids))
         pattern_documents = {
-            file: document
-            for file, document in documents.items()
-            if isinstance(document, dict) and _PATTERN_BINDING_KEY in document
+            file: documents[file] for file, rule in rule_by_file.items() if rule in pattern_ids
         }
-        skill_documents = {
+        judge_documents = {
             file: document for file, document in documents.items() if file not in pattern_documents
         }
         try:
             bindings = BindingsConfig.model_validate(
-                skill_documents, context={"working_tree": self.repo}
+                judge_documents, context={"working_tree": self.repo}
             )
             pattern_bindings = PatternBindingsConfig.model_validate(pattern_documents)
         except ValidationError as error:
@@ -78,28 +91,39 @@ class RulesetLoader:
             raise ConfigError.invalid(self.root, error, prefix="gates") from error
         self._raise_problems(
             [
-                *self._unbound_pattern_rules(ruleset),
                 *self._unknown_triggers(ruleset, gates),
                 *self._shared_ids(ruleset, gates),
             ]
         )
         return ruleset
 
+    def _routing_problems(
+        self, ruleset: Ruleset, rule_by_file: Mapping[str, str], pattern_ids: frozenset[str]
+    ) -> list[str]:
+        return [
+            problem
+            for file, rule in rule_by_file.items()
+            if (problem := self._route_problem(ruleset, file, rule, rule in pattern_ids))
+        ]
+
+    def _route_problem(
+        self, ruleset: Ruleset, file: str, rule: str, is_pattern_rule: bool
+    ) -> str | None:
+        if "/" in rule or "\\" in rule:
+            return f"bindings.{file}.rule: {rule!r} is not a rule id"
+        path = ruleset.judge_rule_path(rule)
+        expected = path.relative_to(self.root)
+        if path.is_file() and is_pattern_rule:
+            return f"bindings.{file}.rule: both {expected} and pattern rule {rule} have this id"
+        if not path.is_file() and not is_pattern_rule:
+            return f"bindings.{file}.rule: no judge rule {expected} or pattern rule {rule}"
+        return None
+
     def _shared_ids(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:
         if not gates:
             return []
         shared = sorted(ruleset.pattern_rule_ids() & gates.keys())
         return [f"gates.{gate}: a pattern rule has this id" for gate in shared]
-
-    def _unbound_pattern_rules(self, ruleset: Ruleset) -> list[str]:
-        if not ruleset.pattern_bindings.root:
-            return []
-        rules = ruleset.pattern_rule_ids()
-        return [
-            f"bindings.{file}.rule: no pattern rule {binding.rule}"
-            for file, binding in ruleset.pattern_bindings.root.items()
-            if binding.rule not in rules
-        ]
 
     def _unknown_triggers(self, ruleset: Ruleset, gates: Mapping[str, GateRule]) -> list[str]:
         if not ruleset.bindings.root:

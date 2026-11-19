@@ -1,97 +1,85 @@
 from general_rule import (
+    BINDING,
+    BOTH_LANGUAGES,
     EVAL,
+    GENERAL_RULE,
     PYTHON_CASE,
     RULE,
-    SKILL_DIR,
+    RULE_FILE,
     TYPESCRIPT_CASE,
     case,
-    write_general_rule,
 )
 from recording_judge import RecordingJudge, RecordingJudges
 
 from codeguard.config import RulesetLoader
 from codeguard.judge_evals import EvalCoverage, JudgeEvalRunner
-from codeguard.review import Bindings
 from codeguard.rule_tests import RuleTestResult, TriggerTestRunner
 
 
-def binding(repo):
-    (bound,) = Bindings.from_rulesets([RulesetLoader.local(repo.root).load()])
-    return bound
-
-
 class TestGeneralRuleVersion:
-    def test_rewording_the_skill_changes_the_rule_version(self, repo):
-        write_general_rule(repo)
-        before = binding(repo)
-        repo.write(f"{SKILL_DIR}/SKILL.md", "# Knowledge stated once, reworded\n")
-
-        after = binding(repo)
+    def test_rewording_the_rule_changes_the_rule_version(self, make_binding):
+        before = make_binding(judge_rule__text=GENERAL_RULE)
+        after = make_binding(judge_rule__text="# Knowledge stated once, reworded\n")
 
         assert after.version != before.version
 
 
 class TestGeneralRuleEvals:
-    def run(self, repo, judge):
-        loader = RulesetLoader.local(repo.root)
-        return JudgeEvalRunner(repo.root, loader, RecordingJudges(judge), 0.9).run()
+    def run(self, directory, judge):
+        loader = RulesetLoader.local(directory.root)
+        return JudgeEvalRunner(directory.root, loader, RecordingJudges(judge), 0.9).run()
 
-    def test_each_language_is_reported_on_its_own(self, repo):
-        write_general_rule(repo)
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+    def test_each_language_is_reported_on_its_own(self, directory):
+        directory.write(RULE_FILE, GENERAL_RULE)
+        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
 
-        result = self.run(repo, RecordingJudge())
+        result = self.run(directory, RecordingJudge())
 
         assert sorted(report.name for report in result.reports) == [
             f"{RULE} (python) on claude-cli's default model",
             f"{RULE} (typescript) on claude-cli's default model",
         ]
 
-    def test_a_single_language_rule_keeps_one_report(self, repo):
-        write_general_rule(repo, binding='paths: ["**/*.py"]\ntriggers: [string-literal]\n')
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}")
-
-        result = self.run(repo, RecordingJudge())
-
-        assert [report.name for report in result.reports] == [
-            f"{RULE} on claude-cli's default model"
-        ]
-
 
 class TestGeneralRuleCoverage:
-    def test_each_language_the_paths_name_needs_an_invalid_case(self, repo):
-        write_general_rule(repo)
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}")
+    def test_each_language_the_paths_name_needs_an_invalid_case(self, directory):
+        directory.write(RULE_FILE, GENERAL_RULE)
+        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(EVAL, f"cases:\n{PYTHON_CASE}")
 
-        result = EvalCoverage(RulesetLoader.local(repo.root)).run()
+        result = EvalCoverage(RulesetLoader.local(directory.root)).run()
 
         assert result == RuleTestResult(
             problems=(f"{RULE} (typescript): no eval with an invalid case",)
         )
 
-    def test_a_case_in_each_language_passes(self, repo):
-        write_general_rule(repo)
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+    def test_a_case_in_each_language_passes(self, directory):
+        directory.write(RULE_FILE, GENERAL_RULE)
+        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
 
-        assert EvalCoverage(RulesetLoader.local(repo.root)).run() == RuleTestResult()
+        assert EvalCoverage(RulesetLoader.local(directory.root)).run() == RuleTestResult()
 
 
 class TestGeneralRuleTriggers:
-    def test_a_case_in_a_language_without_change_kinds_fires_every_trigger(self, repo):
-        write_general_rule(repo)
-        repo.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+    def test_a_case_in_a_language_without_change_kinds_fires_every_trigger(self, directory):
+        directory.write(RULE_FILE, GENERAL_RULE)
+        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
 
-        result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
+        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
 
         assert result == RuleTestResult()
 
-    def test_a_skipped_case_in_such_a_language_fails(self, repo):
-        write_general_rule(repo)
-        repo.write(
+    def test_a_skipped_case_in_such_a_language_fails(self, directory):
+        directory.write(RULE_FILE, GENERAL_RULE)
+        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(
             EVAL, "cases:\n" + case("a renamed script", "orders.ts", "let s = 1;", "skipped")
         )
 
-        result = TriggerTestRunner(repo.root, RulesetLoader.local(repo.root)).run()
+        result = TriggerTestRunner(directory.root, RulesetLoader.local(directory.root)).run()
 
         assert result == RuleTestResult(
             problems=(

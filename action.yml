@@ -5,7 +5,7 @@ inputs:
     description: Ref the changes are compared against. The checkout needs its history (fetch-depth 0).
     default: origin/${{ github.base_ref }}
   claude-code-oauth-token:
-    description: Claude subscription token the judge runs with, from `claude setup-token`. Needed when a binding uses a skill.
+    description: Claude subscription token the judge runs with, from `claude setup-token`. Needed when a binding names a judge rule.
     required: false
   packages-token:
     description: GitHub token that can read the project's private rule packages.

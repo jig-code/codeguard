@@ -25,9 +25,9 @@ class BroadTriggers:
         return RuleTestResult(
             failed=False,
             warnings=tuple(
-                f"{binding.skill.name}: broad triggers {', '.join(sorted(broad))}; "
+                f"{binding.rule_id}: broad triggers {', '.join(sorted(broad))}; "
                 "a gate on the code its violations need skips more files"
-                for binding in sorted(bindings, key=lambda binding: binding.skill.name)
+                for binding in sorted(bindings, key=lambda binding: binding.rule_id)
                 if (broad := _BROAD & binding.triggers)
             ),
         )

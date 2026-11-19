@@ -19,7 +19,7 @@ from factories.rule_eval import (
     MakeVerdict,
 )
 from factories.ruleset import MakeBindingConfig, MakeRuleset
-from git_repo import GitRepo
+from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
@@ -93,6 +93,11 @@ def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.Mon
 @pytest.fixture
 def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
+def directory(tmp_path: Path) -> Directory:
+    return Directory(tmp_path.resolve())
 
 
 @pytest.fixture

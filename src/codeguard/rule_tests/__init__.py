@@ -1,6 +1,5 @@
 from codeguard.rule_tests.broad_triggers import BroadTriggers
 from codeguard.rule_tests.edit_repo import EditRepo
-from codeguard.rule_tests.missing_why import MissingWhy, MissingWhyMode
 from codeguard.rule_tests.rule_eval import (
     EditCase,
     EditReview,
@@ -21,8 +20,6 @@ __all__ = [
     "EditRepo",
     "EditReview",
     "JudgedViolation",
-    "MissingWhy",
-    "MissingWhyMode",
     "Outcome",
     "RuleEval",
     "RuleEvalCase",

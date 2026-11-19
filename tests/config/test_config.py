@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 from packaging.version import Version
 from pydantic import ValidationError
+from rules_package import NO_PRINT_RULE
 
 from codeguard.config import (
     BindingConfig,
@@ -12,6 +15,7 @@ from codeguard.config import (
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
+    PatternRule,
     RuleOverride,
     RulesetConfig,
     Severity,
@@ -24,24 +28,30 @@ def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
     return [problem["msg"] for problem in error.value.errors()]
 
 
-def write_skill(tmp_path, name: str = "placement"):
-    (tmp_path / name).mkdir()
-    (tmp_path / name / "SKILL.md").write_text("# Placement\n")
-    return tmp_path / name
+@pytest.fixture
+def placement_skill(tmp_path) -> Path:
+    (tmp_path / "placement").mkdir()
+    (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
+    return tmp_path / "placement"
 
 
 class TestBindingsConfig:
-    def test_relative_skill_is_under_the_working_tree(self, tmp_path):
-        skill = write_skill(tmp_path)
-
+    def test_skill_directory_is_under_the_working_tree(self, tmp_path, placement_skill):
         bindings = BindingsConfig.model_validate(
             {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}},
             context={"working_tree": tmp_path},
         )
 
-        assert bindings.root["placement.yaml"].skill == skill
+        assert bindings.root["placement.yaml"] == BindingConfig(
+            skill=placement_skill, paths=("**",), triggers=frozenset({"any"})
+        )
 
-    def test_skill_without_skill_file_is_an_error(self, tmp_path):
+    def test_skill_directory_names_the_rule(self, placement_skill):
+        binding = BindingConfig(skill=placement_skill, paths=("**",))
+
+        assert binding.rule_id == "placement"
+
+    def test_skill_directory_without_skill_file_is_an_error(self, tmp_path):
         (tmp_path / "placement").mkdir()
 
         with pytest.raises(ValidationError) as error:
@@ -52,13 +62,42 @@ class TestBindingsConfig:
 
         assert messages(error) == [f"Value error, {tmp_path}/placement has no SKILL.md"]
 
-    def test_retired_disable_skips_is_ignored(self, tmp_path):
-        skill = write_skill(tmp_path)
+    def test_binding_naming_a_rule_and_a_skill_is_an_error(self, placement_skill):
+        with pytest.raises(ValidationError) as error:
+            BindingConfig.model_validate(
+                {"rule": "placement", "skill": placement_skill, "paths": ["**"]}
+            )
 
+        assert messages(error) == ["Value error, rule and skill both name a rule: keep only rule"]
+
+    def test_binding_reads_its_provider_model_and_triggers(self, make_binding_config):
+        binding = BindingConfig.model_validate(
+            {
+                "rule": "responsibility-placement",
+                "paths": ["**"],
+                "triggers": ["class-header", "fixture"],
+                "provider": "gemini",
+                "model": "gemini-judge-test",
+            }
+        )
+
+        assert binding == make_binding_config(
+            triggers=frozenset({"class-header", "fixture"}),
+            provider=JudgeProvider.GEMINI,
+            model="gemini-judge-test",
+        )
+
+    def test_binding_naming_no_rule_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            BindingConfig.model_validate({"paths": ["**"]})
+
+        assert messages(error) == ["Value error, name the rule with rule: <id>"]
+
+    def test_retired_disable_skips_is_ignored(self):
         bindings = BindingsConfig.model_validate(
             {
                 "placement.yaml": {
-                    "skill": skill,
+                    "rule": "placement",
                     "paths": ["**"],
                     "triggers": ["any"],
                     "disable_skips": ["renames"],
@@ -67,18 +106,17 @@ class TestBindingsConfig:
         )
 
         assert bindings.root["placement.yaml"] == BindingConfig(
-            triggers=frozenset({"any"}), skill=skill, paths=("**",)
+            triggers=frozenset({"any"}), rule="placement", paths=("**",)
         )
 
-    def test_skill_bound_twice_is_an_error(self, tmp_path):
-        skill = write_skill(tmp_path)
-        binding = {"skill": skill, "paths": ["**"], "triggers": ["any"]}
+    def test_rule_bound_twice_is_an_error(self):
+        binding = {"rule": "placement", "paths": ["**"], "triggers": ["any"]}
 
         with pytest.raises(ValidationError) as error:
             BindingsConfig.model_validate({"a.yaml": binding, "b.yaml": binding})
 
         assert messages(error) == [
-            f"Value error, skill {skill} is bound more than once: a.yaml, b.yaml"
+            "Value error, rule placement is bound more than once: a.yaml, b.yaml"
         ]
 
 
@@ -250,12 +288,11 @@ class TestRulesetConfig:
 
         assert messages(error) == ["Value error, set include or exclude, not both"]
 
-    def test_override_replaces_only_the_fields_it_sets(self, tmp_path):
-        skill = write_skill(tmp_path)
+    def test_override_replaces_only_the_fields_it_sets(self):
         bindings = BindingsConfig.model_validate(
             {
                 "placement.yaml": {
-                    "skill": skill,
+                    "rule": "placement",
                     "paths": ["**"],
                     "triggers": ["any"],
                     "model": "claude-haiku-5-5",
@@ -268,16 +305,15 @@ class TestRulesetConfig:
 
         assert binding == BindingConfig(
             triggers=frozenset({"any"}),
-            skill=skill,
+            rule="placement",
             paths=("**",),
             severity=Severity.WARNING,
             model="claude-haiku-5-5",
         )
 
-    def test_ruleset_severity_applies_to_a_rule_without_an_override(self, tmp_path):
-        skill = write_skill(tmp_path)
+    def test_ruleset_severity_applies_to_a_rule_without_an_override(self):
         bindings = BindingsConfig.model_validate(
-            {"placement.yaml": {"skill": skill, "paths": ["**"], "triggers": ["any"]}}
+            {"placement.yaml": {"rule": "placement", "paths": ["**"], "triggers": ["any"]}}
         )
 
         binding = RulesetConfig(severity=Severity.WARNING).apply(
@@ -285,15 +321,14 @@ class TestRulesetConfig:
         )
 
         assert binding == BindingConfig(
-            triggers=frozenset({"any"}), skill=skill, paths=("**",), severity=Severity.WARNING
+            triggers=frozenset({"any"}), rule="placement", paths=("**",), severity=Severity.WARNING
         )
 
-    def test_rule_override_severity_wins_over_the_ruleset_severity(self, tmp_path):
-        skill = write_skill(tmp_path)
+    def test_rule_override_severity_wins_over_the_ruleset_severity(self):
         bindings = BindingsConfig.model_validate(
             {
                 "placement.yaml": {
-                    "skill": skill,
+                    "rule": "placement",
                     "paths": ["**"],
                     "triggers": ["any"],
                     "severity": "info",
@@ -307,13 +342,12 @@ class TestRulesetConfig:
         binding = selection.apply("placement", bindings.root["placement.yaml"])
 
         assert binding == BindingConfig(
-            triggers=frozenset({"any"}), skill=skill, paths=("**",), severity=Severity.ERROR
+            triggers=frozenset({"any"}), rule="placement", paths=("**",), severity=Severity.ERROR
         )
 
-    def test_rule_override_without_severity_takes_the_ruleset_severity(self, tmp_path):
-        skill = write_skill(tmp_path)
+    def test_rule_override_without_severity_takes_the_ruleset_severity(self):
         bindings = BindingsConfig.model_validate(
-            {"placement.yaml": {"skill": skill, "paths": ["**"], "triggers": ["any"]}}
+            {"placement.yaml": {"rule": "placement", "paths": ["**"], "triggers": ["any"]}}
         )
         selection = RulesetConfig(
             severity=Severity.WARNING, rules={"placement": RuleOverride(paths=("app/**",))}
@@ -322,7 +356,10 @@ class TestRulesetConfig:
         binding = selection.apply("placement", bindings.root["placement.yaml"])
 
         assert binding == BindingConfig(
-            triggers=frozenset({"any"}), skill=skill, paths=("app/**",), severity=Severity.WARNING
+            triggers=frozenset({"any"}),
+            rule="placement",
+            paths=("app/**",),
+            severity=Severity.WARNING,
         )
 
     def test_rule_runs_outside_ci_by_default(self):
@@ -344,12 +381,10 @@ class TestRulesetConfig:
             "Value error, model: a rule is judged with the model its binding names"
         ]
 
-    def test_codex_binding_uses_its_selected_model(self, tmp_path):
-        skill = write_skill(tmp_path)
-
+    def test_codex_binding_uses_its_selected_model(self):
         binding = BindingConfig.model_validate(
             {
-                "skill": skill,
+                "rule": "placement",
                 "paths": ["**/*.py"],
                 "provider": "codex-cli",
                 "model": "a-bound-model",
@@ -357,6 +392,200 @@ class TestRulesetConfig:
         )
 
         assert binding.judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="a-bound-model")
+
+
+class TestRuleset:
+    def test_packaged_rule_is_named_by_its_ruleset(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(name="example/python")
+
+        assert ruleset.selected_bindings() == {
+            "example/python/responsibility-placement": make_binding_config()
+        }
+
+    def test_excluded_rule_is_dropped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(exclude=("responsibility-placement",)))
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_rule_left_out_of_include_is_dropped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(include=("another-rule",)))
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_included_rule_is_kept(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(selection=RulesetConfig(include=("responsibility-placement",)))
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_override_replaces_the_binding_fields(self, make_ruleset, make_binding_config):
+        override = RuleOverride(paths=("app/**",), severity=Severity.WARNING)
+        ruleset = make_ruleset(
+            selection=RulesetConfig(rules={"responsibility-placement": override})
+        )
+
+        assert ruleset.selected_bindings() == {
+            "responsibility-placement": make_binding_config(
+                paths=("app/**",), severity=Severity.WARNING
+            )
+        }
+
+    def test_override_replaces_the_excluded_paths(self, make_ruleset, make_binding_config):
+        override = RuleOverride(exclude_paths=())
+        ruleset = make_ruleset(
+            binding__exclude_paths=("tests/**",),
+            selection=RulesetConfig(rules={"responsibility-placement": override}),
+        )
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_ci_only_rule_is_selected_in_ci(self, make_ruleset, make_binding_config):
+        ruleset = make_ruleset(selection=RulesetConfig(ci_only=True))
+
+        assert ruleset.selected_bindings() == {"responsibility-placement": make_binding_config()}
+
+    def test_ci_only_rule_is_not_selected_when_skipped(self, make_ruleset):
+        ruleset = make_ruleset(selection=RulesetConfig(ci_only=True), skip_ci_only=True)
+
+        assert ruleset.selected_bindings() == {}
+
+    def test_package_default_judges_its_rules(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.BEDROCK, model="package-model")
+        ruleset = make_ruleset(package_judge=package)
+
+        judge = ruleset.judge_choice(make_binding_config(), JudgeChoice(), JudgeChoice())
+
+        assert judge == package
+
+    def test_project_default_wins_over_the_package_default(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        ruleset = make_ruleset(package_judge=package)
+
+        judge = ruleset.judge_choice(make_binding_config(), project, JudgeChoice())
+
+        assert judge == project
+
+    def test_binding_wins_over_the_project_default(self, make_ruleset, make_binding_config):
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        binding = make_binding_config(provider=JudgeProvider.GEMINI, model="bound-model")
+
+        judge = make_ruleset().judge_choice(binding, project, JudgeChoice())
+
+        assert judge == JudgeChoice(provider=JudgeProvider.GEMINI, model="bound-model")
+
+    def test_provider_and_model_each_come_from_the_first_level_naming_it(
+        self, make_ruleset, make_binding_config
+    ):
+        package = JudgeChoice(model="package-model")
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK)
+        binding = make_binding_config(model="bound-model")
+
+        judge = make_ruleset(package_judge=package).judge_choice(binding, project, JudgeChoice())
+
+        assert judge == JudgeChoice(provider=JudgeProvider.BEDROCK, model="bound-model")
+
+    def test_project_model_runs_on_the_package_provider(self, make_ruleset, make_binding_config):
+        package = JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="package-model")
+        project = JudgeChoice(model="project-model")
+
+        judge = make_ruleset(package_judge=package).judge_choice(
+            make_binding_config(), project, JudgeChoice()
+        )
+
+        assert judge == JudgeChoice(provider=JudgeProvider.CODEX_CLI, model="project-model")
+
+    def test_override_naming_a_provider_replaces_every_level(
+        self, make_ruleset, make_binding_config
+    ):
+        project = JudgeChoice(provider=JudgeProvider.BEDROCK, model="project-model")
+        binding = make_binding_config(provider=JudgeProvider.GEMINI, model="bound-model")
+        override = JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)
+
+        judge = make_ruleset().judge_choice(binding, project, override)
+
+        assert judge == override
+
+    def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
+        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE)
+        directory.write(
+            "gates/enum-value.yml",
+            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+        )
+
+        rules = make_ruleset(root=directory.root).pattern_rules()
+
+        assert rules == [
+            PatternRule.model_validate(
+                {
+                    "id": "no-print",
+                    "metadata": {
+                        "why": "Print output skips the log levels and handlers production reads."
+                    },
+                }
+            )
+        ]
+
+    def test_malformed_pattern_rule_file_is_a_config_error(self, directory, make_ruleset):
+        directory.write("rules/pattern/bad.yml", "bogus: 1\n")
+
+        with pytest.raises(ConfigError) as error:
+            make_ruleset(root=directory.root).pattern_rules()
+
+        assert str(error.value) == f"{directory.root} is invalid:\n  rules.id: Field required"
+
+    def test_rule_file_text_reaches_the_judge_unparsed(
+        self, directory, make_ruleset, make_binding_config, make_judge_rule
+    ):
+        text = f"---\nname: responsibility-placement\n---\n{make_judge_rule().text}"
+        directory.write("rules/judge/responsibility-placement.md", text)
+
+        judge_text = make_ruleset(root=directory.root).judge_rule_text(make_binding_config())
+
+        assert judge_text == text
+
+    def test_skill_file_reaches_the_judge_without_its_frontmatter(
+        self, directory, make_ruleset, make_binding_config, make_judge_rule
+    ):
+        directory.write(
+            "skills/placement/SKILL.md",
+            f"---\nname: placement\n---\n{make_judge_rule().text}",
+        )
+        binding = make_binding_config(rule=None, skill=directory.root / "skills/placement")
+
+        judge_text = make_ruleset(root=directory.root).judge_rule_text(binding)
+
+        assert judge_text == make_judge_rule().text
+
+
+class TestPatternRule:
+    @pytest.mark.parametrize(
+        "metadata",
+        [None, {"source": "https://example.com"}, {"why": ""}, {"why": "  "}],
+        ids=["no-metadata", "source-only", "empty-why", "blank-why"],
+    )
+    def test_pattern_rule_without_a_why_text_does_not_say_why(self, metadata):
+        rule = PatternRule.model_validate({"id": "no-print", "metadata": metadata})
+
+        assert not rule.says_why
+
+    def test_pattern_rule_with_a_why_says_why(self):
+        rule = PatternRule.model_validate(
+            {"id": "no-print", "metadata": {"why": "Print skips the log levels."}}
+        )
+
+        assert rule.says_why
+
+    def test_why_that_is_not_text_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            PatternRule.model_validate({"id": "no-print", "metadata": {"why": 1}})
+
+        assert error.value.errors(include_url=False, include_input=False) == [
+            {
+                "type": "string_type",
+                "loc": ("metadata", "why"),
+                "msg": "Input should be a valid string",
+            }
+        ]
 
 
 class TestJudgeChoice:
