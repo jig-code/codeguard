@@ -12,17 +12,22 @@ are each taken from the first of these that names it:
    ([Rule packages](rule-packages.md)).
 
 With no provider named, a rule is judged through the `claude` CLI. With no model named
-either, codeguard passes the CLI no model, so the CLI's own default judges. A model with
-no provider named is run with `claude-cli`, so it must be a Claude model. Every
-provider but `claude-cli` needs a model, and a provider can't run another vendor's model,
-such as `codex-cli` with a Claude model; codeguard reports each of these as a config
-error before it judges. This page says how to set each provider up.
+either, codeguard passes the CLI no model, so the CLI's own default judges. A model is
+named once, and codeguard never infers its provider from the model's name: a model
+needs a provider named. Every provider but `claude-cli` needs a model, and a provider
+can't run another vendor's model, such as `codex-cli` with a Claude model; codeguard
+reports each of these as a config error before it judges. This page says how to set each
+provider up.
+
+Which judge runs is configuration, never code that knows where it runs, so that one or
+two config values swap the judge for the whole system and switching models takes
+minimal effort.
 
 ## Choose a provider
 
-- `claude-cli`, the default, runs Claude through the `claude` CLI: on the developer's own
-  subscription at the agent's Stop, and in CI with the token the action takes
-  ([CI](add-codeguard.md#ci)).
+- `claude-cli`, the default, runs Claude through the `claude` CLI on the developer's own
+  subscription at the agent's Stop. It is for local work: CI never uses a subscription or
+  a CLI tool, so a CI job judges with `gemini` or `bedrock`.
 - `codex-cli` runs a GPT model through the `codex` CLI on a ChatGPT subscription
   ([Codex locally](#codex-locally)).
 - `gemini` runs Gemini on Vertex AI with Google credentials
