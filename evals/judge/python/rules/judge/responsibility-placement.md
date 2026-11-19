@@ -1,3 +1,7 @@
 # Responsibility placement
 
-Put logic on the type whose data it reads. Code that reads only one class's attributes belongs on that class as a method. Code outside a class must call the class's methods instead of recomputing from its attributes.
+Logic that reads only one class's attributes is a method of that class, never code outside the class that recomputes from those attributes.
+
+## Why
+
+Logic kept away from the data it reads is missed when that data changes.

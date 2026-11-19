@@ -18,8 +18,18 @@ class TestRuleFormatValidation:
     def test_title_statement_and_why_pass(self, directory):
         assert validate(directory, PLACEMENT_RULE) == ValidationResult()
 
-    def test_title_and_statement_without_why_pass(self, directory):
-        assert validate(directory, "# Naming\n\nA name says what it holds.\n") == ValidationResult()
+    @pytest.mark.parametrize(
+        "rule_file",
+        [
+            "# Naming\n\nA name says what it holds.\n",
+            "# Naming\n\nA name says what it holds.\n\n## Why\n",
+        ],
+        ids=["no Why heading", "empty Why"],
+    )
+    def test_rule_without_a_why_is_a_problem(self, directory, rule_file):
+        assert validate(directory, rule_file) == ValidationResult(
+            problems=("naming: rule file has no `## Why` section with text",)
+        )
 
     @pytest.mark.parametrize(
         "rule_file",
@@ -56,7 +66,10 @@ class TestRuleFormatValidation:
         )
 
     def test_comment_in_a_code_fence_is_not_a_heading(self, directory):
-        rule_file = "# Naming\n\nA name says what it holds, as in:\n\n```\n# note\n```\n"
+        rule_file = (
+            "# Naming\n\nA name says what it holds, as in:\n\n```\n# note\n```\n\n"
+            "## Why\n\nNames are read more than written.\n"
+        )
 
         assert validate(directory, rule_file) == ValidationResult()
 

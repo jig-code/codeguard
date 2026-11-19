@@ -34,6 +34,8 @@ class JudgeRule:
         statement = _until_first_heading(body)
         if not statement.strip():
             problems.append("has no statement between its title and `## Why`")
+        if not self.says_why:
+            problems.append("has no `## Why` section with text")
         return tuple(problems)
 
 

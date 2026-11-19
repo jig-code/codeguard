@@ -31,7 +31,7 @@ codeguard review --host codex   # name the caller in telemetry; changes nothing 
 ```sh
 codeguard test                # pattern rule and gate tests, and judge rule eval triggers
 codeguard test --update-all   # the same, regenerating snapshots
-codeguard test --missing-why fail  # a rule without a why fails; warn (default) or off
+codeguard test --missing-why fail  # a pattern rule without a why fails; warn (default) or off
 codeguard test path/to/package  # test a package outside the current repository
 ```
 

@@ -8,7 +8,7 @@ from codeguard.rule_validation.validation_result import ValidationResult
 @dataclass(frozen=True)
 class RuleFormatValidation:
     """Report each judge rule file that isn't a title, a statement and `## Why`. Rules
-    bound with the legacy `skill` key are not checked: packages still ship them."""
+    bound with the legacy `skill` key are not checked, because packages still ship them."""
 
     ruleset: RulesetLoader
 
@@ -21,7 +21,7 @@ class RuleFormatValidation:
         rules = sorted(
             (
                 JudgeRule(binding.rule_id, ruleset.judge_rule_text(binding))
-                for binding in ruleset.bindings.root.values()
+                for binding in ruleset.selected_bindings().values()
                 if binding.skill is None
             ),
             key=lambda rule: rule.name,

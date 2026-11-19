@@ -39,8 +39,8 @@ model: gemini-4-argon             # default: the claude CLI's own; every provide
 ```
 
 A judge rule's id is its file's name, without `.md`. `codeguard test` fails a rule file
-that doesn't start with a `# ` title, has no statement under it, or has a heading other
-than `## Why`. The frontmatter that older packages' skill files hold is not part of this
+that doesn't start with a `# ` title, has no statement under it, has no `## Why` with
+text, or has a heading other than `## Why`. The frontmatter that older packages' skill files hold is not part of this
 format.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file

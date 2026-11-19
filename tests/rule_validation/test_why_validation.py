@@ -25,12 +25,12 @@ class TestWhyValidationMode:
 
 class TestWhyValidation:
     def test_judge_rules_then_pattern_rules_without_a_why_are_reported_by_id(self, directory):
-        directory.write(".codeguard/rules/judge/placement.md", PLACEMENT_RULE)
-        directory.write(".codeguard/rules/judge/zebra.md", NO_WHY_RULE)
-        directory.write(".codeguard/rules/judge/apple.md", NO_WHY_RULE)
-        directory.write(".codeguard/bindings/a.yaml", f"rule: zebra\n{BINDING}")
-        directory.write(".codeguard/bindings/b.yaml", f"rule: apple\n{BINDING}")
-        directory.write(".codeguard/bindings/c.yaml", f"rule: placement\n{BINDING}")
+        directory.write("skills/placement/SKILL.md", PLACEMENT_RULE)
+        directory.write("skills/zebra/SKILL.md", NO_WHY_RULE)
+        directory.write("skills/apple/SKILL.md", NO_WHY_RULE)
+        directory.write(".codeguard/bindings/a.yaml", f"skill: skills/zebra\n{BINDING}")
+        directory.write(".codeguard/bindings/b.yaml", f"skill: skills/apple\n{BINDING}")
+        directory.write(".codeguard/bindings/c.yaml", f"skill: skills/placement\n{BINDING}")
         directory.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
         directory.write(
             ".codeguard/rules/pattern/a.yml",
@@ -51,6 +51,14 @@ class TestWhyValidation:
                 "z-rule: no metadata.why",
             )
         )
+
+    def test_rule_file_bound_with_rule_is_left_to_the_format_validation(self, directory):
+        directory.write(".codeguard/rules/judge/naming.md", NO_WHY_RULE)
+        directory.write(".codeguard/bindings/naming.yaml", f"rule: naming\n{BINDING}")
+
+        result = WhyValidation(RulesetLoader.local(directory.root)).run()
+
+        assert result == ValidationResult()
 
     @pytest.mark.parametrize("mode", list(WhyValidationMode))
     def test_ruleset_that_does_not_load_reports_nothing(self, directory, mode):
