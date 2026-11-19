@@ -97,8 +97,8 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
 
 ## Layout
 
-- Pattern rule: `.codeguard/rules/pattern/<id>.yml`; its tests:
-  `.codeguard/rule-tests/<id>-test.yml`, never under the rules directory (every YAML file
+- Pattern rule: `.codeguard/rules/pattern/<id>.yml`; its cases:
+  `.codeguard/pattern-cases/<id>-cases.yml`, never under the rules directory (every YAML file
   there loads as a rule).
 - Judge rule: the skill `.codeguard/skills/<id>/SKILL.md`, the binding
   `.codeguard/bindings/<id>.yaml` and the rule eval `.codeguard/rule-evals/<id>.yaml`.
@@ -110,8 +110,8 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
   - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
     path; `before`, the file before the edit, left out for a new file; `after`, the
     file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`).
-- Gate: `.codeguard/gates/<id>.yml`, an ast-grep rule tested by
-  `.codeguard/rule-tests/<id>-test.yml`.
+- Gate: `.codeguard/gates/<id>.yml`, an ast-grep rule checked by
+  `.codeguard/pattern-cases/<id>-cases.yml`.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
   each ruleset's directory instead of `.codeguard/`.
 - A judge rule whose convention holds in several languages is one rule: its binding's

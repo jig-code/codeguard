@@ -7,7 +7,13 @@ from pathlib import Path
 import yaml
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import GATE_DIR, LEGACY_PATTERN_TEST_DIR, PATTERN_RULE_DIR, RULE_TEST_DIR
+from codeguard.config import (
+    GATE_DIR,
+    LEGACY_PATTERN_TEST_DIR,
+    LEGACY_RULE_TEST_DIR,
+    PATTERN_CASE_DIR,
+    PATTERN_RULE_DIR,
+)
 
 
 @dataclass(frozen=True)
@@ -22,7 +28,11 @@ class Layout:
 
     @property
     def case_dirs(self) -> list[Path]:
-        candidates = (self.ruleset / RULE_TEST_DIR, self.ruleset / LEGACY_PATTERN_TEST_DIR)
+        candidates = (
+            self.ruleset / PATTERN_CASE_DIR,
+            self.ruleset / LEGACY_RULE_TEST_DIR,
+            self.ruleset / LEGACY_PATTERN_TEST_DIR,
+        )
         return [directory for directory in candidates if directory.is_dir()]
 
     @property

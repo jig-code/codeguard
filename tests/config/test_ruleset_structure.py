@@ -12,27 +12,33 @@ class TestRulesetStructure:
             tmp_path,
             "rules/pattern",
             "gates",
-            "rule-tests/__snapshots__",
+            "pattern-cases/__snapshots__",
             "rule-evals",
             "bindings",
             "rules/judge",
             "skills",
         )
+        (tmp_path / "pattern-cases/no-print-cases.yml").write_text("id: no-print\n")
+
+        assert RulesetStructure(tmp_path).problems() == []
+
+    def test_legacy_rule_tests_directory_has_no_problems(self, tmp_path):
+        make_dirs(tmp_path, "rules/pattern", "rule-tests/__snapshots__")
         (tmp_path / "rule-tests/no-print-test.yml").write_text("id: no-print\n")
 
         assert RulesetStructure(tmp_path).problems() == []
 
-    def test_pattern_rule_tests_in_their_own_directory_have_no_problems(self, tmp_path):
+    def test_legacy_pattern_rule_tests_directory_has_no_problems(self, tmp_path):
         make_dirs(tmp_path, "rules/pattern", "rule-tests/pattern/__snapshots__")
 
         assert RulesetStructure(tmp_path).problems() == []
 
     def test_rule_test_subdirectory_is_unexpected(self, tmp_path):
-        make_dirs(tmp_path, "rule-tests/gates", "rule-tests/triggers")
+        make_dirs(tmp_path, "pattern-cases/gates", "pattern-cases/triggers")
 
         assert RulesetStructure(tmp_path).problems() == [
-            "unexpected rule-tests/gates",
-            "unexpected rule-tests/triggers",
+            "unexpected pattern-cases/gates",
+            "unexpected pattern-cases/triggers",
         ]
 
     def test_unknown_directory_is_unexpected(self, tmp_path):
@@ -41,10 +47,10 @@ class TestRulesetStructure:
         assert RulesetStructure(tmp_path).problems() == ["unexpected checks"]
 
     def test_unknown_rule_kind_is_unexpected(self, tmp_path):
-        make_dirs(tmp_path, "rules/pattern", "rules/semgrep", "rule-tests/judge")
+        make_dirs(tmp_path, "rules/pattern", "rules/semgrep", "pattern-cases/judge")
 
         assert RulesetStructure(tmp_path).problems() == [
-            "unexpected rule-tests/judge",
+            "unexpected pattern-cases/judge",
             "unexpected rules/semgrep",
         ]
 

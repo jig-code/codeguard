@@ -18,9 +18,12 @@ from codeguard.config.ruleset_config import RulesetConfig
 
 PATTERN_RULE_DIR = "rules/pattern"
 GATE_DIR = "gates"
-RULE_TEST_DIR = "rule-tests"
-SNAPSHOT_DIR = f"{RULE_TEST_DIR}/__snapshots__"
-LEGACY_PATTERN_TEST_DIR = f"{RULE_TEST_DIR}/pattern"
+PATTERN_CASE_DIR = "pattern-cases"
+SNAPSHOT_DIR = f"{PATTERN_CASE_DIR}/__snapshots__"
+# The directory's name before codeguard validate. Read, with a warning, for one more release.
+LEGACY_RULE_TEST_DIR = "rule-tests"
+LEGACY_SNAPSHOT_DIR = f"{LEGACY_RULE_TEST_DIR}/__snapshots__"
+LEGACY_PATTERN_TEST_DIR = f"{LEGACY_RULE_TEST_DIR}/pattern"
 JUDGE_EVAL_DIR = "rule-evals"
 BINDINGS_DIR = "bindings"
 JUDGE_RULE_DIR = "rules/judge"

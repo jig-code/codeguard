@@ -14,18 +14,32 @@ the same layout in each of its ruleset directories:
 
 ```
 .codeguard/
-  config.yaml                # the project's settings; not in a package's rulesets
-  rules/pattern/<id>.yml     # pattern rules
-  gates/<id>.yml             # pattern rules that gate judge rules
-  rule-tests/<id>-test.yml   # tests for both, with __snapshots__/
-  rules/judge/<id>.md        # judge rules: the rule the judge checks
-  bindings/<id>.yaml         # a rule's paths; a judge rule's triggers and model
-  rule-evals/<id>.yaml       # rule evals: edits and the review each should get
+  config.yaml                   # the project's settings; not in a package's rulesets
+  rules/pattern/<id>.yml        # pattern rules
+  gates/<id>.yml                # pattern rules that gate judge rules
+  pattern-cases/<id>-cases.yml  # cases for both, with __snapshots__/
+  rules/judge/<id>.md           # judge rules: the rule the judge checks
+  bindings/<id>.yaml            # a rule's paths; a judge rule's triggers and model
+  rule-evals/<id>.yaml          # rule evals: edits and the review each should get
 ```
 
-A binding or rule eval may end in `.yaml` or `.yml`. Pattern rule tests in
-`rule-tests/pattern/`, the old layout, still run. codeguard rejects anything else, so a
+A binding or rule eval may end in `.yaml` or `.yml`. codeguard rejects anything else, so a
 rule moves between a project and a package unchanged.
+
+### Move the old layout
+
+Earlier releases kept the cases in `rule-tests/<id>-test.yml`, or in `rule-tests/pattern/`.
+codeguard reads those for one more release, and `codeguard validate` warns and names the
+commands. In `.codeguard/`, or in each ruleset of a package, run:
+
+```sh
+git mv .codeguard/rule-tests .codeguard/pattern-cases   # rule-tests/pattern: move that instead
+for file in .codeguard/pattern-cases/*-test.y*ml; do
+  git mv "$file" "${file%-test.*}-cases.${file##*.}"
+done
+```
+
+The snapshots in `__snapshots__/` move with the directory and keep their names.
 
 ## Why a rule exists
 
