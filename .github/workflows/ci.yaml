@@ -34,7 +34,6 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           export_environment_variables: false
-          export_environment_variables: false
       # $GITHUB_ENV reaches every later step in the job, the action's steps included, for
       # the judge rules bound to Gemini.
       - run: |
