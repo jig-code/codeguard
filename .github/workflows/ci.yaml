@@ -27,17 +27,21 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # The Gemini project id stays out of public logs: GitHub masks it only as a secret,
+      # and the auth action would export it unmasked, read from the key.
       - id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_environment_variables: false
+          export_environment_variables: false
       # $GITHUB_ENV reaches every later step in the job, the action's steps included, for
       # the judge rules bound to Gemini.
       - run: |
           echo "CODEGUARD_JUDGE__GEMINI__PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
         env:
-          PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
       - uses: ./
         with:
@@ -51,12 +55,13 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_environment_variables: false
       - uses: astral-sh/setup-uv@v10.2.0
       # Each worker makes 2 Gemini calls at once, which keeps the run under Vertex's
       # tokens-per-minute limit.
       - run: uv run --frozen pytest -m llm -n 4 --llm-runs 1 -x
         env:
-          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
   # Two more runs of each case, for 3 of 3; every run completes.
   llm-tests-reliability:
@@ -68,8 +73,9 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          export_environment_variables: false
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv run --frozen pytest -m llm -n 4 --llm-runs 2
         env:
-          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
