@@ -3,7 +3,7 @@
 | Command | Who runs it | What it checks | Calls the model |
 |---|---|---|---|
 | `codeguard review` | a project using codeguard: the agent's Stop hook, and the action in CI | the project's changed code against the rules it opts into | for judge rules |
-| `codeguard test` | whoever writes rules, in a rule package or a project's `.codeguard/` | the rules: pattern rules and gates match their test cases, and judge rules' triggers fire on their eval cases | no |
+| `codeguard test` | whoever writes rules, in a rule package or a project's `.codeguard/` | the rules: pattern rules and gates match their test cases, judge rule files are a title, a statement and a why, and judge rules' triggers fire on their eval cases | no |
 | `codeguard eval` | whoever writes rules | judge rules: each eval case gets its expected review | yes |
 
 `review` checks code; `test` and `eval` check the rules themselves.
