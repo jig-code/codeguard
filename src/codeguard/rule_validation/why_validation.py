@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
-from codeguard.review import Bindings
+from codeguard.review import JudgeRule
 from codeguard.rule_validation.validation_result import ValidationResult
 
 
@@ -21,9 +21,10 @@ class WhyValidationMode(StrEnum):
 
 @dataclass(frozen=True)
 class WhyValidation:
-    """Report each rule that doesn't say why it exists: a judge rule's `## Why` section,
+    """Report each rule that doesn't say why it exists: a legacy skill's `## Why` section,
     a pattern rule's `metadata.why`. A rule nobody can trace to a reason can't be
-    reviewed when the code or the design around it changes."""
+    reviewed when the code or the design around it changes. A rule file bound with `rule`
+    is held to this by RuleFormatValidation."""
 
     ruleset: RulesetLoader
     mode: WhyValidationMode = WhyValidationMode.WARN
@@ -34,7 +35,11 @@ class WhyValidation:
         except ConfigError:
             # BroadTriggersValidation already reports an invalid ruleset.
             return ValidationResult()
-        judge_rules = (binding.judge_rule for binding in Bindings.from_rulesets([ruleset]))
+        judge_rules = (
+            JudgeRule(binding.rule_id, ruleset.judge_rule_text(binding))
+            for binding in ruleset.selected_bindings().values()
+            if binding.skill is not None
+        )
         return self.mode.result(
             (
                 *(

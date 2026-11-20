@@ -1,25 +1,26 @@
 # Writing a judge rule
 
-Don't add a case's code to the skill as an example, and don't add a carve-out for it:
+Don't add a case's code to the rule file as an example, and don't add a carve-out for it:
 the judge would then pass the case by matching it, and the next piece of code fails the
 same way. Restate the convention so its statement decides the case.
 
-## Write the skill
+## Write the rule file
 
-The skill is the convention codeguard's judge reviews against, and the text the writing
-agent loads before it edits. It holds, in this order, and nothing else:
+The rule file, `rules/judge/<id>.md`, is the convention codeguard's judge reviews against,
+and the judge gets its text unparsed. It holds, in this order, and nothing else:
 
 1. A title.
-2. The convention: one declarative sentence, stated as `SKILL.md`'s The convention section says. It goes directly under the title, with no heading of its own.
+2. The convention: one declarative sentence, stated as the writing-rules skill's The
+   convention section says. It goes directly under the title, with no heading of its own.
 3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
    prompt, so it helps the judge apply the convention to code the statement doesn't
    name, but it never widens the convention: the statement alone decides each case.
 
-Nothing else goes in the skill, in any section or for any language: each piece of code
-is decided by the statement, or the statement is unclear. A rule in several languages is
-one skill, in no language's names, syntax or libraries. Leave out the fix, and anything
-telling the judge how to answer: the judge's own prompt sets its output and its
-confidence scale.
+Nothing else goes in the rule file, in any section or for any language: each piece of
+code is decided by the statement, or the statement is unclear. A rule in several
+languages is one rule file, in no language's names, syntax or libraries. Leave out the
+fix, and anything telling the judge how to answer: the judge's own prompt sets its output
+and its confidence scale.
 
 ## Gate every form of the violation
 
@@ -56,7 +57,7 @@ argue either way proves nothing about the rule, and a judge that flips on it is 
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
-  Each case is named as `SKILL.md` says.
+  Each case is named as the writing-rules skill says.
 - Two cases that break or keep the convention on the same ground are one case, however
   their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
   differ when their code keeps the convention in different situations, not merely by
@@ -71,4 +72,4 @@ argue either way proves nothing about the rule, and a judge that flips on it is 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
 that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss; never add the code to the skill.
+miss; never add the code to the rule file.

@@ -29,8 +29,9 @@ rule moves between a project and a package unchanged.
 
 ## Why a rule exists
 
-Every rule says why it exists. `codeguard test` reports each rule without a why
-([`--missing-why`](cli.md#test)).
+Every rule says why it exists. `codeguard test` fails a judge rule file without a
+`## Why` ([A judge rule's binding](rule-formats.md#a-judge-rules-binding)) and reports a
+pattern rule without a why ([`--missing-why`](cli.md#test)).
 
 ## The judge's model
 
