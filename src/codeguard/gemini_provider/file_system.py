@@ -22,9 +22,7 @@ from pydantic_ai_harness.filesystem import (
 )
 
 _FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, LIST_FILES_KIND)
-# A search or listing records every file it shows as one the verdict depends on, so a
-# larger cap would make a verdict go stale on more files' changes, and cost more tokens.
-_MAX_RESULTS = 200
+_MAX_SEARCH_AND_LIST_RESULTS = 200
 _SEARCH_MATCH = re.compile(r"(?P<file>[^\[].*?):\d+:")
 _NO_FILES = "No files found."
 PATH_WITH_RIPGREP = os.pathsep.join((sysconfig.get_path("scripts"), os.environ.get("PATH", "")))
@@ -36,8 +34,8 @@ def file_system_tools(root: Path) -> FileSystem[object]:
         read_only=True,
         content_hashes=False,
         tools=[kind.name for kind in _FILE_TOOL_KINDS],
-        max_search_results=_MAX_RESULTS,
-        max_find_results=_MAX_RESULTS,
+        max_search_results=_MAX_SEARCH_AND_LIST_RESULTS,
+        max_find_results=_MAX_SEARCH_AND_LIST_RESULTS,
     )
 
 
