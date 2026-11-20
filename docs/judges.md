@@ -23,6 +23,23 @@ Which judge runs is configuration, never code that knows where it runs, so that 
 two config values swap the judge for the whole system and switching models takes
 minimal effort.
 
+## What differs by provider
+
+Every judge gets the same instructions, prompt and verdict schema, and thinks at the same
+level, `medium`, which each judge passes to its provider in that provider's own setting:
+`--effort` for the `claude` CLI, `model_reasoning_effort` for the `codex` CLI, and
+pydantic-ai's `thinking` setting for `gemini` and `bedrock`, which maps it to the model's
+own thinking or reasoning setting. The level keys cached verdicts, so changing it judges
+afresh. `gemini` and `bedrock` ask for the verdict the same way, as a tool call, and give
+each request to the model 120 seconds, its retries included.
+
+What does differ is only what a provider requires: how codeguard reaches the model (a
+CLI it runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and
+how codeguard reads each CLI's output. Every judge records the same telemetry keys where
+its provider reports the data: `input_tokens`, `output_tokens`, `cache_read_input_tokens`,
+`thinking_tokens` and `tool_calls`, plus `num_turns` from all but the `codex` CLI, which
+doesn't report it.
+
 ## Choose a provider
 
 - `claude-cli`, the default, runs Claude through the `claude` CLI on the developer's own
@@ -79,11 +96,12 @@ provider: gemini
 model: gemini-4-argon
 ```
 
-`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini calls run at once:
+`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini or Bedrock calls
+run at once:
 
 ```yaml
 judge:
-  calls_at_once: 2                # Gemini only; default: 2
+  calls_at_once: 2                # Gemini and Bedrock; default: 2
 ```
 
 Use the model in the example: codeguard supports only the Gemini model it is tested with.

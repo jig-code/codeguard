@@ -21,7 +21,7 @@ in use.
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rule package keys](#rule-package-keys). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
 | `judge.provider`, `judge.model` | `claude-cli` and the `claude` CLI's own default model | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
-| `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
+| `judge.calls_at_once` | `2` | How many Gemini or Bedrock judge calls run at once; the CLI providers aren't limited by it. | Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
 
 ## Rule package keys
 

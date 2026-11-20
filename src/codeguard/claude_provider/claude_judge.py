@@ -12,10 +12,12 @@ from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
 from codeguard.review import (
     DEFAULT_MODEL_KEY,
+    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeRequest,
+    Thinking,
     Verdict,
     output_schema,
 )
@@ -33,10 +35,13 @@ class ClaudeJudge:
     executable: str = _EXECUTABLE
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     deadline: Deadline | None = None
+    thinking: Thinking = JUDGE_THINKING
 
     @property
     def identity(self) -> str:
-        return "\0".join((_EXECUTABLE, self.model or DEFAULT_MODEL_KEY))
+        return "\0".join(
+            (_EXECUTABLE, self.model or DEFAULT_MODEL_KEY, f"thinking={self.thinking}")
+        )
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
@@ -78,6 +83,8 @@ class ClaudeJudge:
                 "--safe-mode",
                 "-p",
                 *(("--model", self.model) if self.model else ()),
+                "--effort",
+                self.thinking,
                 "--output-format",
                 "stream-json",
                 "--verbose",

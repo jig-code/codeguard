@@ -145,8 +145,6 @@ class JudgeConfig(BaseModel):
     def concurrency(self, provider: JudgeProvider, cpus: int | None) -> int:
         """How many calls a provider makes at once, given the machine's CPU count, which
         may be unknown."""
-        if provider is JudgeProvider.GEMINI and self.calls_at_once is not None:
-            return self.calls_at_once
-        if not provider.runs_a_cli:
-            return _API_CALLS_AT_ONCE
-        return cpus or 1
+        if provider.runs_a_cli:
+            return cpus or 1
+        return self.calls_at_once or _API_CALLS_AT_ONCE

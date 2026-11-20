@@ -7,11 +7,9 @@ from pathlib import Path
 
 import httpx2
 import logfire
-from google.genai.types import ThinkingLevel
 from pydantic import BaseModel, JsonValue, ValidationError
 from pydantic_ai import (
     Agent,
-    NativeOutput,
     RunContext,
     ToolOutput,
     UsageLimits,
@@ -20,12 +18,12 @@ from pydantic_ai import (
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
+    ModelRequestTimeout,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
-from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
@@ -38,12 +36,14 @@ from codeguard.api_provider.file_system import (
     loaded_files,
 )
 from codeguard.review import (
+    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
     JudgeRequest,
     JudgeTimeout,
+    Thinking,
     Verdict,
 )
 
@@ -63,14 +63,15 @@ class ApiJudge:
     model: str
     models: ApiModels
     processes: AbstractContextManager[object]
+    provider: str
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
     request_limit_seconds: float = _REQUEST_LIMIT_SECONDS
-    provider: str = "gemini"
+    thinking: Thinking = JUDGE_THINKING
 
     @property
     def identity(self) -> str:
-        return "\0".join((self.provider, self.model))
+        return "\0".join((self.provider, self.model, f"thinking={self.thinking}"))
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (
@@ -103,8 +104,8 @@ class ApiJudge:
         agent = Agent[object, Output](
             deps_type=object,
             instructions=instructions,
-            # Bedrock's Converse API has no structured output, so Claude there calls a tool.
-            output_type=ToolOutput(output) if self.provider == "bedrock" else NativeOutput(output),
+            # Every provider can return the verdict as a tool call, and Bedrock only that way.
+            output_type=ToolOutput(output),
             capabilities=[file_system_tools(self.root)],
             model_settings=self._settings,
         )
@@ -139,19 +140,15 @@ class ApiJudge:
             ) from error
         return result.output
 
-    def _settings(self, _: RunContext[object]) -> GoogleModelSettings:
+    # pydantic-ai maps both settings to every provider. Its request timeout covers the whole
+    # request, the times `_Retrying` sends it again included.
+    def _settings(self, _: RunContext[object]) -> ModelSettings:
         limit = self.request_limit_seconds
         if self.deadline is not None:
             limit = min(limit, self.deadline.remaining_seconds())
             if limit <= 0:
                 raise self.deadline.reached()
-        return {
-            "timeout": limit,
-            "google_thinking_config": {
-                "thinking_level": ThinkingLevel.LOW,
-                "include_thoughts": True,
-            },
-        }
+        return {"request_timeout": limit, "thinking": self.thinking}
 
     def _timed_out(self) -> JudgeTimeout:
         if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
@@ -200,7 +197,9 @@ def _transport_error(error: ModelAPIError) -> bool:
 
 
 def _timed_out(error: ModelAPIError) -> bool:
-    return isinstance(error.__cause__, httpx2.TimeoutException)
+    return isinstance(error, ModelRequestTimeout) or isinstance(
+        error.__cause__, httpx2.TimeoutException
+    )
 
 
 def _message(error: ModelHTTPError) -> str:
@@ -226,5 +225,6 @@ def _telemetry(usage: RunUsage) -> dict[str, object]:
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cache_read_input_tokens": usage.cache_read_tokens,
-        "thinking_tokens": usage.details.get("thoughts_tokens", 0),
+        # Gemini reports its thinking tokens only among its own usage details.
+        "thinking_tokens": usage.output_reasoning_tokens or usage.details.get("thoughts_tokens", 0),
     }

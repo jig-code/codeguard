@@ -51,14 +51,16 @@ class Judges:
             models = VertexGemini(
                 gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
             )
-            return ApiJudge(root, model.required_name, models, processes, deadline=deadline)
+            return ApiJudge(
+                root, model.required_name, models, processes, model.provider, deadline=deadline
+            )
         if model.provider is JudgeProvider.BEDROCK:
             return ApiJudge(
                 root,
                 model.required_name,
                 BedrockClaude(),
                 processes,
+                model.provider,
                 deadline=deadline,
-                provider=model.provider,
             )
         return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)

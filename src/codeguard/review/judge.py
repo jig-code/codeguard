@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import ReprEnum
 from pathlib import Path
-from typing import ClassVar, Protocol, Self
+from typing import ClassVar, Literal, Protocol, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.json_schema import JsonSchemaValue
@@ -16,6 +16,12 @@ from codeguard.review.judge_rule import JudgeRule
 from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
+
+# How hard a model thinks before it answers, in the levels every provider offers.
+type Thinking = Literal["low", "medium", "high"]
+# The level every judge thinks at, whatever its provider: each judge passes it to its provider
+# in that provider's own setting.
+JUDGE_THINKING: Thinking = "medium"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
 
 

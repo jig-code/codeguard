@@ -1,9 +1,11 @@
+import json
 import subprocess
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
+import anyio
 import httpx2
 import pytest
 from google.genai.types import GenerateContentConfig
@@ -13,17 +15,19 @@ from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
-    TextPart,
     ToolCallPart,
+    ToolReturnPart,
     UserPromptPart,
 )
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
 from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
 from codeguard.review import (
+    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -42,16 +46,8 @@ VIOLATION = {
 
 
 def verdict(*violations: dict[str, object], input_tokens: int = 10) -> ModelResponse:
-    return ModelResponse(
-        parts=[
-            TextPart(
-                Verdict.model_validate(
-                    {"reason": "Judged.", "violations": violations}
-                ).model_dump_json()
-            )
-        ],
-        usage=_usage(input_tokens),
-    )
+    answer = Verdict.model_validate({"reason": "Judged.", "violations": violations})
+    return calls(("final_result", answer.model_dump(mode="json")), input_tokens=input_tokens)
 
 
 def calls(*tools: tuple[str, dict[str, object]], input_tokens: int = 10) -> ModelResponse:
@@ -99,7 +95,7 @@ class ScriptedGemini:
     @asynccontextmanager
     async def __call__(self, model: str) -> AsyncIterator[Model]:
         self.connected.append(model)
-        yield FunctionModel(self._answer)
+        yield FunctionModel(self._answer, profile=ModelProfile(supports_thinking=True))
 
     def _answer(self, messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         self.requests.append((list(messages), info))
@@ -135,13 +131,13 @@ class VertexVerdicts:
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.sent.append(request)
-        answer = self.verdict.model_dump_json()
+        answer = {"name": "final_result", "args": self.verdict.model_dump(mode="json")}
         return httpx2.Response(
             200,
             json={
                 "candidates": [
                     {
-                        "content": {"role": "model", "parts": [{"text": answer}]},
+                        "content": {"role": "model", "parts": [{"functionCall": answer}]},
                         "finishReason": "STOP",
                     }
                 ],
@@ -167,8 +163,8 @@ def waits(monkeypatch) -> list[float]:
     return waited
 
 
-def judge_with(tmp_path, models, **kwargs) -> ApiJudge:
-    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), **kwargs)
+def judge_with(tmp_path, models, provider: str = "gemini", **kwargs) -> ApiJudge:
+    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), provider, **kwargs)
 
 
 class TestApiJudge:
@@ -181,31 +177,24 @@ class TestApiJudge:
             Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
         )
 
-    def test_asks_for_the_verdict_as_native_structured_output(self, tmp_path, make_judge_request):
+    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
+    def test_asks_every_provider_for_the_verdict_as_a_tool_call(
+        self, tmp_path, make_judge_request, provider
+    ):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models).judge(make_judge_request())
+        judge_with(tmp_path, models, provider=provider).judge(make_judge_request())
 
         parameters = models.info().model_request_parameters
-        assert parameters.output_mode == "native"
-        assert parameters.output_object
-        assert parameters.output_object.name == "Verdict"
-        assert parameters.output_object.description == Verdict.__doc__
-        assert parameters.output_tools == []
+        assert parameters.output_mode == "tool"
+        assert parameters.output_object is None
+        [output_tool] = parameters.output_tools
+        assert output_tool.description == Verdict.__doc__
 
-    def test_gemini_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
+    def test_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
 
         judge_with(tmp_path, models).judge(make_judge_request())
-
-        output_object = models.info().model_request_parameters.output_object
-        assert output_object
-        assert_describes_the_confidence_scale(output_object.json_schema)
-
-    def test_bedrock_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("final_result", {"reason": "Judged.", "violations": []}))])
-
-        judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
         [output_tool] = models.info().output_tools
         assert_describes_the_confidence_scale(output_tool.parameters_json_schema)
@@ -233,16 +222,22 @@ class TestApiJudge:
             request.prompt
         ]
 
-    def test_thinks_at_a_low_level(self, tmp_path, make_judge_request):
+    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
+    def test_every_provider_thinks_at_the_judge_thinking_level(
+        self, tmp_path, make_judge_request, provider
+    ):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models).judge(make_judge_request())
+        judge_with(tmp_path, models, provider=provider).judge(make_judge_request())
 
-        settings = models.info().model_settings or {}
-        assert settings.get("google_thinking_config") == {
-            "thinking_level": "LOW",
-            "include_thoughts": True,
-        }
+        assert models.info().model_request_parameters.thinking == JUDGE_THINKING
+
+    def test_thinks_at_the_level_it_is_given(self, tmp_path, make_judge_request):
+        models = ScriptedGemini([verdict()])
+
+        judge_with(tmp_path, models, thinking="high").judge(make_judge_request())
+
+        assert models.info().model_request_parameters.thinking == "high"
 
     def test_loaded_files_are_the_files_gemini_read_searched_and_listed_in_call_order(
         self, tmp_path, make_judge_request
@@ -312,26 +307,22 @@ class TestApiJudge:
         assert judgement.loaded_files == ()
 
     def test_invalid_verdict_is_sent_back_to_correct(self, tmp_path, make_judge_request):
-        invalid = ModelResponse(parts=[TextPart('{"violations": [{"file": "a.py"}]}')])
+        invalid = calls(("final_result", {"violations": [{"file": "a.py"}]}))
         models = ScriptedGemini([invalid, verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         (feedback,) = models.sent(1)
-        assert isinstance(feedback, UserPromptPart)
-        assert (
-            "<validation_errors>\n"
-            '[{"type":"missing","loc":["reason"],"msg":"Field required",'
-            '"input":{"violations":[{"file":"a.py"}]}},'
-            '{"type":"missing","loc":["violations",0,"lines"],"msg":"Field required",'
-            '"input":{"file":"a.py"}},'
-            '{"type":"missing","loc":["violations",0,"message"],"msg":"Field required",'
-            '"input":{"file":"a.py"}},'
-            '{"type":"missing","loc":["violations",0,"confidence"],"msg":"Field required",'
-            '"input":{"file":"a.py"}}]\n'
-            "</validation_errors>"
-        ) in feedback.content
+        assert isinstance(feedback, ToolReturnPart)
+        assert feedback.outcome == "retried"
+        assert isinstance(feedback.content, list)
+        assert [(error["loc"], error["msg"]) for error in feedback.content] == [
+            (["reason"], "Field required"),
+            (["violations", 0, "lines"], "Field required"),
+            (["violations", 0, "message"], "Field required"),
+            (["violations", 0, "confidence"], "Field required"),
+        ]
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
@@ -409,6 +400,20 @@ class TestApiJudge:
             judge_with(tmp_path, models).judge(make_judge_request())
         assert waits == []
 
+    def test_request_running_past_the_request_limit_is_the_request_limit_error(
+        self, tmp_path, make_judge_request
+    ):
+        @asynccontextmanager
+        async def slow(model: str) -> AsyncIterator[Model]:
+            async def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+                await anyio.sleep(10)
+                return verdict()
+
+            yield FunctionModel(answer)
+
+        with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.1s to answer.$"):
+            judge_with(tmp_path, slow, request_limit_seconds=0.1).judge(make_judge_request())
+
     def test_timeout_at_the_deadline_is_the_time_limit_error(self, tmp_path, make_judge_request):
         @asynccontextmanager
         async def slow(model: str) -> AsyncIterator[Model]:
@@ -438,7 +443,7 @@ class TestApiJudge:
 
         judge_with(tmp_path, models, request_limit_seconds=90).judge(make_judge_request())
 
-        assert (models.info().model_settings or {}).get("timeout") == 90
+        assert (models.info().model_settings or {}).get("request_timeout") == 90
 
     def test_request_times_out_at_the_deadline(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
@@ -446,20 +451,22 @@ class TestApiJudge:
 
         judge_with(tmp_path, models, deadline=deadline).judge(make_judge_request())
 
-        timeout = (models.info().model_settings or {}).get("timeout")
+        timeout = (models.info().model_settings or {}).get("request_timeout")
         assert isinstance(timeout, float) and 29 < timeout <= 30
 
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
 
-        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes).judge(
+        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini").judge(
             make_judge_request()
         )
 
         assert processes.events == ["acquired", "released"]
 
-    def test_identity_names_the_provider_and_model(self, tmp_path):
-        assert judge_with(tmp_path, ScriptedGemini([])).identity == f"gemini\0{MODEL}"
+    def test_identity_names_the_provider_model_and_thinking_level(self, tmp_path):
+        assert judge_with(tmp_path, ScriptedGemini([])).identity == (
+            f"gemini\0{MODEL}\0thinking={JUDGE_THINKING}"
+        )
 
     def test_call_records_its_usage_across_requests(
         self, tmp_path, make_judge_rule, capfire, make_judge_request
@@ -508,17 +515,10 @@ class TestApiJudge:
             '{"tool":"read_file","path":"../outside.py","offset":3}]'
         )
 
-    def test_call_does_not_record_the_verdict_tool_bedrock_calls(
-        self, tmp_path, capfire, make_judge_request
-    ):
-        models = ScriptedGemini(
-            [
-                calls(("list_files", {"glob": "*.py"})),
-                calls(("final_result", {"reason": "Judged.", "violations": []})),
-            ]
-        )
+    def test_call_does_not_record_the_verdict_tool(self, tmp_path, capfire, make_judge_request):
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})), verdict()])
 
-        judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
+        judge_with(tmp_path, models).judge(make_judge_request())
 
         [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == '[{"tool":"list_files","glob":"*.py"}]'
@@ -557,3 +557,29 @@ class TestApiJudgeOnVertex:
         assert "/projects/my-project/locations/europe-west4/" in request.url.path
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
+
+    def test_vertex_is_asked_for_the_verdict_tool_at_the_judge_thinking_level(
+        self, tmp_path, make_judge_request, make_verdict
+    ):
+        vertex = VertexVerdicts(make_verdict())
+        models = VertexGemini(
+            "my-project",
+            "global",
+            api_key=SecretStr("proxy-injected"),
+            transport=httpx2.MockTransport(vertex),
+        )
+
+        judge_with(tmp_path, models).judge(make_judge_request())
+
+        [request] = vertex.sent
+        body = json.loads(request.content)
+        assert body["generationConfig"]["thinkingConfig"] == {
+            "include_thoughts": True,
+            "thinking_level": JUDGE_THINKING.upper(),
+        }
+        declared = [
+            declaration["name"]
+            for tool in body["tools"]
+            for declaration in tool.get("functionDeclarations", [])
+        ]
+        assert "final_result" in declared
