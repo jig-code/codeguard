@@ -366,9 +366,7 @@ class TestVerdict:
         )
 
 
-# The keywords Claude Code's `--json-schema` allows in a schema it enforces strictly, and the
-# ones it allows beside an `anyOf`. Any other keyword makes it fall back to non-strict.
-CLAUDE_CODE_STRICT_KEYWORDS = frozenset(
+KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY = frozenset(
     {
         "$schema",
         "type",
@@ -383,7 +381,9 @@ CLAUDE_CODE_STRICT_KEYWORDS = frozenset(
         "anyOf",
     }
 )
-BESIDE_ANY_OF = frozenset({"anyOf", "$schema", "description", "title"})
+KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY_BESIDE_ANY_OF = frozenset(
+    {"anyOf", "$schema", "description", "title"}
+)
 
 
 def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
@@ -402,13 +402,13 @@ class TestOutputSchema:
         schema = output_schema(Verdict)
 
         used = {keyword for subschema in subschemas(schema) for keyword in subschema}
-        assert used - CLAUDE_CODE_STRICT_KEYWORDS == set()
+        assert used - KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY == set()
 
     def test_verdict_schema_has_nothing_but_a_description_beside_an_any_of(self):
         schema = output_schema(Verdict)
 
         beside = [
-            set(subschema) - BESIDE_ANY_OF
+            set(subschema) - KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY_BESIDE_ANY_OF
             for subschema in subschemas(schema)
             if "anyOf" in subschema
         ]
