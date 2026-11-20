@@ -16,8 +16,9 @@ from codeguard.review.judge import (
     output_schema,
 )
 
-# The schema the providers send, so a change to what the model is told, a `Confidence`
-# description included, judges every cached verdict again.
+# The schema the CLI judges send, which holds the same descriptions the API judge's does, so a
+# change to what the model is told, the confidence scale included, judges every cached verdict
+# again.
 _CACHE_VERSION = "\0".join((INSTRUCTIONS, json.dumps(output_schema(Verdict))))
 
 

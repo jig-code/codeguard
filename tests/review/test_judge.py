@@ -1,7 +1,8 @@
 import textwrap
+from collections.abc import Iterator
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from codeguard.config import ChangeKind
 from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
@@ -259,16 +260,14 @@ class TestViolation:
             make_violation(confidence=confidence)
 
     def test_schema_allows_only_the_scale(self):
-        schema = output_schema(Violation)
+        confidence = output_schema(Violation)["properties"]["confidence"]
 
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
+        assert confidence["enum"] == [1.0, 0.9, 0.7, 0.5]
 
     def test_schema_describes_each_value_of_the_scale(self):
-        schema = output_schema(Violation)
+        description = output_schema(Violation)["properties"]["confidence"]["description"]
 
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        described = [option["const"] for option in options if option.get("description")]
+        described = [member.value for member in Confidence if f" {member.value}: " in description]
         assert described == [member.value for member in Confidence]
 
     def test_note_is_invalid(self):
@@ -365,3 +364,74 @@ class TestVerdict:
         assert diagnostics == (
             make_diagnostic(judged=True, severity=Severity.INFO, confidence=0.5),
         )
+
+
+# The keywords Claude Code's `--json-schema` allows in a schema it enforces strictly, and the
+# ones it allows beside an `anyOf`. Any other keyword makes it fall back to non-strict.
+CLAUDE_CODE_STRICT_KEYWORDS = frozenset(
+    {
+        "$schema",
+        "type",
+        "description",
+        "title",
+        "properties",
+        "required",
+        "additionalProperties",
+        "items",
+        "enum",
+        "const",
+        "anyOf",
+    }
+)
+BESIDE_ANY_OF = frozenset({"anyOf", "$schema", "description", "title"})
+
+
+def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
+    yield schema
+    children = [
+        *(schema.get("properties") or {}).values(),
+        *([schema["items"]] if "items" in schema else []),
+        *(schema.get("anyOf") or []),
+    ]
+    for child in children:
+        yield from subschemas(child)
+
+
+class TestOutputSchema:
+    def test_verdict_schema_uses_only_claude_codes_strict_keywords(self):
+        schema = output_schema(Verdict)
+
+        used = {keyword for subschema in subschemas(schema) for keyword in subschema}
+        assert used - CLAUDE_CODE_STRICT_KEYWORDS == set()
+
+    def test_verdict_schema_has_nothing_but_a_description_beside_an_any_of(self):
+        schema = output_schema(Verdict)
+
+        beside = [
+            set(subschema) - BESIDE_ANY_OF
+            for subschema in subschemas(schema)
+            if "anyOf" in subschema
+        ]
+        assert [keywords for keywords in beside if keywords] == []
+
+    def test_reference_is_inlined_with_its_own_description(self):
+        schema = output_schema(Verdict)
+
+        violation = schema["properties"]["violations"]["items"]
+        assert violation["properties"]["lines"] == {
+            "additionalProperties": False,
+            "description": (
+                "The first and last line of the code that breaks the rule, numbered as the "
+                "`changes` element numbers them."
+            ),
+            "properties": {
+                "start": {"description": "The first line.", "type": "integer"},
+                "end": {
+                    "description": "The last line: the same as `start` for one line.",
+                    "type": "integer",
+                },
+            },
+            "required": ["start", "end"],
+            "title": "LineRange",
+            "type": "object",
+        }

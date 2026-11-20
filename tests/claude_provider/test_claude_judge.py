@@ -25,6 +25,7 @@ from codeguard.review import (
     JudgeProcessError,
     JudgeTimeout,
     Verdict,
+    output_schema,
 )
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
@@ -414,7 +415,7 @@ class TestClaudeJudge:
 
         assert "--effort" not in json.loads(arguments.read_text())["arguments"]
 
-    def test_claude_is_given_the_described_confidence_scale(
+    def test_claude_is_given_the_verdict_output_schema(
         self, tmp_path, processes, arguments, make_judge_request
     ):
         configure_fake_cli_response(
@@ -429,12 +430,7 @@ class TestClaudeJudge:
         judge.judge(make_judge_request())
 
         argv = json.loads(arguments.read_text())["arguments"]
-        schema = json.loads(argv[argv.index("--json-schema") + 1])
-        confidence = schema["$defs"]["Violation"]["properties"]["confidence"]
-        assert confidence["$ref"] == "#/$defs/Confidence"
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
-        assert all(option["description"] for option in options)
+        assert json.loads(argv[argv.index("--json-schema") + 1]) == output_schema(Verdict)
 
     def test_claude_has_only_read_only_tools(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request

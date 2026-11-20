@@ -26,8 +26,8 @@ minimal effort.
 ## What differs by provider
 
 Every judge gets the same instructions, prompt and verdict schema. `gemini` and `bedrock`
-ask for the verdict the same way, as a tool call, and give each request to the model 120
-seconds, its retries included.
+ask for the verdict in the output mode pydantic-ai picks for the model, and give each
+request to the model 120 seconds, its retries included.
 
 What differs is only what a provider requires: how codeguard reaches the model (a CLI it
 runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and how

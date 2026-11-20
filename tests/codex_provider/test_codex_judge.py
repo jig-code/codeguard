@@ -15,6 +15,7 @@ from codeguard.review import (
     JudgeProcessError,
     JudgeTimeout,
     Verdict,
+    output_schema,
 )
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
@@ -89,7 +90,7 @@ class TestCodexJudge:
         received = json.loads(record.read_text())
         assert received["prompt"] == request.prompt
         assert received["instructions"] == request.instructions
-        assert received["schema"]["additionalProperties"] is False
+        assert received["schema"] == output_schema(Verdict)
 
     def test_uses_ephemeral_read_only_native_tools(
         self, tmp_path, processes, fake_codex_executable, record, make_judge_request
