@@ -19,6 +19,7 @@ dependencies = [
     "pydantic-settings>=2.12",
     "pygit2>=1.21.0",
     "pyyaml>=6.0.3",
+    "ripgrep~=14.1.0",
 ]
 
 [project.scripts]

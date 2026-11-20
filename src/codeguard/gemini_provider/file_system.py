@@ -1,5 +1,6 @@
+import os
 import re
-import shutil
+import sysconfig
 from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 
@@ -10,7 +11,6 @@ from pydantic_ai.messages import (
     ToolCallPart,
     ToolReturnPart,
 )
-from pydantic_ai.workspaces import LocalWorkspaceBackend
 from pydantic_ai_harness.filesystem import (
     FIND_FILES_KIND,
     READ_FILE_KIND,
@@ -21,15 +21,13 @@ from pydantic_ai_harness.filesystem import (
     SearchFilesCallPart,
 )
 
-from codeguard.config import ConfigError, JudgeProvider
-
 _FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, FIND_FILES_KIND)
-_MAX_READ_LINES = 2000
 # A search or listing records every file it shows as one the verdict depends on, so a
 # larger cap would make a verdict go stale on more files' changes, and cost more tokens.
 _MAX_RESULTS = 200
 _SEARCH_MATCH = re.compile(r"(?P<file>[^\[].*?):\d+:")
 _NO_MATCHES = "No matches found."
+PATH_WITH_RIPGREP = os.pathsep.join((sysconfig.get_path("scripts"), os.environ.get("PATH", "")))
 
 
 def file_system_tools(root: Path) -> FileSystem[object]:
@@ -38,25 +36,9 @@ def file_system_tools(root: Path) -> FileSystem[object]:
         read_only=True,
         content_hashes=False,
         tools=[kind.name for kind in _FILE_TOOL_KINDS],
-        max_read_lines=_MAX_READ_LINES,
         max_search_results=_MAX_RESULTS,
         max_find_results=_MAX_RESULTS,
     )
-
-
-def working_directory(root: Path) -> LocalWorkspaceBackend:
-    """The model gets only read tools; the harness runs `rg` here so a search skips the
-    files git ignores."""
-    return LocalWorkspaceBackend(root)
-
-
-def require_ripgrep(provider: JudgeProvider) -> None:
-    """Without `rg` the harness searches with `grep -E`, which rejects regexes `rg` takes,
-    so a search would differ by machine."""
-    if shutil.which("rg") is None:
-        raise ConfigError(
-            f"The {provider} judge searches files with ripgrep: install it and put rg on PATH"
-        )
 
 
 def file_tool_calls(messages: Sequence[ModelMessage]) -> Iterator[ToolCallPart]:
@@ -92,7 +74,7 @@ def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
 
 
 def _files_shown(call: ToolCallPart, answer: ToolReturnPart) -> Iterable[str]:
-    lines = answer.model_response_str().splitlines()
+    lines = answer.model_response_str().split("\n")
     match call:
         case ReadFileCallPart(typed_args={"path": path}):
             return (path,)

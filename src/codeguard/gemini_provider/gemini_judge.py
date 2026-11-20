@@ -29,12 +29,13 @@ from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
+from pydantic_ai.workspaces import LocalWorkspaceBackend
 
 from codeguard.gemini_provider.file_system import (
+    PATH_WITH_RIPGREP,
     file_system_tools,
     file_tool_calls,
     loaded_files,
-    working_directory,
 )
 from codeguard.review import (
     Deadline,
@@ -111,7 +112,7 @@ class GeminiJudge:
                 result = await agent.run(
                     prompt,
                     model=_Retrying(model, self.deadline),
-                    workspace=working_directory(self.root),
+                    workspace=LocalWorkspaceBackend(self.root, env={"PATH": PATH_WITH_RIPGREP}),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
                 )

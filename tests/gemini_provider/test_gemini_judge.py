@@ -276,6 +276,16 @@ class TestGeminiJudge:
 
         assert judgement.loaded_files == ("a.py", "logger.py")
 
+    def test_matched_line_holding_a_form_feed_names_only_its_own_file(
+        self, tmp_path, make_judge_request
+    ):
+        (tmp_path / "audit.py").write_text("info = 'a\x0corders.py:1:'\n")
+        models = ScriptedGemini([calls(("search_files", {"pattern": "info ="})), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement.loaded_files == ("audit.py",)
+
     def test_files_git_ignores_are_not_searched(self, tmp_path, make_judge_request):
         subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
         (tmp_path / ".gitignore").write_text("node_modules/\n")
