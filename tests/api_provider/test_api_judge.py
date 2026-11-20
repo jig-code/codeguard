@@ -22,7 +22,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
+from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -163,15 +163,15 @@ def waits(monkeypatch) -> list[float]:
     async def wait(seconds: float) -> None:
         waited.append(seconds)
 
-    monkeypatch.setattr(gemini_judge.asyncio, "sleep", wait)
+    monkeypatch.setattr(api_judge.asyncio, "sleep", wait)
     return waited
 
 
-def judge_with(tmp_path, models, **kwargs) -> GeminiJudge:
-    return GeminiJudge(tmp_path, MODEL, models, RecordingProcesses(), **kwargs)
+def judge_with(tmp_path, models, **kwargs) -> ApiJudge:
+    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), **kwargs)
 
 
-class TestGeminiJudge:
+class TestApiJudge:
     def test_verdict_is_the_structured_output(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict(VIOLATION)])
 
@@ -452,7 +452,7 @@ class TestGeminiJudge:
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
 
-        GeminiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes).judge(
+        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes).judge(
             make_judge_request()
         )
 
@@ -536,7 +536,7 @@ class TestGeminiJudge:
         )
 
 
-class TestGeminiJudgeOnVertex:
+class TestApiJudgeOnVertex:
     def test_api_key_judges_in_the_project_and_location(
         self, tmp_path, make_judge_request, make_verdict
     ):

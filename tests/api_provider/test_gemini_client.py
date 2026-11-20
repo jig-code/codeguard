@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from codeguard.gemini_provider import VertexGemini
+from codeguard.api_provider import VertexGemini
 from codeguard.review import JudgeProcessError
 
 

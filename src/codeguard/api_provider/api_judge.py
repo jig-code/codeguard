@@ -31,7 +31,7 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
 from pydantic_ai.workspaces import LocalWorkspaceBackend
 
-from codeguard.gemini_provider.file_system import (
+from codeguard.api_provider.file_system import (
     PATH_WITH_RIPGREP,
     file_system_tools,
     file_tool_calls,
@@ -53,15 +53,15 @@ _MAX_ATTEMPTS = 5
 # Responses the request can succeed on when sent again.
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
-# Connects to Gemini and gives the model named, for the length of one judgement.
-type GeminiModels = Callable[[str], AbstractAsyncContextManager[Model]]
+# Connects to the provider and gives the model named, for the length of one judgement.
+type ApiModels = Callable[[str], AbstractAsyncContextManager[Model]]
 
 
 @dataclass(frozen=True)
-class GeminiJudge:
+class ApiJudge:
     root: Path
     model: str
-    models: GeminiModels
+    models: ApiModels
     processes: AbstractContextManager[object]
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
@@ -158,7 +158,7 @@ class GeminiJudge:
         return JudgeTimeout(f"{self.model} took over {self.request_limit_seconds:g}s to answer.")
 
 
-# Sends a request again when Gemini turned it away or the connection broke, while the backoff
+# Sends a request again when the provider turned it away or the connection broke, while the backoff
 # fits before the deadline. The SDK's own retries miss a connection that broke after the
 # response started.
 class _Retrying(WrapperModel):

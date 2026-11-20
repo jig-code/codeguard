@@ -6,10 +6,10 @@ from threading import Semaphore
 
 from diskcache import Cache
 
+from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
 from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
@@ -51,9 +51,9 @@ class Judges:
             models = VertexGemini(
                 gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
             )
-            return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
+            return ApiJudge(root, model.required_name, models, processes, deadline=deadline)
         if model.provider is JudgeProvider.BEDROCK:
-            return GeminiJudge(
+            return ApiJudge(
                 root,
                 model.required_name,
                 BedrockClaude(),
