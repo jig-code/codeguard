@@ -1,6 +1,6 @@
 import re
 import shutil
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 
 from pydantic_ai.messages import (
@@ -12,6 +12,9 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.workspaces import LocalWorkspaceBackend
 from pydantic_ai_harness.filesystem import (
+    FIND_FILES_KIND,
+    READ_FILE_KIND,
+    SEARCH_FILES_KIND,
     FileSystem,
     FindFilesCallPart,
     ReadFileCallPart,
@@ -20,7 +23,7 @@ from pydantic_ai_harness.filesystem import (
 
 from codeguard.config import ConfigError, JudgeProvider
 
-FILE_TOOLS = ("read_file", "search_files", "find_files")
+_FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, FIND_FILES_KIND)
 _MAX_READ_LINES = 2000
 # A search or listing records every file it shows as one the verdict depends on, so a
 # larger cap would make a verdict go stale on more files' changes, and cost more tokens.
@@ -34,7 +37,7 @@ def file_system_tools(root: Path) -> FileSystem[object]:
         root_dir=root,
         read_only=True,
         content_hashes=False,
-        tools=FILE_TOOLS,
+        tools=[kind.name for kind in _FILE_TOOL_KINDS],
         max_read_lines=_MAX_READ_LINES,
         max_search_results=_MAX_RESULTS,
         max_find_results=_MAX_RESULTS,
@@ -56,6 +59,18 @@ def require_ripgrep(provider: JudgeProvider) -> None:
         )
 
 
+def file_tool_calls(messages: Sequence[ModelMessage]) -> Iterator[ToolCallPart]:
+    """The file tools' calls, in the order the model made them."""
+    kinds = {kind.id for kind in _FILE_TOOL_KINDS}
+    return (
+        call
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for call in message.tool_calls
+        if call.tool_kind in kinds
+    )
+
+
 def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
     """The files the model read, and the files a search or listing showed it, each once.
     A call the tool sent back to retry loaded nothing."""
@@ -69,9 +84,7 @@ def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
     return tuple(
         dict.fromkeys(
             file
-            for message in messages
-            if isinstance(message, ModelResponse)
-            for call in message.tool_calls
+            for call in file_tool_calls(messages)
             if call.tool_call_id in answers
             for file in _files_shown(call, answers[call.tool_call_id])
         )
@@ -79,14 +92,13 @@ def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
 
 
 def _files_shown(call: ToolCallPart, answer: ToolReturnPart) -> Iterable[str]:
+    lines = answer.model_response_str().splitlines()
     match call:
         case ReadFileCallPart(typed_args={"path": path}):
             return (path,)
         case SearchFilesCallPart():
-            lines = answer.model_response_str().splitlines()
             return (match["file"] for line in lines if (match := _SEARCH_MATCH.match(line)))
         case FindFilesCallPart():
-            lines = answer.model_response_str().splitlines()
             return (line for line in lines if _names_a_file(line))
         case _:
             return ()

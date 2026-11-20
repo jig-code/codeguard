@@ -23,7 +23,7 @@ from pydantic_ai.exceptions import (
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
@@ -31,8 +31,8 @@ from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
 
 from codeguard.gemini_provider.file_system import (
-    FILE_TOOLS,
     file_system_tools,
+    file_tool_calls,
     loaded_files,
     working_directory,
 )
@@ -214,11 +214,7 @@ def _tool_calls(messages: Sequence[ModelMessage]) -> tuple[dict[str, JsonValue],
     """The file tools the model called, with the arguments it sent, in the order it called
     them. The tools run concurrently, so the order they ran in says nothing."""
     return tuple(
-        {"tool": part.tool_name, **part.args_as_dict()}
-        for message in messages
-        if isinstance(message, ModelResponse)
-        for part in message.parts
-        if isinstance(part, ToolCallPart) and part.tool_name in FILE_TOOLS
+        {"tool": call.tool_name, **call.args_as_dict()} for call in file_tool_calls(messages)
     )
 
 
