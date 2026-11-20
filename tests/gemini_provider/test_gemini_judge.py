@@ -219,7 +219,7 @@ class TestGeminiJudge:
         assert [tool.name for tool in models.info().function_tools] == [
             "read_file",
             "search_files",
-            "find_files",
+            "list_files",
         ]
 
     def test_sends_the_instructions_and_the_prompt(self, tmp_path, make_judge_request):
@@ -255,7 +255,7 @@ class TestGeminiJudge:
                 calls(
                     ("read_file", {"path": "logger.py"}),
                     ("search_files", {"pattern": "info", "include_glob": "*.py"}),
-                    ("find_files", {"pattern": "*.toml"}),
+                    ("list_files", {"glob": "*.toml"}),
                 ),
                 verdict(),
             ]
@@ -265,16 +265,17 @@ class TestGeminiJudge:
 
         assert judgement.loaded_files == ("logger.py", "audit.py", "config.toml")
 
-    def test_directories_and_notices_gemini_found_are_not_loaded_files(
+    def test_listing_loads_its_first_200_files_and_not_its_truncation_notice(
         self, tmp_path, make_judge_request
     ):
         (tmp_path / "orders").mkdir()
-        (tmp_path / ".env").write_text("KEY=1\n")
-        models = ScriptedGemini([calls(("find_files", {"pattern": "*"})), verdict()])
+        for number in range(201):
+            (tmp_path / "orders" / f"order_{number:03}.py").write_text("")
+        models = ScriptedGemini([calls(("list_files", {"path": "orders"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert judgement.loaded_files == ("a.py", "logger.py")
+        assert judgement.loaded_files == tuple(f"orders/order_{n:03}.py" for n in range(200))
 
     def test_matched_line_holding_a_form_feed_names_only_its_own_file(
         self, tmp_path, make_judge_request
@@ -285,6 +286,17 @@ class TestGeminiJudge:
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement.loaded_files == ("audit.py",)
+
+    def test_files_git_ignores_are_not_listed(self, tmp_path, make_judge_request):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        (tmp_path / ".gitignore").write_text("node_modules/\n")
+        (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
+        (tmp_path / "node_modules" / "pkg" / "log.py").write_text("def info(message): ...\n")
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement.loaded_files == ("a.py", "logger.py")
 
     def test_files_git_ignores_are_not_searched(self, tmp_path, make_judge_request):
         subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
@@ -351,7 +363,7 @@ class TestGeminiJudge:
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([calls(("find_files", {"pattern": "*.py"})) for _ in range(2)])
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict, match=f"^{MODEL} returned no verdict in 2 requests.$"):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
@@ -480,7 +492,7 @@ class TestGeminiJudge:
         self, tmp_path, make_judge_rule, capfire, make_judge_request
     ):
         models = ScriptedGemini(
-            [calls(("find_files", {"pattern": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
+            [calls(("list_files", {"glob": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
         )
 
         judge_with(tmp_path, models).judge(make_judge_request())
@@ -495,7 +507,7 @@ class TestGeminiJudge:
                 "output_tokens": 6,
                 "cache_read_input_tokens": 8,
                 "thinking_tokens": 10,
-                "tool_calls": '[{"tool":"find_files","pattern":"*.py"}]',
+                "tool_calls": '[{"tool":"list_files","glob":"*.py"}]',
             }
         ]
 
@@ -527,7 +539,7 @@ class TestGeminiJudge:
     ):
         models = ScriptedGemini(
             [
-                calls(("find_files", {"pattern": "*.py"})),
+                calls(("list_files", {"glob": "*.py"})),
                 calls(("final_result", {"reason": "Judged.", "violations": []})),
             ]
         )
@@ -535,19 +547,19 @@ class TestGeminiJudge:
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
-        assert attributes["tool_calls"] == '[{"tool":"find_files","pattern":"*.py"}]'
+        assert attributes["tool_calls"] == '[{"tool":"list_files","glob":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
         self, tmp_path, capfire, make_judge_request
     ):
-        models = ScriptedGemini([calls(("find_files", {"pattern": "*.py"})) for _ in range(2)])
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
         assert attributes["tool_calls"] == (
-            '[{"tool":"find_files","pattern":"*.py"},{"tool":"find_files","pattern":"*.py"}]'
+            '[{"tool":"list_files","glob":"*.py"},{"tool":"list_files","glob":"*.py"}]'
         )
 
 

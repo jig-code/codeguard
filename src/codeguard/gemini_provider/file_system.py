@@ -12,21 +12,21 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from pydantic_ai_harness.filesystem import (
-    FIND_FILES_KIND,
+    LIST_FILES_KIND,
     READ_FILE_KIND,
     SEARCH_FILES_KIND,
     FileSystem,
-    FindFilesCallPart,
+    ListFilesCallPart,
     ReadFileCallPart,
     SearchFilesCallPart,
 )
 
-_FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, FIND_FILES_KIND)
+_FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, LIST_FILES_KIND)
 # A search or listing records every file it shows as one the verdict depends on, so a
 # larger cap would make a verdict go stale on more files' changes, and cost more tokens.
 _MAX_RESULTS = 200
 _SEARCH_MATCH = re.compile(r"(?P<file>[^\[].*?):\d+:")
-_NO_MATCHES = "No matches found."
+_NO_FILES = "No files found."
 PATH_WITH_RIPGREP = os.pathsep.join((sysconfig.get_path("scripts"), os.environ.get("PATH", "")))
 
 
@@ -80,11 +80,11 @@ def _files_shown(call: ToolCallPart, answer: ToolReturnPart) -> Iterable[str]:
             return (path,)
         case SearchFilesCallPart():
             return (match["file"] for line in lines if (match := _SEARCH_MATCH.match(line)))
-        case FindFilesCallPart():
+        case ListFilesCallPart():
             return (line for line in lines if _names_a_file(line))
         case _:
             return ()
 
 
-def _names_a_file(found: str) -> bool:
-    return not found.startswith("[") and not found.endswith("/") and found != _NO_MATCHES
+def _names_a_file(listed: str) -> bool:
+    return not listed.startswith("[") and listed != _NO_FILES
