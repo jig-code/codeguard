@@ -16,7 +16,7 @@ from codeguard.config.judge_config import (
     JudgeProvider,
     ModelFamily,
     ThinkingConfig,
-    chosen_thinking,
+    sent_effort,
 )
 from codeguard.config.languages import LANGUAGES, language_of, named_languages
 from codeguard.config.package_config import (
@@ -84,7 +84,7 @@ __all__ = [
     "JudgeModel",
     "JudgeProvider",
     "ThinkingConfig",
-    "chosen_thinking",
+    "sent_effort",
     "JudgedViolation",
     "Outcome",
     "PackageConfig",

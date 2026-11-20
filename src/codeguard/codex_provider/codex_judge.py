@@ -42,7 +42,6 @@ class CodexJudge:
     processes: AbstractContextManager[object]
     executable: str = "codex"
     deadline: Deadline | None = None
-    # None runs at the CLI's own default reasoning effort.
     thinking: CodexEffort | None = None
 
     @property

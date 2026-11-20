@@ -8,19 +8,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
 
-# How hard a judge's model thinks before its verdict, in each provider's own levels: the
-# `claude` CLI's `--effort`, the `codex` CLI's `model_reasoning_effort`, and for the API
-# providers pydantic-ai's, which it maps to each model's own setting.
 ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
 CodexEffort = Literal["low", "medium", "high"]
 ApiEffort = ThinkingEffort
-# A provider's options in the config: its levels, or `default` to send none so the provider's
-# own default applies. Each is one Literal, so a level it doesn't offer gets one plain error.
-ClaudeThinking = Literal["default", ClaudeEffort]
-CodexThinking = Literal["default", CodexEffort]
-ApiThinking = Literal["default", ApiEffort]
-# The level an API judge thinks at unless the project sets one for its provider.
-_API_THINKING: ApiThinking = "medium"
+ClaudeEffortOrDefault = Literal["default", ClaudeEffort]
+CodexEffortOrDefault = Literal["default", CodexEffort]
+ApiEffortOrDefault = Literal["default", ApiEffort]
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -148,19 +141,16 @@ class GeminiSettings(BaseSettings):
 
 
 class ThinkingConfig(BaseModel):
-    """The level each provider's judge thinks at, for every rule it judges."""
-
     model_config = ConfigDict(extra="forbid", frozen=True, validate_by_name=True)
 
-    claude_cli: ClaudeThinking = Field(default="default", alias="claude-cli")
-    codex_cli: CodexThinking = Field(default="default", alias="codex-cli")
-    gemini: ApiThinking = _API_THINKING
-    bedrock: ApiThinking = _API_THINKING
+    claude_cli: ClaudeEffortOrDefault = Field(default="default", alias="claude-cli")
+    codex_cli: CodexEffortOrDefault = Field(default="default", alias="codex-cli")
+    gemini: ApiEffortOrDefault = "medium"
+    bedrock: ApiEffortOrDefault = "medium"
 
 
-def chosen_thinking[Effort: str](level: Effort | Literal["default"]) -> Effort | None:
-    """The level to send the provider, or `None` to send none and use its default."""
-    return None if level == "default" else cast("Effort", level)
+def sent_effort[Effort: str](setting: Effort | Literal["default"]) -> Effort | None:
+    return None if setting == "default" else cast("Effort", setting)
 
 
 class JudgeConfig(BaseModel):

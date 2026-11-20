@@ -14,7 +14,7 @@ from codeguard.config import (
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
-    chosen_thinking,
+    sent_effort,
 )
 from codeguard.review import CachedJudge, Deadline, Judge
 
@@ -57,7 +57,7 @@ class Judges:
                 model.required_name,
                 processes,
                 deadline=deadline,
-                thinking=chosen_thinking(thinking.codex_cli),
+                thinking=sent_effort(thinking.codex_cli),
             )
         if model.provider is JudgeProvider.GEMINI:
             gemini = self.gemini
@@ -70,7 +70,7 @@ class Judges:
                 models,
                 processes,
                 model.provider,
-                chosen_thinking(thinking.gemini),
+                sent_effort(thinking.gemini),
                 deadline=deadline,
             )
         if model.provider is JudgeProvider.BEDROCK:
@@ -80,7 +80,7 @@ class Judges:
                 BedrockClaude(),
                 processes,
                 model.provider,
-                chosen_thinking(thinking.bedrock),
+                sent_effort(thinking.bedrock),
                 deadline=deadline,
             )
         return ClaudeJudge(
@@ -89,5 +89,5 @@ class Judges:
             processes,
             warmup=self.warmup,
             deadline=deadline,
-            thinking=chosen_thinking(thinking.claude_cli),
+            thinking=sent_effort(thinking.claude_cli),
         )

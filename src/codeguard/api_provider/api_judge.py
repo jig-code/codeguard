@@ -50,6 +50,7 @@ from codeguard.review import (
 _MAX_REQUESTS = 10
 _REQUEST_LIMIT_SECONDS = 120
 _MAX_ATTEMPTS = 5
+_GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
@@ -64,7 +65,6 @@ class ApiJudge:
     models: ApiModels
     processes: AbstractContextManager[object]
     provider: str
-    # None sends no level, so the model thinks at its own default.
     thinking: ApiEffort | None
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
@@ -107,7 +107,6 @@ class ApiJudge:
         agent = Agent[object, Output](
             deps_type=object,
             instructions=instructions,
-            # Every provider can return the verdict as a tool call, and Bedrock only that way.
             output_type=ToolOutput(output),
             capabilities=[file_system_tools(self.root)],
             model_settings=self._settings,
@@ -143,8 +142,6 @@ class ApiJudge:
             ) from error
         return result.output
 
-    # pydantic-ai maps both settings to every provider. Its request timeout covers the whole
-    # request, the times `_Retrying` sends it again included.
     def _settings(self, _: RunContext[object]) -> ModelSettings:
         limit = self.request_limit_seconds
         if self.deadline is not None:
@@ -231,6 +228,6 @@ def _telemetry(usage: RunUsage) -> dict[str, object]:
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cache_read_input_tokens": usage.cache_read_tokens,
-        # Gemini reports its thinking tokens only among its own usage details.
-        "thinking_tokens": usage.output_reasoning_tokens or usage.details.get("thoughts_tokens", 0),
+        "thinking_tokens": usage.output_reasoning_tokens
+        or usage.details.get(_GEMINI_THINKING_TOKENS, 0),
     }

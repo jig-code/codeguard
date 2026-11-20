@@ -21,7 +21,6 @@ class _Usage(BaseModel):
 
     @property
     def telemetry(self) -> dict[str, object]:
-        """The usage under the keys every judge records it with."""
         return {
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
@@ -38,24 +37,20 @@ class _TurnCompleted(BaseModel):
 
 
 class _CommandExecution(BaseModel):
-    """A shell command Codex ran: its native tools read the repository through commands."""
-
     model_config = ConfigDict(frozen=True)
 
     type: Literal["command_execution"]
     command: str
 
 
-class _OtherItem(BaseModel):
-    """A message, reasoning or any other item the judge doesn't read."""
-
+class _UnreadItem(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     type: str
 
 
 def _item_kind(item: dict[str, object]) -> str:
-    return "command_execution" if item.get("type") == "command_execution" else "other"
+    return "command_execution" if item.get("type") == "command_execution" else "unread"
 
 
 class _ItemCompleted(BaseModel):
@@ -64,14 +59,12 @@ class _ItemCompleted(BaseModel):
     type: Literal["item.completed"]
     item: Annotated[
         Annotated[_CommandExecution, Tag("command_execution")]
-        | Annotated[_OtherItem, Tag("other")],
+        | Annotated[_UnreadItem, Tag("unread")],
         Discriminator(_item_kind),
     ]
 
 
-class _OtherEvent(BaseModel):
-    """A thread, turn start or any other event the judge doesn't read."""
-
+class _UnreadEvent(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     type: str
@@ -82,23 +75,20 @@ _EVENT_KINDS = ("turn.completed", "item.completed")
 
 def _event_kind(event: dict[str, object]) -> str:
     kind = event.get("type")
-    return str(kind) if kind in _EVENT_KINDS else "other"
+    return str(kind) if kind in _EVENT_KINDS else "unread"
 
 
-_STREAM_EVENT: TypeAdapter[_TurnCompleted | _ItemCompleted | _OtherEvent] = TypeAdapter(
+_STREAM_EVENT: TypeAdapter[_TurnCompleted | _ItemCompleted | _UnreadEvent] = TypeAdapter(
     Annotated[
         Annotated[_TurnCompleted, Tag("turn.completed")]
         | Annotated[_ItemCompleted, Tag("item.completed")]
-        | Annotated[_OtherEvent, Tag("other")],
+        | Annotated[_UnreadEvent, Tag("unread")],
         Discriminator(_event_kind),
     ]
 )
 
 
 class CodexResult(BaseModel):
-    """What `codex exec --json` printed about its turn. Codex prints no count of the
-    requests it made."""
-
     model_config = ConfigDict(frozen=True)
 
     usage: _Usage | None = None
@@ -106,7 +96,7 @@ class CodexResult(BaseModel):
 
     @classmethod
     def from_stream(cls, stream: str) -> Self:
-        events = [event for line in stream.splitlines() if (event := _parsed(line))]
+        events = [event for line in stream.splitlines() if (event := _event_on(line))]
         turns = [event for event in events if isinstance(event, _TurnCompleted)]
         return cls(
             usage=turns[-1].usage if turns else None,
@@ -119,13 +109,11 @@ class CodexResult(BaseModel):
 
     @property
     def telemetry(self) -> dict[str, object]:
-        """The usage and tool calls, under the keys every judge records them with."""
         usage = self.usage.telemetry if self.usage else {}
         return {**usage, "tool_calls": self.tool_calls}
 
 
-def _parsed(line: str) -> _TurnCompleted | _ItemCompleted | _OtherEvent | None:
-    """The event on one line, or None for a line that holds none, such as a log line."""
+def _event_on(line: str) -> _TurnCompleted | _ItemCompleted | _UnreadEvent | None:
     try:
         return _STREAM_EVENT.validate_json(line)
     except ValidationError:

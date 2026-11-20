@@ -35,7 +35,6 @@ class ClaudeJudge:
     executable: str = _EXECUTABLE
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     deadline: Deadline | None = None
-    # None runs at the CLI's own default effort.
     thinking: ClaudeEffort | None = None
 
     @property
