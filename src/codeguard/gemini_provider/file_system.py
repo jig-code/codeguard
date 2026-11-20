@@ -42,7 +42,6 @@ def file_system_tools(root: Path) -> FileSystem[object]:
 
 
 def file_tool_calls(messages: Sequence[ModelMessage]) -> Iterator[ToolCallPart]:
-    """The file tools' calls, in the order the model made them."""
     kinds = {kind.id for kind in _FILE_TOOL_KINDS}
     return (
         call
@@ -54,8 +53,6 @@ def file_tool_calls(messages: Sequence[ModelMessage]) -> Iterator[ToolCallPart]:
 
 
 def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
-    """The files the model read, and the files a search or listing showed it, each once.
-    A call the tool sent back to retry loaded nothing."""
     answers = {
         part.tool_call_id: part
         for message in messages

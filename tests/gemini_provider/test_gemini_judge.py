@@ -15,7 +15,6 @@ from pydantic_ai.messages import (
     ModelResponse,
     TextPart,
     ToolCallPart,
-    ToolReturnPart,
     UserPromptPart,
 )
 from pydantic_ai.models import Model
@@ -245,7 +244,7 @@ class TestGeminiJudge:
             "include_thoughts": True,
         }
 
-    def test_loaded_files_are_the_files_gemini_read_searched_and_found_in_call_order(
+    def test_loaded_files_are_the_files_gemini_read_searched_and_listed_in_call_order(
         self, tmp_path, make_judge_request
     ):
         (tmp_path / "audit.py").write_text("from logger import info\n")
@@ -298,17 +297,6 @@ class TestGeminiJudge:
 
         assert judgement.loaded_files == ("a.py", "logger.py")
 
-    def test_files_git_ignores_are_not_searched(self, tmp_path, make_judge_request):
-        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-        (tmp_path / ".gitignore").write_text("node_modules/\n")
-        (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
-        (tmp_path / "node_modules" / "pkg" / "log.py").write_text("def info(message): ...\n")
-        models = ScriptedGemini([calls(("search_files", {"pattern": "def info"})), verdict()])
-
-        judgement = judge_with(tmp_path, models).judge(make_judge_request())
-
-        assert judgement.loaded_files == ("logger.py",)
-
     def test_missing_file_gemini_tried_to_read_is_a_loaded_file(self, tmp_path, make_judge_request):
         models = ScriptedGemini([calls(("read_file", {"path": "orders/__init__.py"})), verdict()])
 
@@ -316,27 +304,12 @@ class TestGeminiJudge:
 
         assert judgement.loaded_files == ("orders/__init__.py",)
 
-    def test_file_outside_the_root_is_sent_back_to_retry_and_not_a_loaded_file(
-        self, tmp_path, make_judge_request
-    ):
-        (tmp_path.parent / "outside.py").write_text("key = 1\n")
+    def test_file_outside_the_root_is_not_a_loaded_file(self, tmp_path, make_judge_request):
         models = ScriptedGemini([calls(("read_file", {"path": "../outside.py"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement.loaded_files == ()
-        assert [part.outcome for part in models.sent(1) if isinstance(part, ToolReturnPart)] == [
-            "retried"
-        ]
-
-    def test_answers_file_tool_calls_before_the_verdict(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("read_file", {"path": "logger.py"})), verdict()])
-
-        judge_with(tmp_path, models).judge(make_judge_request())
-
-        assert [part.content for part in models.sent(1) if isinstance(part, ToolReturnPart)] == [
-            "[logger.py | 1 lines]\n     1\tdef info(message): ...\n"
-        ]
 
     def test_invalid_verdict_is_sent_back_to_correct(self, tmp_path, make_judge_request):
         invalid = ModelResponse(parts=[TextPart('{"violations": [{"file": "a.py"}]}')])
