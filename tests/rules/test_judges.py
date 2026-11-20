@@ -208,4 +208,5 @@ class TestJudgeThinking:
 
         assert isinstance(bedrock, ApiJudge)
         assert isinstance(claude, ClaudeJudge)
-        assert (bedrock.thinking, claude.thinking) == ("medium", None)
+        assert bedrock.thinking == "medium"
+        assert claude.thinking is None

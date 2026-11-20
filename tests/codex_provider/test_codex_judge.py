@@ -156,12 +156,15 @@ class TestCodexJudge:
         arguments = json.loads(record.read_text())["arguments"]
         assert not any("model_reasoning_effort" in argument for argument in arguments)
 
-    def test_identity_changes_with_the_thinking_level(self, tmp_path, processes):
-        default = CodexJudge(tmp_path, MODEL, processes)
-        medium = CodexJudge(tmp_path, MODEL, processes, thinking="medium")
-        high = CodexJudge(tmp_path, MODEL, processes, thinking="high")
+    def test_identity_names_the_thinking_level(self, tmp_path, processes):
+        judge = CodexJudge(tmp_path, MODEL, processes, thinking="high")
 
-        assert len({default.identity, medium.identity, high.identity}) == 3
+        assert judge.identity == f"codex-cli\0{MODEL}\0thinking=high\0native-tools-schema-v4"
+
+    def test_identity_without_a_level_names_the_cli_default(self, tmp_path, processes):
+        judge = CodexJudge(tmp_path, MODEL, processes)
+
+        assert judge.identity == f"codex-cli\0{MODEL}\0thinking=default\0native-tools-schema-v4"
 
     def test_records_usage_and_commands_under_the_shared_keys(
         self, tmp_path, processes, fake_codex_executable, capfire, make_judge_request

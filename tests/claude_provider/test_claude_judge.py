@@ -484,12 +484,15 @@ class TestClaudeJudge:
 
         assert sonnet.identity != opus.identity
 
-    def test_identity_changes_with_the_thinking_level(self, tmp_path, processes):
-        default = ClaudeJudge(tmp_path, MODEL, processes)
-        medium = ClaudeJudge(tmp_path, MODEL, processes, thinking="medium")
-        high = ClaudeJudge(tmp_path, MODEL, processes, thinking="high")
+    def test_identity_names_the_thinking_level(self, tmp_path, processes):
+        judge = ClaudeJudge(tmp_path, MODEL, processes, thinking="high")
 
-        assert len({default.identity, medium.identity, high.identity}) == 3
+        assert judge.identity == f"claude\0{MODEL}\0thinking=high"
+
+    def test_identity_without_a_level_names_the_cli_default(self, tmp_path, processes):
+        judge = ClaudeJudge(tmp_path, MODEL, processes)
+
+        assert judge.identity == f"claude\0{MODEL}\0thinking=default"
 
     def test_identity_without_a_model_differs_from_a_named_one(self, tmp_path, processes):
         default = ClaudeJudge(tmp_path, model=None, processes=processes)

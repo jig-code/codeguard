@@ -91,8 +91,9 @@ class TestConfigLoader:
 
         thinking = ConfigLoader(repo.root).load().judge.thinking
 
-        assert thinking == ThinkingConfig(claude_cli="high", gemini="low")
-        assert (thinking.codex_cli, thinking.bedrock) == (None, "medium")
+        assert thinking == ThinkingConfig(
+            claude_cli="high", codex_cli=None, gemini="low", bedrock="medium"
+        )
 
     def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
         repo.write(CONFIG, "judge:\n  thinking:\n    openai: high\n")
