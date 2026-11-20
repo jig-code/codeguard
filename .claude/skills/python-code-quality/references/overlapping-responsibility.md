@@ -1,4 +1,4 @@
-# Overlapping responsibility and re-implemented wiring
+# Overlapping responsibility and re-implemented pipeline assembly
 
 ## Overlapping responsibility
 
@@ -8,7 +8,7 @@ repoint callers. The defect shows only across files: when a change adds a type w
 name is a role (`Resolver`, `Factory`, `Loader`, `Planner`), search for an existing type
 with the same role and noun first.
 
-## Re-implemented wiring
+## Re-implemented pipeline assembly
 
 When a component assembles a pipeline (loads its configuration, builds its inputs,
 chooses its steps), a caller that needs that work calls the component rather than

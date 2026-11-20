@@ -39,7 +39,7 @@ used to do.
 ## Imports and dependencies
 
 - Import another package through its root `__init__.py`; import a module of your own
-  package by its full submodule path. import-linter checks layers, not this.
+  package by its full submodule path.
 - An inline import needs a measured reason, such as import cost, a targeted `# noqa` and
   a comment saying why. Never use one to dodge a cycle.
 - Fix a cycle or layer violation in the design: move the shared type to the lowest

@@ -1,4 +1,4 @@
-# Domain modeling, boundary data and mapping
+# Domain modeling, outside data and mapping
 
 ## Domain modeling
 
@@ -12,7 +12,7 @@
   `dict`, `list` or `set` with the same idiom at three or more sites, or a loop builds it
   with a silent last-writer-wins policy. The type owns the lookups and the policy.
 
-## Parse boundary data once
+## Parse outside data once
 
 Outside data (a subprocess's output, a YAML or JSON file, a model's reply, an environment
 variable, a hook payload, a git object) is parsed once, where it enters, into a named
