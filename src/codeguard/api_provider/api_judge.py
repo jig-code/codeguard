@@ -76,7 +76,8 @@ class ApiJudge:
         with (
             self.processes,
             logfire.span(
-                "gemini judges {rule} on {file}",
+                "{provider} judges {rule} on {file}",
+                provider=self.provider,
                 rule=request.judge_rule.name,
                 file=request.file,
                 model=self.model,

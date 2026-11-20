@@ -470,8 +470,9 @@ class TestApiJudge:
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert finished_span_attributes(capfire, "gemini judges {rule} on {file}") == [
+        assert finished_span_attributes(capfire, "{provider} judges {rule} on {file}") == [
             {
+                "provider": "gemini",
                 "rule": make_judge_rule().name,
                 "file": "a.py",
                 "model": MODEL,
@@ -500,7 +501,7 @@ class TestApiJudge:
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == (
             '[{"tool":"read_file","path":"logger.py"},'
             '{"tool":"search_files","pattern":"def info","include_glob":"*.py"},'
@@ -519,7 +520,7 @@ class TestApiJudge:
 
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == '[{"tool":"list_files","glob":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
@@ -530,7 +531,7 @@ class TestApiJudge:
         with pytest.raises(JudgeNoVerdict):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == (
             '[{"tool":"list_files","glob":"*.py"},{"tool":"list_files","glob":"*.py"}]'
         )
