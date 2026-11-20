@@ -20,6 +20,17 @@ runs:
   using: composite
   steps:
     - uses: astral-sh/setup-uv@v10.2.0
+    # The Gemini and Bedrock judges search files with ripgrep.
+    - name: Install ripgrep
+      shell: bash
+      run: |
+        if ! command -v rg >/dev/null; then
+          if command -v apt-get >/dev/null; then
+            sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+          else
+            brew install ripgrep
+          fi
+        fi
     - name: Authenticate rule package fetches
       if: inputs.packages-token != ''
       shell: bash

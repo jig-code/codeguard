@@ -9,7 +9,7 @@ from diskcache import Cache
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
+from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini, require_ripgrep
 from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
@@ -33,9 +33,14 @@ class Judges:
             },
         )
 
-    def require_sign_ins(self, models: Iterable[JudgeModel]) -> None:
-        if any(model.provider is JudgeProvider.GEMINI for model in models):
+    def require_setup(self, models: Iterable[JudgeModel]) -> None:
+        """Fail before judging when a judge the models need can't run."""
+        providers = {model.provider for model in models}
+        if JudgeProvider.GEMINI in providers:
             self.gemini.check_sign_in()
+        for provider in sorted(providers):
+            if not provider.runs_a_cli:
+                require_ripgrep(provider)
 
     def cached(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None

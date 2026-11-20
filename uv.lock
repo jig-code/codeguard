@@ -300,6 +300,7 @@ dependencies = [
     { name = "logfire" },
     { name = "packaging" },
     { name = "pydantic" },
+    { name = "pydantic-ai-harness" },
     { name = "pydantic-ai-slim", extra = ["bedrock", "google"] },
     { name = "pydantic-evals" },
     { name = "pydantic-settings" },
@@ -326,6 +327,7 @@ requires-dist = [
     { name = "logfire", specifier = ">=5.2.0" },
     { name = "packaging", specifier = ">=26.3" },
     { name = "pydantic", specifier = ">=2.14" },
+    { name = "pydantic-ai-harness", specifier = "~=0.66.0" },
     { name = "pydantic-ai-slim", extras = ["bedrock", "google"], specifier = "~=2.66.0" },
     { name = "pydantic-evals", specifier = "~=2.66.0" },
     { name = "pydantic-settings", specifier = ">=2.12" },
@@ -1010,6 +1012,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/25/3ec212432a6031b65f043eaca9c820ddf87c0d0aa330023e64f79fcb5db6/pydantic-2.14.4.tar.gz", hash = "sha256:7c19f1d46f8accf55a4617a6116e1ade64840870f397b846a2c53fb9019414ba", size = 927354, upload-time = "2026-11-19T12:57:39.767Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/8c/824a686c4ba815ddb0722f9e66272088bccd4e1ae1d2f7015375e4a4fc7f/pydantic-2.14.4-py3-none-any.whl", hash = "sha256:653a2ad9f6d8858529c77c72717d0ea991d6c6837fe683246b2f4b2bbfc3fadc", size = 494865, upload-time = "2026-11-19T12:57:37.688Z" },
+]
+
+[[package]]
+name = "pydantic-ai-harness"
+version = "0.66.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "genai-prices" },
+    { name = "httpx" },
+    { name = "pydantic-ai-slim" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c8/28/96e1ac69852614c1c993ca352000f0f8e381bbc9656802a16864a5c2d897/pydantic_ai_harness-0.66.0.tar.gz", hash = "sha256:d646caf7cf0f83ced707d88dbc387bd73f3ff78cd6e34722665cf527dcfe6674", size = 1504421, upload-time = "2026-11-04T10:28:55.84Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/1b/d3a4e0941226a88f54e17fbb80b7190b752154329d6681a465ae101b4706/pydantic_ai_harness-0.66.0-py3-none-any.whl", hash = "sha256:d98e2e8c57dd34560ad0a83c5611d9b57c30c7572f2bde276d3b99c4d99ab025", size = 1838626, upload-time = "2026-11-04T10:28:42.148Z" },
 ]
 
 [[package]]

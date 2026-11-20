@@ -35,6 +35,11 @@ minimal effort.
 - `bedrock` runs Claude or a GPT model on Amazon Bedrock with AWS credentials
   ([Bedrock](#bedrock)).
 
+`gemini` and `bedrock` search the repository with
+[ripgrep](https://github.com/BurntSushi/ripgrep#installation), so `rg` must be on `PATH`
+on Linux or macOS. Judging with either without it is a config error. The codeguard
+GitHub Action installs it when the runner lacks it.
+
 `codeguard eval --provider` and `--model` judge a rule's eval with another provider and
 model whatever its binding names ([CLI](cli.md#eval)); reviews still use the binding's.
 

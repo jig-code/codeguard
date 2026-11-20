@@ -68,7 +68,7 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_setup([model])
 
         assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
 
@@ -77,7 +77,7 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_setup([model])
 
         assert str(error.value) == (
             "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
@@ -94,13 +94,42 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_setup([model])
 
         assert str(error.value) == (
             "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
         )
         assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
+
+    @pytest.mark.parametrize("provider", [JudgeProvider.GEMINI, JudgeProvider.BEDROCK])
+    def test_api_judge_without_ripgrep_is_a_config_error(self, tmp_path, monkeypatch, provider):
+        monkeypatch.setenv("PATH", str(tmp_path))
+        settings = GeminiSettings(project="sanctum", api_key=SecretStr("proxy-injected"))
+        judges = Judges(gemini=settings, store=Cache(tmp_path))
+
+        with pytest.raises(ConfigError) as error:
+            judges.require_setup([JudgeModel(provider=provider, name="judge-test")])
+
+        assert str(error.value) == (
+            f"The {provider} judge searches files with ripgrep: install it and put rg on PATH"
+        )
+
+    def test_api_judge_with_ripgrep_on_the_path_is_set_up(self, tmp_path, monkeypatch):
+        (tmp_path / "bin").mkdir()
+        ripgrep = tmp_path / "bin" / "rg"
+        ripgrep.write_text("#!/bin/sh\n")
+        ripgrep.chmod(0o755)
+        monkeypatch.setenv("PATH", str(tmp_path / "bin"))
+        judges = Judges(store=Cache(tmp_path))
+
+        judges.require_setup([JudgeModel(provider=JudgeProvider.BEDROCK, name="judge-test")])
+
+    def test_cli_judge_needs_no_ripgrep(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("PATH", str(tmp_path))
+        judges = Judges(store=Cache(tmp_path))
+
+        judges.require_setup([JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="sonnet")])
 
     def test_bedrock_model_builds_a_judge_cached_apart_from_gemini(self, tmp_path):
         judges = Judges(store=Cache(tmp_path))
