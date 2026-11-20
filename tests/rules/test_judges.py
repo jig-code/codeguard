@@ -6,10 +6,10 @@ import pytest
 from diskcache import Cache
 from pydantic import SecretStr
 
+from codeguard.api_provider import ApiJudge, VertexGemini
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import ConfigError, GeminiSettings, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import GeminiJudge, VertexGemini
 from codeguard.rules.judges import Judges
 
 
@@ -40,7 +40,7 @@ class TestJudges:
 
         judge = judges.uncached(tmp_path, model)
 
-        assert judge == GeminiJudge(
+        assert judge == ApiJudge(
             tmp_path,
             "gemini-judge-test",
             VertexGemini("sanctum", "eu", SecretStr("proxy-injected")),
@@ -108,7 +108,7 @@ class TestJudges:
 
         judge = judges.uncached(tmp_path, model)
 
-        assert isinstance(judge, GeminiJudge)
+        assert isinstance(judge, ApiJudge)
         assert judge.identity == "bedrock\0us.anthropic.claude-haiku-5-5"
         assert judge.processes is judges.processes[JudgeProvider.BEDROCK]
 
@@ -136,5 +136,5 @@ def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tm
 
     judge = judges.uncached(tmp_path, model)
 
-    assert isinstance(judge, GeminiJudge)
+    assert isinstance(judge, ApiJudge)
     assert judge.identity == "bedrock\0us.openai.gpt-6-luna"

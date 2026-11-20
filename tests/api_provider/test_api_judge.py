@@ -22,7 +22,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.gemini_provider import GeminiJudge, VertexGemini, gemini_judge
+from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -163,15 +163,15 @@ def waits(monkeypatch) -> list[float]:
     async def wait(seconds: float) -> None:
         waited.append(seconds)
 
-    monkeypatch.setattr(gemini_judge.asyncio, "sleep", wait)
+    monkeypatch.setattr(api_judge.asyncio, "sleep", wait)
     return waited
 
 
-def judge_with(tmp_path, models, **kwargs) -> GeminiJudge:
-    return GeminiJudge(tmp_path, MODEL, models, RecordingProcesses(), **kwargs)
+def judge_with(tmp_path, models, **kwargs) -> ApiJudge:
+    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), **kwargs)
 
 
-class TestGeminiJudge:
+class TestApiJudge:
     def test_verdict_is_the_structured_output(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict(VIOLATION)])
 
@@ -452,7 +452,7 @@ class TestGeminiJudge:
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
 
-        GeminiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes).judge(
+        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes).judge(
             make_judge_request()
         )
 
@@ -470,8 +470,9 @@ class TestGeminiJudge:
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert finished_span_attributes(capfire, "gemini judges {rule} on {file}") == [
+        assert finished_span_attributes(capfire, "{provider} judges {rule} on {file}") == [
             {
+                "provider": "gemini",
                 "rule": make_judge_rule().name,
                 "file": "a.py",
                 "model": MODEL,
@@ -500,7 +501,7 @@ class TestGeminiJudge:
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == (
             '[{"tool":"read_file","path":"logger.py"},'
             '{"tool":"search_files","pattern":"def info","include_glob":"*.py"},'
@@ -519,7 +520,7 @@ class TestGeminiJudge:
 
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == '[{"tool":"list_files","glob":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
@@ -530,13 +531,13 @@ class TestGeminiJudge:
         with pytest.raises(JudgeNoVerdict):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
+        [attributes] = finished_span_attributes(capfire, "{provider} judges {rule} on {file}")
         assert attributes["tool_calls"] == (
             '[{"tool":"list_files","glob":"*.py"},{"tool":"list_files","glob":"*.py"}]'
         )
 
 
-class TestGeminiJudgeOnVertex:
+class TestApiJudgeOnVertex:
     def test_api_key_judges_in_the_project_and_location(
         self, tmp_path, make_judge_request, make_verdict
     ):

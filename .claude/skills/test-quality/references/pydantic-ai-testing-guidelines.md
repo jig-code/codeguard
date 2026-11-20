@@ -5,7 +5,7 @@ code around it, so no LLM is called and every line of codeguard still runs.
 
 ## Pass the model through the seam the code takes
 
-`GeminiJudge` takes its models in its constructor; hand it the scripted model there. Don't
+`ApiJudge` takes its models in its constructor; hand it the scripted model there. Don't
 add a `model` parameter to a method only so a test can pass one. Where code runs a
 module-level agent with no seam, use `agent.override(model=...)`; where the test itself
 runs the agent, pass `model=` to `run_sync`.
