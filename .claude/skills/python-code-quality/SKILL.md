@@ -1,6 +1,6 @@
 ---
 name: python-code-quality
-description: "Applies codeguard's design standards for Python: names that match their bodies, an owner for every function and type, cohesive modules and packages, single responsibility, parsing outside data once, explicit mapping, typing, enums, Pydantic, imports and duplication, and names the codeguard rules and tools that already enforce part of them. Use before writing, editing, refactoring or reviewing any .py file in codeguard, tests included, and whenever a change adds, moves, renames or deletes a function, class, constant or module."
+description: "Applies codeguard's design standards for Python: names that match their bodies, an owner for every function and type, cohesive modules and packages, single responsibility, parsing outside data once, one owner per shared mapping, typing, enums, Pydantic, imports, and types with overlapping responsibility. Use before writing, editing, refactoring or reviewing any .py file in codeguard, tests included, and whenever a change adds, moves, renames or deletes a function, class, constant or module."
 ---
 
 # Python code quality
@@ -12,30 +12,6 @@ the test-specific gates and decide every question they cover: signal (a test tha
 re-checks a framework has none), mocking, assertions, fixtures, factories, helpers and
 where a test's values come from. Code in an eval case or fixture that holds a defect on
 purpose keeps it.
-
-## Already enforced elsewhere
-
-A requirement a rule or tool enforces isn't restated here. Read the rule's message and
-note and follow them. The rules come from the package pinned in `.codeguard/config.yaml`;
-the tools are configured in `pyproject.toml`. A rule bound only to production code still
-describes good test code. When a new rule covers guidance below, delete the guidance and
-add the rule here.
-
-| Requirement | Enforced by |
-|---|---|
-| No bucket module names (`utils`, `helpers`, `common`, `shared`, `contracts`) | `no-bucket-module-names` |
-| `__all__` only in a package's `__init__.py` | `all-only-in-init` |
-| No dict round trip between models | `no-dict-round-trip-between-models` |
-| One form per input | `one-form-per-input` |
-| No append in every branch of a loop | `no-append-in-every-branch` |
-| No comments in tests | `no-comments-in-tests` |
-| No hand-rolled `**kwargs` checks or pops in tests | `no-manual-kwargs-check`, `no-pop-from-kwargs` |
-| A registry class, not a `dict[str, Callable]` | `typed-dispatch-registries` |
-| Knowledge stated once (production code) | the `dry` judge rule |
-| Complexity, argument and statement limits | Ruff `C901`, `PLR0913`, `PLR0915` |
-| Imports at the top; no `TYPE_CHECKING` | Ruff `PLC0415`, `TID251` |
-| No explicit `Any`; no unnecessary `isinstance` or comparison | basedpyright |
-| Package layers and protected modules | import-linter contracts |
 
 ## Naming
 
@@ -73,8 +49,8 @@ read only its own fields has one reason to change.
 
 A type models a concept, not a step or a wrapper around one identity, and no object
 keeps a copy of a value another owns. Outside data is parsed once, where it enters, into
-a named type; code past that point never indexes or slices the raw shape. Map one model
-to another field by field; a mapping used by several targets has one owner.
+a named type; code past that point never indexes or slices the raw shape. A mapping from
+one model into several targets has one owner.
 [references/domain-modeling.md](references/domain-modeling.md)
 
 ## Dead code
@@ -83,11 +59,11 @@ Every production symbol has a production caller. Verify with a repository-wide s
 and rule out dynamic reach, before deleting anything.
 [references/dead-code.md](references/dead-code.md)
 
-## Duplication
+## Overlapping responsibility
 
-Beyond what `dry` judges: two types that both answer "who owns X?", and a caller that
-rebuilds a pipeline's inputs or wiring instead of calling the component that runs it.
-Hold test code to `dry`'s text too. [references/duplication.md](references/duplication.md)
+Two types that both answer "who owns X?" are one responsibility split in two: pick one
+owner. A caller that needs a pipeline's work calls the component that runs it, never
+rebuilding its inputs or wiring. [references/overlapping-responsibility.md](references/overlapping-responsibility.md)
 
 ## Function design
 
@@ -145,9 +121,9 @@ Python review:
 - [ ] Modules: one concept each; outside-format parsing in its own module beside the caller
 - [ ] Packages: each concept's package is predictable from its responsibility
 - [ ] Responsibility: one reason to change per type, module and function
-- [ ] Modeling: types model concepts; outside data parsed once; mappings explicit
+- [ ] Modeling: types model concepts; outside data parsed once; one owner per shared mapping
 - [ ] Dead code: every new or touched symbol has a production caller
-- [ ] Duplication: passes dry, tests included; no second owner; no rebuilt pipeline
+- [ ] Overlap: one owner per responsibility; no rebuilt pipeline wiring
 - [ ] Functions: narrow inputs; no pre-derived arguments; no unnamed tuple or dict answers
 - [ ] Comments: only a why that structure can't hold
 - [ ] Imports: package roots across packages; no cycle dodged

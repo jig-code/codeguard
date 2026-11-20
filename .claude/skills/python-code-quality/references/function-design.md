@@ -35,12 +35,6 @@ function nears one, work down this list:
   per-item function is `map` with a name: inline it. Keep it when several callers share
   it or it filters, sorts, deduplicates or reports errors.
 
-## Loops
-
-A loop that computes each item's result in branches and appends in each mixes mapping one
-item with iterating: extract the per-item function and use a comprehension. A loop that
-only filters, or keeps state across items, is fine.
-
 ## Anti-patterns
 
 - A helper that is an arbitrary chunk of the original with no identity of its own.

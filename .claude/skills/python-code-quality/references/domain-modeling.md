@@ -27,8 +27,6 @@ Signals of raw data interpreted in place:
 
 ## Model-to-model mapping
 
-Map one model to another field by field, so a field renamed, added or removed on either
-side fails the type check. When one source type maps into several targets, one mapper
-owns the mapping and each target calls it. Two models with the same fields at different
-boundaries (a file format and the runtime type built from it) stay separate and are
-mapped where they meet.
+When one source type maps into several targets, one mapper owns the mapping and each
+target calls it; a copy of the mapping in each target drifts. A mapping into one target
+stays in that target's constructor.

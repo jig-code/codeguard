@@ -7,7 +7,7 @@
 - `StrEnum` when code branches on the value or keys a mapping with it; behavior that
   reads only the member is a property on the enum. `Literal["x"] = "x"` as one union
   variant's tag; `Literal["a", "b"]` for a constraint nothing branches on.
-- Discriminated unions are explicit, never inferred from shape. A union codeguard owns
+- Discriminated unions are explicit, never inferred from shape. A union the code owns
   tags each variant with `kind: Literal[...]` and uses `Field(discriminator="kind")`. An
   outside format with a catch-all variant uses a callable `Discriminator` with a `Tag`
   per variant. Define the variants together, directly above the alias, inner unions
