@@ -69,4 +69,5 @@ result normalization (gate 12) to strip framework noise is a second tell.
 To review one, trace each step to the unit test covering it. When every step is covered,
 delete the test; if the seam itself has no generic test, add one synthetic case to the
 mechanism's suite, and assert a lone config invariant (the type registered the field the
-mapper needs) directly.
+mapper needs) directly, and move to that suite the tests that exercise a step only
+through the caller (gate 18).

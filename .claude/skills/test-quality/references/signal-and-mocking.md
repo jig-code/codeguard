@@ -14,7 +14,9 @@ are replaced at that boundary by the fake CLIs.
 
 Git and the filesystem are not a boundary. Use a real repository (`GitRepo`, the `repo`
 fixture) and real files under `tmp_path`; mocked git output drifts from real git (diff
-ranges, untracked files, flags).
+ranges, untracked files, flags). That says how to write a file, not when to: a test that
+writes a file for a unit that takes text or an object has the wrong unit as its SUT
+(gate 18).
 
 `monkeypatch.setattr` on a module constant or function so that real work doesn't run is
 stubbing the SUT; inject the dependency instead. Vary an environment variable
