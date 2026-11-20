@@ -37,7 +37,7 @@ from codeguard.api_provider.file_system import (
 )
 from codeguard.config import ApiEffort
 from codeguard.review import (
-    DEFAULT_MODEL_KEY,
+    DEFAULT_THINKING_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -73,7 +73,7 @@ class ApiJudge:
     @property
     def identity(self) -> str:
         return "\0".join(
-            (self.provider, self.model, f"thinking={self.thinking or DEFAULT_MODEL_KEY}")
+            (self.provider, self.model, f"thinking={self.thinking or DEFAULT_THINKING_KEY}")
         )
 
     def judge(self, request: JudgeRequest) -> Judgement:

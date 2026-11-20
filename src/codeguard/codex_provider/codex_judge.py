@@ -13,7 +13,7 @@ from codeguard.codex_provider.codex_result import CodexResult
 from codeguard.codex_provider.verdict_schema import verdict_schema
 from codeguard.config import CodexEffort
 from codeguard.review import (
-    DEFAULT_MODEL_KEY,
+    DEFAULT_THINKING_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -51,7 +51,7 @@ class CodexJudge:
             (
                 "codex-cli",
                 self.model,
-                f"thinking={self.thinking or DEFAULT_MODEL_KEY}",
+                f"thinking={self.thinking or DEFAULT_THINKING_KEY}",
                 "native-tools-schema-v4",
             )
         )

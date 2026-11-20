@@ -19,6 +19,16 @@ class _Usage(BaseModel):
     output_tokens: int = 0
     reasoning_output_tokens: int = 0
 
+    @property
+    def telemetry(self) -> dict[str, object]:
+        """The usage under the keys every judge records it with."""
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "cache_read_input_tokens": self.cached_input_tokens,
+            "thinking_tokens": self.reasoning_output_tokens,
+        }
+
 
 class _TurnCompleted(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -110,20 +120,8 @@ class CodexResult(BaseModel):
     @property
     def telemetry(self) -> dict[str, object]:
         """The usage and tool calls, under the keys every judge records them with."""
-        usage = self.usage
-        return {
-            **(
-                {
-                    "input_tokens": usage.input_tokens,
-                    "output_tokens": usage.output_tokens,
-                    "cache_read_input_tokens": usage.cached_input_tokens,
-                    "thinking_tokens": usage.reasoning_output_tokens,
-                }
-                if usage
-                else {}
-            ),
-            "tool_calls": self.tool_calls,
-        }
+        usage = self.usage.telemetry if self.usage else {}
+        return {**usage, "tool_calls": self.tool_calls}
 
 
 def _parsed(line: str) -> _TurnCompleted | _ItemCompleted | _OtherEvent | None:

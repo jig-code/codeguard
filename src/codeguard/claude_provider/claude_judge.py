@@ -13,6 +13,7 @@ from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
 from codeguard.config import ClaudeEffort
 from codeguard.review import (
     DEFAULT_MODEL_KEY,
+    DEFAULT_THINKING_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -43,7 +44,7 @@ class ClaudeJudge:
             (
                 _EXECUTABLE,
                 self.model or DEFAULT_MODEL_KEY,
-                f"thinking={self.thinking or DEFAULT_MODEL_KEY}",
+                f"thinking={self.thinking or DEFAULT_THINKING_KEY}",
             )
         )
 

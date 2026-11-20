@@ -16,6 +16,8 @@ from codeguard.review.judge_rule import JudgeRule
 from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
+# A judge that sends its provider no thinking level is keyed on this in place of one.
+DEFAULT_THINKING_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
 
 
