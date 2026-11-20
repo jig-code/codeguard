@@ -35,6 +35,8 @@ minimal effort.
 - `bedrock` runs Claude or a GPT model on Amazon Bedrock with AWS credentials
   ([Bedrock](#bedrock)).
 
+`gemini` and `bedrock` run on Linux and macOS, not Windows.
+
 `codeguard eval --provider` and `--model` judge a rule's eval with another provider and
 model whatever its binding names ([CLI](cli.md#eval)); reviews still use the binding's.
 

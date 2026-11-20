@@ -1,0 +1,85 @@
+import os
+import re
+import sysconfig
+from collections.abc import Iterable, Iterator, Sequence
+from pathlib import Path
+
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    ToolCallPart,
+    ToolReturnPart,
+)
+from pydantic_ai_harness.filesystem import (
+    LIST_FILES_KIND,
+    READ_FILE_KIND,
+    SEARCH_FILES_KIND,
+    FileSystem,
+    ListFilesCallPart,
+    ReadFileCallPart,
+    SearchFilesCallPart,
+)
+
+_FILE_TOOL_KINDS = (READ_FILE_KIND, SEARCH_FILES_KIND, LIST_FILES_KIND)
+_MAX_SEARCH_AND_LIST_RESULTS = 200
+_SEARCH_MATCH = re.compile(r"(?P<file>[^\[].*?):\d+:")
+_NO_FILES = "No files found."
+PATH_WITH_RIPGREP = os.pathsep.join((sysconfig.get_path("scripts"), os.environ.get("PATH", "")))
+
+
+def file_system_tools(root: Path) -> FileSystem[object]:
+    return FileSystem[object](
+        root_dir=root,
+        read_only=True,
+        content_hashes=False,
+        tools=[kind.name for kind in _FILE_TOOL_KINDS],
+        max_search_results=_MAX_SEARCH_AND_LIST_RESULTS,
+        max_find_results=_MAX_SEARCH_AND_LIST_RESULTS,
+    )
+
+
+def file_tool_calls(messages: Sequence[ModelMessage]) -> Iterator[ToolCallPart]:
+    kinds = {kind.id for kind in _FILE_TOOL_KINDS}
+    return (
+        call
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for call in message.tool_calls
+        if call.tool_kind in kinds
+    )
+
+
+def loaded_files(messages: Sequence[ModelMessage]) -> tuple[str, ...]:
+    answers = {
+        part.tool_call_id: part
+        for message in messages
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+        if isinstance(part, ToolReturnPart) and part.outcome == "success"
+    }
+    return tuple(
+        dict.fromkeys(
+            file
+            for call in file_tool_calls(messages)
+            if call.tool_call_id in answers
+            for file in _files_shown(call, answers[call.tool_call_id])
+        )
+    )
+
+
+def _files_shown(call: ToolCallPart, answer: ToolReturnPart) -> Iterable[str]:
+    lines = answer.model_response_str().split("\n")
+    match call:
+        case ReadFileCallPart(typed_args={"path": path}):
+            return (path,)
+        case SearchFilesCallPart():
+            return (match["file"] for line in lines if (match := _SEARCH_MATCH.match(line)))
+        case ListFilesCallPart():
+            return (line for line in lines if _names_a_file(line))
+        case _:
+            return ()
+
+
+def _names_a_file(listed: str) -> bool:
+    return not listed.startswith("[") and listed != _NO_FILES

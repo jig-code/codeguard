@@ -1,3 +1,4 @@
+import subprocess
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,7 +15,6 @@ from pydantic_ai.messages import (
     ModelResponse,
     TextPart,
     ToolCallPart,
-    ToolReturnPart,
     UserPromptPart,
 )
 from pydantic_ai.models import Model
@@ -217,8 +217,8 @@ class TestGeminiJudge:
 
         assert [tool.name for tool in models.info().function_tools] == [
             "read_file",
-            "grep",
-            "glob",
+            "search_files",
+            "list_files",
         ]
 
     def test_sends_the_instructions_and_the_prompt(self, tmp_path, make_judge_request):
@@ -244,7 +244,7 @@ class TestGeminiJudge:
             "include_thoughts": True,
         }
 
-    def test_loaded_files_are_the_files_gemini_read_grepped_and_globbed_in_any_order(
+    def test_loaded_files_are_the_files_gemini_read_searched_and_listed_in_call_order(
         self, tmp_path, make_judge_request
     ):
         (tmp_path / "audit.py").write_text("from logger import info\n")
@@ -253,8 +253,8 @@ class TestGeminiJudge:
             [
                 calls(
                     ("read_file", {"path": "logger.py"}),
-                    ("grep", {"pattern": "info", "glob": "**/*.py"}),
-                    ("glob", {"pattern": "*.toml"}),
+                    ("search_files", {"pattern": "info", "include_glob": "*.py"}),
+                    ("list_files", {"glob": "*.toml"}),
                 ),
                 verdict(),
             ]
@@ -262,7 +262,40 @@ class TestGeminiJudge:
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
-        assert sorted(judgement.loaded_files) == ["audit.py", "config.toml", "logger.py"]
+        assert judgement.loaded_files == ("logger.py", "audit.py", "config.toml")
+
+    def test_listing_loads_its_first_200_files_and_not_its_truncation_notice(
+        self, tmp_path, make_judge_request
+    ):
+        (tmp_path / "orders").mkdir()
+        for number in range(201):
+            (tmp_path / "orders" / f"order_{number:03}.py").write_text("")
+        models = ScriptedGemini([calls(("list_files", {"path": "orders"})), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement.loaded_files == tuple(f"orders/order_{n:03}.py" for n in range(200))
+
+    def test_matched_line_holding_a_form_feed_names_only_its_own_file(
+        self, tmp_path, make_judge_request
+    ):
+        (tmp_path / "audit.py").write_text("info = 'a\x0corders.py:1:'\n")
+        models = ScriptedGemini([calls(("search_files", {"pattern": "info ="})), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement.loaded_files == ("audit.py",)
+
+    def test_files_git_ignores_are_not_listed(self, tmp_path, make_judge_request):
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+        (tmp_path / ".gitignore").write_text("node_modules/\n")
+        (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
+        (tmp_path / "node_modules" / "pkg" / "log.py").write_text("def info(message): ...\n")
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})), verdict()])
+
+        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+
+        assert judgement.loaded_files == ("a.py", "logger.py")
 
     def test_missing_file_gemini_tried_to_read_is_a_loaded_file(self, tmp_path, make_judge_request):
         models = ScriptedGemini([calls(("read_file", {"path": "orders/__init__.py"})), verdict()])
@@ -277,15 +310,6 @@ class TestGeminiJudge:
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement.loaded_files == ()
-
-    def test_answers_file_tool_calls_before_the_verdict(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("read_file", {"path": "logger.py"})), verdict()])
-
-        judge_with(tmp_path, models).judge(make_judge_request())
-
-        assert [part.content for part in models.sent(1) if isinstance(part, ToolReturnPart)] == [
-            "     1\tdef info(message): ...\n"
-        ]
 
     def test_invalid_verdict_is_sent_back_to_correct(self, tmp_path, make_judge_request):
         invalid = ModelResponse(parts=[TextPart('{"violations": [{"file": "a.py"}]}')])
@@ -312,7 +336,7 @@ class TestGeminiJudge:
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([calls(("glob", {"pattern": "*.py"})) for _ in range(2)])
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict, match=f"^{MODEL} returned no verdict in 2 requests.$"):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
@@ -441,7 +465,7 @@ class TestGeminiJudge:
         self, tmp_path, make_judge_rule, capfire, make_judge_request
     ):
         models = ScriptedGemini(
-            [calls(("glob", {"pattern": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
+            [calls(("list_files", {"glob": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
         )
 
         judge_with(tmp_path, models).judge(make_judge_request())
@@ -456,7 +480,7 @@ class TestGeminiJudge:
                 "output_tokens": 6,
                 "cache_read_input_tokens": 8,
                 "thinking_tokens": 10,
-                "tool_calls": '[{"tool":"glob","pattern":"*.py"}]',
+                "tool_calls": '[{"tool":"list_files","glob":"*.py"}]',
             }
         ]
 
@@ -467,7 +491,7 @@ class TestGeminiJudge:
             [
                 calls(
                     ("read_file", {"path": "logger.py"}),
-                    ("grep", {"pattern": "def info", "glob": "**/*.py"}),
+                    ("search_files", {"pattern": "def info", "include_glob": "*.py"}),
                 ),
                 calls(("read_file", {"path": "../outside.py", "offset": 3})),
                 verdict(),
@@ -479,7 +503,7 @@ class TestGeminiJudge:
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
         assert attributes["tool_calls"] == (
             '[{"tool":"read_file","path":"logger.py"},'
-            '{"tool":"grep","pattern":"def info","glob":"**/*.py"},'
+            '{"tool":"search_files","pattern":"def info","include_glob":"*.py"},'
             '{"tool":"read_file","path":"../outside.py","offset":3}]'
         )
 
@@ -488,7 +512,7 @@ class TestGeminiJudge:
     ):
         models = ScriptedGemini(
             [
-                calls(("glob", {"pattern": "*.py"})),
+                calls(("list_files", {"glob": "*.py"})),
                 calls(("final_result", {"reason": "Judged.", "violations": []})),
             ]
         )
@@ -496,19 +520,19 @@ class TestGeminiJudge:
         judge_with(tmp_path, models, provider="bedrock").judge(make_judge_request())
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
-        assert attributes["tool_calls"] == '[{"tool":"glob","pattern":"*.py"}]'
+        assert attributes["tool_calls"] == '[{"tool":"list_files","glob":"*.py"}]'
 
     def test_call_without_a_verdict_records_the_tools_gemini_called(
         self, tmp_path, capfire, make_judge_request
     ):
-        models = ScriptedGemini([calls(("glob", {"pattern": "*.py"})) for _ in range(2)])
+        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
         [attributes] = finished_span_attributes(capfire, "gemini judges {rule} on {file}")
         assert attributes["tool_calls"] == (
-            '[{"tool":"glob","pattern":"*.py"},{"tool":"glob","pattern":"*.py"}]'
+            '[{"tool":"list_files","glob":"*.py"},{"tool":"list_files","glob":"*.py"}]'
         )
 
 

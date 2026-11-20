@@ -13,7 +13,6 @@ from pydantic_ai import (
     Agent,
     NativeOutput,
     RunContext,
-    Tool,
     ToolOutput,
     UsageLimits,
     capture_run_messages,
@@ -24,14 +23,20 @@ from pydantic_ai.exceptions import (
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
+from pydantic_ai.workspaces import LocalWorkspaceBackend
 
-from codeguard.gemini_provider.file_tools import FileTools
+from codeguard.gemini_provider.file_system import (
+    PATH_WITH_RIPGREP,
+    file_system_tools,
+    file_tool_calls,
+    loaded_files,
+)
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -77,25 +82,21 @@ class GeminiJudge:
                 model=self.model,
             ) as span,
         ):
-            tools = FileTools(self.root)
             usage = RunUsage()
             with capture_run_messages() as messages:
                 try:
                     verdict = asyncio.run(
-                        self._run(request.instructions, request.prompt, Verdict, tools.tools, usage)
+                        self._run(request.instructions, request.prompt, Verdict, usage)
                     )
                 finally:
-                    span.set_attributes(
-                        {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
-                    )
-            return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
+                    span.set_attributes({**_telemetry(usage), "tool_calls": _tool_calls(messages)})
+            return Judgement(verdict, loaded_files(messages))
 
     async def _run[Output: BaseModel](
         self,
         instructions: str,
         prompt: str,
         output: type[Output],
-        tools: Sequence[Tool[object]],
         usage: RunUsage,
     ) -> Output:
         agent = Agent[object, Output](
@@ -103,7 +104,7 @@ class GeminiJudge:
             instructions=instructions,
             # Bedrock's Converse API has no structured output, so Claude there calls a tool.
             output_type=ToolOutput(output) if self.provider == "bedrock" else NativeOutput(output),
-            tools=tools,
+            capabilities=[file_system_tools(self.root)],
             model_settings=self._settings,
         )
         try:
@@ -111,6 +112,7 @@ class GeminiJudge:
                 result = await agent.run(
                     prompt,
                     model=_Retrying(model, self.deadline),
+                    workspace=LocalWorkspaceBackend(self.root, env={"PATH": PATH_WITH_RIPGREP}),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
                 )
@@ -209,18 +211,11 @@ def _message(error: ModelHTTPError) -> str:
     return str(body)
 
 
-def _tool_calls(
-    messages: Sequence[ModelMessage], tools: FileTools
-) -> tuple[dict[str, JsonValue], ...]:
+def _tool_calls(messages: Sequence[ModelMessage]) -> tuple[dict[str, JsonValue], ...]:
     """The file tools the model called, with the arguments it sent, in the order it called
     them. The tools run concurrently, so the order they ran in says nothing."""
-    names = {tool.name for tool in tools.tools}
     return tuple(
-        {"tool": part.tool_name, **part.args_as_dict()}
-        for message in messages
-        if isinstance(message, ModelResponse)
-        for part in message.parts
-        if isinstance(part, ToolCallPart) and part.tool_name in names
+        {"tool": call.tool_name, **call.args_as_dict()} for call in file_tool_calls(messages)
     )
 
 
