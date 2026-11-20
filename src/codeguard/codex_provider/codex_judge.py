@@ -12,13 +12,13 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Discriminator, Tag, TypeAdapter, ValidationError
 
 from codeguard.codex_provider.verdict_schema import verdict_schema
+from codeguard.config import Thinking
 from codeguard.review import (
-    JUDGE_THINKING,
+    DEFAULT_MODEL_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeRequest,
-    Thinking,
     Verdict,
 )
 from codeguard.review.judge_process import check_judge_process, run_judge_process
@@ -43,12 +43,18 @@ class CodexJudge:
     processes: AbstractContextManager[object]
     executable: str = "codex"
     deadline: Deadline | None = None
-    thinking: Thinking = JUDGE_THINKING
+    # None runs at the CLI's own default reasoning effort.
+    thinking: Thinking | None = None
 
     @property
     def identity(self) -> str:
         return "\0".join(
-            ("codex-cli", self.model, f"thinking={self.thinking}", "native-tools-schema-v4")
+            (
+                "codex-cli",
+                self.model,
+                f"thinking={self.thinking or DEFAULT_MODEL_KEY}",
+                "native-tools-schema-v4",
+            )
         )
 
     def judge(self, request: JudgeRequest) -> Judgement:
@@ -84,17 +90,18 @@ class CodexJudge:
         return run_judge_process(command, prompt, work, self.deadline, environment)
 
     def _command(self, schema: Path, instructions: Path, answer: Path) -> list[str]:
-        settings = {
+        settings: dict[str, object] = {
             "approval_policy": "never",
             "forced_login_method": "chatgpt",
             "model_provider": "openai",
-            "model_reasoning_effort": self.thinking,
             "model_instructions_file": str(instructions),
             "project_doc_max_bytes": 0,
             "web_search": "disabled",
             "features.skip_host_skill_discovery": True,
             "features.omit_skill_descriptions": True,
         }
+        if self.thinking:
+            settings["model_reasoning_effort"] = self.thinking
         return [
             self.executable,
             "exec",

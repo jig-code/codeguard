@@ -44,15 +44,24 @@ class Judges:
 
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]
+        thinking = self.config.thinking
         if model.provider is JudgeProvider.CODEX_CLI:
-            return CodexJudge(root, model.required_name, processes, deadline=deadline)
+            return CodexJudge(
+                root, model.required_name, processes, deadline=deadline, thinking=thinking.codex_cli
+            )
         if model.provider is JudgeProvider.GEMINI:
             gemini = self.gemini
             models = VertexGemini(
                 gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
             )
             return ApiJudge(
-                root, model.required_name, models, processes, model.provider, deadline=deadline
+                root,
+                model.required_name,
+                models,
+                processes,
+                model.provider,
+                thinking.gemini,
+                deadline=deadline,
             )
         if model.provider is JudgeProvider.BEDROCK:
             return ApiJudge(
@@ -61,6 +70,14 @@ class Judges:
                 BedrockClaude(),
                 processes,
                 model.provider,
+                thinking.bedrock,
                 deadline=deadline,
             )
-        return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+        return ClaudeJudge(
+            root,
+            model.name,
+            processes,
+            warmup=self.warmup,
+            deadline=deadline,
+            thinking=thinking.claude_cli,
+        )

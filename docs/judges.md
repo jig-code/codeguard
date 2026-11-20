@@ -25,20 +25,39 @@ minimal effort.
 
 ## What differs by provider
 
-Every judge gets the same instructions, prompt and verdict schema, and thinks at the same
-level, `medium`, which each judge passes to its provider in that provider's own setting:
-`--effort` for the `claude` CLI, `model_reasoning_effort` for the `codex` CLI, and
-pydantic-ai's `thinking` setting for `gemini` and `bedrock`, which maps it to the model's
-own thinking or reasoning setting. The level keys cached verdicts, so changing it judges
-afresh. `gemini` and `bedrock` ask for the verdict the same way, as a tool call, and give
-each request to the model 120 seconds, its retries included.
+Every judge gets the same instructions, prompt and verdict schema. `gemini` and `bedrock`
+ask for the verdict the same way, as a tool call, and give each request to the model 120
+seconds, its retries included.
 
-What does differ is only what a provider requires: how codeguard reaches the model (a
-CLI it runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and
-how codeguard reads each CLI's output. Every judge records the same telemetry keys where
-its provider reports the data: `input_tokens`, `output_tokens`, `cache_read_input_tokens`,
+What differs is only what a provider requires: how codeguard reaches the model (a CLI it
+runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and how
+codeguard reads each CLI's output. Every judge records the same telemetry keys where its
+provider reports the data: `input_tokens`, `output_tokens`, `cache_read_input_tokens`,
 `thinking_tokens` and `tool_calls`, plus `num_turns` from all but the `codex` CLI, which
 doesn't report it.
+
+### Thinking
+
+How hard a judge's model thinks before its verdict is set per provider, for every rule it
+judges, in `.codeguard/config.yaml`:
+
+```yaml
+judge:
+  thinking:
+    claude-cli: high   # default: the claude CLI's own
+    codex-cli: medium  # default: the codex CLI's own
+    gemini: medium     # default: medium
+    bedrock: medium    # default: medium
+```
+
+Each level is `low`, `medium` or `high`. `gemini` and `bedrock` think at `medium` unless
+set. The `claude` and `codex` CLIs think at their own default unless set; a level set for
+one is passed on its command line, as `--effort` to `claude` and as
+`model_reasoning_effort` to `codex`. `gemini` and `bedrock` pass it through pydantic-ai's
+`thinking` setting, which maps it to the model's own thinking or reasoning setting.
+
+The level changes verdicts, so it is set only in the committed config, never in the
+environment, and it keys cached verdicts: changing it judges afresh.
 
 ## Choose a provider
 

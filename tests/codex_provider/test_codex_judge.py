@@ -9,7 +9,6 @@ from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
 from codeguard.review import (
-    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -134,22 +133,35 @@ class TestCodexJudge:
         assert "OPENAI_BASE_URL" not in received["environment"]
         assert "PATH" in received["environment"]
 
-    def test_passes_the_bound_model_and_the_judge_thinking_level(
+    def test_passes_the_bound_model_and_the_thinking_level_it_is_given(
         self, tmp_path, processes, fake_codex_executable, record, make_judge_request
     ):
-        judge = CodexJudge(tmp_path, "a-bound-model", processes, fake_codex_executable)
+        judge = CodexJudge(
+            tmp_path, "a-bound-model", processes, fake_codex_executable, thinking="high"
+        )
 
         judge.judge(make_judge_request())
 
         arguments = json.loads(record.read_text())["arguments"]
         assert arguments[arguments.index("--model") + 1] == "a-bound-model"
-        assert f'model_reasoning_effort="{JUDGE_THINKING}"' in arguments
+        assert 'model_reasoning_effort="high"' in arguments
+
+    def test_without_a_level_runs_at_the_cli_default_reasoning_effort(
+        self, tmp_path, processes, fake_codex_executable, record, make_judge_request
+    ):
+        judge = CodexJudge(tmp_path, MODEL, processes, fake_codex_executable)
+
+        judge.judge(make_judge_request())
+
+        arguments = json.loads(record.read_text())["arguments"]
+        assert not any("model_reasoning_effort" in argument for argument in arguments)
 
     def test_identity_changes_with_the_thinking_level(self, tmp_path, processes):
+        default = CodexJudge(tmp_path, MODEL, processes)
         medium = CodexJudge(tmp_path, MODEL, processes, thinking="medium")
         high = CodexJudge(tmp_path, MODEL, processes, thinking="high")
 
-        assert medium.identity != high.identity
+        assert len({default.identity, medium.identity, high.identity}) == 3
 
     def test_records_usage_and_commands_under_the_shared_keys(
         self, tmp_path, processes, fake_codex_executable, capfire, make_judge_request

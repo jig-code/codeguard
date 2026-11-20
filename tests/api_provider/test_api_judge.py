@@ -26,8 +26,8 @@ from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
 from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
+from codeguard.config import Thinking
 from codeguard.review import (
-    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -163,8 +163,10 @@ def waits(monkeypatch) -> list[float]:
     return waited
 
 
-def judge_with(tmp_path, models, provider: str = "gemini", **kwargs) -> ApiJudge:
-    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), provider, **kwargs)
+def judge_with(
+    tmp_path, models, provider: str = "gemini", thinking: Thinking = "medium", **kwargs
+) -> ApiJudge:
+    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), provider, thinking, **kwargs)
 
 
 class TestApiJudge:
@@ -223,19 +225,12 @@ class TestApiJudge:
         ]
 
     @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
-    def test_every_provider_thinks_at_the_judge_thinking_level(
+    def test_every_provider_thinks_at_the_level_it_is_given(
         self, tmp_path, make_judge_request, provider
     ):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models, provider=provider).judge(make_judge_request())
-
-        assert models.info().model_request_parameters.thinking == JUDGE_THINKING
-
-    def test_thinks_at_the_level_it_is_given(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
-
-        judge_with(tmp_path, models, thinking="high").judge(make_judge_request())
+        judge_with(tmp_path, models, provider, "high").judge(make_judge_request())
 
         assert models.info().model_request_parameters.thinking == "high"
 
@@ -457,15 +452,15 @@ class TestApiJudge:
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
 
-        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini").judge(
+        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini", "medium").judge(
             make_judge_request()
         )
 
         assert processes.events == ["acquired", "released"]
 
     def test_identity_names_the_provider_model_and_thinking_level(self, tmp_path):
-        assert judge_with(tmp_path, ScriptedGemini([])).identity == (
-            f"gemini\0{MODEL}\0thinking={JUDGE_THINKING}"
+        assert judge_with(tmp_path, ScriptedGemini([]), thinking="low").identity == (
+            f"gemini\0{MODEL}\0thinking=low"
         )
 
     def test_call_records_its_usage_across_requests(
@@ -558,7 +553,7 @@ class TestApiJudgeOnVertex:
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
 
-    def test_vertex_is_asked_for_the_verdict_tool_at_the_judge_thinking_level(
+    def test_vertex_is_asked_for_the_verdict_tool_at_the_thinking_level(
         self, tmp_path, make_judge_request, make_verdict
     ):
         vertex = VertexVerdicts(make_verdict())
@@ -569,13 +564,13 @@ class TestApiJudgeOnVertex:
             transport=httpx2.MockTransport(vertex),
         )
 
-        judge_with(tmp_path, models).judge(make_judge_request())
+        judge_with(tmp_path, models, thinking="high").judge(make_judge_request())
 
         [request] = vertex.sent
         body = json.loads(request.content)
         assert body["generationConfig"]["thinkingConfig"] == {
             "include_thoughts": True,
-            "thinking_level": JUDGE_THINKING.upper(),
+            "thinking_level": "HIGH",
         }
         declared = [
             declaration["name"]

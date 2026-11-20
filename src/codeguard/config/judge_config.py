@@ -1,10 +1,17 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
+
+# How hard a judge's model thinks before its verdict, in the levels every provider offers.
+type Thinking = Literal["low", "medium", "high"]
+# The level an API judge thinks at unless the project sets one for its provider. A CLI judge
+# runs at the CLI's own default unless the project sets one.
+_API_THINKING: Thinking = "medium"
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -131,12 +138,24 @@ class GeminiSettings(BaseSettings):
             )
 
 
+class ThinkingConfig(BaseModel):
+    """The level each provider's judge thinks at, for every rule it judges."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, validate_by_name=True)
+
+    claude_cli: Thinking | None = Field(default=None, alias="claude-cli")
+    codex_cli: Thinking | None = Field(default=None, alias="codex-cli")
+    gemini: Thinking = _API_THINKING
+    bedrock: Thinking = _API_THINKING
+
+
 class JudgeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None
     model: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
+    thinking: ThinkingConfig = ThinkingConfig()
 
     @property
     def choice(self) -> JudgeChoice:

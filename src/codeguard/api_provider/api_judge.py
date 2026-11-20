@@ -35,15 +35,14 @@ from codeguard.api_provider.file_system import (
     file_tool_calls,
     loaded_files,
 )
+from codeguard.config import Thinking
 from codeguard.review import (
-    JUDGE_THINKING,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
     JudgeRequest,
     JudgeTimeout,
-    Thinking,
     Verdict,
 )
 
@@ -64,10 +63,10 @@ class ApiJudge:
     models: ApiModels
     processes: AbstractContextManager[object]
     provider: str
+    thinking: Thinking
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
     request_limit_seconds: float = _REQUEST_LIMIT_SECONDS
-    thinking: Thinking = JUDGE_THINKING
 
     @property
     def identity(self) -> str:

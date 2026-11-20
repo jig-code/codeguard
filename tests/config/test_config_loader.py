@@ -19,6 +19,7 @@ from codeguard.config import (
     RulesetConfig,
     RulesetLoader,
     Severity,
+    ThinkingConfig,
 )
 
 CONFIG = ".codeguard/config.yaml"
@@ -84,6 +85,41 @@ class TestConfigLoader:
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             provider=JudgeProvider.BEDROCK, model="project-model"
         )
+
+    def test_loads_each_providers_thinking_level(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    claude-cli: high\n    gemini: low\n")
+
+        thinking = ConfigLoader(repo.root).load().judge.thinking
+
+        assert thinking == ThinkingConfig(claude_cli="high", gemini="low")
+        assert (thinking.codex_cli, thinking.bedrock) == (None, "medium")
+
+    def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    openai: high\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.thinking.openai: Extra inputs are not permitted"
+        )
+
+    def test_unknown_thinking_level_is_an_error(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    gemini: max\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value).startswith(
+            f"{repo.root}/.codeguard is invalid:\n  judge.thinking.gemini: Input should be "
+        )
+
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__THINKING__GEMINI": "high"})
+    def test_thinking_level_in_the_environment_is_ignored(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    gemini: low\n")
+
+        assert ConfigLoader(repo.root).load().judge.thinking.gemini == "low"
 
     @mock.patch.dict(
         os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock", "CODEGUARD_JUDGE__MODEL": "env-model"}
