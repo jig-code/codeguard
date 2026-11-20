@@ -23,6 +23,50 @@ Which judge runs is configuration, never code that knows where it runs, so that 
 two config values swap the judge for the whole system and switching models takes
 minimal effort.
 
+## What differs by provider
+
+Every judge gets the same instructions, prompt and verdict schema. `gemini` and `bedrock`
+ask for the verdict the same way, as a tool call, and give each request to the model 120
+seconds, its retries included.
+
+What differs is only what a provider requires: how codeguard reaches the model (a CLI it
+runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and how
+codeguard reads each CLI's output. Every judge records the same telemetry keys where its
+provider reports the data: `input_tokens`, `output_tokens`, `cache_read_input_tokens`,
+`thinking_tokens` and `tool_calls`, plus `num_turns` from all but the `codex` CLI, which
+doesn't report it.
+
+### Thinking
+
+How hard a judge's model thinks before its verdict is set per provider, for every rule it
+judges, in `.codeguard/config.yaml`:
+
+```yaml
+judge:
+  thinking:
+    claude-cli: high     # default: default
+    codex-cli: medium    # default: default
+    gemini: medium       # default: medium
+    bedrock: xhigh       # default: medium
+```
+
+Each provider takes its own levels, or `default`:
+
+| Provider | Levels | Unset | Passed as |
+|---|---|---|---|
+| `claude-cli` | `low`, `medium`, `high`, `xhigh`, `max` | `default` | `--effort` on the `claude` command line |
+| `codex-cli` | `low`, `medium`, `high` | `default` | `model_reasoning_effort` on the `codex` command line |
+| `gemini`, `bedrock` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max` | `medium` | pydantic-ai's `thinking` setting |
+
+`default` passes no level, as codeguard passes no model when none is named, so the CLI or
+model thinks at its own default. pydantic-ai maps an API level to the model's own thinking
+or reasoning setting, and to the nearest level a model offers when it lacks one: Gemini
+has no level above `high`, so `xhigh` and `max` think at `high` there. A level a provider
+doesn't take is a config error.
+
+The level changes verdicts, so it is set only in the committed config, never in the
+environment, and it keys cached verdicts: changing it judges afresh.
+
 ## Choose a provider
 
 - `claude-cli`, the default, runs Claude through the `claude` CLI on the developer's own
@@ -79,11 +123,12 @@ provider: gemini
 model: gemini-4-argon
 ```
 
-`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini calls run at once:
+`judge.calls_at_once` in `.codeguard/config.yaml` sets how many Gemini or Bedrock calls
+run at once:
 
 ```yaml
 judge:
-  calls_at_once: 2                # Gemini only; default: 2
+  calls_at_once: 2                # Gemini and Bedrock; default: 2
 ```
 
 Use the model in the example: codeguard supports only the Gemini model it is tested with.

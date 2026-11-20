@@ -1,10 +1,19 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_ai.settings import ThinkingEffort
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
+
+ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
+CodexEffort = Literal["low", "medium", "high"]
+ApiEffort = ThinkingEffort
+ClaudeEffortOrDefault = Literal["default", ClaudeEffort]
+CodexEffortOrDefault = Literal["default", CodexEffort]
+ApiEffortOrDefault = Literal["default", ApiEffort]
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -131,12 +140,26 @@ class GeminiSettings(BaseSettings):
             )
 
 
+class ThinkingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, validate_by_name=True)
+
+    claude_cli: ClaudeEffortOrDefault = Field(default="default", alias="claude-cli")
+    codex_cli: CodexEffortOrDefault = Field(default="default", alias="codex-cli")
+    gemini: ApiEffortOrDefault = "medium"
+    bedrock: ApiEffortOrDefault = "medium"
+
+
+def sent_effort[Effort: str](setting: Effort | Literal["default"]) -> Effort | None:
+    return None if setting == "default" else cast("Effort", setting)
+
+
 class JudgeConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: JudgeProvider | None = None
     model: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
+    thinking: ThinkingConfig = ThinkingConfig()
 
     @property
     def choice(self) -> JudgeChoice:
@@ -145,8 +168,6 @@ class JudgeConfig(BaseModel):
     def concurrency(self, provider: JudgeProvider, cpus: int | None) -> int:
         """How many calls a provider makes at once, given the machine's CPU count, which
         may be unknown."""
-        if provider is JudgeProvider.GEMINI and self.calls_at_once is not None:
-            return self.calls_at_once
-        if not provider.runs_a_cli:
-            return _API_CALLS_AT_ONCE
-        return cpus or 1
+        if provider.runs_a_cli:
+            return cpus or 1
+        return self.calls_at_once or _API_CALLS_AT_ONCE

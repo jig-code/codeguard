@@ -16,6 +16,7 @@ from codeguard.review.judge_rule import JudgeRule
 from codeguard.syntax import Classification
 
 DEFAULT_MODEL_KEY = "default"
+DEFAULT_THINKING_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
 
 

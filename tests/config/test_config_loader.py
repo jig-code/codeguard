@@ -19,6 +19,7 @@ from codeguard.config import (
     RulesetConfig,
     RulesetLoader,
     Severity,
+    ThinkingConfig,
 )
 
 CONFIG = ".codeguard/config.yaml"
@@ -83,6 +84,49 @@ class TestConfigLoader:
 
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(
             provider=JudgeProvider.BEDROCK, model="project-model"
+        )
+
+    def test_loads_each_providers_thinking_level(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    claude-cli: high\n    gemini: low\n")
+
+        thinking = ConfigLoader(repo.root).load().judge.thinking
+
+        assert thinking == ThinkingConfig(
+            claude_cli="high", codex_cli="default", gemini="low", bedrock="medium"
+        )
+
+    @pytest.mark.parametrize(
+        ("provider", "level", "offered"),
+        [
+            (
+                "gemini",
+                "extreme",
+                "'default', 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max'",
+            ),
+            ("claude-cli", "minimal", "'default', 'low', 'medium', 'high', 'xhigh' or 'max'"),
+            ("codex-cli", "max", "'default', 'low', 'medium' or 'high'"),
+        ],
+    )
+    def test_level_a_provider_does_not_offer_is_an_error(self, repo, provider, level, offered):
+        repo.write(CONFIG, f"judge:\n  thinking:\n    {provider}: {level}\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            f"  judge.thinking.{provider}: Input should be {offered}"
+        )
+
+    def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
+        repo.write(CONFIG, "judge:\n  thinking:\n    openai: high\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            "  judge.thinking.openai: Extra inputs are not permitted"
         )
 
     @mock.patch.dict(

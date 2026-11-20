@@ -10,8 +10,10 @@ from pydantic import BaseModel
 
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
+from codeguard.config import ClaudeEffort
 from codeguard.review import (
     DEFAULT_MODEL_KEY,
+    DEFAULT_THINKING_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -33,10 +35,17 @@ class ClaudeJudge:
     executable: str = _EXECUTABLE
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     deadline: Deadline | None = None
+    thinking: ClaudeEffort | None = None
 
     @property
     def identity(self) -> str:
-        return "\0".join((_EXECUTABLE, self.model or DEFAULT_MODEL_KEY))
+        return "\0".join(
+            (
+                _EXECUTABLE,
+                self.model or DEFAULT_MODEL_KEY,
+                f"thinking={self.thinking or DEFAULT_THINKING_KEY}",
+            )
+        )
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with logfire.span(
@@ -78,6 +87,7 @@ class ClaudeJudge:
                 "--safe-mode",
                 "-p",
                 *(("--model", self.model) if self.model else ()),
+                *(("--effort", self.thinking) if self.thinking else ()),
                 "--output-format",
                 "stream-json",
                 "--verbose",
