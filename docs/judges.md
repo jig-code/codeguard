@@ -44,17 +44,25 @@ judges, in `.codeguard/config.yaml`:
 ```yaml
 judge:
   thinking:
-    claude-cli: high   # default: the claude CLI's own
-    codex-cli: medium  # default: the codex CLI's own
-    gemini: medium     # default: medium
-    bedrock: medium    # default: medium
+    claude-cli: high     # default: default
+    codex-cli: medium    # default: default
+    gemini: medium       # default: medium
+    bedrock: xhigh       # default: medium
 ```
 
-Each level is `low`, `medium` or `high`. `gemini` and `bedrock` think at `medium` unless
-set. The `claude` and `codex` CLIs think at their own default unless set; a level set for
-one is passed on its command line, as `--effort` to `claude` and as
-`model_reasoning_effort` to `codex`. `gemini` and `bedrock` pass it through pydantic-ai's
-`thinking` setting, which maps it to the model's own thinking or reasoning setting.
+Each provider takes its own levels, or `default`:
+
+| Provider | Levels | Unset | Passed as |
+|---|---|---|---|
+| `claude-cli` | `low`, `medium`, `high`, `xhigh`, `max` | `default` | `--effort` on the `claude` command line |
+| `codex-cli` | `low`, `medium`, `high` | `default` | `model_reasoning_effort` on the `codex` command line |
+| `gemini`, `bedrock` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max` | `medium` | pydantic-ai's `thinking` setting |
+
+`default` passes no level, as codeguard passes no model when none is named, so the CLI or
+model thinks at its own default. pydantic-ai maps an API level to the model's own thinking
+or reasoning setting, and to the nearest level a model offers when it lacks one: Gemini
+has no level above `high`, so `xhigh` and `max` think at `high` there. A level a provider
+doesn't take is a config error.
 
 The level changes verdicts, so it is set only in the committed config, never in the
 environment, and it keys cached verdicts: changing it judges afresh.

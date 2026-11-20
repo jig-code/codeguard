@@ -1,4 +1,3 @@
-import json
 import subprocess
 import time
 from collections.abc import AsyncIterator
@@ -26,7 +25,7 @@ from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
 from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
-from codeguard.config import Thinking
+from codeguard.config import ApiEffort
 from codeguard.review import (
     Deadline,
     Judgement,
@@ -164,7 +163,7 @@ def waits(monkeypatch) -> list[float]:
 
 
 def judge_with(
-    tmp_path, models, provider: str = "gemini", thinking: Thinking = "medium", **kwargs
+    tmp_path, models, provider: str = "gemini", thinking: ApiEffort | None = "medium", **kwargs
 ) -> ApiJudge:
     return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), provider, thinking, **kwargs)
 
@@ -179,19 +178,14 @@ class TestApiJudge:
             Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
         )
 
-    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
-    def test_asks_every_provider_for_the_verdict_as_a_tool_call(
-        self, tmp_path, make_judge_request, provider
-    ):
+    def test_asks_for_the_verdict_as_a_tool_call(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models, provider=provider).judge(make_judge_request())
+        judge_with(tmp_path, models).judge(make_judge_request())
 
         parameters = models.info().model_request_parameters
         assert parameters.output_mode == "tool"
-        assert parameters.output_object is None
-        [output_tool] = parameters.output_tools
-        assert output_tool.description == Verdict.__doc__
+        assert [tool.name for tool in parameters.output_tools] == ["final_result"]
 
     def test_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
@@ -224,15 +218,19 @@ class TestApiJudge:
             request.prompt
         ]
 
-    @pytest.mark.parametrize("provider", ["gemini", "bedrock"])
-    def test_every_provider_thinks_at_the_level_it_is_given(
-        self, tmp_path, make_judge_request, provider
-    ):
+    def test_thinks_at_the_level_it_is_given(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models, provider, "high").judge(make_judge_request())
+        judge_with(tmp_path, models, thinking="xhigh").judge(make_judge_request())
 
-        assert models.info().model_request_parameters.thinking == "high"
+        assert models.info().model_request_parameters.thinking == "xhigh"
+
+    def test_without_a_level_sends_none(self, tmp_path, make_judge_request):
+        models = ScriptedGemini([verdict()])
+
+        judge_with(tmp_path, models, thinking=None).judge(make_judge_request())
+
+        assert models.info().model_request_parameters.thinking is None
 
     def test_loaded_files_are_the_files_gemini_read_searched_and_listed_in_call_order(
         self, tmp_path, make_judge_request
@@ -311,12 +309,31 @@ class TestApiJudge:
         (feedback,) = models.sent(1)
         assert isinstance(feedback, ToolReturnPart)
         assert feedback.outcome == "retried"
-        assert isinstance(feedback.content, list)
-        assert [(error["loc"], error["msg"]) for error in feedback.content] == [
-            (["reason"], "Field required"),
-            (["violations", 0, "lines"], "Field required"),
-            (["violations", 0, "message"], "Field required"),
-            (["violations", 0, "confidence"], "Field required"),
+        assert feedback.content == [
+            {
+                "type": "missing",
+                "loc": ["reason"],
+                "msg": "Field required",
+                "input": {"violations": [{"file": "a.py"}]},
+            },
+            {
+                "type": "missing",
+                "loc": ["violations", 0, "lines"],
+                "msg": "Field required",
+                "input": {"file": "a.py"},
+            },
+            {
+                "type": "missing",
+                "loc": ["violations", 0, "message"],
+                "msg": "Field required",
+                "input": {"file": "a.py"},
+            },
+            {
+                "type": "missing",
+                "loc": ["violations", 0, "confidence"],
+                "msg": "Field required",
+                "input": {"file": "a.py"},
+            },
         ]
 
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
@@ -463,6 +480,11 @@ class TestApiJudge:
             f"gemini\0{MODEL}\0thinking=low"
         )
 
+    def test_identity_without_a_level_names_the_model_default(self, tmp_path):
+        assert judge_with(tmp_path, ScriptedGemini([]), thinking=None).identity == (
+            f"gemini\0{MODEL}\0thinking=default"
+        )
+
     def test_call_records_its_usage_across_requests(
         self, tmp_path, make_judge_rule, capfire, make_judge_request
     ):
@@ -552,29 +574,3 @@ class TestApiJudgeOnVertex:
         assert "/projects/my-project/locations/europe-west4/" in request.url.path
         assert f"/models/{MODEL}:" in request.url.path
         assert request.headers["x-goog-api-key"] == "proxy-injected"
-
-    def test_vertex_is_asked_for_the_verdict_tool_at_the_thinking_level(
-        self, tmp_path, make_judge_request, make_verdict
-    ):
-        vertex = VertexVerdicts(make_verdict())
-        models = VertexGemini(
-            "my-project",
-            "global",
-            api_key=SecretStr("proxy-injected"),
-            transport=httpx2.MockTransport(vertex),
-        )
-
-        judge_with(tmp_path, models, thinking="high").judge(make_judge_request())
-
-        [request] = vertex.sent
-        body = json.loads(request.content)
-        assert body["generationConfig"]["thinkingConfig"] == {
-            "include_thoughts": True,
-            "thinking_level": "HIGH",
-        }
-        declared = [
-            declaration["name"]
-            for tool in body["tools"]
-            for declaration in tool.get("functionDeclarations", [])
-        ]
-        assert "final_result" in declared

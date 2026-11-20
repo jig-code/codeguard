@@ -200,12 +200,20 @@ class TestCodexJudge:
             }
         )
         judge = CodexJudge(tmp_path, MODEL, processes, str(FAKE_CODEX))
+        request = make_judge_request()
 
-        judge.judge(make_judge_request())
+        judge.judge(request)
 
-        [attributes] = finished_span_attributes(capfire, "codex judges {rule} on {file}")
-        assert "input_tokens" not in attributes
-        assert attributes["tool_calls"] == "[]"
+        assert finished_span_attributes(capfire, "codex judges {rule} on {file}") == [
+            {
+                "rule": request.judge_rule.name,
+                "file": "a.py",
+                "model": MODEL,
+                "returncode": 0,
+                "loaded_files": "[]",
+                "tool_calls": "[]",
+            }
+        ]
 
     def test_process_failure_is_not_retried(self, tmp_path, processes, record, make_judge_request):
         attempts = tmp_path / "attempts"

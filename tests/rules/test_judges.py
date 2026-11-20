@@ -6,7 +6,7 @@ import pytest
 from diskcache import Cache
 from pydantic import SecretStr
 
-from codeguard.api_provider import ApiJudge, VertexGemini
+from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import (
@@ -149,64 +149,74 @@ def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tm
 
 
 class TestJudgeThinking:
-    @pytest.mark.parametrize(
-        ("provider", "name"),
-        [
-            (JudgeProvider.GEMINI, "gemini-judge-test"),
-            (JudgeProvider.BEDROCK, "us.anthropic.claude-haiku-5-5"),
-        ],
-    )
-    def test_an_api_judge_thinks_at_medium_by_default(self, tmp_path, provider, name):
-        judge = Judges(store=Cache(tmp_path)).uncached(
-            tmp_path, JudgeModel(provider=provider, name=name)
-        )
-
-        assert isinstance(judge, ApiJudge)
-        assert judge.thinking == "medium"
-
-    @pytest.mark.parametrize(
-        ("provider", "name"),
-        [(JudgeProvider.CLAUDE_CLI, None), (JudgeProvider.CODEX_CLI, "gpt-6-luna")],
-    )
-    def test_a_cli_judge_runs_at_the_cli_default_by_default(self, tmp_path, provider, name):
-        judge = Judges(store=Cache(tmp_path)).uncached(
-            tmp_path, JudgeModel(provider=provider, name=name)
-        )
-
-        assert isinstance(judge, ClaudeJudge | CodexJudge)
-        assert judge.thinking is None
-
-    @pytest.mark.parametrize(
-        ("provider", "name"),
-        [
-            (JudgeProvider.CLAUDE_CLI, None),
-            (JudgeProvider.CODEX_CLI, "gpt-6-luna"),
-            (JudgeProvider.GEMINI, "gemini-judge-test"),
-            (JudgeProvider.BEDROCK, "us.anthropic.claude-haiku-5-5"),
-        ],
-    )
-    def test_each_provider_thinks_at_the_level_the_project_sets_for_it(
-        self, tmp_path, provider, name
-    ):
-        config = JudgeConfig.model_validate({"thinking": {str(provider): "high"}})
+    def test_claude_judge_runs_at_the_claude_cli_level(self, tmp_path):
+        config = JudgeConfig.model_validate({"thinking": {"claude-cli": "xhigh"}})
         judges = Judges(config, store=Cache(tmp_path))
 
-        judge = judges.uncached(tmp_path, JudgeModel(provider=provider, name=name))
+        judge = judges.uncached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
 
-        assert isinstance(judge, ApiJudge | ClaudeJudge | CodexJudge)
-        assert judge.thinking == "high"
+        assert judge == ClaudeJudge(
+            tmp_path,
+            None,
+            judges.processes[JudgeProvider.CLAUDE_CLI],
+            warmup=judges.warmup,
+            thinking="xhigh",
+        )
 
-    def test_a_level_set_for_one_provider_leaves_the_others_at_their_default(self, tmp_path):
-        config = JudgeConfig.model_validate({"thinking": {"gemini": "low"}})
+    def test_codex_judge_runs_at_the_codex_cli_level(self, tmp_path):
+        config = JudgeConfig.model_validate({"thinking": {"codex-cli": "low"}})
         judges = Judges(config, store=Cache(tmp_path))
 
-        bedrock = judges.uncached(
+        judge = judges.uncached(
+            tmp_path, JudgeModel(provider=JudgeProvider.CODEX_CLI, name="gpt-6-luna")
+        )
+
+        assert judge == CodexJudge(
+            tmp_path, "gpt-6-luna", judges.processes[JudgeProvider.CODEX_CLI], thinking="low"
+        )
+
+    def test_bedrock_judge_runs_at_the_bedrock_level(self, tmp_path):
+        config = JudgeConfig.model_validate({"thinking": {"bedrock": "max"}})
+        judges = Judges(config, store=Cache(tmp_path))
+
+        judge = judges.uncached(
             tmp_path,
             JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5"),
         )
-        claude = judges.uncached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
 
-        assert isinstance(bedrock, ApiJudge)
-        assert isinstance(claude, ClaudeJudge)
-        assert bedrock.thinking == "medium"
-        assert claude.thinking is None
+        assert judge == ApiJudge(
+            tmp_path,
+            "us.anthropic.claude-haiku-5-5",
+            BedrockClaude(),
+            judges.processes[JudgeProvider.BEDROCK],
+            JudgeProvider.BEDROCK,
+            "max",
+        )
+
+    def test_default_gives_a_cli_judge_no_level(self, tmp_path):
+        config = JudgeConfig.model_validate({"thinking": {"claude-cli": "default"}})
+        judges = Judges(config, store=Cache(tmp_path))
+
+        judge = judges.uncached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
+
+        assert judge == ClaudeJudge(
+            tmp_path, None, judges.processes[JudgeProvider.CLAUDE_CLI], warmup=judges.warmup
+        )
+
+    def test_default_gives_an_api_judge_no_level(self, tmp_path):
+        settings = GeminiSettings(project="a-project", api_key=SecretStr("proxy-injected"))
+        config = JudgeConfig.model_validate({"thinking": {"gemini": "default"}})
+        judges = Judges(config, settings, store=Cache(tmp_path))
+
+        judge = judges.uncached(
+            tmp_path, JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
+        )
+
+        assert judge == ApiJudge(
+            tmp_path,
+            "gemini-judge-test",
+            VertexGemini("a-project", "global", SecretStr("proxy-injected")),
+            judges.processes[JudgeProvider.GEMINI],
+            JudgeProvider.GEMINI,
+            None,
+        )

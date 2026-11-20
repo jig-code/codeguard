@@ -35,8 +35,9 @@ from codeguard.api_provider.file_system import (
     file_tool_calls,
     loaded_files,
 )
-from codeguard.config import Thinking
+from codeguard.config import ApiEffort
 from codeguard.review import (
+    DEFAULT_MODEL_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -63,14 +64,17 @@ class ApiJudge:
     models: ApiModels
     processes: AbstractContextManager[object]
     provider: str
-    thinking: Thinking
+    # None sends no level, so the model thinks at its own default.
+    thinking: ApiEffort | None
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
     request_limit_seconds: float = _REQUEST_LIMIT_SECONDS
 
     @property
     def identity(self) -> str:
-        return "\0".join((self.provider, self.model, f"thinking={self.thinking}"))
+        return "\0".join(
+            (self.provider, self.model, f"thinking={self.thinking or DEFAULT_MODEL_KEY}")
+        )
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (
@@ -147,7 +151,10 @@ class ApiJudge:
             limit = min(limit, self.deadline.remaining_seconds())
             if limit <= 0:
                 raise self.deadline.reached()
-        return {"request_timeout": limit, "thinking": self.thinking}
+        settings: ModelSettings = {"request_timeout": limit}
+        if self.thinking is not None:
+            settings["thinking"] = self.thinking
+        return settings
 
     def _timed_out(self) -> JudgeTimeout:
         if self.deadline is not None and self.deadline.remaining_seconds() <= 0:

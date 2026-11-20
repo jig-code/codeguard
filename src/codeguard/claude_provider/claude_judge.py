@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from codeguard.claude_provider.claude_result import ClaudeResult
 from codeguard.claude_provider.prompt_cache_warmup import PromptCacheWarmup
-from codeguard.config import Thinking
+from codeguard.config import ClaudeEffort
 from codeguard.review import (
     DEFAULT_MODEL_KEY,
     Deadline,
@@ -35,7 +35,7 @@ class ClaudeJudge:
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     deadline: Deadline | None = None
     # None runs at the CLI's own default effort.
-    thinking: Thinking | None = None
+    thinking: ClaudeEffort | None = None
 
     @property
     def identity(self) -> str:

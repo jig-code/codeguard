@@ -9,7 +9,13 @@ from diskcache import Cache
 from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
+from codeguard.config import (
+    GeminiSettings,
+    JudgeConfig,
+    JudgeModel,
+    JudgeProvider,
+    chosen_thinking,
+)
 from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
@@ -47,7 +53,11 @@ class Judges:
         thinking = self.config.thinking
         if model.provider is JudgeProvider.CODEX_CLI:
             return CodexJudge(
-                root, model.required_name, processes, deadline=deadline, thinking=thinking.codex_cli
+                root,
+                model.required_name,
+                processes,
+                deadline=deadline,
+                thinking=chosen_thinking(thinking.codex_cli),
             )
         if model.provider is JudgeProvider.GEMINI:
             gemini = self.gemini
@@ -60,7 +70,7 @@ class Judges:
                 models,
                 processes,
                 model.provider,
-                thinking.gemini,
+                chosen_thinking(thinking.gemini),
                 deadline=deadline,
             )
         if model.provider is JudgeProvider.BEDROCK:
@@ -70,7 +80,7 @@ class Judges:
                 BedrockClaude(),
                 processes,
                 model.provider,
-                thinking.bedrock,
+                chosen_thinking(thinking.bedrock),
                 deadline=deadline,
             )
         return ClaudeJudge(
@@ -79,5 +89,5 @@ class Judges:
             processes,
             warmup=self.warmup,
             deadline=deadline,
-            thinking=thinking.claude_cli,
+            thinking=chosen_thinking(thinking.claude_cli),
         )

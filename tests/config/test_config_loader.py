@@ -92,7 +92,30 @@ class TestConfigLoader:
         thinking = ConfigLoader(repo.root).load().judge.thinking
 
         assert thinking == ThinkingConfig(
-            claude_cli="high", codex_cli=None, gemini="low", bedrock="medium"
+            claude_cli="high", codex_cli="default", gemini="low", bedrock="medium"
+        )
+
+    @pytest.mark.parametrize(
+        ("provider", "level", "offered"),
+        [
+            (
+                "gemini",
+                "extreme",
+                "'default', 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max'",
+            ),
+            ("claude-cli", "minimal", "'default', 'low', 'medium', 'high', 'xhigh' or 'max'"),
+            ("codex-cli", "max", "'default', 'low', 'medium' or 'high'"),
+        ],
+    )
+    def test_level_a_provider_does_not_offer_is_an_error(self, repo, provider, level, offered):
+        repo.write(CONFIG, f"judge:\n  thinking:\n    {provider}: {level}\n")
+
+        with pytest.raises(ConfigError) as error:
+            ConfigLoader(repo.root).load()
+
+        assert str(error.value) == (
+            f"{repo.root}/.codeguard is invalid:\n"
+            f"  judge.thinking.{provider}: Input should be {offered}"
         )
 
     def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
@@ -105,22 +128,6 @@ class TestConfigLoader:
             f"{repo.root}/.codeguard is invalid:\n"
             "  judge.thinking.openai: Extra inputs are not permitted"
         )
-
-    def test_unknown_thinking_level_is_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  thinking:\n    gemini: max\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value).startswith(
-            f"{repo.root}/.codeguard is invalid:\n  judge.thinking.gemini: Input should be "
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__THINKING__GEMINI": "high"})
-    def test_thinking_level_in_the_environment_is_ignored(self, repo):
-        repo.write(CONFIG, "judge:\n  thinking:\n    gemini: low\n")
-
-        assert ConfigLoader(repo.root).load().judge.thinking.gemini == "low"
 
     @mock.patch.dict(
         os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock", "CODEGUARD_JUDGE__MODEL": "env-model"}

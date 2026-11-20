@@ -6,14 +6,17 @@ from codeguard.config.config_error import ConfigError
 from codeguard.config.config_loader import CONFIG_DIR, CONFIG_FILE, ConfigLoader
 from codeguard.config.gate_rule import GateRule
 from codeguard.config.judge_config import (
+    ApiEffort,
+    ClaudeEffort,
+    CodexEffort,
     GeminiSettings,
     JudgeChoice,
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
     ModelFamily,
-    Thinking,
     ThinkingConfig,
+    chosen_thinking,
 )
 from codeguard.config.languages import LANGUAGES, language_of, named_languages
 from codeguard.config.package_config import (
@@ -61,9 +64,12 @@ __all__ = [
     "PATTERN_RULE_DIR",
     "RULE_TEST_DIR",
     "SNAPSHOT_DIR",
+    "ApiEffort",
     "BindingConfig",
     "BindingsConfig",
     "ChangeKind",
+    "ClaudeEffort",
+    "CodexEffort",
     "Config",
     "ConfigError",
     "ConfigLoader",
@@ -77,8 +83,8 @@ __all__ = [
     "JudgeConfig",
     "JudgeModel",
     "JudgeProvider",
-    "Thinking",
     "ThinkingConfig",
+    "chosen_thinking",
     "JudgedViolation",
     "Outcome",
     "PackageConfig",

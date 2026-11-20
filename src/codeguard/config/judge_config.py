@@ -1,17 +1,26 @@
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_ai.settings import ThinkingEffort
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from codeguard.config.config_error import ConfigError
 
-# How hard a judge's model thinks before its verdict, in the levels every provider offers.
-type Thinking = Literal["low", "medium", "high"]
-# The level an API judge thinks at unless the project sets one for its provider. A CLI judge
-# runs at the CLI's own default unless the project sets one.
-_API_THINKING: Thinking = "medium"
+# How hard a judge's model thinks before its verdict, in each provider's own levels: the
+# `claude` CLI's `--effort`, the `codex` CLI's `model_reasoning_effort`, and for the API
+# providers pydantic-ai's, which it maps to each model's own setting.
+ClaudeEffort = Literal["low", "medium", "high", "xhigh", "max"]
+CodexEffort = Literal["low", "medium", "high"]
+ApiEffort = ThinkingEffort
+# A provider's options in the config: its levels, or `default` to send none so the provider's
+# own default applies. Each is one Literal, so a level it doesn't offer gets one plain error.
+ClaudeThinking = Literal["default", ClaudeEffort]
+CodexThinking = Literal["default", CodexEffort]
+ApiThinking = Literal["default", ApiEffort]
+# The level an API judge thinks at unless the project sets one for its provider.
+_API_THINKING: ApiThinking = "medium"
 
 # Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls at once keep a run
 # under its tokens-per-minute limit.
@@ -143,10 +152,15 @@ class ThinkingConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, validate_by_name=True)
 
-    claude_cli: Thinking | None = Field(default=None, alias="claude-cli")
-    codex_cli: Thinking | None = Field(default=None, alias="codex-cli")
-    gemini: Thinking = _API_THINKING
-    bedrock: Thinking = _API_THINKING
+    claude_cli: ClaudeThinking = Field(default="default", alias="claude-cli")
+    codex_cli: CodexThinking = Field(default="default", alias="codex-cli")
+    gemini: ApiThinking = _API_THINKING
+    bedrock: ApiThinking = _API_THINKING
+
+
+def chosen_thinking[Effort: str](level: Effort | Literal["default"]) -> Effort | None:
+    """The level to send the provider, or `None` to send none and use its default."""
+    return None if level == "default" else cast("Effort", level)
 
 
 class JudgeConfig(BaseModel):
