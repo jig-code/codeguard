@@ -12,7 +12,6 @@ from codeguard.config.retired_keys import without_retired_keys
 from codeguard.config.versions import ExactVersion
 
 _ENVIRONMENT_JUDGE_KEYS = ("provider", "model")
-# Projects' configs still set it, from when the judge's verdict stated a confidence.
 _RETIRED_SETTINGS = frozenset({"confidence_threshold"})
 
 

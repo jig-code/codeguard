@@ -28,8 +28,6 @@ class FailingJudge:
 
 @dataclass(frozen=True)
 class SequencedJudge:
-    """Gives each call the next of its verdicts, as a judge whose verdict varies between runs."""
-
     verdicts: list[Verdict]
     identity: str = "sequenced"
 
