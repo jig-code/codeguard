@@ -18,8 +18,7 @@ agent loads before it edits. It holds, in this order, and nothing else:
 Nothing else goes in the skill, in any section or for any language: each piece of code
 is decided by the statement, or the statement is unclear. A rule in several languages is
 one skill, in no language's names, syntax or libraries. Leave out the fix, and anything
-telling the judge how to answer: the judge's own prompt sets its output and its
-confidence scale.
+telling the judge how to answer: the judge's own prompt sets its output.
 
 ## Gate every form of the violation
 

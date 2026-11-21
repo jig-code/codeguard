@@ -27,6 +27,17 @@ class FailingJudge:
 
 
 @dataclass(frozen=True)
+class SequencedJudge:
+    """Gives each call the next of its verdicts, as a judge whose verdict varies between runs."""
+
+    verdicts: list[Verdict]
+    identity: str = "sequenced"
+
+    def judge(self, request: JudgeRequest) -> Judgement:
+        return Judgement(self.verdicts.pop(0))
+
+
+@dataclass(frozen=True)
 class JudgeCreation:
     root: Path
     model: JudgeModel
@@ -34,9 +45,11 @@ class JudgeCreation:
 
 @dataclass(frozen=True)
 class RecordingJudges:
-    judge: RecordingJudge | FailingJudge
+    judge: RecordingJudge | FailingJudge | SequencedJudge
     created: list[JudgeCreation] = field(default_factory=list)
 
-    def __call__(self, root: Path, model: JudgeModel) -> RecordingJudge | FailingJudge:
+    def __call__(
+        self, root: Path, model: JudgeModel
+    ) -> RecordingJudge | FailingJudge | SequencedJudge:
         self.created.append(JudgeCreation(root, model))
         return self.judge

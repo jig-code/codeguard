@@ -11,7 +11,6 @@ from codeguard.syntax import ChangeClassifier, SyntaxScanner
 class EditReviewTask:
     binding: Binding
     judges: JudgeFactory
-    confidence_threshold: float
     scanner: SyntaxScanner
 
     def __call__(self, inputs: FileEdit) -> EditVerdict:
@@ -33,7 +32,6 @@ class EditReviewTask:
         violations = tuple(
             JudgedViolation(
                 lines=violation.lines,
-                confidence=violation.confidence,
                 message=violation.message,
                 kinds=None if parsed is None else tuple(sorted(parsed.kinds_on(violation.lines))),
             )
@@ -41,10 +39,7 @@ class EditReviewTask:
             if changed.covers(violation.file, violation.lines) and violation.file == inputs.file
         )
         return EditVerdict(
-            outcome=self._outcome(violations), reason=verdict.reason, violations=violations
+            outcome=Outcome.INVALID if violations else Outcome.VALID,
+            reason=verdict.reason,
+            violations=violations,
         )
-
-    def _outcome(self, violations: tuple[JudgedViolation, ...]) -> Outcome:
-        if any(violation.confidence >= self.confidence_threshold for violation in violations):
-            return Outcome.INVALID
-        return Outcome.UNCERTAIN if violations else Outcome.VALID

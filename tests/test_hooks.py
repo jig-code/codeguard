@@ -227,7 +227,7 @@ class TestStopHook:
             "systemMessage": f"codeguard warnings:\n{warning}",
         }
 
-    def test_low_confidence_finding_goes_to_the_user(
+    def test_judged_error_finding_blocks_the_agent(
         self, repo, make_judge_rule, claude_bin, make_diagnostic
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
@@ -235,7 +235,7 @@ class TestStopHook:
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\ny = 2\n")
         violation = {"file": "a.py", "lines": {"start": 1, "end": 2}, "message": "Move it."}
-        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([violation])})
         finding = make_diagnostic(
             judged=True,
             lines__start=1,
@@ -244,12 +244,11 @@ class TestStopHook:
             message="Move it.",
             note=None,
             warning=False,
-            confidence=0.5,
-        ).as_warning()
+        )
 
         response = run_stop_hook(repo, stop(), path=path_with(claude_bin))
 
-        assert response == {"systemMessage": f"codeguard warnings:\n{finding}"}
+        assert response == {"decision": "block", "reason": f"{finding}\n{REQUIRED_FIXES}"}
 
     def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, make_judge_rule, claude_bin):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)

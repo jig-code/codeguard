@@ -137,13 +137,11 @@ class Rules:
         deadline: Deadline,
     ) -> tuple[JudgeCheck, ...]:
         root = self.working_tree.root
-        threshold = self.config.confidence_threshold
         return tuple(
             JudgeCheck(
                 self.working_tree,
                 binding,
                 self.judges.cached(root, binding.model, deadline),
-                threshold,
                 scope,
                 classification,
             )

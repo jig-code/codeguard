@@ -40,7 +40,6 @@ VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
     "message": "Move it.",
-    "confidence": 0.5,
 }
 
 
@@ -298,12 +297,6 @@ class TestApiJudge:
             {
                 "type": "missing",
                 "loc": ["violations", 0, "message"],
-                "msg": "Field required",
-                "input": {"file": "a.py"},
-            },
-            {
-                "type": "missing",
-                "loc": ["violations", 0, "confidence"],
                 "msg": "Field required",
                 "input": {"file": "a.py"},
             },

@@ -25,7 +25,6 @@ class PartialEqualsExpected(Evaluator[FileEdit, EditVerdict, None]):
 @dataclass
 class ViolationsOnTriggers(Evaluator[FileEdit, EditVerdict, None]):
     triggers: tuple[str, ...]
-    confidence_threshold: float
 
     def evaluate(
         self, ctx: EvaluatorContext[FileEdit, EditVerdict, None]
@@ -40,7 +39,7 @@ class ViolationsOnTriggers(Evaluator[FileEdit, EditVerdict, None]):
         kinds = {
             violation.lines: violation.kinds
             for violation in ctx.output.violations
-            if violation.confidence >= self.confidence_threshold and violation.kinds is not None
+            if violation.kinds is not None
         }
         if not kinds or any(set(self.triggers) & set(found) for found in kinds.values()):
             return EvaluationReason(value=True)

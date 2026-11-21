@@ -33,7 +33,6 @@ class JudgeEvalRunner:
     root: Path
     ruleset: RulesetLoader
     judges: JudgeFactory
-    confidence_threshold: float
     repeat: int = 1
     judge_config: JudgeConfig = JudgeConfig()
     ast_grep: AstGrep = AstGrep()
@@ -126,10 +125,10 @@ class JudgeEvalRunner:
             ],
             evaluators=[
                 PartialEqualsExpected(),
-                ViolationsOnTriggers(tuple(sorted(binding.triggers)), self.confidence_threshold),
+                ViolationsOnTriggers(tuple(sorted(binding.triggers))),
             ],
         )
-        task = EditReviewTask(binding, self.judges, self.confidence_threshold, scanner)
+        task = EditReviewTask(binding, self.judges, scanner)
         return await dataset.evaluate(
             task,
             name=f"{dataset.name} on {model.label}",
@@ -137,7 +136,6 @@ class JudgeEvalRunner:
             metadata={
                 "provider": model.provider,
                 "model": model.name,
-                "confidence_threshold": self.confidence_threshold,
                 "rule_version": binding.version,
                 "codeguard_version": version("codeguard"),
             },

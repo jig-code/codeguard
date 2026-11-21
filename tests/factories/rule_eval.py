@@ -31,7 +31,6 @@ class MakeJudgedViolation(factory.Factory):
         model = JudgedViolation
 
     lines = factory.SubFactory(MakeLineRange)
-    confidence = 0.9
     message = "Pass the member."
 
 

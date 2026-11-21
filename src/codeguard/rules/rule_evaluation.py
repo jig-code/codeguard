@@ -29,7 +29,6 @@ class RuleEvaluation:
                     root,
                     loader,
                     judge,
-                    config.confidence_threshold,
                     repeat,
                     config.judge,
                     rules.ast_grep,

@@ -27,7 +27,7 @@ class TestGeneralRuleVersion:
 class TestGeneralRuleEvals:
     def run(self, directory, judge):
         loader = RulesetLoader.local(directory.root)
-        return JudgeEvalRunner(directory.root, loader, RecordingJudges(judge), 0.9).run()
+        return JudgeEvalRunner(directory.root, loader, RecordingJudges(judge)).run()
 
     def test_each_language_is_reported_on_its_own(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
