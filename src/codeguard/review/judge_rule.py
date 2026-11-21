@@ -28,30 +28,31 @@ class JudgeRule:
         return match is not None and bool(match.group("body").strip())
 
     def format_problems(self) -> tuple[str, ...]:
-        """What keeps the text from being a title, a statement and `## Why`, in that order."""
         lines = self.text.splitlines()
         if not lines or not _TITLE.match(lines[0]):
             return ("must start with a `# ` title",)
-        body = lines[1:]
-        headings = _heading_rows(body)
-        statement = body[: headings[0][0]] if headings else body
         return (
             *(
                 f"has the heading {heading!r}, but holds only a title, the statement and `## Why`"
-                for _, heading in headings
+                for heading in self._headings(lines[1:])
                 if not _WHY_HEADING_LINE.match(heading)
             ),
-            *(() if "".join(statement).strip() else ("has no statement under its title",)),
+            *(() if self._has_statement(lines[1:]) else ("has no statement under its title",)),
             *(() if self.says_why else ("has no `## Why` section with text",)),
         )
 
+    @staticmethod
+    def _has_statement(lines_under_title: list[str]) -> bool:
+        first = next((line for line in lines_under_title if line.strip()), "")
+        return bool(first) and not _HEADING.match(first)
 
-def _heading_rows(lines: list[str]) -> list[tuple[int, str]]:
-    inside_fence = False
-    rows: list[tuple[int, str]] = []
-    for row, line in enumerate(lines):
-        if line.lstrip().startswith(_FENCE):
-            inside_fence = not inside_fence
-        elif not inside_fence and _HEADING.match(line):
-            rows.append((row, line))
-    return rows
+    @staticmethod
+    def _headings(lines_under_title: list[str]) -> list[str]:
+        inside_fence = False
+        headings: list[str] = []
+        for line in lines_under_title:
+            if line.lstrip().startswith(_FENCE):
+                inside_fence = not inside_fence
+            elif not inside_fence and _HEADING.match(line):
+                headings.append(line)
+        return headings

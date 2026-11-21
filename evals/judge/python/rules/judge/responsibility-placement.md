@@ -1,6 +1,6 @@
 # Responsibility placement
 
-Logic that reads only one class's attributes is a method of that class, never code outside the class that recomputes from those attributes.
+Code outside a class never holds logic that reads only that class's attributes.
 
 ## Why
 

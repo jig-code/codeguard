@@ -1312,6 +1312,21 @@ class TestTestCommand:
         assert result.stdout == PASSING_NO_PRINT_TEST_REPORT + report
         assert result.returncode == returncode
 
+    def test_judge_rule_file_that_is_not_a_title_statement_and_why_fails(self, repo):
+        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(".codeguard/rules/judge/placement.md", "A method lives on its type.\n")
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            'rule: placement\npaths: ["**/*.py"]\ntriggers: [fixture]\n',
+        )
+
+        result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
+
+        assert result.stdout == (
+            PASSING_NO_PRINT_TEST_REPORT + "placement: rule file must start with a `# ` title\n"
+        )
+        assert result.returncode == 1
+
     def test_gate_tests_run_with_the_pattern_tests(self, repo):
         repo.write(
             ".codeguard/gates/enum-value.yml",

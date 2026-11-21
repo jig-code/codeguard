@@ -1,6 +1,6 @@
 # Defaults on the type
 
-A caller never passes a field a value that the owning type already declares as that field's default.
+A caller never passes a value that equals the default the owning type declares for that field.
 
 ## Why
 

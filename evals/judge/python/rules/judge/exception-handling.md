@@ -1,6 +1,6 @@
 # Exception handling
 
-A handler that catches an exception re-raises it, returns an error to its caller, or logs it with its traceback.
+A handler never discards the exception it catches.
 
 ## Why
 
