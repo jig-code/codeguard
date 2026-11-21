@@ -661,18 +661,17 @@ class TestJudgeConfig:
     def test_claude_runs_a_call_per_cpu_at_once(self):
         assert JudgeConfig().concurrency(JudgeProvider.CLAUDE_CLI, CPUS) == CPUS
 
-    def test_gemini_runs_two_calls_at_once(self):
-        assert JudgeConfig().concurrency(JudgeProvider.GEMINI, CPUS) == 2
+    @pytest.mark.parametrize("provider", [JudgeProvider.GEMINI, JudgeProvider.BEDROCK])
+    def test_an_api_runs_two_calls_at_once(self, provider):
+        assert JudgeConfig().concurrency(provider, CPUS) == 2
 
-    def test_calls_at_once_sets_the_concurrency(self):
-        assert JudgeConfig(calls_at_once=1).concurrency(JudgeProvider.GEMINI, CPUS) == 1
+    @pytest.mark.parametrize("provider", [JudgeProvider.GEMINI, JudgeProvider.BEDROCK])
+    def test_calls_at_once_sets_an_apis_concurrency(self, provider):
+        assert JudgeConfig(calls_at_once=1).concurrency(provider, CPUS) == 1
 
     @pytest.mark.parametrize("provider", [JudgeProvider.CLAUDE_CLI, JudgeProvider.CODEX_CLI])
     def test_calls_at_once_is_ignored_on_a_cli(self, provider):
         assert JudgeConfig(calls_at_once=1).concurrency(provider, CPUS) == CPUS
-
-    def test_calls_at_once_is_ignored_on_bedrock(self):
-        assert JudgeConfig(calls_at_once=5).concurrency(JudgeProvider.BEDROCK, CPUS) == 2
 
     def test_a_cli_without_a_cpu_count_runs_one_call_at_once(self):
         assert JudgeConfig().concurrency(JudgeProvider.CLAUDE_CLI, None) == 1

@@ -36,5 +36,4 @@ class AstGrepMatch(BaseModel):
             severity=self.severity,
             note=self.note,
             category=Category.PATTERN,
-            confidence=1.0,
         )

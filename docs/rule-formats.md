@@ -106,9 +106,6 @@ the review it should get:
   - `valid`: the triggers fire and the judge reports none;
   - `skipped`: the triggers don't fire, so the judge never sees the edit.
 
-  A review whose only violations are below the confidence threshold has the outcome
-  `uncertain`. No case can expect it: a case fails when the judge is uncertain about it.
-
   A case states no reason. The judge gives one with every verdict, and `codeguard eval`
   prints it for every case it judged, so whoever reads the eval sees on what ground the
   rule was decided; a wrong or vague reason shows where the rule's wording is unclear.
@@ -150,7 +147,7 @@ cases:
 
 `expected_output` can also list the `violations`, each with the `lines` of the code that
 breaks the rule (`lines: {start: 9, end: 11}`, with `end` equal to `start` for one line),
-its `confidence` and `message`, and optionally the `kinds` on those lines; a violation
+its `message`, and optionally the `kinds` on those lines; a violation
 without `kinds` isn't checked on them.
 A case that leaves them out checks only the outcome. Besides `cases`, the file may set
 `name`, the rule id, which defaults to the file name; a rule has one eval file. The file
@@ -193,6 +190,6 @@ reason for each case it judged, then one line per failure.
 | The convention | the rule file, `rules/judge/<id>.md` |
 | Paths and triggers | the binding |
 | Provider and model | the binding, or `--provider` and `--model` |
-| The confidence threshold, and Gemini's calls at once | the caller's `.codeguard/config.yaml` |
+| Gemini's calls at once | the caller's `.codeguard/config.yaml` |
 | Gemini's project, location and sign-in | the `CODEGUARD_JUDGE__GEMINI__` environment variables |
 | The judge prompt and how each case is checked | codeguard |

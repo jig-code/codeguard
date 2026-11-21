@@ -13,7 +13,7 @@ defect below, not its surface shape. A test without signal is deleted, or not wr
 
 For an assertion against a declared value (a default, a bound, a config field): if it went
 red, would you fix the code or the test? When the value answers to something outside the
-declaration (a confidence is between 0 and 1, a line number is positive), you'd fix the
+declaration (a time limit is at least a minute, a line number is positive), you'd fix the
 code: keep the test. When it answers only to itself (a label, a message string, a default
 someone chose), you'd update the test: it's a tautology.
 
@@ -38,7 +38,7 @@ Pydantic, the stdlib or a library guarantees the behavior; no decision of yours 
 test. Check: whose code fails if this goes red?
 
 A declared constraint is your decision even though Pydantic enforces it: a test that
-`Diagnostic(confidence=1.5, ...)` is rejected under `Field(le=1)` has signal. These don't:
+`Config(review_time_limit_minutes=0)` is rejected under `Field(ge=1)` has signal. These don't:
 
 - A default equals the literal it was declared with (a computed default has signal).
 - A field with no validator accepts any value of its type.
