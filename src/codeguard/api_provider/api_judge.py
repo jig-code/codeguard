@@ -47,7 +47,6 @@ from codeguard.review import (
 )
 
 _MAX_REQUESTS = 10
-_REQUEST_LIMIT_SECONDS = 120
 _MAX_ATTEMPTS = 5
 _GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
@@ -65,9 +64,9 @@ class ApiJudge:
     processes: AbstractContextManager[object]
     provider: str
     thinking: ApiEffort | None
+    request_time_limit_seconds: float
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
-    request_limit_seconds: float = _REQUEST_LIMIT_SECONDS
 
     @property
     def identity(self) -> str:
@@ -142,7 +141,7 @@ class ApiJudge:
         return result.output
 
     def _settings(self, _: RunContext[object]) -> ModelSettings:
-        limit = self.request_limit_seconds
+        limit = self.request_time_limit_seconds
         if self.deadline is not None:
             limit = min(limit, self.deadline.remaining_seconds())
             if limit <= 0:
@@ -155,7 +154,9 @@ class ApiJudge:
     def _timed_out(self) -> JudgeTimeout:
         if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
             return self.deadline.reached()
-        return JudgeTimeout(f"{self.model} took over {self.request_limit_seconds:g}s to answer.")
+        return JudgeTimeout(
+            f"{self.model} took over {self.request_time_limit_seconds:g}s to answer."
+        )
 
 
 # Sends a request again when the provider turned it away or the connection broke, while the backoff

@@ -159,6 +159,7 @@ class JudgeConfig(BaseModel):
     provider: JudgeProvider | None = None
     model: str | None = None
     calls_at_once: int | None = Field(default=None, ge=1)
+    request_time_limit_seconds: int = Field(default=120, ge=1)
     thinking: ThinkingConfig = ThinkingConfig()
 
     @property

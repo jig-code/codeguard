@@ -152,9 +152,23 @@ def waits(monkeypatch) -> list[float]:
 
 
 def judge_with(
-    tmp_path, models, provider: str = "gemini", thinking: ApiEffort | None = "medium", **kwargs
+    tmp_path,
+    models,
+    provider: str = "gemini",
+    thinking: ApiEffort | None = "medium",
+    request_time_limit_seconds: float = 120,
+    **kwargs,
 ) -> ApiJudge:
-    return ApiJudge(tmp_path, MODEL, models, RecordingProcesses(), provider, thinking, **kwargs)
+    return ApiJudge(
+        tmp_path,
+        MODEL,
+        models,
+        RecordingProcesses(),
+        provider,
+        thinking,
+        request_time_limit_seconds,
+        **kwargs,
+    )
 
 
 class TestApiJudge:
@@ -390,7 +404,7 @@ class TestApiJudge:
             yield FunctionModel(answer)
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.1s to answer.$"):
-            judge_with(tmp_path, slow, request_limit_seconds=0.1).judge(make_judge_request())
+            judge_with(tmp_path, slow, request_time_limit_seconds=0.1).judge(make_judge_request())
 
     def test_timeout_at_the_deadline_is_the_time_limit_error(self, tmp_path, make_judge_request):
         @asynccontextmanager
@@ -419,7 +433,7 @@ class TestApiJudge:
     def test_requests_time_out_at_the_request_limit(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
 
-        judge_with(tmp_path, models, request_limit_seconds=90).judge(make_judge_request())
+        judge_with(tmp_path, models, request_time_limit_seconds=90).judge(make_judge_request())
 
         assert (models.info().model_settings or {}).get("request_timeout") == 90
 
@@ -435,9 +449,9 @@ class TestApiJudge:
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
 
-        ApiJudge(tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini", "medium").judge(
-            make_judge_request()
-        )
+        ApiJudge(
+            tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini", "medium", 120
+        ).judge(make_judge_request())
 
         assert processes.events == ["acquired", "released"]
 

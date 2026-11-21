@@ -137,6 +137,12 @@ class TestConfigLoader:
     def test_judge_env_var_applies_without_a_config_file(self, repo):
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
 
+    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS": "180"})
+    def test_request_time_limit_env_var_overrides_the_file(self, repo):
+        repo.write(CONFIG, "judge:\n  request_time_limit_seconds: 60\n")
+
+        assert ConfigLoader(repo.root).load().judge == JudgeConfig(request_time_limit_seconds=180)
+
     @mock.patch.dict(os.environ, {"CODEGUARD_REVIEW_TIME_LIMIT_MINUTES": "20"})
     def test_env_var_for_another_setting_is_ignored(self, repo):
         repo.write(CONFIG, "review_time_limit_minutes: 10\n")
