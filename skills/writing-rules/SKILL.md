@@ -46,8 +46,10 @@ statement as a reviewer would, and says on what ground the code keeps or breaks 
   second test.
 - **Nothing about how.** The statement says nothing about how code avoids what that code
   must never do.
-- **No reason or consequence.** The statement gives no reason for the convention and no
-  consequence of breaking it.
+- **No reason or consequence.** Every clause of the statement describes what the code it
+  forbids itself does. No clause says why the convention exists, or names an outcome
+  that follows once that code has run: both belong in the rule's why, and in the
+  statement the judge reads either as a second test.
 - **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
   shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
