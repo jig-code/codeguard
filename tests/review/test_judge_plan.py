@@ -18,21 +18,21 @@ class TestJudgePlan:
         plan.write(out)
 
         assert out.getvalue() == (
-            "Judge calls: 3 (2 cached, 1 to Claude), 1 skipped by triggers\n"
+            "Judge calls: 3 (2 cached, 1 new), 1 skipped by triggers\n"
             "\n"
             "By rule:\n"
-            "  claude  cached  skipped  rule\n"
+            "     new  cached  skipped  rule\n"
             "       1       1        0  no-dead-code\n"
             "       0       1        1  enum-usage\n"
             "\n"
             "By file:\n"
-            "  claude  cached  skipped  file\n"
+            "     new  cached  skipped  file\n"
             "       0       2        0  b.py\n"
             "       1       0        1  a.py\n"
             "\n"
             "Calls by file:\n"
             "a.py\n"
-            "  claude   no-dead-code\n"
+            "  new      no-dead-code\n"
             "  skipped  enum-usage\n"
             "b.py\n"
             "  cached   enum-usage\n"
@@ -44,4 +44,4 @@ class TestJudgePlan:
 
         JudgePlan(calls=()).write(out)
 
-        assert out.getvalue() == "Judge calls: 0 (0 cached, 0 to Claude), 0 skipped by triggers\n"
+        assert out.getvalue() == "Judge calls: 0 (0 cached, 0 new), 0 skipped by triggers\n"
