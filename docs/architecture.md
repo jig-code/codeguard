@@ -79,8 +79,7 @@ line.
   plugins, memory or skills reach it, so a verdict depends only on the rule and the
   repository.
 - The judge reports violations, never fixes (#21), with a reason for its verdict as
-  context for whoever troubleshoots it. A violation states no confidence: its severity
-  is its binding's (#13).
+  context for whoever troubleshoots it.
 - Output that fails the verdict schema fails the run loudly (#11).
 - The judge is sent a change as a standard unified diff with function context, never an
   excerpt codeguard builds itself, because a custom excerpt reinvents diffs and context
