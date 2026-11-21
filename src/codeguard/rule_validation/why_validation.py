@@ -35,16 +35,11 @@ class WhyValidation:
         except ConfigError:
             # BroadTriggersValidation already reports an invalid ruleset.
             return ValidationResult()
-        judge_rules = (
-            JudgeRule.from_binding(binding, ruleset)
-            for binding in ruleset.selected_bindings().values()
-            if binding.is_legacy_skill
-        )
         return self.mode.result(
             (
                 *(
                     f"{rule.name}: no ## Why section in its rule file"
-                    for rule in sorted(judge_rules, key=lambda rule: rule.name)
+                    for rule in JudgeRule.legacy_skills_of(ruleset)
                     if not rule.says_why
                 ),
                 *(

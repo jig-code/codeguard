@@ -19,6 +19,13 @@ class TestJudgeRule:
 
         assert rule.says_why
 
+    def test_why_text_may_sit_under_a_subheading(self, make_judge_rule):
+        rule = make_judge_rule(
+            text="# Placement\n\nA method lives on its type.\n\n## Why\n\n### Cost\n\nIt costs.\n"
+        )
+
+        assert rule.says_why
+
     def test_why_section_may_end_in_a_source(self, make_judge_rule):
         rule = make_judge_rule(
             text="# Placement\n\nA method lives on its type.\n\n## Why\n\nIt stays with its data.\n"

@@ -17,18 +17,10 @@ class RuleFormatValidation:
         except ConfigError:
             # BroadTriggersValidation already reports an invalid ruleset.
             return ValidationResult()
-        rules = sorted(
-            (
-                JudgeRule.from_binding(binding, ruleset)
-                for binding in ruleset.selected_bindings().values()
-                if not binding.is_legacy_skill
-            ),
-            key=lambda rule: rule.name,
-        )
         return ValidationResult(
             problems=tuple(
                 f"{rule.name}: rule file {problem}"
-                for rule in rules
+                for rule in JudgeRule.rule_files_of(ruleset)
                 for problem in rule.format_problems()
             )
         )
