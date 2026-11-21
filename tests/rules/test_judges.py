@@ -53,6 +53,7 @@ class TestJudges:
             judges.processes[JudgeProvider.GEMINI],
             JudgeProvider.GEMINI,
             "medium",
+            judges.config.request_time_limit_seconds,
         )
 
     @mock.patch.dict(
@@ -175,6 +176,24 @@ class TestJudgeThinking:
             tmp_path, "gpt-6-luna", judges.processes[JudgeProvider.CODEX_CLI], thinking="low"
         )
 
+    def test_api_judge_runs_with_the_request_time_limit(self, tmp_path):
+        judges = Judges(JudgeConfig(request_time_limit_seconds=180), store=Cache(tmp_path))
+
+        judge = judges.uncached(
+            tmp_path,
+            JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5"),
+        )
+
+        assert judge == ApiJudge(
+            tmp_path,
+            "us.anthropic.claude-haiku-5-5",
+            BedrockClaude(),
+            judges.processes[JudgeProvider.BEDROCK],
+            JudgeProvider.BEDROCK,
+            "medium",
+            180,
+        )
+
     def test_bedrock_judge_runs_at_the_bedrock_level(self, tmp_path):
         config = JudgeConfig.model_validate({"thinking": {"bedrock": "max"}})
         judges = Judges(config, store=Cache(tmp_path))
@@ -191,6 +210,7 @@ class TestJudgeThinking:
             judges.processes[JudgeProvider.BEDROCK],
             JudgeProvider.BEDROCK,
             "max",
+            judges.config.request_time_limit_seconds,
         )
 
     def test_default_gives_a_cli_judge_no_level(self, tmp_path):
@@ -219,4 +239,5 @@ class TestJudgeThinking:
             judges.processes[JudgeProvider.GEMINI],
             JudgeProvider.GEMINI,
             None,
+            judges.config.request_time_limit_seconds,
         )

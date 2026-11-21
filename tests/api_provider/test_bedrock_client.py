@@ -6,7 +6,7 @@ from botocore.stub import Stubber
 from pydantic_ai.providers.bedrock import BedrockProvider
 
 from codeguard.api_provider import ApiJudge, BedrockClaude
-from codeguard.config import JudgeModel, JudgeProvider, ThinkingConfig, sent_effort
+from codeguard.config import JudgeConfig, JudgeModel, JudgeProvider, ThinkingConfig, sent_effort
 from codeguard.review import JudgeProcessError
 
 
@@ -34,6 +34,7 @@ def test_default_model_is_asked_for_the_verdict_as_native_json_schema_output(
         nullcontext(),
         default.provider,
         sent_effort(ThinkingConfig().bedrock),
+        JudgeConfig().request_time_limit_seconds,
     )
 
     with stubber, pytest.raises(JudgeProcessError):
