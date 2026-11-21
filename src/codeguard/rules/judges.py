@@ -71,6 +71,7 @@ class Judges:
                 processes,
                 model.provider,
                 sent_effort(thinking.gemini),
+                self.config.request_time_limit_seconds,
                 deadline=deadline,
             )
         if model.provider is JudgeProvider.BEDROCK:
@@ -81,6 +82,7 @@ class Judges:
                 processes,
                 model.provider,
                 sent_effort(thinking.bedrock),
+                self.config.request_time_limit_seconds,
                 deadline=deadline,
             )
         return ClaudeJudge(
