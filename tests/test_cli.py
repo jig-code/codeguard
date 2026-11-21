@@ -436,20 +436,20 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            "Judge calls: 1 (0 cached, 1 to Claude), 1 skipped by triggers\n"
+            "Judge calls: 1 (0 cached, 1 new), 1 skipped by triggers\n"
             "\n"
             "By rule:\n"
-            "  claude  cached  skipped  rule\n"
+            "     new  cached  skipped  rule\n"
             "       1       0        0  placement\n"
             "       0       0        1  class-shape\n"
             "\n"
             "By file:\n"
-            "  claude  cached  skipped  file\n"
+            "     new  cached  skipped  file\n"
             "       1       0        1  a.py\n"
             "\n"
             "Calls by file:\n"
             "a.py\n"
-            "  claude   placement\n"
+            "  new      placement\n"
             "  skipped  class-shape\n"
         )
         assert result.returncode == 0
@@ -474,19 +474,19 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            "Judge calls: 1 (0 cached, 1 to Claude), 0 skipped by triggers\n"
+            "Judge calls: 1 (0 cached, 1 new), 0 skipped by triggers\n"
             "\n"
             "By rule:\n"
-            "  claude  cached  skipped  rule\n"
+            "     new  cached  skipped  rule\n"
             "       1       0        0  placement\n"
             "\n"
             "By file:\n"
-            "  claude  cached  skipped  file\n"
+            "     new  cached  skipped  file\n"
             "       1       0        0  a.py\n"
             "\n"
             "Calls by file:\n"
             "a.py\n"
-            "  claude   placement\n"
+            "  new      placement\n"
         )
         assert result.returncode == 0
 
@@ -498,7 +498,7 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            f"{make_diagnostic()}\nJudge calls: 0 (0 cached, 0 to Claude), 0 skipped by triggers\n"
+            f"{make_diagnostic()}\nJudge calls: 0 (0 cached, 0 new), 0 skipped by triggers\n"
         )
         assert result.stderr == ""
         assert result.returncode == 1
