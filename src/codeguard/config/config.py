@@ -11,7 +11,7 @@ from codeguard.config.package_config import PackageConfig
 from codeguard.config.retired_keys import without_retired_keys
 from codeguard.config.versions import ExactVersion
 
-_ENVIRONMENT_JUDGE_KEYS = ("provider", "model")
+_ENVIRONMENT_JUDGE_KEYS = ("provider", "model", "request_time_limit_seconds")
 _RETIRED_SETTINGS = frozenset({"confidence_threshold"})
 
 
