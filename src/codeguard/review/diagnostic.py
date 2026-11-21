@@ -3,7 +3,7 @@ import textwrap
 from enum import StrEnum
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from codeguard.config import Severity
 from codeguard.line_range import LineRange
@@ -31,7 +31,6 @@ class Diagnostic(BaseModel):
     severity: Severity
     note: str | None
     category: Category
-    confidence: float = Field(ge=0, le=1)
     error_type: ErrorType | None = None
 
     @model_validator(mode="after")
@@ -61,7 +60,6 @@ class Diagnostic(BaseModel):
             "message": self.message,
             "severity": self.severity,
             "category": self.category,
-            "confidence": self.confidence,
             "error_type": self.error_type,
             "note": None if self.category is Category.JUDGED else self.note,
             "blocks": self.blocks,
@@ -69,10 +67,7 @@ class Diagnostic(BaseModel):
 
     def __str__(self) -> str:
         location = self.file if self.lines is None else f"{self.file}:{self.lines}"
-        confidence = (
-            f" (confidence {self.confidence:.2f})" if self.category is Category.JUDGED else ""
-        )
-        summary = f"{location}: {self.severity} {self.rule}: {self.message}{confidence} [{self.id}]"
+        summary = f"{location}: {self.severity} {self.rule}: {self.message} [{self.id}]"
         if self.note is None:
             return summary
         return f"{summary}\n{textwrap.indent(self.note.rstrip(), '  ')}"

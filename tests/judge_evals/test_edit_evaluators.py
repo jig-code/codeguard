@@ -60,7 +60,7 @@ class TestViolationsOnTriggers:
             )
         )
 
-        result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)
+        result = ViolationsOnTriggers(("string-literal",)).evaluate(context)
 
         assert result == EvaluationReason(value=True)
 
@@ -77,7 +77,7 @@ class TestViolationsOnTriggers:
             )
         )
 
-        result = ViolationsOnTriggers(("class-header", "string-literal"), 0.9).evaluate(context)
+        result = ViolationsOnTriggers(("class-header", "string-literal")).evaluate(context)
 
         assert result == EvaluationReason(
             value=False,
@@ -100,20 +100,7 @@ class TestViolationsOnTriggers:
             )
         )
 
-        result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)
-
-        assert result == EvaluationReason(value=True)
-
-    def test_violation_below_the_threshold_passes(
-        self, make_evaluator_context, make_edit_verdict, make_judged_violation
-    ):
-        context = make_evaluator_context(
-            output=make_edit_verdict(
-                violations=(make_judged_violation(confidence=0.7, kinds=("number-literal",)),)
-            )
-        )
-
-        result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)
+        result = ViolationsOnTriggers(("string-literal",)).evaluate(context)
 
         assert result == EvaluationReason(value=True)
 
@@ -124,7 +111,7 @@ class TestViolationsOnTriggers:
             output=make_edit_verdict(violations=(make_judged_violation(kinds=("code",)),))
         )
 
-        result = ViolationsOnTriggers(("any",), 0.9).evaluate(context)
+        result = ViolationsOnTriggers(("any",)).evaluate(context)
 
         assert result == {}
 
@@ -136,6 +123,6 @@ class TestViolationsOnTriggers:
             output=make_edit_verdict(violations=(make_judged_violation(kinds=("code",)),)),
         )
 
-        result = ViolationsOnTriggers(("string-literal",), 0.9).evaluate(context)
+        result = ViolationsOnTriggers(("string-literal",)).evaluate(context)
 
         assert result == {}

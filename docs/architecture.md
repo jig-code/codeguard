@@ -79,9 +79,8 @@ line.
   plugins, memory or skills reach it, so a verdict depends only on the rule and the
   repository.
 - The judge reports violations, never fixes (#21), with a reason for its verdict as
-  context for whoever troubleshoots it, and a confidence on a fixed scale stated in the
-  verdict schema. The scale never rewards resemblance to an example, since rules hold
-  none.
+  context for whoever troubleshoots it. A violation states no confidence: its severity
+  is its binding's (#13).
 - Output that fails the verdict schema fails the run loudly (#11).
 - The judge is sent a change as a standard unified diff with function context, never an
   excerpt codeguard builds itself, because a custom excerpt reinvents diffs and context
@@ -110,8 +109,8 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 
 - Pattern rules and gates: `codeguard test`, with valid and invalid cases and snapshots.
 - Judge rules: `codeguard eval`. Each case is a small fixture repository plus a change,
-  with the expected violations. A case passes only when it gets the right verdict at 0.9
-  or above on every run. The eval prints the judge's reason for every case, as context
+  with the expected violations. A case passes only when it gets the right verdict on
+  every run. The eval prints the judge's reason for every case, as context
   for fixing the rule's wording; nothing checks it.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
@@ -156,8 +155,8 @@ the code refer to.
    fail; a failed or timed-out classification keeps every candidate. Choosing rules that
    no binding maps is out of scope until it can satisfy #2. Code decides each step's
    prompt.
-8. Only three steps call a model: change classification, the judge and verify. Caching,
-   recall tests and confidence gating bound their variation. Every other step is
+8. Only three steps call a model: change classification, the judge and verify. Caching
+   and recall tests bound their variation. Every other step is
    deterministic.
 9. Hook inputs come only from documented host payloads, never from the transcript.
 
@@ -168,7 +167,7 @@ the code refer to.
     agent, which can't fix it; a rule's error still blocks every stop until it is fixed. In
     CI, a failed judge call fails the review unless the PR's label bypasses it: a bypass is
     explicit and per change, never the default.
-12. Write-time hooks block only for a failed deterministic check or a high-confidence
+12. Write-time hooks block only for a failed deterministic check or a judged `error`
     violation. Findings that don't block go only to the person, because anything sent to
     the agent at Stop continues its turn and acts as a block.
 13. Severity decides blocking: an `error` blocks the Stop hook and CI; `warning`, `info`

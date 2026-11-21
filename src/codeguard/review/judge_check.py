@@ -14,7 +14,6 @@ class JudgeCheck:
     working_tree: WorkingTree
     binding: Binding
     judge: Judge
-    confidence_threshold: float
     scope: LineScope
     classification: Classification
 
@@ -43,11 +42,10 @@ class JudgeCheck:
                     severity=self.binding.severity,
                     note=str(error),
                     category=Category.JUDGE_ERROR,
-                    confidence=0.0,
                     error_type=error.error_type,
                 ),
             )
-        return verdict.diagnostics_for(self.binding, file, self.confidence_threshold)
+        return verdict.diagnostics_for(self.binding, file)
 
     def _request(self, file: str) -> JudgeRequest:
         return JudgeRequest.of_change(

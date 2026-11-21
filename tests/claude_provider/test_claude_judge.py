@@ -48,7 +48,6 @@ def fake_claude_executable(tmp_path, arguments) -> str:
                         "file": "a.py",
                         "lines": {"start": 1, "end": 1},
                         "message": "Move it.",
-                        "confidence": 0.5,
                     }
                 ]
             ),
@@ -260,9 +259,7 @@ class TestClaudeJudge:
         judgement = judge.judge(make_judge_request())
 
         assert judgement == Judgement(
-            Verdict(
-                reason="Judged.", violations=(make_violation(message="Move it.", confidence=0.5),)
-            )
+            Verdict(reason="Judged.", violations=(make_violation(message="Move it."),))
         )
 
     def test_loaded_files_are_the_files_claude_read(self, tmp_path, processes, make_judge_request):

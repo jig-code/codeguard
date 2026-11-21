@@ -11,6 +11,9 @@ from codeguard.config.config_error import ConfigError
 CONFIG_DIR = ".codeguard"
 CONFIG_FILE = f"{CONFIG_DIR}/config.yaml"
 CONFIG_ENV_VAR = "CODEGUARD_CONFIG"
+_REMOVED_SETTINGS = {
+    "confidence_threshold": "the judge's verdict has no confidence, so delete the setting",
+}
 
 
 @dataclass(frozen=True)
@@ -23,6 +26,12 @@ class ConfigLoader:
         if not isinstance(settings, dict):
             raise ConfigError(
                 f"{self.root / CONFIG_DIR} is invalid:\n  {config_file.name} holds no settings"
+            )
+        removed = sorted(settings.keys() & _REMOVED_SETTINGS.keys())
+        if removed:
+            raise ConfigError(
+                f"{self.root / CONFIG_DIR} is invalid:"
+                + "".join(f"\n  {key}: removed: {_REMOVED_SETTINGS[key]}" for key in removed)
             )
         try:
             return Config(**settings)

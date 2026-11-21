@@ -16,7 +16,6 @@ _EVAL_FILE_SUFFIXES = (".yaml", ".yml")
 
 class Outcome(StrEnum):
     INVALID = "invalid"
-    UNCERTAIN = "uncertain"
     VALID = "valid"
     SKIPPED = "skipped"
 
@@ -60,7 +59,6 @@ class JudgedViolation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     lines: LineRange
-    confidence: float
     message: str
     kinds: tuple[str, ...] | None = None
 
@@ -77,8 +75,7 @@ class EditVerdict(BaseModel):
     def listing(self) -> str:
         reason = "" if self.reason is None else f"\n  reason: {self.reason}"
         return reason + "".join(
-            f"\n  {violation.lines.described} ({violation.confidence:.2f}): {violation.message}"
-            for violation in self.violations
+            f"\n  {violation.lines.described}: {violation.message}" for violation in self.violations
         )
 
 
@@ -88,16 +85,6 @@ class RuleEvalCase(BaseModel):
     name: str
     inputs: FileEdit
     expected_output: EditVerdict
-
-    @field_validator("expected_output")
-    @classmethod
-    def expects_a_clear_outcome(cls, expected: EditVerdict) -> EditVerdict:
-        if expected.outcome is Outcome.UNCERTAIN:
-            raise ValueError(
-                "a case expects invalid, valid or skipped; one the judge can't decide isn't "
-                "clear enough for a rule eval"
-            )
-        return expected
 
     @field_validator("expected_output")
     @classmethod
