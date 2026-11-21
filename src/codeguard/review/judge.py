@@ -4,7 +4,8 @@ from enum import ReprEnum
 from pathlib import Path
 from typing import ClassVar, Protocol, Self
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic_ai import InlineDefsJsonSchemaTransformer
 from pydantic_ai.tools import GenerateToolJsonSchema
 
 from codeguard.line_range import LineRange
@@ -17,8 +18,6 @@ from codeguard.syntax import Classification
 DEFAULT_MODEL_KEY = "default"
 DEFAULT_THINKING_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
-_SCHEMA_ADAPTER = TypeAdapter(dict[str, JsonValue])
-_DEFINITIONS_ADAPTER = TypeAdapter(dict[str, dict[str, JsonValue]])
 
 
 @dataclass(frozen=True)
@@ -151,26 +150,10 @@ class Verdict(BaseModel):
         )
 
 
-def _without_references(generated: object) -> dict[str, JsonValue]:
-    schema = _SCHEMA_ADAPTER.validate_python(generated)
-    definitions = _DEFINITIONS_ADAPTER.validate_python(schema.pop("$defs", {}))
-    return {key: _inlined(value, definitions) for key, value in schema.items()}
-
-
-def _inlined(value: JsonValue, definitions: dict[str, dict[str, JsonValue]]) -> JsonValue:
-    if isinstance(value, list):
-        return [_inlined(item, definitions) for item in value]
-    if not isinstance(value, dict):
-        return value
-    reference = value.get("$ref")
-    if isinstance(reference, str):
-        definition = definitions[reference.removeprefix("#/$defs/")]
-        value = {**definition, **{key: item for key, item in value.items() if key != "$ref"}}
-    return {key: _inlined(item, definitions) for key, item in value.items()}
-
-
 VERDICT_SCHEMA = json.dumps(
-    _without_references(Verdict.model_json_schema(schema_generator=GenerateToolJsonSchema))
+    InlineDefsJsonSchemaTransformer(
+        Verdict.model_json_schema(schema_generator=GenerateToolJsonSchema)
+    ).walk()
 )
 
 

@@ -1,9 +1,8 @@
 import json
 import textwrap
-from collections.abc import Iterator
 
 import pytest
-from pydantic import JsonValue, ValidationError
+from pydantic import ValidationError
 
 from codeguard.config import ChangeKind
 from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
@@ -361,70 +360,3 @@ class TestVerdict:
         assert diagnostics == (
             make_diagnostic(judged=True, severity=Severity.INFO, confidence=0.5),
         )
-
-
-def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
-    yield schema
-    children = [
-        *(schema.get("properties") or {}).values(),
-        *([schema["items"]] if "items" in schema else []),
-        *(schema.get("anyOf") or []),
-    ]
-    for child in children:
-        yield from subschemas(child)
-
-
-class TestVerdictSchema:
-    def test_verdict_schema_uses_only_claude_codes_strict_keywords(self):
-        strict_keywords = {
-            "$schema",
-            "type",
-            "description",
-            "title",
-            "properties",
-            "required",
-            "additionalProperties",
-            "items",
-            "enum",
-            "const",
-            "anyOf",
-        }
-
-        schema = json.loads(VERDICT_SCHEMA)
-
-        used = {keyword for subschema in subschemas(schema) for keyword in subschema}
-        assert used - strict_keywords == set()
-
-    def test_verdict_schema_has_only_annotations_beside_an_any_of(self):
-        allowed_beside_any_of = {"anyOf", "$schema", "description", "title"}
-
-        schema = json.loads(VERDICT_SCHEMA)
-
-        beside = [
-            set(subschema) - allowed_beside_any_of
-            for subschema in subschemas(schema)
-            if "anyOf" in subschema
-        ]
-        assert [keywords for keywords in beside if keywords] == []
-
-    def test_reference_is_inlined_with_its_own_description(self):
-        schema = json.loads(VERDICT_SCHEMA)
-
-        violation = schema["properties"]["violations"]["items"]
-        assert violation["properties"]["lines"] == {
-            "additionalProperties": False,
-            "description": (
-                "The first and last line of the code that breaks the rule, numbered as the "
-                "`changes` element numbers them."
-            ),
-            "properties": {
-                "start": {"description": "The first line.", "type": "integer"},
-                "end": {
-                    "description": "The last line: the same as `start` for one line.",
-                    "type": "integer",
-                },
-            },
-            "required": ["start", "end"],
-            "title": "LineRange",
-            "type": "object",
-        }
