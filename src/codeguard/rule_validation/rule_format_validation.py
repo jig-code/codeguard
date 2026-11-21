@@ -20,9 +20,9 @@ class RuleFormatValidation:
             return ValidationResult()
         rules = sorted(
             (
-                JudgeRule(binding.rule_id, ruleset.judge_rule_text(binding))
+                JudgeRule.from_binding(binding, ruleset)
                 for binding in ruleset.selected_bindings().values()
-                if binding.skill is None
+                if not binding.is_legacy_skill
             ),
             key=lambda rule: rule.name,
         )

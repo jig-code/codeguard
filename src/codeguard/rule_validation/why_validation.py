@@ -36,9 +36,9 @@ class WhyValidation:
             # BroadTriggersValidation already reports an invalid ruleset.
             return ValidationResult()
         judge_rules = (
-            JudgeRule(binding.rule_id, ruleset.judge_rule_text(binding))
+            JudgeRule.from_binding(binding, ruleset)
             for binding in ruleset.selected_bindings().values()
-            if binding.skill is not None
+            if binding.is_legacy_skill
         )
         return self.mode.result(
             (

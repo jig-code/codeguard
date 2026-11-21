@@ -32,7 +32,7 @@ class Binding:
     ) -> Self:
         return cls(
             rule=rule,
-            judge_rule=JudgeRule(name=binding.rule_id, text=ruleset.judge_rule_text(binding)),
+            judge_rule=JudgeRule.from_binding(binding, ruleset),
             paths=binding.paths,
             severity=binding.severity,
             judge=judge,
