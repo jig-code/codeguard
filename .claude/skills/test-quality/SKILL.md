@@ -67,6 +67,16 @@ belongs to the `pytest-factoryboy` skill. Gates 5, 9, 11, 13, 14, 15 and 16 poin
 17. **Arrange, act and assert stay in the test body.** A phase hidden in a fixture or
     helper hides the cause and effect the test exists to show.
     [helpers-and-results.md](references/helpers-and-results.md)
+18. **Right unit, right file.** Name the one unit (class or function) whose behaviour
+    each test checks, and put the test in that unit's test file. A test that reaches the
+    unit through a caller moves to the unit's own file when the caller only passes the
+    result on; the caller keeps one test for the wiring (gate 1, 'Integration tests earn
+    their level'). Give the test the smallest input the unit reads: a file only when the
+    unit reads a path, and text or an object when it takes one. A unit reachable only
+    through a caller or a file although its behaviour is on the content is a missing
+    seam: split the read from the logic in production (`python-code-quality`, "Parse
+    outside data once"), then test the logic with text or an object.
+    [signal-and-mocking.md](references/signal-and-mocking.md)
 
 ## Review scope
 
@@ -90,11 +100,13 @@ For each test, check:
 - Each fixture, factory, helper and module-level constant or function (gates 5, 9, 11,
   13–16, in `pytest-factoryboy`).
 - LLM tests and their fixture cases (gates 6, 7).
+- The unit each test checks, whether this is its test file, and whether that unit reads
+  the input from disk or the test only reaches it through a caller that does (gate 18).
 
 ## References
 
-- [signal-and-mocking.md](references/signal-and-mocking.md): gates 2–4 and 8, with the
-  fakes codeguard tests use. Read when mocking, asserting or naming.
+- [signal-and-mocking.md](references/signal-and-mocking.md): gates 2–4, 8 and 18, with
+  the fakes codeguard tests use. Read when mocking, asserting or naming.
 - [redundant-tests.md](references/redundant-tests.md): gate 1, the three no-signal
   defects and when an integration test earns its level.
 - [helpers-and-results.md](references/helpers-and-results.md): gates 10, 12 and 17.
