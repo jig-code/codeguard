@@ -12,7 +12,7 @@ class TestEditReviewTask:
     ):
         judges = RecordingJudges(RecordingJudge())
         task = EditReviewTask(
-            make_binding(paths=("src/**/*.py",)), judges, 0.9, SyntaxScanner(AstGrep(), {})
+            make_binding(paths=("src/**/*.py",)), judges, SyntaxScanner(AstGrep(), {})
         )
 
         review = task(make_file_edit(file="module.py"))
@@ -27,7 +27,6 @@ class TestEditReviewTask:
         task = EditReviewTask(
             make_binding(paths=("**/*.py",), triggers=frozenset({"string-literal"})),
             judges,
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 
@@ -41,7 +40,7 @@ class TestEditReviewTask:
     ):
         judges = RecordingJudges(RecordingJudge())
         task = EditReviewTask(
-            make_binding(paths=("**/*.py",)), judges, 0.9, SyntaxScanner(AstGrep(), {})
+            make_binding(paths=("**/*.py",)), judges, SyntaxScanner(AstGrep(), {})
         )
 
         review = task(
@@ -51,14 +50,13 @@ class TestEditReviewTask:
         assert review == EditVerdict(outcome=Outcome.SKIPPED)
         assert judges.created == []
 
-    def test_violation_at_the_threshold_is_invalid_with_the_kinds_on_its_line(
+    def test_violation_is_invalid_with_the_kinds_on_its_line(
         self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
     ):
-        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.9)
+        violation = make_violation(file="module.py", message="Pass the member.")
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 
@@ -74,38 +72,12 @@ class TestEditReviewTask:
             ),
         )
 
-    def test_violation_below_the_threshold_is_uncertain(
-        self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
-    ):
-        violation = make_violation(file="module.py", message="Pass the member.", confidence=0.7)
-        task = EditReviewTask(
-            make_binding(paths=("**/*.py",)),
-            RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
-            0.9,
-            SyntaxScanner(AstGrep(), {}),
-        )
-
-        review = task(make_file_edit())
-
-        assert review == EditVerdict(
-            outcome=Outcome.UNCERTAIN,
-            reason="The code breaks the convention.",
-            violations=(
-                make_judged_violation(
-                    lines__end=1,
-                    confidence=0.7,
-                    kinds=("call", "code", "module-statement", "string-literal"),
-                ),
-            ),
-        )
-
     def test_no_violation_is_valid_with_the_judge_reason(
         self, make_binding, make_file_edit, make_verdict
     ):
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict())),
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 
@@ -116,11 +88,10 @@ class TestEditReviewTask:
     def test_violation_whose_lines_take_in_a_changed_line_is_kept_with_their_kinds(
         self, make_binding, make_file_edit, make_verdict, make_violation, make_judged_violation
     ):
-        violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
+        violation = make_violation(file="module.py", lines__start=1, lines__end=2)
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 
@@ -147,11 +118,10 @@ class TestEditReviewTask:
     def test_violation_on_an_unchanged_line_is_dropped(
         self, make_binding, make_file_edit, make_verdict, make_violation
     ):
-        violation = make_violation(file="module.py", lines__start=1, lines__end=2, confidence=0.9)
+        violation = make_violation(file="module.py", lines__start=1, lines__end=2)
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 
@@ -175,11 +145,10 @@ class TestEditReviewTask:
     def test_violation_in_another_file_is_dropped(
         self, make_binding, make_file_edit, make_verdict, make_violation
     ):
-        violation = make_violation(file="other.py", confidence=0.9)
+        violation = make_violation(file="other.py")
         task = EditReviewTask(
             make_binding(paths=("**/*.py",)),
             RecordingJudges(RecordingJudge(make_verdict(breaking=True, violations=(violation,)))),
-            0.9,
             SyntaxScanner(AstGrep(), {}),
         )
 

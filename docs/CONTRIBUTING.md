@@ -41,7 +41,7 @@ time: any number gives the same result, though more may hit Gemini's tokens-per-
 limit.
 
 Their fixtures are the cases in `evals/judge/python/rule-evals/`, with the rule files and
-bindings beside them. When a case flips between runs or comes back uncertain, follow the
+bindings beside them. When a case fails or flips between runs, follow the
 Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 [Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.

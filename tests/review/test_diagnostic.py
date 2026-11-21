@@ -73,7 +73,7 @@ class TestDiagnostic:
         )
 
     def test_json_has_every_field_and_no_judged_note(self, make_diagnostic):
-        diagnostic = make_diagnostic(judged=True, confidence=0.95)
+        diagnostic = make_diagnostic(judged=True)
 
         assert diagnostic.as_json() == {
             "id": diagnostic.id,
@@ -83,7 +83,6 @@ class TestDiagnostic:
             "message": "Use logging, not print.",
             "severity": "error",
             "category": "judged",
-            "confidence": 0.95,
             "error_type": None,
             "note": None,
             "blocks": True,

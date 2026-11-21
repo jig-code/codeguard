@@ -35,24 +35,10 @@ class TestConfigLoader:
 
         assert config == Config()
 
-    def test_confidence_threshold_defaults_to_0_9(self, repo):
-        assert ConfigLoader(repo.root).load().confidence_threshold == 0.9
+    def test_retired_confidence_threshold_is_ignored(self, repo):
+        repo.write(CONFIG, "confidence_threshold: 0.9\nreview_time_limit_minutes: 10\n")
 
-    def test_loads_the_confidence_threshold(self, repo):
-        repo.write(CONFIG, "confidence_threshold: 0.75\n")
-
-        assert ConfigLoader(repo.root).load().confidence_threshold == 0.75
-
-    def test_confidence_threshold_above_1_is_an_error(self, repo):
-        repo.write(CONFIG, "confidence_threshold: 1.5\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  confidence_threshold: Input should be less than or equal to 1"
-        )
+        assert ConfigLoader(repo.root).load() == Config(review_time_limit_minutes=10)
 
     def test_review_time_limit_defaults_to_5_minutes(self, repo):
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 5
@@ -151,11 +137,11 @@ class TestConfigLoader:
     def test_judge_env_var_applies_without_a_config_file(self, repo):
         assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
 
-    @mock.patch.dict(os.environ, {"CODEGUARD_CONFIDENCE_THRESHOLD": "0.8"})
+    @mock.patch.dict(os.environ, {"CODEGUARD_REVIEW_TIME_LIMIT_MINUTES": "20"})
     def test_env_var_for_another_setting_is_ignored(self, repo):
-        repo.write(CONFIG, "confidence_threshold: 0.75\n")
+        repo.write(CONFIG, "review_time_limit_minutes: 10\n")
 
-        assert ConfigLoader(repo.root).load().confidence_threshold == 0.75
+        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
 
     @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__CALLS_AT_ONCE": "9"})
     def test_env_var_for_another_judge_setting_is_ignored(self, repo):

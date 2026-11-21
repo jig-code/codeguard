@@ -33,7 +33,6 @@ class TestReviewer:
                             WorkingTree.at(repo.root),
                             make_binding(),
                             judge,
-                            0.9,
                             scope,
                             Classification(),
                         ),
@@ -78,9 +77,7 @@ class TestReviewer:
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
-                    checks=(
-                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
-                    )
+                    checks=(JudgeCheck(working_tree, make_binding(), judge, scope, classification),)
                 ),
             )
         )
@@ -112,9 +109,7 @@ class TestReviewer:
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
-                    checks=(
-                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
-                    )
+                    checks=(JudgeCheck(working_tree, make_binding(), judge, scope, classification),)
                 ),
             )
         )
@@ -148,9 +143,7 @@ class TestReviewer:
             steps=(
                 CheckStep(checks=(PatternRuleCheck(repo.root, local),)),
                 CheckStep(
-                    checks=(
-                        JudgeCheck(working_tree, make_binding(), judge, 0.9, scope, classification),
-                    )
+                    checks=(JudgeCheck(working_tree, make_binding(), judge, scope, classification),)
                 ),
             )
         )

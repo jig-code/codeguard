@@ -34,7 +34,6 @@ class TestRuleEvals:
             "      outcome: invalid\n"
             "      violations:\n"
             "        - lines: {start: 1, end: 2}\n"
-            "          confidence: 0.9\n"
             "          message: Pass the member.\n"
         )
 
@@ -158,20 +157,6 @@ class TestRuleEvals:
                         {
                             "name": "a string",
                             "inputs": {"after": "x"},
-                            "expected_output": {"outcome": "uncertain"},
-                        }
-                    ]
-                },
-                "cases.0.expected_output: Value error, a case expects invalid, valid or "
-                "skipped; one the judge can't decide isn't clear enough for a rule eval",
-                id="case-expecting-uncertain",
-            ),
-            pytest.param(
-                {
-                    "cases": [
-                        {
-                            "name": "a string",
-                            "inputs": {"after": "x"},
                             "expected_output": {"outcome": "invalid", "reason": "A string."},
                         }
                     ]
@@ -202,7 +187,7 @@ class TestEditVerdict:
             reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=2),)
         )
 
-        assert review.listing == "\n  reason: Judged.\n  line 2 (0.90): Pass the member."
+        assert review.listing == "\n  reason: Judged.\n  line 2: Pass the member."
 
     def test_listing_gives_a_violation_over_several_lines_its_first_and_last_line(
         self, make_edit_verdict, make_judged_violation
@@ -211,7 +196,7 @@ class TestEditVerdict:
             reason="Judged.", violations=(make_judged_violation(lines__start=2, lines__end=4),)
         )
 
-        assert review.listing == "\n  reason: Judged.\n  lines 2-4 (0.90): Pass the member."
+        assert review.listing == "\n  reason: Judged.\n  lines 2-4: Pass the member."
 
 
 class TestFileEdit:

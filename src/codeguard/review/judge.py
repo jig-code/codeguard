@@ -1,6 +1,5 @@
 import json
 from dataclasses import dataclass
-from enum import ReprEnum
 from pathlib import Path
 from typing import ClassVar, Protocol, Self
 
@@ -11,7 +10,7 @@ from pydantic_ai.tools import GenerateToolJsonSchema
 from codeguard.line_range import LineRange
 from codeguard.repository import LineScope, WorkingTree
 from codeguard.review.binding import Binding
-from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
+from codeguard.review.diagnostic import Category, Diagnostic, ErrorType
 from codeguard.review.judge_rule import JudgeRule
 from codeguard.syntax import Classification
 
@@ -69,15 +68,6 @@ def _decoded_for_judge(row: bytes) -> str:
     return row.decode(errors="replace")
 
 
-class Confidence(float, ReprEnum):
-    """How certain you are that the code breaks the rule."""
-
-    CERTAIN = 1.0
-    HIGHLY_PROBABLE = 0.9
-    PROBABLE = 0.7
-    POSSIBLE = 0.5
-
-
 class Violation(BaseModel):
     """A violation of the rule that a `+` or `-` line of the change is part of."""
 
@@ -93,27 +83,6 @@ class Violation(BaseModel):
         )
     )
     message: str = Field(description="What breaks the rule, in one plain sentence.")
-    confidence: Confidence = Field(
-        description=(
-            "How certain you are that the code breaks the rule. Use one of these values, not "
-            "one between them. 1.0: You are certain: what the code does is what the rule "
-            "forbids, and nothing in the working directory points to an exception the rule "
-            "allows. 0.9: The code breaks the rule as written, but the verdict rests on a "
-            "reading of the rule's terms a reviewer could contest. You would still block the "
-            "change. 0.7: The code probably breaks the rule, but something in the working "
-            "directory points to an exception the rule allows. 0.5: The code is as likely to "
-            "follow the rule as to break it. Below 0.5 the code probably follows the rule: "
-            "don't report it. An unseen caller, implementer, or fixture is not a reason to "
-            "lower it. Lower it only for something you can point to in the working directory. "
-            "When what the code does shows the violation, a name that says nothing is not a "
-            "reason to lower it. Give the same file the same confidence each time you judge it."
-        ),
-    )
-
-    def severity(self, severity: Severity, threshold: float) -> Severity:
-        if severity is Severity.ERROR and self.confidence < threshold:
-            return Severity.WARNING
-        return severity
 
 
 class Verdict(BaseModel):
@@ -131,19 +100,16 @@ class Verdict(BaseModel):
         description="Each violation of the rule; none when the code follows it."
     )
 
-    def diagnostics_for(
-        self, binding: Binding, file: str, threshold: float
-    ) -> tuple[Diagnostic, ...]:
+    def diagnostics_for(self, binding: Binding, file: str) -> tuple[Diagnostic, ...]:
         return tuple(
             Diagnostic(
                 rule=binding.rule,
                 file=violation.file,
                 lines=violation.lines,
                 message=violation.message,
-                severity=violation.severity(binding.severity, threshold),
+                severity=binding.severity,
                 note=None,
                 category=Category.JUDGED,
-                confidence=violation.confidence,
             )
             for violation in self.violations
             if violation.file == file
