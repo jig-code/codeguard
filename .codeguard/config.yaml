@@ -3,6 +3,3 @@ packages:
     git: https://github.com/jig-code/codeguard-rules.git
     ref: 6ac43576ea7958e657ea368a3de46d279829659f
     rulesets: [general, python]
-judge:
-  provider: gemini
-  model: gemini-4-argon
