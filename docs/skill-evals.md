@@ -26,6 +26,11 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
+- A case's prompt asks only for a rule, a new one or a fix to an existing one, and names
+  the files the agent needs. It never says why the rule is wanted, who or what reads it,
+  or how it behaves when it runs, such as a review it gave or a verdict that changed
+  between runs. The skill covers only writing the rule, so none of that is part of a
+  case.
 - A grader reads one thing: a file that the agent wrote, whether the agent wrote any
   rule file, whether the agent loaded the writing-rules skill, or, in a case that
   declines a rule, the agent's final reply.
