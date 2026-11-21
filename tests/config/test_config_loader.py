@@ -35,17 +35,10 @@ class TestConfigLoader:
 
         assert config == Config()
 
-    def test_confidence_threshold_is_a_removed_setting(self, repo):
-        repo.write(CONFIG, "confidence_threshold: 0.9\n")
+    def test_retired_confidence_threshold_is_ignored(self, repo):
+        repo.write(CONFIG, "confidence_threshold: 0.9\nreview_time_limit_minutes: 10\n")
 
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  confidence_threshold: removed: the judge's verdict has no confidence, so delete "
-            "the setting"
-        )
+        assert ConfigLoader(repo.root).load() == Config(review_time_limit_minutes=10)
 
     def test_review_time_limit_defaults_to_5_minutes(self, repo):
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 5

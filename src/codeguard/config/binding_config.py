@@ -13,6 +13,7 @@ from pydantic import (
 
 from codeguard.config.change_kind import ChangeKind
 from codeguard.config.judge_config import JudgeChoice, JudgeProvider
+from codeguard.config.retired_keys import without_retired_keys
 from codeguard.config.severity import Severity
 
 LEGACY_SKILL_FILE = "SKILL.md"
@@ -46,9 +47,7 @@ class BindingConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def drop_retired_fields(cls, data: object) -> object:
-        if not isinstance(data, dict):
-            return data
-        return {key: value for key, value in data.items() if key not in _RETIRED_FIELDS}
+        return without_retired_keys(data, _RETIRED_FIELDS)
 
     @model_validator(mode="after")
     def validate_one_rule(self) -> Self:
