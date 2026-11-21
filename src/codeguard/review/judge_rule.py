@@ -20,38 +20,33 @@ class JudgeRule:
         return match is not None and bool(match.group("body").strip())
 
     def format_problems(self) -> tuple[str, ...]:
-        """What keeps the file from being a title, a statement and `## Why`, in that order."""
+        """What keeps the text from being a title, a statement and `## Why`, in that order."""
         lines = self.text.splitlines()
         if not lines or not _TITLE.match(lines[0]):
             return ("must start with a `# ` title",)
-        body = lines[1:]
-        headings = [line for line in _outside_fences(body) if _HEADING.match(line)]
-        problems = [
-            f"has the heading {heading!r}, but holds only a title, the statement and `## Why`"
-            for heading in headings
-            if not _WHY_HEADING.match(heading)
-        ]
-        statement = _until_first_heading(body)
-        if not statement.strip():
-            problems.append("has no statement between its title and `## Why`")
-        if not self.says_why:
-            problems.append("has no `## Why` section with text")
-        return tuple(problems)
+        headings = self._headings(lines[1:])
+        return (
+            *(
+                f"has the heading {heading!r}, but holds only a title, the statement and `## Why`"
+                for heading in headings
+                if not _WHY_HEADING.match(heading)
+            ),
+            *(() if self._statement(lines[1:]) else ("has no statement under its title",)),
+            *(() if self.says_why else ("has no `## Why` section with text",)),
+        )
 
+    @staticmethod
+    def _headings(lines: list[str]) -> list[str]:
+        inside_fence = False
+        headings: list[str] = []
+        for line in lines:
+            if line.lstrip().startswith(_FENCE):
+                inside_fence = not inside_fence
+            elif not inside_fence and _HEADING.match(line):
+                headings.append(line)
+        return headings
 
-def _outside_fences(lines: list[str]) -> list[str]:
-    inside = False
-    outside: list[str] = []
-    for line in lines:
-        if line.lstrip().startswith(_FENCE):
-            inside = not inside
-        elif not inside:
-            outside.append(line)
-    return outside
-
-
-def _until_first_heading(lines: list[str]) -> str:
-    for index, line in enumerate(lines):
-        if _HEADING.match(line):
-            return "\n".join(lines[:index])
-    return "\n".join(lines)
+    @staticmethod
+    def _statement(lines: list[str]) -> str:
+        first_heading = next((i for i, line in enumerate(lines) if _HEADING.match(line)), None)
+        return "\n".join(lines[:first_heading]).strip()

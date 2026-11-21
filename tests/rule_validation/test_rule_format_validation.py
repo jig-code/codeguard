@@ -49,7 +49,7 @@ class TestRuleFormatValidation:
         result = validate(directory, "# Naming\n\n## Why\n\nNames are read more than written.\n")
 
         assert result == ValidationResult(
-            problems=("naming: rule file has no statement between its title and `## Why`",)
+            problems=("naming: rule file has no statement under its title",)
         )
 
     def test_section_other_than_why_is_a_problem(self, directory):
