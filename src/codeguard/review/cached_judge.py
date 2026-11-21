@@ -16,9 +16,12 @@ from codeguard.review.judge import (
     output_schema,
 )
 
-_JUDGE_INSTRUCTIONS_AND_VERDICT_SCHEMA = "\0".join(
-    (INSTRUCTIONS, json.dumps(output_schema(Verdict)))
-)
+
+def _digest(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+_JUDGE_PROMPT_VERSION = _digest(f"{INSTRUCTIONS}\0{json.dumps(output_schema(Verdict))}".encode())
 
 
 @dataclass(frozen=True)
@@ -39,7 +42,7 @@ class CachedJudge:
     wrapped: Judge
     store: Cache
     root: Path
-    version: str = _JUDGE_INSTRUCTIONS_AND_VERDICT_SCHEMA
+    version: str = _JUDGE_PROMPT_VERSION
 
     @property
     def identity(self) -> str:
@@ -94,7 +97,3 @@ class CachedJudge:
             self._digest_of(request.file) or "",
         )
         return _digest("\0".join(parts).encode())
-
-
-def _digest(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
