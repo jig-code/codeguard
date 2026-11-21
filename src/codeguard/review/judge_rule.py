@@ -121,5 +121,5 @@ class JudgeRule:
                 if not section.is_why
             ),
             *(() if outline.statement else ("has no statement under its title",)),
-            *(() if outline.why.strip() else ("has no `## Why` section with text",)),
+            *(() if self.says_why else ("has no `## Why` section with text",)),
         )
