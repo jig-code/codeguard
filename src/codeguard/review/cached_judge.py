@@ -16,10 +16,9 @@ from codeguard.review.judge import (
     output_schema,
 )
 
-# The schema the CLI judges send, which holds the same descriptions the API judge's does, so a
-# change to what the model is told, the confidence scale included, judges every cached verdict
-# again.
-_CACHE_VERSION = "\0".join((INSTRUCTIONS, json.dumps(output_schema(Verdict))))
+_JUDGE_INSTRUCTIONS_AND_VERDICT_SCHEMA = "\0".join(
+    (INSTRUCTIONS, json.dumps(output_schema(Verdict)))
+)
 
 
 @dataclass(frozen=True)
@@ -40,7 +39,7 @@ class CachedJudge:
     wrapped: Judge
     store: Cache
     root: Path
-    version: str = _CACHE_VERSION
+    version: str = _JUDGE_INSTRUCTIONS_AND_VERDICT_SCHEMA
 
     @property
     def identity(self) -> str:

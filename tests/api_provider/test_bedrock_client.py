@@ -10,7 +10,7 @@ from codeguard.config import JudgeModel, JudgeProvider, ThinkingConfig, sent_eff
 from codeguard.review import JudgeProcessError
 
 
-def test_default_model_is_asked_for_the_verdict_as_strict_native_output(
+def test_default_model_is_asked_for_the_verdict_as_native_json_schema_output(
     tmp_path, make_judge_request
 ):
     client = boto3.client(
@@ -47,4 +47,5 @@ def test_default_model_is_asked_for_the_verdict_as_strict_native_output(
         "list_files",
     ]
     output = request["outputConfig"]["textFormat"]
-    assert (output["type"], output["structure"]["jsonSchema"]["name"]) == ("json_schema", "Verdict")
+    assert output["type"] == "json_schema"
+    assert output["structure"]["jsonSchema"]["name"] == "Verdict"

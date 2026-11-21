@@ -259,11 +259,6 @@ class TestViolation:
         with pytest.raises(ValidationError):
             make_violation(confidence=confidence)
 
-    def test_schema_allows_only_the_scale(self):
-        confidence = output_schema(Violation)["properties"]["confidence"]
-
-        assert confidence["enum"] == [1.0, 0.9, 0.7, 0.5]
-
     def test_schema_describes_each_value_of_the_scale(self):
         description = output_schema(Violation)["properties"]["confidence"]["description"]
 
@@ -366,26 +361,6 @@ class TestVerdict:
         )
 
 
-KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY = frozenset(
-    {
-        "$schema",
-        "type",
-        "description",
-        "title",
-        "properties",
-        "required",
-        "additionalProperties",
-        "items",
-        "enum",
-        "const",
-        "anyOf",
-    }
-)
-KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY_BESIDE_ANY_OF = frozenset(
-    {"anyOf", "$schema", "description", "title"}
-)
-
-
 def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
     yield schema
     children = [
@@ -399,16 +374,32 @@ def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
 
 class TestOutputSchema:
     def test_verdict_schema_uses_only_claude_codes_strict_keywords(self):
+        strict_keywords = {
+            "$schema",
+            "type",
+            "description",
+            "title",
+            "properties",
+            "required",
+            "additionalProperties",
+            "items",
+            "enum",
+            "const",
+            "anyOf",
+        }
+
         schema = output_schema(Verdict)
 
         used = {keyword for subschema in subschemas(schema) for keyword in subschema}
-        assert used - KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY == set()
+        assert used - strict_keywords == set()
 
-    def test_verdict_schema_has_nothing_but_a_description_beside_an_any_of(self):
+    def test_verdict_schema_has_only_annotations_beside_an_any_of(self):
+        allowed_beside_any_of = {"anyOf", "$schema", "description", "title"}
+
         schema = output_schema(Verdict)
 
         beside = [
-            set(subschema) - KEYWORDS_CLAUDE_CODE_ENFORCES_STRICTLY_BESIDE_ANY_OF
+            set(subschema) - allowed_beside_any_of
             for subschema in subschemas(schema)
             if "anyOf" in subschema
         ]

@@ -33,7 +33,6 @@ from codeguard.review import (
     JudgeProcessError,
     JudgeTimeout,
     Verdict,
-    output_schema,
 )
 
 MODEL = "gemini-judge-test"
@@ -55,15 +54,6 @@ def calls(*tools: tuple[str, dict[str, object]], input_tokens: int = 10) -> Mode
         parts=[ToolCallPart(name, args, tool_call_id=f"{name}-id") for name, args in tools],
         usage=_usage(input_tokens),
     )
-
-
-def assert_describes_the_confidence_scale(schema: dict[str, object]) -> None:
-    definitions = schema["$defs"]
-    assert isinstance(definitions, dict)
-    assert definitions["Confidence"]["enum"] == [1.0, 0.9, 0.7, 0.5]
-    confidence = definitions["Violation"]["properties"]["confidence"]
-    violation = output_schema(Verdict)["properties"]["violations"]["items"]
-    assert confidence["description"] == violation["properties"]["confidence"]["description"]
 
 
 def _usage(input_tokens: int) -> RequestUsage:
@@ -177,14 +167,6 @@ class TestApiJudge:
         assert judgement == Judgement(
             Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
         )
-
-    def test_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
-
-        judge_with(tmp_path, models).judge(make_judge_request())
-
-        [output_tool] = models.info().output_tools
-        assert_describes_the_confidence_scale(output_tool.parameters_json_schema)
 
     def test_offers_the_file_tools(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])

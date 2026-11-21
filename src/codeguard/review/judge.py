@@ -16,7 +16,8 @@ from codeguard.syntax import Classification
 DEFAULT_MODEL_KEY = "default"
 DEFAULT_THINKING_KEY = "default"
 INSTRUCTIONS = (Path(__file__).parent / "judge.md").read_text()
-_JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+_SCHEMA_ADAPTER = TypeAdapter(dict[str, JsonValue])
+_DEFINITIONS_ADAPTER = TypeAdapter(dict[str, dict[str, JsonValue]])
 
 
 @dataclass(frozen=True)
@@ -68,11 +69,9 @@ def _decoded_for_judge(row: bytes) -> str:
     return row.decode(errors="replace")
 
 
-# The likelihood levels the judge rates a violation with. The schema gives the model only these
-# values, so a confidence between two of them can't reach the threshold check;
-# `Violation.confidence`'s description says what each value means. A plain enum's schema is one
-# `enum` beside its `type`, which every provider's strict mode accepts: pydantic-ai doesn't make
-# a described `const` per member strict-safe for Bedrock.
+# The schema gives the model only these values, so a confidence between two of them can't reach
+# the threshold check. A plain enum, because pydantic-ai doesn't make a described `const` per
+# member strict-safe for Bedrock.
 class Confidence(float, ReprEnum):
     """How certain you are that the code breaks the rule."""
 
@@ -155,20 +154,17 @@ class Verdict(BaseModel):
 
 
 def output_schema(output: type[BaseModel]) -> dict[str, JsonValue]:
-    """The schema pydantic-ai's generator gives the API judge, with every `$ref` inlined and each
-    field's description kept. Claude Code's `--json-schema` enforces a schema strictly only when it
-    has no `$ref` or `$defs`, and Codex's strict validator needs references inlined too.
+    """References are inlined because Claude Code's `--json-schema` enforces a schema strictly only
+    without `$ref` or `$defs`, and Codex's strict validator needs them inlined too.
     """
-    schema = _JSON_OBJECT.validate_python(
+    schema = _SCHEMA_ADAPTER.validate_python(
         output.model_json_schema(schema_generator=GenerateToolJsonSchema)
     )
-    definitions = schema.pop("$defs", {})
-    if not isinstance(definitions, dict):
-        raise ValueError(f"{output.__name__}'s schema definitions must be objects")
+    definitions = _DEFINITIONS_ADAPTER.validate_python(schema.pop("$defs", {}))
     return {key: _inlined(value, definitions) for key, value in schema.items()}
 
 
-def _inlined(value: JsonValue, definitions: dict[str, JsonValue]) -> JsonValue:
+def _inlined(value: JsonValue, definitions: dict[str, dict[str, JsonValue]]) -> JsonValue:
     if isinstance(value, list):
         return [_inlined(item, definitions) for item in value]
     if not isinstance(value, dict):
@@ -176,8 +172,6 @@ def _inlined(value: JsonValue, definitions: dict[str, JsonValue]) -> JsonValue:
     reference = value.get("$ref")
     if isinstance(reference, str):
         definition = definitions[reference.removeprefix("#/$defs/")]
-        if not isinstance(definition, dict):
-            raise ValueError(f"Schema reference {reference} must name an object")
         value = {**definition, **{key: item for key, item in value.items() if key != "$ref"}}
     return {key: _inlined(item, definitions) for key, item in value.items()}
 
