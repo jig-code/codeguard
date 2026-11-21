@@ -33,4 +33,7 @@ LLM test or a judged review fails, flips between runs or reports a warning, foll
 Rule failures bullet in [docs/architecture.md](docs/architecture.md#testing-a-rule) and
 [docs/testing.md](docs/testing.md). This covers the LLM
 tests' fixtures in `evals/judge`, every rule package, and judged reviews of codeguard's
-own code.
+own code. A finding that a judged review reports on codeguard's own code, a warning
+included, is fixed in the code; only a finding that is wrong goes to its rule, under
+that bullet. [How codeguard reviews itself](docs/CONTRIBUTING.md#how-codeguard-reviews-itself)
+says which build, judge and files each review uses.
