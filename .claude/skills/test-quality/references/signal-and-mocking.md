@@ -24,6 +24,12 @@ stubbing the SUT; inject the dependency instead. Vary an environment variable
 exercises, never to stop production code from running. If a patch seems to need a written
 justification, build the injected version: it usually exposes a missing seam.
 
+A unit reachable only through a caller or a file, although its behaviour is on the
+content, is the same missing seam: a test that writes a file to reach it works around
+what it should expose. Split the read from the logic in production
+(`python-code-quality`, "Parse outside data once"), then test the logic with text or an
+object (gate 18).
+
 Pass real data for every input the SUT reads. An empty or dummy value
 (`make_binding(triggers=frozenset())` where real triggers belong) is fine for an input the
 SUT provably never reads. When real data makes the test fail, that failure is a

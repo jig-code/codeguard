@@ -72,7 +72,10 @@ belongs to the `pytest-factoryboy` skill. Gates 5, 9, 11, 13, 14, 15 and 16 poin
     unit through a caller moves to the unit's own file when the caller only passes the
     result on; the caller keeps one test for the wiring (gate 1, 'Integration tests earn
     their level'). Give the test the smallest input the unit reads: a file only when the
-    unit reads a path, and text or an object when it takes one.
+    unit reads a path, and text or an object when it takes one. A unit reachable only
+    through a caller or a file although its behaviour is on the content is a missing
+    seam: split the read from the logic in production (`python-code-quality`, "Parse
+    outside data once"), then test the logic with text or an object.
     [signal-and-mocking.md](references/signal-and-mocking.md)
 
 ## Review scope
