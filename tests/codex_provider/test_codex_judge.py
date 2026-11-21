@@ -9,6 +9,7 @@ from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
 from codeguard.review import (
+    VERDICT_SCHEMA,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -33,7 +34,31 @@ def fake_codex_executable(tmp_path, record) -> str:
         {
             "record": str(record),
             "answer": '{"reason":"Follows the rule.","violations":[]}',
-            "stdout": '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":5}}\n',
+            "stdout": "".join(
+                json.dumps(event) + "\n"
+                for event in (
+                    {"type": "thread.started", "thread_id": "thread"},
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "id": "item_0",
+                            "type": "command_execution",
+                            "command": "sed -n 1,40p logger.py",
+                            "exit_code": 0,
+                        },
+                    },
+                    {"type": "item.completed", "item": {"id": "item_1", "type": "agent_message"}},
+                    {
+                        "type": "turn.completed",
+                        "usage": {
+                            "input_tokens": 10,
+                            "cached_input_tokens": 4,
+                            "output_tokens": 5,
+                            "reasoning_output_tokens": 2,
+                        },
+                    },
+                )
+            ),
         }
     )
     return str(FAKE_CODEX)
@@ -65,7 +90,7 @@ class TestCodexJudge:
         received = json.loads(record.read_text())
         assert received["prompt"] == request.prompt
         assert received["instructions"] == request.instructions
-        assert received["schema"]["additionalProperties"] is False
+        assert received["schema"] == json.loads(VERDICT_SCHEMA)
 
     def test_uses_ephemeral_read_only_native_tools(
         self, tmp_path, processes, fake_codex_executable, record, make_judge_request
@@ -109,10 +134,12 @@ class TestCodexJudge:
         assert "OPENAI_BASE_URL" not in received["environment"]
         assert "PATH" in received["environment"]
 
-    def test_passes_the_bound_model_and_reasoning_effort(
+    def test_passes_the_bound_model_and_the_thinking_level_it_is_given(
         self, tmp_path, processes, fake_codex_executable, record, make_judge_request
     ):
-        judge = CodexJudge(tmp_path, "a-bound-model", processes, fake_codex_executable)
+        judge = CodexJudge(
+            tmp_path, "a-bound-model", processes, fake_codex_executable, thinking="high"
+        )
 
         judge.judge(make_judge_request())
 
@@ -120,15 +147,74 @@ class TestCodexJudge:
         assert arguments[arguments.index("--model") + 1] == "a-bound-model"
         assert 'model_reasoning_effort="high"' in arguments
 
-    def test_records_usage(
-        self, tmp_path, processes, fake_codex_executable, capfire, make_judge_request
+    def test_without_a_level_runs_at_the_cli_default_reasoning_effort(
+        self, tmp_path, processes, fake_codex_executable, record, make_judge_request
     ):
         judge = CodexJudge(tmp_path, MODEL, processes, fake_codex_executable)
 
         judge.judge(make_judge_request())
 
-        [attributes] = finished_span_attributes(capfire, "codex judges {rule} on {file}")
-        assert attributes["usage"] == '{"input_tokens":10,"output_tokens":5}'
+        arguments = json.loads(record.read_text())["arguments"]
+        assert not any("model_reasoning_effort" in argument for argument in arguments)
+
+    def test_identity_names_the_thinking_level(self, tmp_path, processes):
+        judge = CodexJudge(tmp_path, MODEL, processes, thinking="high")
+
+        assert judge.identity == f"codex-cli\0{MODEL}\0thinking=high\0native-tools-schema-v4"
+
+    def test_identity_without_a_level_names_the_cli_default(self, tmp_path, processes):
+        judge = CodexJudge(tmp_path, MODEL, processes)
+
+        assert judge.identity == f"codex-cli\0{MODEL}\0thinking=default\0native-tools-schema-v4"
+
+    def test_records_usage_and_commands_under_the_shared_keys(
+        self, tmp_path, processes, fake_codex_executable, capfire, make_judge_request
+    ):
+        judge = CodexJudge(tmp_path, MODEL, processes, fake_codex_executable)
+        request = make_judge_request()
+
+        judge.judge(request)
+
+        assert finished_span_attributes(capfire, "codex judges {rule} on {file}") == [
+            {
+                "rule": request.judge_rule.name,
+                "file": "a.py",
+                "model": MODEL,
+                "returncode": 0,
+                "loaded_files": "[]",
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "cache_read_input_tokens": 4,
+                "thinking_tokens": 2,
+                "tool_calls": '[{"tool":"command_execution","command":"sed -n 1,40p logger.py"}]',
+            }
+        ]
+
+    def test_output_without_a_completed_turn_records_no_usage(
+        self, tmp_path, processes, record, capfire, make_judge_request
+    ):
+        configure_fake_cli_response(
+            {
+                "record": str(record),
+                "answer": '{"reason":"Follows the rule.","violations":[]}',
+                "stdout": "not json\n",
+            }
+        )
+        judge = CodexJudge(tmp_path, MODEL, processes, str(FAKE_CODEX))
+        request = make_judge_request()
+
+        judge.judge(request)
+
+        assert finished_span_attributes(capfire, "codex judges {rule} on {file}") == [
+            {
+                "rule": request.judge_rule.name,
+                "file": "a.py",
+                "model": MODEL,
+                "returncode": 0,
+                "loaded_files": "[]",
+                "tool_calls": "[]",
+            }
+        ]
 
     def test_process_failure_is_not_retried(self, tmp_path, processes, record, make_judge_request):
         attempts = tmp_path / "attempts"

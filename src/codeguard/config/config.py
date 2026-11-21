@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import (
     BaseSettings,
     EnvSettingsSource,
@@ -8,9 +8,11 @@ from pydantic_settings import (
 
 from codeguard.config.judge_config import JudgeConfig
 from codeguard.config.package_config import PackageConfig
+from codeguard.config.retired_keys import without_retired_keys
 from codeguard.config.versions import ExactVersion
 
-_ENVIRONMENT_JUDGE_KEYS = ("provider", "model")
+_ENVIRONMENT_JUDGE_KEYS = ("provider", "model", "request_time_limit_seconds")
+_RETIRED_SETTINGS = frozenset({"confidence_threshold"})
 
 
 class _JudgeEnvironment(EnvSettingsSource):
@@ -33,11 +35,15 @@ class Config(BaseSettings):
         env_ignore_empty=True,
     )
 
-    confidence_threshold: float = Field(default=0.9, ge=0, le=1)
     review_time_limit_minutes: int = Field(default=5, ge=1)
     ast_grep: ExactVersion | None = Field(default=None, alias="ast-grep")
     packages: tuple[PackageConfig, ...] = ()
     judge: JudgeConfig = JudgeConfig()
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_retired_settings(cls, data: object) -> object:
+        return without_retired_keys(data, _RETIRED_SETTINGS)
 
     @classmethod
     def settings_customise_sources(

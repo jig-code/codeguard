@@ -5,6 +5,8 @@ from codeguard.review.deadline import Deadline
 from codeguard.review.diagnostic import Category, Diagnostic, ErrorType, Severity
 from codeguard.review.judge import (
     DEFAULT_MODEL_KEY,
+    DEFAULT_THINKING_KEY,
+    VERDICT_SCHEMA,
     Judge,
     JudgeError,
     Judgement,
@@ -13,7 +15,6 @@ from codeguard.review.judge import (
     JudgeRequest,
     JudgeTimeout,
     Verdict,
-    output_schema,
 )
 from codeguard.review.judge_check import JudgeCheck
 from codeguard.review.judge_plan import JudgePlan, PlannedCall
@@ -23,6 +24,8 @@ from codeguard.review.reviewer import Reviewer, Step
 
 __all__ = [
     "DEFAULT_MODEL_KEY",
+    "DEFAULT_THINKING_KEY",
+    "VERDICT_SCHEMA",
     "Binding",
     "Bindings",
     "CachedJudge",
@@ -48,5 +51,4 @@ __all__ = [
     "Severity",
     "Step",
     "Verdict",
-    "output_schema",
 ]

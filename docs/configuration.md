@@ -10,7 +10,6 @@ in use.
 
 | Setting | Default | What it does | Why the default |
 |---|---|---|---|
-| `confidence_threshold` | `0.9` | A judged `error` with a lower confidence is reported as a warning, to you rather than the agent, and doesn't block. | Only findings the judge is sure of should stop an agent or fail a PR. A doubtful finding that blocked would send the agent after a violation that may not exist. See [How a review works](how-a-review-works.md). |
 | `review_time_limit_minutes` | `5` | The review stops judging after this long. Each rule and file it didn't judge is reported as not checked, at the rule's severity. The GitHub Action stops the review 2 minutes after it. | A stuck `claude` call once hung a CI review for 30 minutes with no output. A limit turns a hang into a visible failure. |
 | `ast-grep` | the version codeguard installs | The ast-grep version every pattern rule and gate runs with, through `uv tool run`, such as `0.45.3`. | One version for every rule, so a rule matches the same code on every machine. codeguard fails when it is outside a package's `ast-grep` range. |
 | `packages` | none | The rule packages and rulesets the project uses; see [Opt into a rule package](add-codeguard.md#opt-into-a-rule-package). Without it, only the rules in `.codeguard/` run. | A project opts into each ruleset, so no rule runs that the project didn't choose. |
@@ -21,7 +20,9 @@ in use.
 | `packages[].rulesets.<name>.ci_only` | `false` | Runs every rule in the ruleset only in CI and in reviews run by hand, not in the agent's Stop hook. A rule's own override wins. | A hook review spends the developer's subscription each time an agent stops; `true` keeps a costly rule to CI. See [Rule package keys](#rule-package-keys). |
 | `packages[].rulesets.<name>.rules.<id>` | the binding's | Overrides a rule's `paths`, `exclude_paths`, `severity` or `ci_only`. | |
 | `judge.provider`, `judge.model` | `claude-cli` and the `claude` CLI's own default model | The judge provider and model for each judge rule whose binding leaves them out; see [Choose a judge](judges.md). | A project whose developers and CI judge with another provider names it once, instead of in every binding. |
-| `judge.calls_at_once` | `2` | How many Gemini judge calls run at once; other providers aren't limited by it. | Gemini's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
+| `judge.thinking.<provider>` | `medium` for `gemini` and `bedrock`; `default` for `claude-cli` and `codex-cli` | How hard the provider's judge model thinks before its verdict, for every rule it judges: one of the provider's levels, or `default` to pass none so the CLI or model uses its own. See [Thinking](judges.md#thinking). | `medium` gives the API judges room to reason through a rule without the latency of `high`. A CLI keeps its own default unless the project asks otherwise. |
+| `judge.request_time_limit_seconds` | `120` | How long a Gemini or Bedrock judge waits for each answer from its model, retries included, before the judge call fails as timed out. `CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS` overrides it. | Above the time most answers take, so a stuck request fails visibly instead of holding the review until its time limit. |
+| `judge.calls_at_once` | `2` | How many Gemini or Bedrock judge calls run at once; the CLI providers aren't limited by it. | Gemini's and Bedrock's pay-as-you-go capacity is shared, so fewer calls keep a review under its tokens-per-minute limit. |
 
 ## Rule package keys
 

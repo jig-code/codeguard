@@ -7,4 +7,4 @@ allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
 
 One case in .codeguard/rule-evals/no-swallowed-exceptions.yaml flips between valid and invalid across codeguard eval --repeat 3 runs. The case is 'a handler that logs the error and re-raises'. Fix it.
 
-Input files: .codeguard/config.yaml, .codeguard/rules/judge/no-swallowed-exceptions.md, .codeguard/bindings/no-swallowed-exceptions.yaml, .codeguard/rule-evals/no-swallowed-exceptions.yaml, src/shop/__init__.py, src/shop/orders.py
+Input files: .codeguard/rules/judge/no-swallowed-exceptions.md, .codeguard/bindings/no-swallowed-exceptions.yaml, .codeguard/rule-evals/no-swallowed-exceptions.yaml, src/shop/__init__.py, src/shop/orders.py

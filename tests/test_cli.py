@@ -375,7 +375,7 @@ class TestReviewOfDeletedCode:
             "service.py",
             "class ExampleService:\n    def describe(self):\n        return 'service'\n",
         )
-        violation = {"file": "service.py", "confidence": 1.0}
+        violation = {"file": "service.py"}
         bin_dir = FAKE_CLAUDE.parent
         configure_fake_cli_response(
             {
@@ -436,20 +436,20 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            "Judge calls: 1 (0 cached, 1 to Claude), 1 skipped by triggers\n"
+            "Judge calls: 1 (0 cached, 1 new), 1 skipped by triggers\n"
             "\n"
             "By rule:\n"
-            "  claude  cached  skipped  rule\n"
+            "     new  cached  skipped  rule\n"
             "       1       0        0  placement\n"
             "       0       0        1  class-shape\n"
             "\n"
             "By file:\n"
-            "  claude  cached  skipped  file\n"
+            "     new  cached  skipped  file\n"
             "       1       0        1  a.py\n"
             "\n"
             "Calls by file:\n"
             "a.py\n"
-            "  claude   placement\n"
+            "  new      placement\n"
             "  skipped  class-shape\n"
         )
         assert result.returncode == 0
@@ -474,19 +474,19 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            "Judge calls: 1 (0 cached, 1 to Claude), 0 skipped by triggers\n"
+            "Judge calls: 1 (0 cached, 1 new), 0 skipped by triggers\n"
             "\n"
             "By rule:\n"
-            "  claude  cached  skipped  rule\n"
+            "     new  cached  skipped  rule\n"
             "       1       0        0  placement\n"
             "\n"
             "By file:\n"
-            "  claude  cached  skipped  file\n"
+            "     new  cached  skipped  file\n"
             "       1       0        0  a.py\n"
             "\n"
             "Calls by file:\n"
             "a.py\n"
-            "  claude   placement\n"
+            "  new      placement\n"
         )
         assert result.returncode == 0
 
@@ -498,7 +498,7 @@ class TestReviewDryRun:
         )
 
         assert result.stdout == (
-            f"{make_diagnostic()}\nJudge calls: 0 (0 cached, 0 to Claude), 0 skipped by triggers\n"
+            f"{make_diagnostic()}\nJudge calls: 0 (0 cached, 0 new), 0 skipped by triggers\n"
         )
         assert result.stderr == ""
         assert result.returncode == 1
@@ -518,7 +518,7 @@ class TestReviewJsonFormat:
         assert json.loads(result.stdout) == {"diagnostics": [make_diagnostic().as_json()]}
         assert result.returncode == 1
 
-    def test_low_confidence_finding_is_a_warning_with_its_confidence(
+    def test_judged_error_finding_blocks_the_review(
         self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
@@ -527,7 +527,7 @@ class TestReviewJsonFormat:
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
         violation = {"file": "a.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
-        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([violation])})
 
         result = run_review(repo, tmp_path, bin_dir, "--format", "json")
 
@@ -536,11 +536,9 @@ class TestReviewJsonFormat:
             rule="placement",
             message="Move it.",
             note="Move it.",
-            severity=Severity.WARNING,
-            confidence=0.5,
         )
         assert json.loads(result.stdout) == {"diagnostics": [finding.as_json()]}
-        assert result.returncode == 0
+        assert result.returncode == 1
 
     def test_failed_judge_call_is_a_judge_error(
         self, repo, make_judge_rule, tmp_path, make_diagnostic
@@ -788,7 +786,7 @@ class TestEvalCommand:
         assert result.stdout == "False\n"
 
     @pytest.mark.parametrize("from_package", [True, False], ids=["in-package", "package-path"])
-    def test_invalid_case_below_the_confidence_threshold_is_reported_and_exits_1(
+    def test_invalid_case_judged_valid_is_reported_and_exits_1(
         self, tmp_path, tmp_path_factory, from_package
     ):
         package = GitRepo.init(tmp_path_factory.mktemp("package").resolve())
@@ -799,9 +797,8 @@ class TestEvalCommand:
             "    inputs:\n      file: invoice.py\n"
             "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
         )
-        violation = {"file": "invoice.py", "lines": {"start": 1, "end": 1}, "message": "Move it."}
         bin_dir = FAKE_CLAUDE.parent
-        configure_fake_cli_response({"stdout": claude_stream([{**violation, "confidence": 0.5}])})
+        configure_fake_cli_response({"stdout": claude_stream([])})
 
         result = subprocess.run(
             [CODEGUARD, "eval"] if from_package else [CODEGUARD, "eval", str(package.root)],
@@ -817,7 +814,7 @@ class TestEvalCommand:
         )
         assert result.stdout.endswith(
             "responsibility-placement an assignment in the invoice: expected outcome "
-            "invalid, got outcome uncertain\n  reason: Judged.\n  line 1 (0.50): Move it.\n"
+            "invalid, got outcome valid\n  reason: Judged.\n"
         )
         assert result.returncode == 1
 
@@ -836,7 +833,6 @@ class TestEvalCommand:
             "file": "invoice.py",
             "lines": {"start": 1, "end": 1},
             "message": "Move it.",
-            "confidence": 1.0,
         }
         configure_fake_cli_response({"stdout": claude_stream([violation]), "calls": str(calls)})
         env = {**os.environ, "HOME": str(tmp_path), "PATH": f"{bin_dir}:{os.environ['PATH']}"}
@@ -890,7 +886,6 @@ class TestEvalCommand:
                     "file": "invoice.py",
                     "lines": {"start": 3, "end": 3},
                     "message": "M.",
-                    "confidence": 1.0,
                 }
             ],
         )
@@ -999,7 +994,6 @@ class TestEvalCommand:
                     "file": "invoice.py",
                     "lines": {"start": 3, "end": 3},
                     "message": "M.",
-                    "confidence": 1.0,
                 }
             ],
         )
@@ -1083,16 +1077,9 @@ class TestEvalMatchesReview:
         ("violations", "failure", "returncode"),
         [
             (
-                [{"confidence": 1.0}],
+                [{}],
                 "responsibility-placement totals the order lines: Judged.\n",
                 0,
-            ),
-            (
-                [{"confidence": 0.5}],
-                "responsibility-placement totals the order lines: Judged.\n"
-                "responsibility-placement totals the order lines: expected outcome invalid, got "
-                "outcome uncertain\n  reason: Judged.\n  line 3 (0.50): Move it.\n",
-                1,
             ),
             (
                 [],
@@ -1102,7 +1089,7 @@ class TestEvalMatchesReview:
                 1,
             ),
         ],
-        ids=["invalid", "uncertain", "valid"],
+        ids=["invalid", "valid"],
     )
     def test_eval_reports_the_outcome_of_claude_verdict(
         self, tmp_path, tmp_path_factory, violations, failure, returncode

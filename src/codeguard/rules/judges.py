@@ -6,10 +6,16 @@ from threading import Semaphore
 
 from diskcache import Cache
 
+from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider
-from codeguard.gemini_provider import BedrockClaude, GeminiJudge, VertexGemini
+from codeguard.config import (
+    GeminiSettings,
+    JudgeConfig,
+    JudgeModel,
+    JudgeProvider,
+    sent_effort,
+)
 from codeguard.review import CachedJudge, Deadline, Judge
 
 _JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
@@ -44,21 +50,46 @@ class Judges:
 
     def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]
+        thinking = self.config.thinking
         if model.provider is JudgeProvider.CODEX_CLI:
-            return CodexJudge(root, model.required_name, processes, deadline=deadline)
+            return CodexJudge(
+                root,
+                model.required_name,
+                processes,
+                deadline=deadline,
+                thinking=sent_effort(thinking.codex_cli),
+            )
         if model.provider is JudgeProvider.GEMINI:
             gemini = self.gemini
             models = VertexGemini(
                 gemini.project, gemini.location, gemini.api_key, gemini.credentials_file
             )
-            return GeminiJudge(root, model.required_name, models, processes, deadline=deadline)
+            return ApiJudge(
+                root,
+                model.required_name,
+                models,
+                processes,
+                model.provider,
+                sent_effort(thinking.gemini),
+                self.config.request_time_limit_seconds,
+                deadline=deadline,
+            )
         if model.provider is JudgeProvider.BEDROCK:
-            return GeminiJudge(
+            return ApiJudge(
                 root,
                 model.required_name,
                 BedrockClaude(),
                 processes,
+                model.provider,
+                sent_effort(thinking.bedrock),
+                self.config.request_time_limit_seconds,
                 deadline=deadline,
-                provider=model.provider,
             )
-        return ClaudeJudge(root, model.name, processes, warmup=self.warmup, deadline=deadline)
+        return ClaudeJudge(
+            root,
+            model.name,
+            processes,
+            warmup=self.warmup,
+            deadline=deadline,
+            thinking=sent_effort(thinking.claude_cli),
+        )

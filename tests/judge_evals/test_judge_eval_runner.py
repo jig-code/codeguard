@@ -1,9 +1,9 @@
 from importlib.metadata import version
 
 import yaml
-from recording_judge import FailingJudge, RecordingJudge, RecordingJudges
+from recording_judge import FailingJudge, RecordingJudge, RecordingJudges, SequencedJudge
 
-from codeguard.config import JudgeChoice, JudgeModel, JudgeProvider, RulesetLoader
+from codeguard.config import JudgeChoice, JudgeConfig, JudgeModel, JudgeProvider, RulesetLoader
 from codeguard.judge_evals import EvalSelection, JudgeEvalResult, JudgeEvalRunner
 from codeguard.review import Bindings
 from codeguard.rule_validation import ValidationResult
@@ -30,7 +30,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
         )
 
         result = runner.run()
@@ -51,14 +50,13 @@ class TestJudgeEvalRunner:
         )
         loader = RulesetLoader.local(directory.root)
         [binding] = Bindings.from_rulesets([loader.load()])
-        runner = JudgeEvalRunner(directory.root, loader, RecordingJudges(RecordingJudge()), 0.9)
+        runner = JudgeEvalRunner(directory.root, loader, RecordingJudges(RecordingJudge()))
 
         result = runner.run()
 
         assert result.reports[0].experiment_metadata == {
             "provider": "claude-cli",
             "model": "claude-haiku-5-5",
-            "confidence_threshold": 0.9,
             "rule_version": binding.version,
             "codeguard_version": version("codeguard"),
         }
@@ -73,7 +71,7 @@ class TestJudgeEvalRunner:
             ),
         )
         judges = RecordingJudges(RecordingJudge())
-        runner = JudgeEvalRunner(directory.root, RulesetLoader.local(directory.root), judges, 0.9)
+        runner = JudgeEvalRunner(directory.root, RulesetLoader.local(directory.root), judges)
 
         runner.run()
 
@@ -94,7 +92,7 @@ class TestJudgeEvalRunner:
         model = "gemini-judge-test"
         gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model=model)
         runner = JudgeEvalRunner(
-            directory.root, RulesetLoader.local(directory.root), judges, 0.9, judge_override=gemini
+            directory.root, RulesetLoader.local(directory.root), judges, judge_override=gemini
         )
 
         result = runner.run()
@@ -122,7 +120,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge(verdict)),
-            0.9,
             repeat=2,
         )
 
@@ -130,9 +127,66 @@ class TestJudgeEvalRunner:
 
         assert sorted(result.failures) == [
             f"enum-usage a string [{run}/2]: expected outcome valid, got outcome invalid\n"
-            "  reason: The code breaks the convention.\n  line 1 (1.00): Rename it."
+            "  reason: The code breaks the convention.\n  line 1: Rename it."
             for run in (1, 2)
         ]
+
+    def test_case_passes_when_every_run_gives_its_expected_outcome(
+        self, directory, make_rule_eval_case
+    ):
+        directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
+        directory.write(".codeguard/bindings/enum-usage.yaml", ENUM_BINDING)
+        directory.write(
+            ".codeguard/rule-evals/enum-usage.yaml",
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
+        )
+        runner = JudgeEvalRunner(
+            directory.root,
+            RulesetLoader.local(directory.root),
+            RecordingJudges(RecordingJudge()),
+            repeat=3,
+        )
+
+        result = runner.run()
+
+        assert result.passed
+        assert result.failures == ()
+
+    def test_case_fails_when_any_run_gives_another_outcome(
+        self, directory, make_rule_eval_case, make_verdict, make_violation
+    ):
+        directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
+        directory.write(".codeguard/bindings/enum-usage.yaml", ENUM_BINDING)
+        directory.write(
+            ".codeguard/rule-evals/enum-usage.yaml",
+            yaml.safe_dump(
+                {"cases": [make_rule_eval_case().model_dump(mode="json", exclude_defaults=True)]}
+            ),
+        )
+        breaking = make_verdict(
+            breaking=True, violations=(make_violation(file="module.py", message="Rename it."),)
+        )
+        judge = SequencedJudge([make_verdict(), breaking, make_verdict()])
+        one_call_at_once = JudgeConfig(calls_at_once=1)
+        gemini = JudgeChoice(provider=JudgeProvider.GEMINI, model="gemini-judge-test")
+        runner = JudgeEvalRunner(
+            directory.root,
+            RulesetLoader.local(directory.root),
+            RecordingJudges(judge),
+            repeat=3,
+            judge_config=one_call_at_once,
+            judge_override=gemini,
+        )
+
+        result = runner.run()
+
+        assert not result.passed
+        assert result.failures == (
+            "enum-usage a string [2/3]: expected outcome valid, got outcome invalid\n"
+            "  reason: The code breaks the convention.\n  line 1: Rename it.",
+        )
 
     def test_judge_error_is_reported_as_a_case_not_judged(self, directory, make_rule_eval_case):
         directory.write(".codeguard/rules/judge/enum-usage.md", ENUM_RULE)
@@ -147,7 +201,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(FailingJudge()),
-            0.9,
         )
 
         result = runner.run()
@@ -175,7 +228,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
         )
 
         result = runner.run()
@@ -210,7 +262,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
             selection=EvalSelection(cases=("member",)),
         )
 
@@ -232,7 +283,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             judges,
-            0.9,
             selection=EvalSelection(rules=frozenset({"other-rule"})),
         )
 
@@ -263,7 +313,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
         )
 
         names = runner.case_names()
@@ -286,7 +335,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge(verdict)),
-            0.9,
         )
 
         result = runner.run()
@@ -301,7 +349,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
         )
 
         result = runner.run()
@@ -321,7 +368,6 @@ class TestJudgeEvalRunner:
             directory.root,
             RulesetLoader.local(directory.root),
             RecordingJudges(RecordingJudge()),
-            0.9,
             selection=EvalSelection(cases=("member",)),
         )
 

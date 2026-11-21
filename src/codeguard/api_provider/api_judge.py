@@ -7,32 +7,36 @@ from pathlib import Path
 
 import httpx2
 import logfire
-from google.genai.types import ThinkingLevel
 from pydantic import BaseModel, JsonValue, ValidationError
 from pydantic_ai import (
     Agent,
-    NativeOutput,
     RunContext,
-    Tool,
-    ToolOutput,
     UsageLimits,
     capture_run_messages,
 )
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
+    ModelRequestTimeout,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
-from pydantic_ai.models.google import GoogleModelSettings
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
+from pydantic_ai.workspaces import LocalWorkspaceBackend
 
-from codeguard.gemini_provider.file_tools import FileTools
+from codeguard.api_provider.file_system import (
+    PATH_WITH_RIPGREP,
+    file_system_tools,
+    file_tool_calls,
+    loaded_files,
+)
+from codeguard.config import ApiEffort
 from codeguard.review import (
+    DEFAULT_THINKING_KEY,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -43,67 +47,66 @@ from codeguard.review import (
 )
 
 _MAX_REQUESTS = 10
-_REQUEST_LIMIT_SECONDS = 120
 _MAX_ATTEMPTS = 5
+_GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
-# Connects to Gemini and gives the model named, for the length of one judgement.
-type GeminiModels = Callable[[str], AbstractAsyncContextManager[Model]]
+# Connects to the provider and gives the model named, for the length of one judgement.
+type ApiModels = Callable[[str], AbstractAsyncContextManager[Model]]
 
 
 @dataclass(frozen=True)
-class GeminiJudge:
+class ApiJudge:
     root: Path
     model: str
-    models: GeminiModels
+    models: ApiModels
     processes: AbstractContextManager[object]
+    provider: str
+    thinking: ApiEffort | None
+    request_time_limit_seconds: float
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
-    request_limit_seconds: float = _REQUEST_LIMIT_SECONDS
-    provider: str = "gemini"
 
     @property
     def identity(self) -> str:
-        return "\0".join((self.provider, self.model))
+        return "\0".join(
+            (self.provider, self.model, f"thinking={self.thinking or DEFAULT_THINKING_KEY}")
+        )
 
     def judge(self, request: JudgeRequest) -> Judgement:
         with (
             self.processes,
             logfire.span(
-                "gemini judges {rule} on {file}",
+                "{provider} judges {rule} on {file}",
+                provider=self.provider,
                 rule=request.judge_rule.name,
                 file=request.file,
                 model=self.model,
             ) as span,
         ):
-            tools = FileTools(self.root)
             usage = RunUsage()
             with capture_run_messages() as messages:
                 try:
                     verdict = asyncio.run(
-                        self._run(request.instructions, request.prompt, Verdict, tools.tools, usage)
+                        self._run(request.instructions, request.prompt, Verdict, usage)
                     )
                 finally:
-                    span.set_attributes(
-                        {**_telemetry(usage), "tool_calls": _tool_calls(messages, tools)}
-                    )
-            return Judgement(verdict, tuple(dict.fromkeys(tools.loaded_files)))
+                    span.set_attributes({**_telemetry(usage), "tool_calls": _tool_calls(messages)})
+            return Judgement(verdict, loaded_files(messages))
 
     async def _run[Output: BaseModel](
         self,
         instructions: str,
         prompt: str,
         output: type[Output],
-        tools: Sequence[Tool[object]],
         usage: RunUsage,
     ) -> Output:
         agent = Agent[object, Output](
             deps_type=object,
             instructions=instructions,
-            # Bedrock's Converse API has no structured output, so Claude there calls a tool.
-            output_type=ToolOutput(output) if self.provider == "bedrock" else NativeOutput(output),
-            tools=tools,
+            output_type=output,
+            capabilities=[file_system_tools(self.root)],
             model_settings=self._settings,
         )
         try:
@@ -111,6 +114,7 @@ class GeminiJudge:
                 result = await agent.run(
                     prompt,
                     model=_Retrying(model, self.deadline),
+                    workspace=LocalWorkspaceBackend(self.root, env={"PATH": PATH_WITH_RIPGREP}),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
                 )
@@ -136,27 +140,26 @@ class GeminiJudge:
             ) from error
         return result.output
 
-    def _settings(self, _: RunContext[object]) -> GoogleModelSettings:
-        limit = self.request_limit_seconds
+    def _settings(self, _: RunContext[object]) -> ModelSettings:
+        limit = self.request_time_limit_seconds
         if self.deadline is not None:
             limit = min(limit, self.deadline.remaining_seconds())
             if limit <= 0:
                 raise self.deadline.reached()
-        return {
-            "timeout": limit,
-            "google_thinking_config": {
-                "thinking_level": ThinkingLevel.LOW,
-                "include_thoughts": True,
-            },
-        }
+        settings: ModelSettings = {"request_timeout": limit}
+        if self.thinking is not None:
+            settings["thinking"] = self.thinking
+        return settings
 
     def _timed_out(self) -> JudgeTimeout:
         if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
             return self.deadline.reached()
-        return JudgeTimeout(f"{self.model} took over {self.request_limit_seconds:g}s to answer.")
+        return JudgeTimeout(
+            f"{self.model} took over {self.request_time_limit_seconds:g}s to answer."
+        )
 
 
-# Sends a request again when Gemini turned it away or the connection broke, while the backoff
+# Sends a request again when the provider turned it away or the connection broke, while the backoff
 # fits before the deadline. The SDK's own retries miss a connection that broke after the
 # response started.
 class _Retrying(WrapperModel):
@@ -197,7 +200,9 @@ def _transport_error(error: ModelAPIError) -> bool:
 
 
 def _timed_out(error: ModelAPIError) -> bool:
-    return isinstance(error.__cause__, httpx2.TimeoutException)
+    return isinstance(error, ModelRequestTimeout) or isinstance(
+        error.__cause__, httpx2.TimeoutException
+    )
 
 
 def _message(error: ModelHTTPError) -> str:
@@ -209,18 +214,11 @@ def _message(error: ModelHTTPError) -> str:
     return str(body)
 
 
-def _tool_calls(
-    messages: Sequence[ModelMessage], tools: FileTools
-) -> tuple[dict[str, JsonValue], ...]:
+def _tool_calls(messages: Sequence[ModelMessage]) -> tuple[dict[str, JsonValue], ...]:
     """The file tools the model called, with the arguments it sent, in the order it called
     them. The tools run concurrently, so the order they ran in says nothing."""
-    names = {tool.name for tool in tools.tools}
     return tuple(
-        {"tool": part.tool_name, **part.args_as_dict()}
-        for message in messages
-        if isinstance(message, ModelResponse)
-        for part in message.parts
-        if isinstance(part, ToolCallPart) and part.tool_name in names
+        {"tool": call.tool_name, **call.args_as_dict()} for call in file_tool_calls(messages)
     )
 
 
@@ -230,5 +228,6 @@ def _telemetry(usage: RunUsage) -> dict[str, object]:
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cache_read_input_tokens": usage.cache_read_tokens,
-        "thinking_tokens": usage.details.get("thoughts_tokens", 0),
+        "thinking_tokens": usage.output_reasoning_tokens
+        or usage.details.get(_GEMINI_THINKING_TOKENS, 0),
     }

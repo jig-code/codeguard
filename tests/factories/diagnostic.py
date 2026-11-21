@@ -21,7 +21,6 @@ class MakeDiagnostic(factory.Factory):
             rule=factory.LazyFunction(lambda: MakeJudgeRule().name),
             note=None,
             category=Category.JUDGED,
-            confidence=1.0,
         )
         judge_error = factory.Trait(
             rule=factory.LazyFunction(lambda: MakeJudgeRule().name),
@@ -29,7 +28,6 @@ class MakeDiagnostic(factory.Factory):
             message="The judge call failed, so this rule was not checked.",
             note="claude exited with 1.",
             category=Category.JUDGE_ERROR,
-            confidence=0.0,
             error_type=ErrorType.PROCESS,
         )
 
@@ -40,7 +38,6 @@ class MakeDiagnostic(factory.Factory):
     severity = Severity.ERROR
     note = "print bypasses log levels.\nCall logger.info instead.\n"
     category = Category.PATTERN
-    confidence = 1.0
     error_type = None
 
 
@@ -51,4 +48,3 @@ class MakeViolation(factory.Factory):
     file = "a.py"
     lines = factory.SubFactory(MakeLineRange)
     message = "Use logging, not print."
-    confidence = 1.0

@@ -19,8 +19,6 @@ from codeguard.review import (
 )
 from codeguard.syntax import Classification
 
-THRESHOLD = 0.9
-
 
 @pytest.fixture(autouse=True)
 def reviewed_file(tmp_path) -> None:
@@ -54,7 +52,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(),
             FailingJudge(),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
@@ -68,7 +65,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(severity=Severity.WARNING),
             FailingJudge(),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
@@ -83,7 +79,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(),
             FailingJudge(error),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
@@ -98,7 +93,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(),
             FailingJudge(error),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
@@ -117,7 +111,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(),
             WaitingJudge(barrier),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         ).check(files)
@@ -129,7 +122,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(paths=("app/**",)),
             RecordingJudge(),
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
@@ -144,7 +136,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(),
             judge,
-            THRESHOLD,
             AllLines(()),
             Classification(),
         ).check(["a.py", "b.py"])
@@ -187,9 +178,9 @@ class TestJudgeCheck:
             {"pricing.py": make_file_classification(context_lines=frozenset({4, 5}))}
         )
 
-        JudgeCheck(
-            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
-        ).check(["pricing.py"])
+        JudgeCheck(WorkingTree.at(tmp_path), make_binding(), judge, scope, classification).check(
+            ["pricing.py"]
+        )
 
         assert judge.received == [
             make_judge_request(
@@ -205,7 +196,6 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(paths=("app/**",)),
             judge,
-            THRESHOLD,
             AllLines(()),
             Classification(),
         ).check(["a.py"])
@@ -226,9 +216,7 @@ class TestJudgeCheck:
         )
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(
-            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
-        ).check(["a.py"])
+        JudgeCheck(WorkingTree.at(tmp_path), binding, judge, scope, classification).check(["a.py"])
 
         assert judge.received == []
 
@@ -251,9 +239,7 @@ class TestJudgeCheck:
         )
         binding = make_binding(triggers=frozenset({ChangeKind.COMMENT, ChangeKind.CLASS_HEADER}))
 
-        JudgeCheck(
-            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, classification
-        ).check(["a.py"])
+        JudgeCheck(WorkingTree.at(tmp_path), binding, judge, scope, classification).check(["a.py"])
 
         assert judge.received == [make_judge_request()]
 
@@ -266,9 +252,9 @@ class TestJudgeCheck:
         binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
         scope = make_new_file_changed_lines(file="a.md", content=content)
 
-        JudgeCheck(
-            WorkingTree.at(tmp_path), binding, judge, THRESHOLD, scope, Classification()
-        ).check(["a.md"])
+        JudgeCheck(WorkingTree.at(tmp_path), binding, judge, scope, Classification()).check(
+            ["a.md"]
+        )
 
         assert judge.received == [make_judge_request(file="a.md", changes="+     1\t# A\n")]
 
@@ -290,9 +276,9 @@ class TestJudgeCheck:
             }
         )
 
-        JudgeCheck(
-            WorkingTree.at(tmp_path), make_binding(), judge, THRESHOLD, scope, classification
-        ).check(["a.py"])
+        JudgeCheck(WorkingTree.at(tmp_path), make_binding(), judge, scope, classification).check(
+            ["a.py"]
+        )
 
         assert judge.received == [make_judge_request()]
 
@@ -306,31 +292,8 @@ class TestJudgeCheck:
             WorkingTree.at(tmp_path),
             make_binding(severity=Severity.WARNING),
             judge,
-            THRESHOLD,
             AllLines(()),
             Classification(),
         )
 
         assert check.check(["a.py"]) == [make_diagnostic(judged=True, severity=Severity.WARNING)]
-
-    def test_error_below_the_threshold_is_a_warning(
-        self, tmp_path, make_binding, make_violation, make_diagnostic
-    ):
-        judge = RecordingJudge(
-            Verdict(
-                reason="The code breaks the convention.",
-                violations=(make_violation(confidence=0.5),),
-            )
-        )
-        check = JudgeCheck(
-            WorkingTree.at(tmp_path),
-            make_binding(),
-            judge,
-            THRESHOLD,
-            AllLines(()),
-            Classification(),
-        )
-
-        assert check.check(["a.py"]) == [
-            make_diagnostic(judged=True, severity=Severity.WARNING, confidence=0.5)
-        ]

@@ -22,15 +22,11 @@ Added and removed blank lines are never part of a change, in any language. Other
 whitespace can change meaning, such as indentation in Python, so codeguard leaves it to
 the formatter. `--all` reviews every file whole.
 
-A judge rule's violation comes with the judge's confidence: 1.0 when it is certain, 0.9
-when the verdict rests on a reading of the rule a reviewer could contest, 0.7 when
-something in the repository points to an exception the rule allows, and 0.5 when it is as
-likely as not. An error below `confidence_threshold`
-([Settings](configuration.md#settings)) is reported as a warning, with its confidence,
-and doesn't block, so a warning shows how far it fell short:
+A judge rule's violation has its binding's severity, so a violation of an `error` rule
+blocks:
 
 ```
-app/orders.py:12: warning no-pre-derived-arguments: The call passes both lines and the context they come from. (confidence 0.70) [3f1c9a2b7d40]
+app/orders.py:12: error no-pre-derived-arguments: The call passes both lines and the context they come from. [3f1c9a2b7d40]
 ```
 
 A diagnostic's location is its file and lines: `app/orders.py:12` for one line,
@@ -52,8 +48,8 @@ that doesn't run.
 
 - An error blocks the stop, and only errors reach the agent. It blocks every time the
   agent stops until the errors are fixed.
-- Everything else goes to you, not the agent: warnings, findings below the confidence
-  threshold, and rules the judge couldn't check (a failed judge call or the time limit).
+- Everything else goes to you, not the agent: warnings, and rules the judge couldn't
+  check (a failed judge call or the time limit).
   The agent can't fix those; CI still fails on them, unless the PR has the
   [`codeguard-allow-judge-errors` label](using-codeguard.md#merge-a-pr-despite-a-judge-error).
 - [`ci_only` rules](configuration.md#rule-package-keys) don't run at Stop. They still run

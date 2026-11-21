@@ -141,6 +141,4 @@ def _case_tree(evals: Path, rule: str, inputs: FileEdit) -> AbstractContextManag
 
 
 def _outcome(review: Review) -> Outcome:
-    if review.blocks:
-        return Outcome.INVALID
-    return Outcome.UNCERTAIN if review.diagnostics else Outcome.VALID
+    return Outcome.INVALID if review.blocks else Outcome.VALID

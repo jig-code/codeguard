@@ -78,7 +78,6 @@ class Diagnostic:
     severity: str
     rule: str
     message: str
-    confidence: float | None
     id: str
     note: str | None
     blocks: bool
@@ -91,17 +90,13 @@ class Diagnostic:
             severity=str(raw["severity"]),
             rule=str(raw["rule"]),
             message=str(raw["message"]),
-            confidence=float(str(raw["confidence"])) if raw["category"] == "judged" else None,
             id=str(raw["id"]),
             note=None if note is None else str(note),
             blocks=bool(raw["blocks"]),
         )
 
     def render(self) -> str:
-        confidence = "" if self.confidence is None else f" (confidence {self.confidence:.2f})"
-        summary = (
-            f"{self.location}: {self.severity} {self.rule}: {self.message}{confidence} [{self.id}]"
-        )
+        summary = f"{self.location}: {self.severity} {self.rule}: {self.message} [{self.id}]"
         if self.note is None:
             return summary
         return f"{summary}\n{textwrap.indent(self.note.rstrip(), '  ')}"

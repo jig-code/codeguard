@@ -19,6 +19,12 @@ Before testing any change, follow [docs/testing.md](docs/testing.md).
 - If a change fits no row, or a listed check can't run, say so and propose a change to
   the guide; don't change the guide without approval.
 
+## Python
+
+Before writing, editing or reviewing any `.py` file, tests included, load the
+`python-code-quality` skill
+([.claude/skills/python-code-quality/SKILL.md](.claude/skills/python-code-quality/SKILL.md)).
+
 ## Rules
 
 Before adding or changing a rule, follow

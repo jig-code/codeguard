@@ -6,10 +6,8 @@ from pydantic import ValidationError
 from codeguard.config import ChangeKind
 from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
 from codeguard.review import JudgeRequest, Severity, Verdict
-from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
+from codeguard.review.judge import INSTRUCTIONS, Violation
 from codeguard.syntax import Classification
-
-THRESHOLD = 0.9
 
 
 class TestJudgeRequest:
@@ -253,24 +251,6 @@ class TestJudgeRequest:
 
 
 class TestViolation:
-    @pytest.mark.parametrize("confidence", [0.85, 0.95, 1.1, 0.4])
-    def test_confidence_off_the_scale_is_invalid(self, make_violation, confidence):
-        with pytest.raises(ValidationError):
-            make_violation(confidence=confidence)
-
-    def test_schema_allows_only_the_scale(self):
-        schema = output_schema(Violation)
-
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
-
-    def test_schema_describes_each_value_of_the_scale(self):
-        schema = output_schema(Violation)
-
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        described = [option["const"] for option in options if option.get("description")]
-        assert described == [member.value for member in Confidence]
-
     def test_note_is_invalid(self):
         with pytest.raises(ValidationError):
             Violation.model_validate(
@@ -279,33 +259,18 @@ class TestViolation:
                     "lines": {"start": 1, "end": 1},
                     "message": "Move it.",
                     "note": "Fix it.",
-                    "confidence": 1,
                 }
             )
 
 
 class TestVerdict:
-    def test_unconfident_violation_shows_why_it_is_only_a_warning(
-        self, make_violation, make_binding
-    ):
-        verdict = Verdict(
-            reason="The code breaks the convention.", violations=(make_violation(confidence=0.7),)
-        )
-
-        [diagnostic] = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
-
-        assert str(diagnostic).startswith(
-            f"a.py:1: warning {make_binding().rule}: Use logging, not print. (confidence 0.70)"
-        )
-
     def test_judged_diagnostic_prints_only_its_summary(self, make_violation, make_binding):
         verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
 
-        [diagnostic] = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
+        [diagnostic] = verdict.diagnostics_for(make_binding(), "a.py")
 
         assert str(diagnostic) == (
-            f"a.py:1: error {make_binding().rule}: Use logging, not print. (confidence 1.00) "
-            f"[{diagnostic.id}]"
+            f"a.py:1: error {make_binding().rule}: Use logging, not print. [{diagnostic.id}]"
         )
 
     def test_diagnostic_has_the_binding_rule_and_severity(
@@ -313,9 +278,7 @@ class TestVerdict:
     ):
         verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
 
-        diagnostics = verdict.diagnostics_for(
-            make_binding(severity=Severity.WARNING), "a.py", THRESHOLD
-        )
+        diagnostics = verdict.diagnostics_for(make_binding(severity=Severity.WARNING), "a.py")
 
         assert diagnostics == (make_diagnostic(judged=True, severity=Severity.WARNING),)
 
@@ -324,44 +287,14 @@ class TestVerdict:
             reason="The code breaks the convention.", violations=(make_violation(file="b.py"),)
         )
 
-        assert verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD) == ()
+        assert verdict.diagnostics_for(make_binding(), "a.py") == ()
 
-    def test_error_at_the_threshold_stays_an_error(
+    def test_error_violation_is_a_blocking_error(
         self, make_violation, make_binding, make_diagnostic
     ):
-        verdict = Verdict(
-            reason="The code breaks the convention.",
-            violations=(make_violation(confidence=THRESHOLD),),
-        )
+        verdict = Verdict(reason="The code breaks the convention.", violations=(make_violation(),))
 
-        diagnostics = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
+        [diagnostic] = verdict.diagnostics_for(make_binding(severity=Severity.ERROR), "a.py")
 
-        assert diagnostics == (make_diagnostic(judged=True, confidence=THRESHOLD),)
-
-    def test_error_below_the_threshold_is_a_warning(
-        self, make_violation, make_binding, make_diagnostic
-    ):
-        verdict = Verdict(
-            reason="The code breaks the convention.", violations=(make_violation(confidence=0.5),)
-        )
-
-        diagnostics = verdict.diagnostics_for(make_binding(), "a.py", THRESHOLD)
-
-        assert diagnostics == (
-            make_diagnostic(judged=True, severity=Severity.WARNING, confidence=0.5),
-        )
-
-    def test_info_below_the_threshold_stays_info(
-        self, make_violation, make_binding, make_diagnostic
-    ):
-        verdict = Verdict(
-            reason="The code breaks the convention.", violations=(make_violation(confidence=0.5),)
-        )
-
-        diagnostics = verdict.diagnostics_for(
-            make_binding(severity=Severity.INFO), "a.py", THRESHOLD
-        )
-
-        assert diagnostics == (
-            make_diagnostic(judged=True, severity=Severity.INFO, confidence=0.5),
-        )
+        assert diagnostic == make_diagnostic(judged=True)
+        assert diagnostic.blocks
