@@ -1,5 +1,4 @@
 import hashlib
-import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,11 +8,11 @@ from diskcache import Cache
 
 from codeguard.review.judge import (
     INSTRUCTIONS,
+    VERDICT_SCHEMA,
     Judge,
     Judgement,
     JudgeRequest,
     Verdict,
-    output_schema,
 )
 
 
@@ -21,7 +20,7 @@ def _digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-_JUDGE_PROMPT_VERSION = _digest(f"{INSTRUCTIONS}\0{json.dumps(output_schema(Verdict))}".encode())
+_JUDGE_PROMPT_VERSION = _digest(f"{INSTRUCTIONS}\0{VERDICT_SCHEMA}".encode())
 
 
 @dataclass(frozen=True)

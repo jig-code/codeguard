@@ -19,13 +19,13 @@ from spans import finished_span_attributes
 
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.review import (
+    VERDICT_SCHEMA,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeProcessError,
     JudgeTimeout,
     Verdict,
-    output_schema,
 )
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
@@ -430,7 +430,7 @@ class TestClaudeJudge:
         judge.judge(make_judge_request())
 
         argv = json.loads(arguments.read_text())["arguments"]
-        assert json.loads(argv[argv.index("--json-schema") + 1]) == output_schema(Verdict)
+        assert argv[argv.index("--json-schema") + 1] == VERDICT_SCHEMA
 
     def test_claude_has_only_read_only_tools(
         self, tmp_path, processes, fake_claude_executable, arguments, make_judge_request

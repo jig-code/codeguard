@@ -1,3 +1,4 @@
+import json
 import textwrap
 from collections.abc import Iterator
 
@@ -7,7 +8,7 @@ from pydantic import JsonValue, ValidationError
 from codeguard.config import ChangeKind
 from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
 from codeguard.review import JudgeRequest, Severity, Verdict
-from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
+from codeguard.review.judge import INSTRUCTIONS, VERDICT_SCHEMA, Confidence, Violation
 from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
@@ -260,7 +261,8 @@ class TestViolation:
             make_violation(confidence=confidence)
 
     def test_schema_describes_each_value_of_the_scale(self):
-        description = output_schema(Violation)["properties"]["confidence"]["description"]
+        violation = json.loads(VERDICT_SCHEMA)["properties"]["violations"]["items"]
+        description = violation["properties"]["confidence"]["description"]
 
         described = [member.value for member in Confidence if f" {member.value}: " in description]
         assert described == [member.value for member in Confidence]
@@ -372,7 +374,7 @@ def subschemas(schema: dict[str, JsonValue]) -> Iterator[dict[str, JsonValue]]:
         yield from subschemas(child)
 
 
-class TestOutputSchema:
+class TestVerdictSchema:
     def test_verdict_schema_uses_only_claude_codes_strict_keywords(self):
         strict_keywords = {
             "$schema",
@@ -388,7 +390,7 @@ class TestOutputSchema:
             "anyOf",
         }
 
-        schema = output_schema(Verdict)
+        schema = json.loads(VERDICT_SCHEMA)
 
         used = {keyword for subschema in subschemas(schema) for keyword in subschema}
         assert used - strict_keywords == set()
@@ -396,7 +398,7 @@ class TestOutputSchema:
     def test_verdict_schema_has_only_annotations_beside_an_any_of(self):
         allowed_beside_any_of = {"anyOf", "$schema", "description", "title"}
 
-        schema = output_schema(Verdict)
+        schema = json.loads(VERDICT_SCHEMA)
 
         beside = [
             set(subschema) - allowed_beside_any_of
@@ -406,7 +408,7 @@ class TestOutputSchema:
         assert [keywords for keywords in beside if keywords] == []
 
     def test_reference_is_inlined_with_its_own_description(self):
-        schema = output_schema(Verdict)
+        schema = json.loads(VERDICT_SCHEMA)
 
         violation = schema["properties"]["violations"]["items"]
         assert violation["properties"]["lines"] == {

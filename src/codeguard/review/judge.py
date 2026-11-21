@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from enum import ReprEnum
 from pathlib import Path
@@ -69,9 +70,6 @@ def _decoded_for_judge(row: bytes) -> str:
     return row.decode(errors="replace")
 
 
-# The schema gives the model only these values, so a confidence between two of them can't reach
-# the threshold check. A plain enum, because pydantic-ai doesn't make a described `const` per
-# member strict-safe for Bedrock.
 class Confidence(float, ReprEnum):
     """How certain you are that the code breaks the rule."""
 
@@ -153,13 +151,8 @@ class Verdict(BaseModel):
         )
 
 
-def output_schema(output: type[BaseModel]) -> dict[str, JsonValue]:
-    """References are inlined because Claude Code's `--json-schema` enforces a schema strictly only
-    without `$ref` or `$defs`, and Codex's strict validator needs them inlined too.
-    """
-    schema = _SCHEMA_ADAPTER.validate_python(
-        output.model_json_schema(schema_generator=GenerateToolJsonSchema)
-    )
+def _without_references(generated: object) -> dict[str, JsonValue]:
+    schema = _SCHEMA_ADAPTER.validate_python(generated)
     definitions = _DEFINITIONS_ADAPTER.validate_python(schema.pop("$defs", {}))
     return {key: _inlined(value, definitions) for key, value in schema.items()}
 
@@ -174,6 +167,11 @@ def _inlined(value: JsonValue, definitions: dict[str, dict[str, JsonValue]]) -> 
         definition = definitions[reference.removeprefix("#/$defs/")]
         value = {**definition, **{key: item for key, item in value.items() if key != "$ref"}}
     return {key: _inlined(item, definitions) for key, item in value.items()}
+
+
+VERDICT_SCHEMA = json.dumps(
+    _without_references(Verdict.model_json_schema(schema_generator=GenerateToolJsonSchema))
+)
 
 
 @dataclass(frozen=True)

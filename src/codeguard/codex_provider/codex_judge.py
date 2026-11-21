@@ -13,12 +13,12 @@ from codeguard.codex_provider.codex_result import CodexResult
 from codeguard.config import CodexEffort
 from codeguard.review import (
     DEFAULT_THINKING_KEY,
+    VERDICT_SCHEMA,
     Deadline,
     Judgement,
     JudgeNoVerdict,
     JudgeRequest,
     Verdict,
-    output_schema,
 )
 from codeguard.review.judge_process import check_judge_process, run_judge_process
 
@@ -68,7 +68,7 @@ class CodexJudge:
         ):
             work = Path(directory)
             schema = work / "verdict.schema.json"
-            schema.write_text(json.dumps(output_schema(Verdict)))
+            schema.write_text(VERDICT_SCHEMA)
             instructions = work / "instructions.md"
             instructions.write_text(request.instructions)
             answer = work / "verdict.json"
