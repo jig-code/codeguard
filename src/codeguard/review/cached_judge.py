@@ -1,5 +1,4 @@
 import hashlib
-import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,16 +8,19 @@ from diskcache import Cache
 
 from codeguard.review.judge import (
     INSTRUCTIONS,
+    VERDICT_SCHEMA,
     Judge,
     Judgement,
     JudgeRequest,
     Verdict,
-    output_schema,
 )
 
-# The schema the providers send, so a change to what the model is told, a `Confidence`
-# description included, judges every cached verdict again.
-_CACHE_VERSION = "\0".join((INSTRUCTIONS, json.dumps(output_schema(Verdict))))
+
+def _digest(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+_JUDGE_PROMPT_VERSION = _digest(f"{INSTRUCTIONS}\0{VERDICT_SCHEMA}".encode())
 
 
 @dataclass(frozen=True)
@@ -39,7 +41,7 @@ class CachedJudge:
     wrapped: Judge
     store: Cache
     root: Path
-    version: str = _CACHE_VERSION
+    version: str = _JUDGE_PROMPT_VERSION
 
     @property
     def identity(self) -> str:
@@ -94,7 +96,3 @@ class CachedJudge:
             self._digest_of(request.file) or "",
         )
         return _digest("\0".join(parts).encode())
-
-
-def _digest(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()

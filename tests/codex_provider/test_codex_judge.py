@@ -9,6 +9,7 @@ from spans import finished_span_attributes
 
 from codeguard.codex_provider import CodexJudge
 from codeguard.review import (
+    VERDICT_SCHEMA,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -89,7 +90,7 @@ class TestCodexJudge:
         received = json.loads(record.read_text())
         assert received["prompt"] == request.prompt
         assert received["instructions"] == request.instructions
-        assert received["schema"]["additionalProperties"] is False
+        assert received["schema"] == json.loads(VERDICT_SCHEMA)
 
     def test_uses_ephemeral_read_only_native_tools(
         self, tmp_path, processes, fake_codex_executable, record, make_judge_request

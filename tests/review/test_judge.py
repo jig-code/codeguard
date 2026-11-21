@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 import pytest
@@ -6,7 +7,7 @@ from pydantic import ValidationError
 from codeguard.config import ChangeKind
 from codeguard.repository import AddedRow, AllLines, KeptRow, RemovedRow, RowText, WorkingTree
 from codeguard.review import JudgeRequest, Severity, Verdict
-from codeguard.review.judge import INSTRUCTIONS, Confidence, Violation, output_schema
+from codeguard.review.judge import INSTRUCTIONS, VERDICT_SCHEMA, Confidence, Violation
 from codeguard.syntax import Classification
 
 THRESHOLD = 0.9
@@ -258,17 +259,11 @@ class TestViolation:
         with pytest.raises(ValidationError):
             make_violation(confidence=confidence)
 
-    def test_schema_allows_only_the_scale(self):
-        schema = output_schema(Violation)
-
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
-
     def test_schema_describes_each_value_of_the_scale(self):
-        schema = output_schema(Violation)
+        violation = json.loads(VERDICT_SCHEMA)["properties"]["violations"]["items"]
+        description = violation["properties"]["confidence"]["description"]
 
-        options = schema["$defs"]["Confidence"]["anyOf"]
-        described = [option["const"] for option in options if option.get("description")]
+        described = [member.value for member in Confidence if f" {member.value}: " in description]
         assert described == [member.value for member in Confidence]
 
     def test_note_is_invalid(self):

@@ -11,7 +11,6 @@ from pydantic import BaseModel, JsonValue, ValidationError
 from pydantic_ai import (
     Agent,
     RunContext,
-    ToolOutput,
     UsageLimits,
     capture_run_messages,
 )
@@ -107,7 +106,7 @@ class ApiJudge:
         agent = Agent[object, Output](
             deps_type=object,
             instructions=instructions,
-            output_type=ToolOutput(output),
+            output_type=output,
             capabilities=[file_system_tools(self.root)],
             model_settings=self._settings,
         )

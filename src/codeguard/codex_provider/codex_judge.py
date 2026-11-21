@@ -10,10 +10,10 @@ import logfire
 from pydantic import ValidationError
 
 from codeguard.codex_provider.codex_result import CodexResult
-from codeguard.codex_provider.verdict_schema import verdict_schema
 from codeguard.config import CodexEffort
 from codeguard.review import (
     DEFAULT_THINKING_KEY,
+    VERDICT_SCHEMA,
     Deadline,
     Judgement,
     JudgeNoVerdict,
@@ -68,7 +68,7 @@ class CodexJudge:
         ):
             work = Path(directory)
             schema = work / "verdict.schema.json"
-            schema.write_text(json.dumps(verdict_schema()))
+            schema.write_text(VERDICT_SCHEMA)
             instructions = work / "instructions.md"
             instructions.write_text(request.instructions)
             answer = work / "verdict.json"

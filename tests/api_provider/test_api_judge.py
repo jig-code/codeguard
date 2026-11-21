@@ -56,16 +56,6 @@ def calls(*tools: tuple[str, dict[str, object]], input_tokens: int = 10) -> Mode
     )
 
 
-def assert_describes_the_confidence_scale(schema: dict[str, object]) -> None:
-    definitions = schema["$defs"]
-    assert isinstance(definitions, dict)
-    violation = definitions["Violation"]["properties"]["confidence"]
-    assert violation["$ref"] == "#/$defs/Confidence"
-    options = definitions["Confidence"]["anyOf"]
-    assert [option["const"] for option in options] == [1.0, 0.9, 0.7, 0.5]
-    assert all(option["description"] for option in options)
-
-
 def _usage(input_tokens: int) -> RequestUsage:
     return RequestUsage(
         input_tokens=input_tokens,
@@ -177,23 +167,6 @@ class TestApiJudge:
         assert judgement == Judgement(
             Verdict.model_validate({"reason": "Judged.", "violations": [VIOLATION]})
         )
-
-    def test_asks_for_the_verdict_as_a_tool_call(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
-
-        judge_with(tmp_path, models).judge(make_judge_request())
-
-        parameters = models.info().model_request_parameters
-        assert parameters.output_mode == "tool"
-        assert [tool.name for tool in parameters.output_tools] == ["final_result"]
-
-    def test_is_given_the_described_confidence_scale(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
-
-        judge_with(tmp_path, models).judge(make_judge_request())
-
-        [output_tool] = models.info().output_tools
-        assert_describes_the_confidence_scale(output_tool.parameters_json_schema)
 
     def test_offers_the_file_tools(self, tmp_path, make_judge_request):
         models = ScriptedGemini([verdict()])
