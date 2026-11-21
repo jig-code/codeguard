@@ -32,9 +32,11 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           export_environment_variables: false
-      # $GITHUB_ENV reaches every later step in the job, the action's steps included, for
-      # the judge rules bound to Gemini.
+      # $GITHUB_ENV reaches every later step in the job, the action's steps included. CI
+      # judges with Gemini; local reviews keep the default claude-cli judge.
       - run: |
+          echo "CODEGUARD_JUDGE__PROVIDER=gemini" >> "$GITHUB_ENV"
+          echo "CODEGUARD_JUDGE__MODEL=gemini-4-argon" >> "$GITHUB_ENV"
           echo "CODEGUARD_JUDGE__GEMINI__PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
           echo "CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS=180" >> "$GITHUB_ENV"
