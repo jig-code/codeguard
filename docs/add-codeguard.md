@@ -27,29 +27,9 @@ In the project's `.claude/settings.json`:
 
 ## Codex
 
-List the plugin in the project's `.agents/plugins/marketplace.json`:
-
-```json
-{
-  "name": "<project>",
-  "plugins": [
-    {
-      "name": "codeguard",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/jig-code/codeguard.git",
-        "path": "./plugin",
-        "ref": "v0"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Coding"
-    }
-  ]
-}
-```
+Codex has no project file that adds a marketplace, so there's nothing to add to the
+repository: each engineer adds codeguard's marketplace and installs the plugin
+([Use codeguard](using-codeguard.md#codex)).
 
 ## CI
 
