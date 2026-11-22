@@ -432,7 +432,9 @@ class TestRulesetLoader:
             f"  bindings.placement.yaml.rule: {rule!r} is not a rule id"
         )
 
-    def test_binding_naming_a_pattern_rule_and_a_skill_is_an_error(self, repo, make_judge_rule):
+    def test_legacy_skill_binding_that_also_names_a_pattern_rule_is_an_error(
+        self, repo, make_judge_rule
+    ):
         repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
         repo.write(".codeguard/skills/no-print/SKILL.md", make_judge_rule().text)
         repo.write(
@@ -477,7 +479,9 @@ class TestRulesetLoader:
             "rules/judge/responsibility-placement.md or pattern rule responsibility-placement"
         )
 
-    def test_package_skill_directory_is_under_the_package(self, tmp_path, make_judge_rule):
+    def test_legacy_skill_directory_in_a_package_is_under_the_package(
+        self, tmp_path, make_judge_rule
+    ):
         (tmp_path / "python/skills/placement").mkdir(parents=True)
         (tmp_path / "python/skills/placement/SKILL.md").write_text(make_judge_rule().text)
         (tmp_path / "python/bindings").mkdir()
@@ -501,7 +505,7 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_missing_skill_directory_is_an_error(self, repo):
+    def test_legacy_skill_binding_to_a_missing_directory_is_an_error(self, repo):
         repo.write(
             BINDING,
             'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
@@ -515,7 +519,7 @@ class TestRulesetLoader:
             "  bindings.placement.yaml.skill: Path does not point to a directory"
         )
 
-    def test_ruleset_may_bind_rule_files_and_skill_directories_together(
+    def test_legacy_skill_and_rule_file_bindings_may_share_a_ruleset(
         self, directory, make_judge_rule
     ):
         naming = make_judge_rule(name="naming", text="# Naming\n\nNames say what a value is.\n")

@@ -1,5 +1,5 @@
 import pytest
-from rules_package import NO_PRINT_RULE, PLACEMENT_RULE
+from rules_package import NO_PRINT_RULE
 
 from codeguard.config import ConfigError, RulesetLoader
 from codeguard.rule_validation import ValidationResult, WhyValidation, WhyValidationMode
@@ -24,13 +24,21 @@ class TestWhyValidationMode:
 
 
 class TestWhyValidation:
-    def test_judge_rules_then_pattern_rules_without_a_why_are_reported_by_id(self, directory):
-        directory.write("skills/placement/SKILL.md", PLACEMENT_RULE)
-        directory.write("skills/zebra/SKILL.md", NO_WHY_RULE)
-        directory.write("skills/apple/SKILL.md", NO_WHY_RULE)
-        directory.write(".codeguard/bindings/a.yaml", f"skill: skills/zebra\n{BINDING}")
-        directory.write(".codeguard/bindings/b.yaml", f"skill: skills/apple\n{BINDING}")
-        directory.write(".codeguard/bindings/c.yaml", f"skill: skills/placement\n{BINDING}")
+    def test_legacy_skill_without_a_why_is_reported_before_pattern_rules(self, directory):
+        directory.write("skills/naming/SKILL.md", f"---\nname: naming\n---\n{NO_WHY_RULE}")
+        directory.write(".codeguard/bindings/naming.yaml", f"skill: skills/naming\n{BINDING}")
+        directory.write(
+            ".codeguard/rules/pattern/a.yml",
+            "id: a-rule\nlanguage: python\nrule:\n  pattern: a()\n",
+        )
+
+        result = WhyValidation(RulesetLoader.local(directory.root)).run()
+
+        assert result == ValidationResult(
+            warnings=("naming: no ## Why section in its rule file", "a-rule: no metadata.why")
+        )
+
+    def test_pattern_rules_without_a_why_are_reported_by_id(self, directory):
         directory.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
         directory.write(
             ".codeguard/rules/pattern/a.yml",
@@ -44,12 +52,7 @@ class TestWhyValidation:
         result = WhyValidation(RulesetLoader.local(directory.root)).run()
 
         assert result == ValidationResult(
-            warnings=(
-                "apple: no ## Why section in its rule file",
-                "zebra: no ## Why section in its rule file",
-                "a-rule: no metadata.why",
-                "z-rule: no metadata.why",
-            )
+            warnings=("a-rule: no metadata.why", "z-rule: no metadata.why")
         )
 
     def test_rule_file_bound_with_rule_is_left_to_the_format_validation(self, directory):

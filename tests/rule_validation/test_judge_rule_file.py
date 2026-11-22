@@ -25,8 +25,8 @@ class TestJudgeRuleFile:
             ),
         )
 
-    def test_rule_bound_with_the_skill_key_is_a_legacy_skill(self, directory):
-        directory.write("skills/placement/SKILL.md", PLACEMENT_RULE)
+    def test_legacy_skill_binding_is_marked_legacy(self, directory):
+        directory.write("skills/placement/SKILL.md", f"---\nname: placement\n---\n{PLACEMENT_RULE}")
         directory.write(".codeguard/bindings/placement.yaml", f"skill: skills/placement\n{BINDING}")
 
         rule_files = JudgeRuleFile.from_ruleset(RulesetLoader.local(directory.root).load())

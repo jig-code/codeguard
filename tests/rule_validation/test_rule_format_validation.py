@@ -26,7 +26,7 @@ class TestRuleFormatValidation:
             problems=("naming: rule file must start with a `# ` title",)
         )
 
-    def test_rule_bound_with_the_legacy_skill_key_is_not_checked(self, directory):
+    def test_legacy_skill_is_not_checked(self, directory):
         directory.write("skills/legacy/SKILL.md", LEGACY_SKILL)
         directory.write(".codeguard/bindings/legacy.yaml", f"skill: skills/legacy\n{BINDING}")
 

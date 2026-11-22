@@ -29,29 +29,31 @@ def messages(error: pytest.ExceptionInfo[ValidationError]) -> list[str]:
 
 
 @pytest.fixture
-def placement_skill(tmp_path) -> Path:
+def legacy_placement_skill(tmp_path) -> Path:
     (tmp_path / "placement").mkdir()
     (tmp_path / "placement/SKILL.md").write_text("# Placement\n")
     return tmp_path / "placement"
 
 
 class TestBindingsConfig:
-    def test_skill_directory_is_under_the_working_tree(self, tmp_path, placement_skill):
+    def test_legacy_skill_directory_is_under_the_working_tree(
+        self, tmp_path, legacy_placement_skill
+    ):
         bindings = BindingsConfig.model_validate(
             {"placement.yaml": {"skill": "placement", "paths": ["**"], "triggers": ["any"]}},
             context={"working_tree": tmp_path},
         )
 
         assert bindings.root["placement.yaml"] == BindingConfig(
-            skill=placement_skill, paths=("**",), triggers=frozenset({"any"})
+            skill=legacy_placement_skill, paths=("**",), triggers=frozenset({"any"})
         )
 
-    def test_skill_directory_names_the_rule(self, placement_skill):
-        binding = BindingConfig(skill=placement_skill, paths=("**",))
+    def test_legacy_skill_directory_names_the_rule(self, legacy_placement_skill):
+        binding = BindingConfig(skill=legacy_placement_skill, paths=("**",))
 
         assert binding.rule_id == "placement"
 
-    def test_skill_directory_without_skill_file_is_an_error(self, tmp_path):
+    def test_legacy_skill_directory_without_skill_file_is_an_error(self, tmp_path):
         (tmp_path / "placement").mkdir()
 
         with pytest.raises(ValidationError) as error:
@@ -62,10 +64,10 @@ class TestBindingsConfig:
 
         assert messages(error) == [f"Value error, {tmp_path}/placement has no SKILL.md"]
 
-    def test_binding_naming_a_rule_and_a_skill_is_an_error(self, placement_skill):
+    def test_legacy_skill_binding_that_also_names_a_rule_is_an_error(self, legacy_placement_skill):
         with pytest.raises(ValidationError) as error:
             BindingConfig.model_validate(
-                {"rule": "placement", "skill": placement_skill, "paths": ["**"]}
+                {"rule": "placement", "skill": legacy_placement_skill, "paths": ["**"]}
             )
 
         assert messages(error) == ["Value error, rule and skill both name a rule: keep only rule"]
@@ -543,7 +545,7 @@ class TestRuleset:
 
         assert judge_text == text
 
-    def test_skill_file_reaches_the_judge_without_its_frontmatter(
+    def test_legacy_skill_file_reaches_the_judge_without_its_frontmatter(
         self, directory, make_ruleset, make_binding_config, make_judge_rule
     ):
         directory.write(
