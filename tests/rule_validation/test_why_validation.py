@@ -1,4 +1,5 @@
 import pytest
+import yaml
 from rules_package import NO_PRINT_RULE
 
 from codeguard.config import ConfigError, RulesetLoader
@@ -6,7 +7,7 @@ from codeguard.rule_validation import ValidationResult, WhyValidation, WhyValida
 
 MISSING = ("naming: no ## Why section in its rule file", "no-breakpoint: no metadata.why")
 NO_WHY_RULE = "# A rule\n\nIt gives no reason.\n"
-BINDING = 'paths: ["**/*.py"]\ntriggers: [any]\n'
+BINDING = {"paths": ["**/*.py"], "triggers": ["any"]}
 
 
 class TestWhyValidationMode:
@@ -26,10 +27,12 @@ class TestWhyValidationMode:
 class TestWhyValidation:
     def test_legacy_skill_without_a_why_is_reported_before_pattern_rules(self, directory):
         directory.write("skills/naming/SKILL.md", f"---\nname: naming\n---\n{NO_WHY_RULE}")
-        directory.write(".codeguard/bindings/naming.yaml", f"skill: skills/naming\n{BINDING}")
+        directory.write(
+            ".codeguard/bindings/naming.yaml", yaml.safe_dump({"skill": "skills/naming"} | BINDING)
+        )
         directory.write(
             ".codeguard/rules/pattern/a.yml",
-            "id: a-rule\nlanguage: python\nrule:\n  pattern: a()\n",
+            yaml.safe_dump({"id": "a-rule", "language": "python", "rule": {"pattern": "a()"}}),
         )
 
         result = WhyValidation(RulesetLoader.local(directory.root)).run()
@@ -39,14 +42,14 @@ class TestWhyValidation:
         )
 
     def test_pattern_rules_without_a_why_are_reported_by_id(self, directory):
-        directory.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        directory.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
         directory.write(
             ".codeguard/rules/pattern/a.yml",
-            "id: z-rule\nlanguage: python\nrule:\n  pattern: z()\n",
+            yaml.safe_dump({"id": "z-rule", "language": "python", "rule": {"pattern": "z()"}}),
         )
         directory.write(
             ".codeguard/rules/pattern/b.yml",
-            "id: a-rule\nlanguage: python\nrule:\n  pattern: a()\n",
+            yaml.safe_dump({"id": "a-rule", "language": "python", "rule": {"pattern": "a()"}}),
         )
 
         result = WhyValidation(RulesetLoader.local(directory.root)).run()
@@ -57,7 +60,9 @@ class TestWhyValidation:
 
     def test_rule_file_bound_with_rule_is_left_to_the_format_validation(self, directory):
         directory.write(".codeguard/rules/judge/naming.md", NO_WHY_RULE)
-        directory.write(".codeguard/bindings/naming.yaml", f"rule: naming\n{BINDING}")
+        directory.write(
+            ".codeguard/bindings/naming.yaml", yaml.safe_dump({"rule": "naming"} | BINDING)
+        )
 
         result = WhyValidation(RulesetLoader.local(directory.root)).run()
 
@@ -65,7 +70,9 @@ class TestWhyValidation:
 
     @pytest.mark.parametrize("mode", list(WhyValidationMode))
     def test_ruleset_that_does_not_load_reports_nothing(self, directory, mode):
-        directory.write(".codeguard/bindings/naming.yaml", f"rule: naming\n{BINDING}")
+        directory.write(
+            ".codeguard/bindings/naming.yaml", yaml.safe_dump({"rule": "naming"} | BINDING)
+        )
 
         result = WhyValidation(RulesetLoader.local(directory.root), mode).run()
 
@@ -75,7 +82,14 @@ class TestWhyValidation:
     def test_pattern_rule_whose_why_is_not_text_is_a_config_error(self, directory, mode):
         directory.write(
             ".codeguard/rules/pattern/no-print.yml",
-            "id: no-print\nlanguage: python\nmetadata:\n  why: 1\nrule:\n  pattern: print()\n",
+            yaml.safe_dump(
+                {
+                    "id": "no-print",
+                    "language": "python",
+                    "metadata": {"why": 1},
+                    "rule": {"pattern": "print()"},
+                }
+            ),
         )
 
         with pytest.raises(ConfigError) as error:

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+import yaml
 from packaging.version import Version
 from pydantic import ValidationError
 from rules_package import NO_PRINT_RULE
@@ -508,10 +509,12 @@ class TestRuleset:
         assert judge == override
 
     def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
-        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE)
+        directory.write("rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
         directory.write(
             "gates/enum-value.yml",
-            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+            yaml.safe_dump(
+                {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+            ),
         )
 
         rules = make_ruleset(root=directory.root).pattern_rules()
@@ -528,7 +531,7 @@ class TestRuleset:
         ]
 
     def test_malformed_pattern_rule_file_is_a_config_error(self, directory, make_ruleset):
-        directory.write("rules/pattern/bad.yml", "bogus: 1\n")
+        directory.write("rules/pattern/bad.yml", yaml.safe_dump({"bogus": 1}))
 
         with pytest.raises(ConfigError) as error:
             make_ruleset(root=directory.root).pattern_rules()
