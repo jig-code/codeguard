@@ -23,8 +23,6 @@ _MAX_ATTEMPTS = 5
 _TRANSIENT_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 
-# Wraps the model, not the transport: a transport retry misses a connection that breaks after
-# the response starts.
 class RetryingModel(WrapperModel):
     def __init__(
         self,
