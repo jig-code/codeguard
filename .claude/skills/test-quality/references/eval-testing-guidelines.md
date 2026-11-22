@@ -35,8 +35,9 @@ says which changes need the LLM tests and how many runs.
 ## Cases
 
 - Each case tests one judge behavior, such as reporting a violation that a removed line
-  creates, and no two cases test the same one. The writing-rules eval case guidance
-  doesn't apply: it tests a rule, not the judge.
+  creates, and no two cases test the same one. The writing-rules skill's eval case
+  guidance doesn't apply: it is for a rule's own cases, which test that the rule's wording
+  gets the right verdicts. These cases test codeguard's judge.
 - A review-scope case may hold an old violation in code the change doesn't touch, which
   the review must leave unreported. Keep it small and plain, and let it break no other
   rule.
