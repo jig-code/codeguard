@@ -38,6 +38,8 @@ don't check what it says about the other tool or whether it sets that tool up. S
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
   A grader checks the instruction or the ask, never the answer that the fixture's domain
   has, such as which code the rule should flag.
+- A grader is changed only when a run of a case misjudged what the agent wrote. Never
+  write outputs to test a grader.
 - An `llm` grader states the convention and any limit the docs set on what it checks.
   It never refers to the prompt or the docs.
 - Every case has a grader that passes when the agent loads the writing-rules skill,
