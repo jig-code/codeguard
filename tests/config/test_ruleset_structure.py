@@ -1,3 +1,5 @@
+import yaml
+
 from codeguard.config import RulesetStructure
 
 
@@ -18,7 +20,7 @@ class TestRulesetStructure:
             "rules/judge",
             "skills",
         )
-        (tmp_path / "rule-tests/no-print-test.yml").write_text("id: no-print\n")
+        (tmp_path / "rule-tests/no-print-test.yml").write_text(yaml.safe_dump({"id": "no-print"}))
 
         assert RulesetStructure(tmp_path).problems() == []
 
@@ -50,12 +52,12 @@ class TestRulesetStructure:
 
     def test_rule_outside_its_kind_directory_is_unexpected(self, tmp_path):
         make_dirs(tmp_path, "rules/pattern")
-        (tmp_path / "rules/no-print.yml").write_text("id: no-print\n")
+        (tmp_path / "rules/no-print.yml").write_text(yaml.safe_dump({"id": "no-print"}))
 
         assert RulesetStructure(tmp_path).problems() == ["unexpected rules/no-print.yml"]
 
     def test_file_is_unexpected_unless_allowed(self, tmp_path):
-        (tmp_path / "config.yaml").write_text("{}\n")
+        (tmp_path / "config.yaml").write_text(yaml.safe_dump({}))
 
         assert RulesetStructure(tmp_path).problems() == ["unexpected config.yaml"]
         assert RulesetStructure(tmp_path, frozenset({"config.yaml"})).problems() == []

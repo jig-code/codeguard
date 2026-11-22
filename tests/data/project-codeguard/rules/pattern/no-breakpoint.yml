@@ -1,0 +1,8 @@
+id: no-breakpoint
+language: python
+severity: warning
+message: Remove breakpoint().
+metadata:
+  why: A breakpoint left in the code stops a run that nobody is watching.
+rule:
+  pattern: breakpoint()

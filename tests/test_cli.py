@@ -24,7 +24,7 @@ CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 BUNDLED_AST_GREP = metadata.version("ast-grep-cli")
 NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
 NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
-PLACEMENT_BINDING = 'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
+PLACEMENT_BINDING = {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 TRACEBACK_HEADING = "Traceback (most recent call last):\n"
 PASSING_NO_PRINT_TEST_REPORT = (
     "Running 1 tests\n"
@@ -179,8 +179,15 @@ class TestReviewCommand:
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.rb"]\ntriggers: [any]\n'
-            "provider: gemini\nmodel: gemini-judge-test\n",
+            yaml.safe_dump(
+                {
+                    "rule": "placement",
+                    "paths": ["**/*.rb"],
+                    "triggers": ["any"],
+                    "provider": "gemini",
+                    "model": "gemini-judge-test",
+                }
+            ),
         )
         repo.write("a.py", "x = 1\n")
 
@@ -202,7 +209,7 @@ class TestReviewCommand:
 
 class TestReviewWithAstGrepVersion:
     def test_pinned_ast_grep_runs_the_rules(self, repo, make_diagnostic):
-        repo.write(".codeguard/config.yaml", f"ast-grep: {BUNDLED_AST_GREP}\n")
+        repo.write(".codeguard/config.yaml", yaml.safe_dump({"ast-grep": BUNDLED_AST_GREP}))
         repo.write("a.py", "print(1)\n")
 
         result = subprocess.run(
@@ -216,11 +223,13 @@ class TestReviewWithAstGrepVersion:
         write_package(repo, prefix="rules/")
         repo.write(
             "rules/codeguard-package.yaml",
-            "name: example\nrulesets: [python]\nast-grep: '<0.45'\n",
+            yaml.safe_dump({"name": "example", "rulesets": ["python"], "ast-grep": "<0.45"}),
         )
         repo.write(
             ".codeguard/config.yaml",
-            "packages:\n  - kind: path\n    path: rules\n    rulesets:\n      python: {}\n",
+            yaml.safe_dump(
+                {"packages": [{"kind": "path", "path": "rules", "rulesets": {"python": {}}}]}
+            ),
         )
         repo.write("a.py", "print(1)\n")
 
@@ -241,12 +250,17 @@ class TestReviewWithPackages:
         write_package(repo, prefix="rules/")
         repo.write(
             ".codeguard/config.yaml",
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [responsibility-placement]\n",
+            yaml.safe_dump(
+                {
+                    "packages": [
+                        {
+                            "kind": "path",
+                            "path": "rules",
+                            "rulesets": {"python": {"exclude": ["responsibility-placement"]}},
+                        }
+                    ]
+                }
+            ),
         )
         repo.write("a.py", "x = 1\n")
         repo.commit("Opt in")
@@ -267,12 +281,19 @@ class TestReviewWithPackages:
         write_package(repo, prefix="rules/")
         repo.write(
             ".codeguard/config.yaml",
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [no-print, responsibility-placement]\n",
+            yaml.safe_dump(
+                {
+                    "packages": [
+                        {
+                            "kind": "path",
+                            "path": "rules",
+                            "rulesets": {
+                                "python": {"exclude": ["no-print", "responsibility-placement"]}
+                            },
+                        }
+                    ]
+                }
+            ),
         )
         (repo.root / ".codeguard/rules/pattern/no-print.yml").unlink()
         repo.write("a.py", "print(1)\n")
@@ -291,15 +312,22 @@ class TestReviewWithPackages:
         write_package(repo, prefix="rules/")
         repo.write(
             ".codeguard/config.yaml",
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [responsibility-placement]\n"
-            "        rules:\n"
-            "          no-print:\n"
-            "            ci_only: true\n",
+            yaml.safe_dump(
+                {
+                    "packages": [
+                        {
+                            "kind": "path",
+                            "path": "rules",
+                            "rulesets": {
+                                "python": {
+                                    "exclude": ["responsibility-placement"],
+                                    "rules": {"no-print": {"ci_only": True}},
+                                }
+                            },
+                        }
+                    ]
+                }
+            ),
         )
         (repo.root / ".codeguard/rules/pattern/no-print.yml").unlink()
         repo.write("a.py", "print(1)\n")
@@ -315,12 +343,17 @@ class TestReviewWithPackages:
         write_package(repo, prefix="rules/")
         repo.write(
             ".codeguard/config.yaml",
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [no-prnt]\n",
+            yaml.safe_dump(
+                {
+                    "packages": [
+                        {
+                            "kind": "path",
+                            "path": "rules",
+                            "rulesets": {"python": {"exclude": ["no-prnt"]}},
+                        }
+                    ]
+                }
+            ),
         )
         repo.write("a.py", "print(1)\n")
 
@@ -346,9 +379,17 @@ def released_package(tmp_path_factory) -> GitRepo:
 
 
 def git_config(package: GitRepo, ref: str) -> str:
-    return (
-        f"packages:\n  - kind: git\n    git: {package.file_url}\n    ref: {ref}\n"
-        "    rulesets:\n      python:\n        exclude: [responsibility-placement]\n"
+    return yaml.safe_dump(
+        {
+            "packages": [
+                {
+                    "kind": "git",
+                    "git": package.file_url,
+                    "ref": ref,
+                    "rulesets": {"python": {"exclude": ["responsibility-placement"]}},
+                }
+            ]
+        }
     )
 
 
@@ -359,7 +400,7 @@ class TestReviewOfDeletedCode:
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+            yaml.safe_dump(PLACEMENT_BINDING),
         )
         repo.write(
             "service.py",
@@ -415,12 +456,14 @@ class TestReviewDryRun:
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n',
+            yaml.safe_dump(PLACEMENT_BINDING),
         )
         repo.write(".codeguard/rules/judge/class-shape.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/class-shape.yaml",
-            'rule: class-shape\npaths: ["**/*.py"]\ntriggers: [class-header]\n',
+            yaml.safe_dump(
+                {"rule": "class-shape", "paths": ["**/*.py"], "triggers": ["class-header"]}
+            ),
         )
         repo.write("a.py", "x = 1\n")
         repo.write("b.rb", "x = 1\n")
@@ -460,8 +503,15 @@ class TestReviewDryRun:
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any]\n'
-            "provider: gemini\nmodel: gemini-judge-test\n",
+            yaml.safe_dump(
+                {
+                    "rule": "placement",
+                    "paths": ["**/*.py"],
+                    "triggers": ["any"],
+                    "provider": "gemini",
+                    "model": "gemini-judge-test",
+                }
+            ),
         )
         repo.write("a.py", "x = 1\n")
 
@@ -522,7 +572,7 @@ class TestReviewJsonFormat:
         self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -544,7 +594,7 @@ class TestReviewJsonFormat:
         self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -576,7 +626,7 @@ class TestReviewJudgeCache:
         self, repo, make_judge_rule, tmp_path
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -603,7 +653,7 @@ class TestReviewJudgeCache:
         self, repo, make_judge_rule, tmp_path, search
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -633,7 +683,7 @@ class TestReviewJudgeCache:
 class TestReviewJudgeErrorsAsWarnings:
     def test_judge_error_fails_the_review_without_the_flag(self, repo, make_judge_rule, tmp_path):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -646,7 +696,7 @@ class TestReviewJudgeErrorsAsWarnings:
 
     def test_judge_error_is_a_warning_with_the_flag(self, repo, make_judge_rule, tmp_path):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -661,7 +711,7 @@ class TestReviewJudgeErrorsAsWarnings:
         self, repo, make_judge_rule, tmp_path, make_diagnostic
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", PLACEMENT_BINDING)
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
         repo.commit("Bind the rule")
         bin_dir = FAKE_CLAUDE.parent
         repo.write("a.py", "x = 1\n")
@@ -725,7 +775,7 @@ class TestConfigCommand:
         assert result.returncode == 0
 
     def test_prints_the_configured_setting(self, repo):
-        repo.write(".codeguard/config.yaml", "review_time_limit_minutes: 10\n")
+        repo.write(".codeguard/config.yaml", yaml.safe_dump({"review_time_limit_minutes": 10}))
 
         result = subprocess.run(
             [CODEGUARD, "config", "review_time_limit_minutes"],
@@ -793,9 +843,17 @@ class TestEvalCommand:
         write_package(package)
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            "cases:\n  - name: an assignment in the invoice\n"
-            "    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
+            yaml.safe_dump(
+                {
+                    "cases": [
+                        {
+                            "name": "an assignment in the invoice",
+                            "inputs": {"file": "invoice.py", "after": "x = 1\n"},
+                            "expected_output": {"outcome": "invalid"},
+                        }
+                    ]
+                }
+            ),
         )
         bin_dir = FAKE_CLAUDE.parent
         configure_fake_cli_response({"stdout": claude_stream([])})
@@ -823,9 +881,17 @@ class TestEvalCommand:
         write_package(package)
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            "cases:\n  - name: an assignment in the invoice\n"
-            "    inputs:\n      file: invoice.py\n"
-            "      after: |\n        x = 1\n    expected_output:\n      outcome: invalid\n",
+            yaml.safe_dump(
+                {
+                    "cases": [
+                        {
+                            "name": "an assignment in the invoice",
+                            "inputs": {"file": "invoice.py", "after": "x = 1\n"},
+                            "expected_output": {"outcome": "invalid"},
+                        }
+                    ]
+                }
+            ),
         )
         bin_dir = FAKE_CLAUDE.parent
         calls = tmp_path / "calls"
@@ -929,8 +995,15 @@ class TestEvalCommand:
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
-            'rule: responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-4-argon\n",
+            yaml.safe_dump(
+                {
+                    "rule": "responsibility-placement",
+                    "paths": ["**/*.py"],
+                    "triggers": ["any"],
+                    "provider": "gemini",
+                    "model": "gemini-4-argon",
+                }
+            ),
         )
         bin_dir = recording_claude(tmp_path, [])
 
@@ -951,8 +1024,15 @@ class TestEvalCommand:
         package = invoice_package(tmp_path_factory)
         package.write(
             "python/bindings/responsibility-placement.yaml",
-            'rule: responsibility-placement\npaths: ["**/*.py"]\n'
-            "triggers: [any]\nprovider: gemini\nmodel: gemini-judge-test\n",
+            yaml.safe_dump(
+                {
+                    "rule": "responsibility-placement",
+                    "paths": ["**/*.py"],
+                    "triggers": ["any"],
+                    "provider": "gemini",
+                    "model": "gemini-judge-test",
+                }
+            ),
         )
 
         result = subprocess.run(
@@ -978,8 +1058,15 @@ class TestEvalCommand:
         package.write("python/rules/judge/naming.md", make_judge_rule().text)
         package.write(
             "python/bindings/naming.yaml",
-            'rule: naming\npaths: ["**/*.py"]\ntriggers: [any]\n'
-            "provider: gemini\nmodel: gemini-judge-test\n",
+            yaml.safe_dump(
+                {
+                    "rule": "naming",
+                    "paths": ["**/*.py"],
+                    "triggers": ["any"],
+                    "provider": "gemini",
+                    "model": "gemini-judge-test",
+                }
+            ),
         )
         naming_case = {
             "name": "names the helper",
@@ -1134,9 +1221,16 @@ def invoice_package(tmp_path_factory) -> GitRepo:
 
 
 def path_package_config(package: GitRepo) -> str:
-    return (
-        f"packages:\n  - kind: path\n    path: {package.root}\n    rulesets:\n"
-        "      python:\n        include: [responsibility-placement]\n"
+    return yaml.safe_dump(
+        {
+            "packages": [
+                {
+                    "kind": "path",
+                    "path": str(package.root),
+                    "rulesets": {"python": {"include": ["responsibility-placement"]}},
+                }
+            ]
+        }
     )
 
 
@@ -1173,7 +1267,8 @@ class TestTestCommand:
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
         package.write(
-            "codeguard-package.yaml", "name: example\nrulesets: [python]\nast-grep: '<0.45'\n"
+            "codeguard-package.yaml",
+            yaml.safe_dump({"name": "example", "rulesets": ["python"], "ast-grep": "<0.45"}),
         )
 
         result = subprocess.run(
@@ -1191,7 +1286,9 @@ class TestTestCommand:
     def test_unexpected_ruleset_entry_exits_2(self, tmp_path):
         package = GitRepo.init(tmp_path.resolve())
         write_package(package)
-        package.write("python/rule-tests/triggers/no-print-test.yml", "id: no-print\n")
+        package.write(
+            "python/rule-tests/triggers/no-print-test.yml", yaml.safe_dump({"id": "no-print"})
+        )
 
         result = subprocess.run(
             [CODEGUARD, "test"], cwd=package.root, capture_output=True, text=True
@@ -1209,7 +1306,7 @@ class TestTestCommand:
         write_package(package)
         package.write(
             "python/rule-tests/no-print-test.yml",
-            "id: no-print\nvalid:\n  - logging.info(1)\n",
+            yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}),
         )
 
         result = subprocess.run(
@@ -1223,7 +1320,7 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_passing_rule_tests_exit_0(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
@@ -1234,10 +1331,10 @@ class TestTestCommand:
     def test_stale_snapshot_entry_fails(self, repo):
         repo.write(
             NO_PRINT_TEST,
-            "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n",
+            yaml.safe_dump({"id": "no-print", "invalid": ["print(1)", "print(2)"]}),
         )
         subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(2)"]}))
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
@@ -1248,7 +1345,7 @@ class TestTestCommand:
         assert result.returncode == 1
 
     def test_update_all_removes_snapshots_of_removed_tests(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)"]}))
         subprocess.run([CODEGUARD, "test", "--update-all"], cwd=repo.root, check=True)
         (repo.root / NO_PRINT_TEST).unlink()
 
@@ -1257,8 +1354,8 @@ class TestTestCommand:
         assert not (repo.root / NO_PRINT_SNAPSHOT).exists()
 
     def test_invalid_binding_does_not_stop_rule_tests(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
-        repo.write(".codeguard/bindings/broken.yaml", "path: [a.py]\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
+        repo.write(".codeguard/bindings/broken.yaml", yaml.safe_dump({"path": ["a.py"]}))
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 
@@ -1270,11 +1367,13 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_broad_triggers_are_a_warning(self, repo, make_judge_rule):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [any, fixture]\n',
+            yaml.safe_dump(
+                {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any", "fixture"]}
+            ),
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
@@ -1300,10 +1399,17 @@ class TestTestCommand:
     ):
         repo.write(
             ".codeguard/rules/pattern/no-print.yml",
-            "id: no-print\nlanguage: python\nseverity: error\nmessage: Use logging, not print.\n"
-            "rule:\n  pattern: print($$$ARGS)\n",
+            yaml.safe_dump(
+                {
+                    "id": "no-print",
+                    "language": "python",
+                    "severity": "error",
+                    "message": "Use logging, not print.",
+                    "rule": {"pattern": "print($$$ARGS)"},
+                }
+            ),
         )
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
 
         result = subprocess.run(
             [CODEGUARD, "test", *options], cwd=repo.root, capture_output=True, text=True
@@ -1313,11 +1419,11 @@ class TestTestCommand:
         assert result.returncode == returncode
 
     def test_judge_rule_file_that_is_not_a_title_statement_and_why_fails(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
         repo.write(".codeguard/rules/judge/placement.md", "A method lives on its type.\n")
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [fixture]\n',
+            yaml.safe_dump({"rule": "placement", "paths": ["**/*.py"], "triggers": ["fixture"]}),
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
@@ -1330,11 +1436,15 @@ class TestTestCommand:
     def test_gate_tests_run_with_the_pattern_tests(self, repo):
         repo.write(
             ".codeguard/gates/enum-value.yml",
-            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+            yaml.safe_dump(
+                {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+            ),
         )
         repo.write(
             ".codeguard/rule-tests/enum-value-test.yml",
-            "id: enum-value\nvalid:\n  - status.name\ninvalid:\n  - status.value\n",
+            yaml.safe_dump(
+                {"id": "enum-value", "valid": ["status.name"], "invalid": ["status.value"]}
+            ),
         )
 
         result = subprocess.run(
@@ -1345,17 +1455,25 @@ class TestTestCommand:
         assert result.returncode == 0
 
     def test_eval_case_whose_change_misses_the_triggers_exits_1(self, repo, make_judge_rule):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            'rule: placement\npaths: ["**/*.py"]\ntriggers: [comment]\n',
+            yaml.safe_dump({"rule": "placement", "paths": ["**/*.py"], "triggers": ["comment"]}),
         )
         repo.write(
             ".codeguard/rule-evals/placement.yaml",
-            "cases:\n  - name: an assigned count\n"
-            "    inputs:\n      after: |\n        count = 1\n"
-            "    expected_output:\n      outcome: invalid\n",
+            yaml.safe_dump(
+                {
+                    "cases": [
+                        {
+                            "name": "an assigned count",
+                            "inputs": {"after": "count = 1\n"},
+                            "expected_output": {"outcome": "invalid"},
+                        }
+                    ]
+                }
+            ),
         )
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
@@ -1368,7 +1486,7 @@ class TestTestCommand:
         assert result.returncode == 1
 
     def test_failing_rule_tests_exit_1(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["print(1)"]}))
 
         result = subprocess.run([CODEGUARD, "test"], cwd=repo.root, capture_output=True, text=True)
 

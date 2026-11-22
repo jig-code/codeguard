@@ -1,11 +1,12 @@
 import subprocess
 
 import pytest
+import yaml
 from git_repo import GitRepo
 
 from codeguard.packages import GitFetch
 
-MANIFEST = "name: example\nrulesets: [python]\n"
+MANIFEST = yaml.safe_dump({"name": "example", "rulesets": ["python"]})
 
 
 @pytest.fixture
@@ -31,7 +32,9 @@ class TestGitFetch:
     def test_fetched_ref_is_reused_without_the_remote(self, remote, tmp_path):
         fetch = GitFetch(tmp_path)
         first = fetch.fetch(remote.file_url, "v1.0.0")
-        remote.write("codeguard-package.yaml", "name: changed\nrulesets: [python]\n")
+        remote.write(
+            "codeguard-package.yaml", yaml.safe_dump({"name": "changed", "rulesets": ["python"]})
+        )
         remote.commit("Change manifest")
         remote.git("tag", "--force", "v1.0.0")
 
