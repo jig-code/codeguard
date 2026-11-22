@@ -8,8 +8,8 @@ similar exact tool can check, directly, through its configuration or with a cust
 isn't codeguard's, whether or not the project runs that tool or turns that check on. An
 exact tool gives the same answer every run, costs nothing, and already runs in the
 editor. A way past the tool that the tool's configuration can forbid doesn't make the
-convention a judgment. Write no rule, say only that the convention isn't codeguard's to
-check, and offer no other rule.
+convention a judgment. Write no rule, and say that the convention isn't codeguard's to
+check.
 
 A codeguard pattern rule is for a code shape in one file that those tools can't express.
 
