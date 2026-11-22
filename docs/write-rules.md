@@ -64,4 +64,4 @@ each rule's run is also in Logfire, as an experiment named `<rule> on <model>`, 
 of the same rule compare ([Telemetry](telemetry.md)).
 
 Run both in the project root for `.codeguard/`, or in a package's root for every
-ruleset. [Testing](testing.md#changing-a-rule-package) says which test each change needs.
+ruleset.

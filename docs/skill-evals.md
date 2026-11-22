@@ -5,8 +5,7 @@ gives an agent that writes or changes a codeguard rule. Its evals are in
 `evals/writing-rules/` and run with `claude plugin eval`.
 [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
 command, how to write a case and its graders, and how cases are scored. This page says
-only what codeguard adds. [How to test your changes](testing.md) covers testing
-codeguard, testing rules and reviewing code.
+only what codeguard adds. [Testing codeguard](testing.md) says when to run them.
 
 ## What the evals check
 

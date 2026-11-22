@@ -5,7 +5,7 @@ invariants every change must keep. Before changing the judge (its template, its
 prompt, its tools or what it's given), the review pipeline, or anything an invariant
 covers, read it and check the change against it.
 
-[Testing](testing.md#changing-codeguard) says which checks a change to codeguard needs.
+[Testing](testing.md) says which tests a change needs you to run.
 
 ## Run the tests
 

@@ -54,7 +54,7 @@ For whoever works on codeguard:
 - [Contributing](docs/CONTRIBUTING.md): working on codeguard, and releases.
 - [Architecture](docs/architecture.md): why codeguard works as it does, and the
   invariants every change keeps.
-- [Testing](docs/testing.md): which checks a change needs.
+- [Testing](docs/testing.md): which of codeguard's tests a change needs you to run.
 
 ## Help and maintainers
 
