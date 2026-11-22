@@ -45,10 +45,9 @@ Re-running until a case passes doesn't meet the bar.
 
 A fixture case pins down one behavior of the judge, such as reporting a violation that
 removing a line creates, or reading another file to decide. Each behavior the LLM tests
-check has one case, and one rule carries them all. The writing-rules reference's eval
-case guidance is for testing a rule's statement, not the judge, so it doesn't say which
-fixture cases are needed. A fixture that tests review scope may also hold a pre-existing
-violation of the rule under test, in code the change leaves untouched and doesn't take
-part in, so the review must leave it unreported. Keep that violation small and plain, and
-let it break no other rule, so nothing else in the fixture obscures the behavior under
-test.
+check has one case. The writing-rules reference's eval case guidance is for testing a
+rule's statement, not the judge, so it doesn't say which fixture cases are needed. A
+fixture that tests review scope may also hold a pre-existing violation of the rule under
+test, in code the change leaves untouched and doesn't take part in, so the review must
+leave it unreported. Keep that violation small and plain, and let it break no other rule,
+so nothing else in the fixture obscures the behavior under test.
