@@ -28,9 +28,10 @@ Before writing, editing or reviewing any `.py` file, tests included, load the
 ## Rules
 
 Before adding or changing a rule, follow
-[skills/writing-rules/SKILL.md](skills/writing-rules/SKILL.md). Whenever a rule eval, an
-LLM test or a judged review fails, flips between runs or reports a warning, follow the
-Rule failures bullet in [docs/architecture.md](docs/architecture.md#testing-a-rule) and
-[docs/testing.md](docs/testing.md). This covers the LLM
-tests' fixtures in `evals/judge`, every rule package, and judged reviews of codeguard's
-own code.
+[skills/writing-rules/SKILL.md](skills/writing-rules/SKILL.md). Before changing the skill,
+read [The writing-rules skill](docs/CONTRIBUTING.md#the-writing-rules-skill). Whenever a
+rule eval, an LLM test or a judged review fails, flips between runs or reports a
+warning, follow the Rule failures bullet in
+[docs/architecture.md](docs/architecture.md#testing-a-rule) and
+[docs/testing.md](docs/testing.md). This covers the LLM tests' fixtures in
+`evals/judge`, every rule package, and judged reviews of codeguard's own code.

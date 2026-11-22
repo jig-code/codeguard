@@ -46,8 +46,15 @@ Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 [Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
-The `writing-rules` skill has its own evals in `evals/writing-rules/`;
-[docs/skill-evals.md](skill-evals.md) says how to run and write them.
+## The writing-rules skill
+
+The plugin's writing-rules skill, in `skills/writing-rules/`, tells an agent how to write
+a codeguard rule: whether a convention is codeguard's to check, and how to state it, gate
+it and write its cases. It covers only writing the rule: testing it is left to whoever
+asked for it, and the README's [Write and test rules](../README.md#write-and-test-rules)
+says when and how.
+
+[Testing the writing-rules skill](skill-evals.md) says how to write and run its evals.
 
 ## Run your clone in a project
 
