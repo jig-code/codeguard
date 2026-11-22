@@ -74,6 +74,10 @@ CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Ed
   --trust-plugin --no-publish
 ```
 
+Without Bedrock, the same command runs on a signed-in `claude` CLI: leave out
+`CLAUDE_CODE_USE_BEDROCK=1` and give `--model` and `--judge-model` the names of the
+models CI's Bedrock profiles serve. `--case <name>` runs only the case a change touches.
+
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
 
