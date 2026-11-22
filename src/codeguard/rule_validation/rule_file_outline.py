@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Self
 
 _HEADING = re.compile(r"^(?P<marks>#{1,6})[ \t]+(?P<title>\S.*?)[ \t]*$")
-_FENCE = "```"
 _WHY_HEADING = "## Why"
 
 
@@ -24,8 +23,6 @@ class _Section:
 
 @dataclass(frozen=True)
 class RuleFileOutline:
-    """A `#` line in a code fence is a comment in the code, not a heading."""
-
     preamble: str
     sections: tuple[_Section, ...]
 
@@ -34,11 +31,8 @@ class RuleFileOutline:
         preamble: list[str] = []
         headings: list[tuple[int, str]] = []
         bodies: list[list[str]] = []
-        inside_fence = False
         for line in text.splitlines():
-            if line.lstrip().startswith(_FENCE):
-                inside_fence = not inside_fence
-            heading = None if inside_fence else _HEADING.match(line)
+            heading = _HEADING.match(line)
             if heading:
                 headings.append((len(heading["marks"]), heading["title"]))
                 bodies.append([])

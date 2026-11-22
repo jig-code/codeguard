@@ -7,8 +7,6 @@ from codeguard.rule_validation.validation_result import ValidationResult
 
 @dataclass(frozen=True)
 class RuleFormatValidation:
-    """Skips rules bound with the legacy `skill` key, which packages still ship."""
-
     ruleset: RulesetLoader
 
     def run(self) -> ValidationResult:

@@ -76,11 +76,3 @@ class TestRuleFileOutline:
         assert outline.format_problems() == (
             "has the heading '## Forms', but holds only a title, the statement and `## Why`",
         )
-
-    def test_comment_in_a_code_fence_is_not_a_heading(self):
-        outline = RuleFileOutline.from_text(
-            "# Naming\n\nA name says what it holds, as in:\n\n```\n# note\n```\n\n"
-            "## Why\n\nNames are read more than written.\n"
-        )
-
-        assert outline.format_problems() == ()
