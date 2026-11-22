@@ -24,7 +24,7 @@ from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.usage import RequestUsage
 from spans import finished_span_attributes
 
-from codeguard.api_provider import ApiJudge, VertexGemini, api_judge
+from codeguard.api_provider import ApiJudge, VertexGemini, retrying_model
 from codeguard.config import ApiEffort
 from codeguard.review import (
     Deadline,
@@ -154,7 +154,7 @@ def waits(monkeypatch) -> list[float]:
     async def wait(seconds: float) -> None:
         waited.append(seconds)
 
-    monkeypatch.setattr(api_judge.asyncio, "sleep", wait)
+    monkeypatch.setattr(retrying_model.asyncio, "sleep", wait)
     return waited
 
 
