@@ -4,14 +4,18 @@ import time
 import httpx2
 import pytest
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
-from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
+from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.models import ModelRequestParameters
+from recording_sleep import RecordingSleep
 from scripted_gemini import ScriptedGemini, http_error, transport_error
 
 from codeguard.api_provider.retrying_model import RetryingModel
 from codeguard.review import Deadline
 
-PROMPT = [ModelRequest(parts=[UserPromptPart("Judge the change.")])]
+
+@pytest.fixture
+def prompt() -> list[ModelMessage]:
+    return [ModelRequest(parts=[UserPromptPart("Judge the change.")])]
 
 
 class TestRetryingModel:
@@ -25,48 +29,61 @@ class TestRetryingModel:
         ],
         ids=["quota", "unavailable", "connection reset", "disconnected"],
     )
-    def test_turned_away_or_broken_request_is_sent_again(self, waits, error):
+    def test_turned_away_or_broken_request_is_sent_again(self, prompt, error):
         answer = ModelResponse(parts=[TextPart("Judged.")])
         models = ScriptedGemini([error, answer])
+        sleep = RecordingSleep()
 
         response = asyncio.run(
-            RetryingModel(models.model, None).request(PROMPT, None, ModelRequestParameters())
+            RetryingModel(models.model, None, sleep).request(prompt, None, ModelRequestParameters())
         )
 
         assert response == answer
         assert models.answers == []
-        assert 1 <= waits[0] < 2
+        assert 1 <= sleep.waited[0] < 2
 
-    def test_request_is_sent_at_most_five_times(self, waits):
+    def test_request_is_sent_at_most_five_times(self, prompt):
+        errors = [http_error(429, "Quota exceeded.") for _ in range(5)]
         unsent = ModelResponse(parts=[TextPart("Judged.")])
-        models = ScriptedGemini([*(http_error(429, "Quota exceeded.") for _ in range(5)), unsent])
+        models = ScriptedGemini([*errors, unsent])
+        sleep = RecordingSleep()
 
-        with pytest.raises(ModelHTTPError):
+        with pytest.raises(ModelHTTPError) as raised:
             asyncio.run(
-                RetryingModel(models.model, None).request(PROMPT, None, ModelRequestParameters())
-            )
-        assert models.answers == [unsent]
-        assert [int(wait) for wait in waits] == [1, 2, 4, 8]
-
-    def test_sends_again_only_while_the_backoff_fits_before_the_deadline(self, waits):
-        models = ScriptedGemini([http_error(429, "Quota exceeded.") for _ in range(5)])
-        deadline = Deadline(minutes=1, started=time.monotonic() - 56)
-
-        with pytest.raises(ModelHTTPError):
-            asyncio.run(
-                RetryingModel(models.model, deadline).request(
-                    PROMPT, None, ModelRequestParameters()
+                RetryingModel(models.model, None, sleep).request(
+                    prompt, None, ModelRequestParameters()
                 )
             )
-        assert [int(wait) for wait in waits] == [1, 2]
+        assert raised.value is errors[4]
+        assert models.answers == [unsent]
+        assert [int(wait) for wait in sleep.waited] == [1, 2, 4, 8]
 
-    def test_timed_out_request_is_not_sent_again(self, waits):
+    def test_sends_again_only_while_the_backoff_fits_before_the_deadline(self, prompt):
+        errors = [http_error(429, "Quota exceeded.") for _ in range(5)]
+        models = ScriptedGemini(list(errors))
+        deadline = Deadline(minutes=1, started=time.monotonic() - 56)
+        sleep = RecordingSleep()
+
+        with pytest.raises(ModelHTTPError) as raised:
+            asyncio.run(
+                RetryingModel(models.model, deadline, sleep).request(
+                    prompt, None, ModelRequestParameters()
+                )
+            )
+        assert raised.value is errors[2]
+        assert models.answers == errors[3:]
+        assert [int(wait) for wait in sleep.waited] == [1, 2]
+
+    def test_timed_out_request_is_not_sent_again(self, prompt):
         timeout = transport_error(httpx2.ReadTimeout("timed out"))
         models = ScriptedGemini([timeout])
+        sleep = RecordingSleep()
 
         with pytest.raises(ModelAPIError) as raised:
             asyncio.run(
-                RetryingModel(models.model, None).request(PROMPT, None, ModelRequestParameters())
+                RetryingModel(models.model, None, sleep).request(
+                    prompt, None, ModelRequestParameters()
+                )
             )
         assert raised.value is timeout
-        assert waits == []
+        assert sleep.waited == []

@@ -1,5 +1,6 @@
 import asyncio
 import random
+from collections.abc import Awaitable, Callable
 
 import httpx2
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
@@ -19,9 +20,15 @@ _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 # fits before the deadline. The SDK's own retries miss a connection that broke after the
 # response started.
 class RetryingModel(WrapperModel):
-    def __init__(self, wrapped: Model, deadline: Deadline | None) -> None:
+    def __init__(
+        self,
+        wrapped: Model,
+        deadline: Deadline | None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
         super().__init__(wrapped)
         self.deadline = deadline
+        self.sleep = sleep
 
     async def request(
         self,
@@ -37,18 +44,18 @@ class RetryingModel(WrapperModel):
                 backoff_seconds = 2 ** (attempt - 1) + random.random()
                 if (
                     attempt == _MAX_ATTEMPTS
-                    or not _retried(error)
+                    or not _retryable(error)
                     or not self._fits(backoff_seconds)
                 ):
                     raise
-            await asyncio.sleep(backoff_seconds)
+            await self.sleep(backoff_seconds)
             attempt += 1
 
     def _fits(self, backoff_seconds: float) -> bool:
         return self.deadline is None or backoff_seconds < self.deadline.remaining_seconds()
 
 
-def _retried(error: ModelAPIError) -> bool:
+def _retryable(error: ModelAPIError) -> bool:
     if isinstance(error, ModelHTTPError):
         return error.status_code in _RETRIED_STATUSES
     return _transport_error(error) and not transport_timed_out(error)

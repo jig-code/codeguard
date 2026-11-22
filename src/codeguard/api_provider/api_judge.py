@@ -1,6 +1,6 @@
 import asyncio
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +70,7 @@ class ApiJudge:
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
     max_attempt_seconds: float = _MAX_ATTEMPT_SECONDS
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
 
     @property
     def identity(self) -> str:
@@ -118,7 +119,7 @@ class ApiJudge:
                     prompt,
                     model=FallbackModel(
                         *(
-                            RetryingModel(model, self.deadline)
+                            RetryingModel(model, self.deadline, self.sleep)
                             for _ in range(self._attempts_per_request)
                         ),
                         fallback_on=(ModelRequestTimeout,),

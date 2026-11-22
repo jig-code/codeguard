@@ -18,6 +18,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
+from recording_sleep import RecordingSleep
 from scripted_gemini import MODEL, ScriptedGemini, Stall, http_error, transport_error
 from spans import finished_span_attributes
 
@@ -291,13 +292,15 @@ class TestApiJudge:
         ):
             judge_with(tmp_path, models).judge(make_judge_request())
 
-    def test_turned_away_request_is_sent_again(self, tmp_path, make_judge_request, waits):
+    def test_turned_away_request_is_sent_again(self, tmp_path, make_judge_request):
         models = ScriptedGemini([http_error(429, "Quota exceeded."), verdict()])
+        sleep = RecordingSleep()
 
-        judgement = judge_with(tmp_path, models).judge(make_judge_request())
+        judgement = judge_with(tmp_path, models, sleep=sleep).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
+        assert [int(wait) for wait in sleep.waited] == [1]
 
     def test_transport_timeout_is_the_request_limit_error(self, tmp_path, make_judge_request):
         models = ScriptedGemini([transport_error(httpx2.ReadTimeout("timed out"))])
@@ -313,19 +316,20 @@ class TestApiJudge:
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.1s to answer.$"):
             judge_with(tmp_path, models, request_time_limit_seconds=0.1).judge(make_judge_request())
 
-    def test_stalled_attempt_is_sent_again(self, tmp_path, make_judge_request, waits):
+    def test_stalled_attempt_is_sent_again(self, tmp_path, make_judge_request):
         models = ScriptedGemini([Stall(), verdict()])
+        sleep = RecordingSleep()
 
         judgement = judge_with(
-            tmp_path, models, request_time_limit_seconds=0.2, max_attempt_seconds=0.1
+            tmp_path, models, request_time_limit_seconds=0.2, max_attempt_seconds=0.1, sleep=sleep
         ).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
-        assert waits == []
+        assert sleep.waited == []
 
     def test_request_stalling_on_every_attempt_is_the_request_limit_error(
-        self, tmp_path, make_judge_request, waits
+        self, tmp_path, make_judge_request
     ):
         models = ScriptedGemini([Stall(), Stall(), Stall(), Stall()])
 
