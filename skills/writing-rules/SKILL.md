@@ -16,10 +16,7 @@ convention that a model judges each change against.
    rewrite the statement until it meets them all:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
-   3. Name what code does, never what code leaves out: use no "without" followed by a
-      verb, no "fail to", no "skip", and no "leave" with "undone".
-   4. Name no other way for code to act in place of what it must never do: use no
-      "rather than" and no "instead of".
+   3. Name what code does, never what code leaves out.
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.

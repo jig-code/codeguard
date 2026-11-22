@@ -5,4 +5,4 @@ weight: 1
 ---
 
 PASS if the statement names nothing that code leaves out. The statement is the sentence under this rule file's `#` title and before `## Why`, leaving out the title.
-FAIL if the statement is missing or empty. Also FAIL if the statement has "without" followed by a verb, "fail to", "skip", or "leave" with "undone". Also FAIL if the statement names something else that code leaves out.
+FAIL if the statement is missing or empty. Also FAIL if the statement names something that code leaves out.
