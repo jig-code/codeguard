@@ -12,6 +12,22 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check the versions match the tag
         run: .github/scripts/check-versions.sh "${GITHUB_REF_NAME#v}"
+      - uses: astral-sh/setup-uv@v10.2.0
+      # The plugin runs this release from its tag, so v0 moves only once the plugin's
+      # Stop hook, run as hooks.json configures it, reviews a repository with it.
+      - name: Check the plugin's hook runs this release
+        shell: bash
+        run: |
+          repo="$RUNNER_TEMP/hook-check"
+          git init --quiet "$repo"
+          git -C "$repo" -c user.name=release -c user.email=release@example.invalid \
+            commit --quiet --allow-empty -m "Empty"
+          command="$(jq -r '.hooks.Stop[0].hooks[0].command' plugin/hooks/hooks.json)"
+          response="$(cd "$repo" && echo '{}' | CLAUDE_PLUGIN_ROOT="$GITHUB_WORKSPACE/plugin" sh -c "$command")"
+          if [ "$response" != "{}" ]; then
+            echo "::error file=plugin/hooks/hooks.json::the Stop hook didn't review with this release: $response"
+            exit 1
+          fi
       - name: Move the major tag to this release
         shell: bash
         run: |

@@ -8,14 +8,12 @@ from pathlib import Path
 import pytest
 import yaml
 from claude_output import claude_stream
-from fake_cli import FAKE_CLAUDE, FAKE_UVX, configure_fake_cli_response
+from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
 from rules_package import write_package
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
 PLUGIN = Path(__file__).resolve().parent.parent / "plugin"
-VERSION = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())["version"]
-RELEASE = f"git+https://github.com/jig-code/codeguard@v{VERSION}"
 SCRIPTS = sysconfig.get_path("scripts")
 PLACEMENT_BINDING = {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 UNDER_TEST = {"CODEGUARD": str(Path(SCRIPTS) / "codeguard")}
@@ -43,14 +41,6 @@ def commands(config: Path, event: str) -> list[str]:
 def home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
     path = tmp_path_factory.mktemp("home")
     monkeypatch.setenv("HOME", str(path))
-    return path
-
-
-@pytest.fixture
-def uv_only(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A PATH directory with uv and nothing else, so codeguard is not on PATH."""
-    path = tmp_path_factory.mktemp("uv-only")
-    (path / "uv").symlink_to(UV)
     return path
 
 
@@ -231,31 +221,6 @@ class TestStopHook:
             "broken.yml\n"
         )
 
-    def test_the_plugin_reviews_with_the_release_it_names(self, repo, uv_only, tmp_path):
-        request = tmp_path / "uvx-request.json"
-        configure_fake_cli_response(
-            {"stdout": json.dumps({"diagnostics": []}), "record": str(request)}
-        )
-
-        response = run_stop_hook(
-            repo, stop(), path=[FAKE_UVX.parent, uv_only, "/usr/bin", "/bin"], env={}
-        )
-
-        assert response == {}
-        assert json.loads(request.read_text())["arguments"] == [
-            "--quiet",
-            "--from",
-            RELEASE,
-            "codeguard",
-            "review",
-            "--format",
-            "json",
-            "--judge-errors-as-warnings",
-            "--skip-ci-only",
-            "--host",
-            "claude-code",
-        ]
-
     def test_missing_codeguard_goes_to_the_user(self, repo, tmp_path):
         missing = tmp_path / "codeguard"
 
@@ -272,29 +237,3 @@ class TestStopHook:
         codex = run_stop_hook(repo, {"session_id": "s", "turn_id": "t"}, CODEX_COMMAND)
 
         assert claude_code == codex
-
-
-class TestBundledCommand:
-    def test_the_bash_tool_runs_the_release_the_plugin_names(self, tmp_path):
-        request = tmp_path / "uvx-request.json"
-        configure_fake_cli_response({"record": str(request)})
-
-        result = subprocess.run(
-            [PLUGIN / "bin" / "codeguard", "--help"],
-            input="",
-            capture_output=True,
-            text=True,
-            env={
-                **without_codeguard(),
-                "PATH": os.pathsep.join([str(FAKE_UVX.parent), "/usr/bin", "/bin"]),
-            },
-        )
-
-        assert result.returncode == 0, result.stderr
-        assert json.loads(request.read_text())["arguments"] == [
-            "--quiet",
-            "--from",
-            RELEASE,
-            "codeguard",
-            "--help",
-        ]
