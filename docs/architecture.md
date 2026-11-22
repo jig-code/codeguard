@@ -114,12 +114,10 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
-- Follow the writing-rules reference's
+- Cases follow the writing-rules
   [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
-  codeguard's own judge fixtures test the judge, not their rule, and follow the LLM test
-  guidelines'
-  [Cases](../.claude/skills/test-quality/references/eval-testing-guidelines.md#cases)
-  instead.
+  codeguard's judge fixtures test the judge instead, and follow the
+  [LLM test guidelines](../.claude/skills/test-quality/references/eval-testing-guidelines.md#cases).
 
 ## Invariants
 

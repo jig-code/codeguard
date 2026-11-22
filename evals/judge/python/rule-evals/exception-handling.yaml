@@ -186,7 +186,7 @@ cases:
                 logger.exception("Refund failed")
     expected_output:
       outcome: valid
-  - name: a handler that passes its exception to a function earlier in its file that logs it
+  - name: a handler that passes its exception to a logging function earlier in its file
     inputs:
       file: shipping/labels.py
       before: |
@@ -218,7 +218,7 @@ cases:
                 record_failure(error)
     expected_output:
       outcome: valid
-  - name: a handler that passes its exception to another module's function that logs it
+  - name: a handler that passes its exception to a logging function in another module
     inputs:
       file: shipping/dispatch.py
       after: |
