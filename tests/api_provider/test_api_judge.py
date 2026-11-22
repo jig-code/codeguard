@@ -4,15 +4,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
-import anyio
 import httpx2
 import pytest
 from google.genai.types import GenerateContentConfig
 from pydantic import SecretStr, ValidationError
-from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import (
     ModelMessage,
-    ModelRequest,
     ModelResponse,
     ToolCallPart,
     ToolReturnPart,
@@ -20,11 +17,11 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
-from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.usage import RequestUsage
+from scripted_gemini import MODEL, ScriptedGemini, Stall, http_error, transport_error
 from spans import finished_span_attributes
 
-from codeguard.api_provider import ApiJudge, VertexGemini, retrying_model
+from codeguard.api_provider import ApiJudge, VertexGemini
 from codeguard.config import ApiEffort
 from codeguard.review import (
     Deadline,
@@ -35,7 +32,6 @@ from codeguard.review import (
     Verdict,
 )
 
-MODEL = "gemini-judge-test"
 VIOLATION = {
     "file": "a.py",
     "lines": {"start": 1, "end": 1},
@@ -62,50 +58,6 @@ def _usage(input_tokens: int) -> RequestUsage:
         cache_read_tokens=4,
         details={"thoughts_tokens": 5},
     )
-
-
-def http_error(status: int, message: str) -> ModelHTTPError:
-    return ModelHTTPError(status, MODEL, body={"error": {"message": message}})
-
-
-def transport_error(cause: Exception) -> ModelAPIError:
-    error = ModelAPIError(MODEL, str(cause))
-    error.__cause__ = cause
-    return error
-
-
-class Stall:
-    pass
-
-
-@dataclass
-class ScriptedGemini:
-    answers: list[ModelResponse | Exception | Stall]
-    requests: list[tuple[list[ModelMessage], AgentInfo]] = field(default_factory=list)
-    connected: list[str] = field(default_factory=list)
-
-    @asynccontextmanager
-    async def __call__(self, model: str) -> AsyncIterator[Model]:
-        self.connected.append(model)
-        yield FunctionModel(self._answer, profile=ModelProfile(supports_thinking=True))
-
-    async def _answer(self, messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        self.requests.append((list(messages), info))
-        answer = self.answers.pop(0)
-        if isinstance(answer, Stall):
-            await anyio.sleep(10)
-            raise AssertionError("The stalled request wasn't cut off.")
-        if isinstance(answer, Exception):
-            raise answer
-        return answer
-
-    def info(self, request: int = 0) -> AgentInfo:
-        return self.requests[request][1]
-
-    def sent(self, request: int) -> list[object]:
-        last = self.requests[request][0][-1]
-        assert isinstance(last, ModelRequest)
-        return list(last.parts)
 
 
 @dataclass
@@ -145,17 +97,6 @@ class VertexVerdicts:
 def reviewed_file(tmp_path) -> None:
     (tmp_path / "a.py").write_text("print(1)\n")
     (tmp_path / "logger.py").write_text("def info(message): ...\n")
-
-
-@pytest.fixture
-def waits(monkeypatch) -> list[float]:
-    waited: list[float] = []
-
-    async def wait(seconds: float) -> None:
-        waited.append(seconds)
-
-    monkeypatch.setattr(retrying_model.asyncio, "sleep", wait)
-    return waited
 
 
 def judge_with(
@@ -350,54 +291,19 @@ class TestApiJudge:
         ):
             judge_with(tmp_path, models).judge(make_judge_request())
 
-    @pytest.mark.parametrize(
-        "error",
-        [
-            http_error(429, "Quota exceeded."),
-            http_error(503, "Unavailable."),
-            transport_error(httpx2.ReadError("Connection reset by peer")),
-            transport_error(httpx2.RemoteProtocolError("Server disconnected")),
-        ],
-        ids=["quota", "unavailable", "connection reset", "disconnected"],
-    )
-    def test_turned_away_or_broken_request_is_sent_again(
-        self, tmp_path, make_judge_request, waits, error
-    ):
-        models = ScriptedGemini([error, verdict()])
+    def test_turned_away_request_is_sent_again(self, tmp_path, make_judge_request, waits):
+        models = ScriptedGemini([http_error(429, "Quota exceeded."), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
-        assert 1 <= waits[0] < 2
 
-    def test_request_is_sent_at_most_five_times(self, tmp_path, make_judge_request, waits):
-        unsent = verdict()
-        models = ScriptedGemini([*(http_error(429, "Quota exceeded.") for _ in range(5)), unsent])
-
-        with pytest.raises(JudgeProcessError, match=f"^{MODEL} failed with 429: Quota exceeded.$"):
-            judge_with(tmp_path, models).judge(make_judge_request())
-        assert models.answers == [unsent]
-        assert [int(wait) for wait in waits] == [1, 2, 4, 8]
-
-    def test_sends_again_only_while_the_backoff_fits_before_the_deadline(
-        self, tmp_path, make_judge_request, waits
-    ):
-        models = ScriptedGemini([http_error(429, "Quota exceeded.") for _ in range(5)])
-        deadline = Deadline(minutes=1, started=time.monotonic() - 56)
-
-        with pytest.raises(JudgeProcessError):
-            judge_with(tmp_path, models, deadline=deadline).judge(make_judge_request())
-        assert [int(wait) for wait in waits] == [1, 2]
-
-    def test_timeout_is_the_request_limit_error_without_sending_again(
-        self, tmp_path, make_judge_request, waits
-    ):
+    def test_transport_timeout_is_the_request_limit_error(self, tmp_path, make_judge_request):
         models = ScriptedGemini([transport_error(httpx2.ReadTimeout("timed out"))])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 120s to answer.$"):
             judge_with(tmp_path, models).judge(make_judge_request())
-        assert waits == []
 
     def test_request_running_past_the_request_limit_is_the_request_limit_error(
         self, tmp_path, make_judge_request
