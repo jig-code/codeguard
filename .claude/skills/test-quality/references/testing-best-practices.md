@@ -34,3 +34,6 @@ Control time with an injected clock or start time rather than a patch.
   a carriage return, trailing or whitespace-only lines, a leading blank line, a missing
   final newline, or bytes that aren't UTF-8. A block would hide them.
 - A single line of code stays a plain string.
+- Write a YAML file from Python data with `yaml.safe_dump`, never from a hand-built
+  string: data reads as the structure it holds and can't be invalid YAML. Keep a string
+  only when the test is about the YAML text itself, such as a file that doesn't parse.

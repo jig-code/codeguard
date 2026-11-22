@@ -112,7 +112,7 @@ For each test, check:
 - [helpers-and-results.md](references/helpers-and-results.md): gates 10, 12 and 17.
   Read when a helper or fixture does more than build an object.
 - [testing-best-practices.md](references/testing-best-practices.md): isolation,
-  testing through public methods, and how a test writes multi-line code.
+  testing through public methods, and how a test writes multi-line code and YAML files.
 - [pytest-guidelines.md](references/pytest-guidelines.md): marks and environment
   variables.
 - [pydantic-ai-testing-guidelines.md](references/pydantic-ai-testing-guidelines.md):
