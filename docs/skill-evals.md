@@ -43,9 +43,10 @@ don't check what it says about the other tool or whether it sets that tool up. S
 - Every case has a grader that passes when the agent loads the writing-rules skill,
   written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
-Cases are named like tests. A case's directory is its expected outcome, then its
-subject. The outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it
-changes an existing rule) or `declines`. A grader's file is its number, then what
+Cases are named like tests. A case's directory is its expected outcome, then what only
+that case tests, never the fixture's topic, so the names alone tell the cases apart. The
+outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it changes an existing
+rule) or `declines`. A grader's file is its number, then what
 the agent's output does.
 
 [Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
