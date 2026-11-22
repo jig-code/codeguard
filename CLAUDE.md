@@ -14,9 +14,9 @@ that conflicts with it needs the maintainers' approval before it's made.
 
 Before testing any change, follow [docs/testing.md](docs/testing.md).
 
-- Run only the checks the change's row names. Never write a script, a copy of the
+- Run only the tests the change's row names. Never write a script, a copy of the
   repository or a workaround to test a change some other way.
-- If a change fits no row, or a listed check can't run, say so and propose a change to
+- If a change fits no row, or a listed test can't run, say so and propose a change to
   the guide; don't change the guide without approval.
 
 ## Python

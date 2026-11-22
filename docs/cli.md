@@ -7,7 +7,7 @@
 | `codeguard eval` | whoever writes rules | judge rules: each eval case gets its expected review | yes |
 
 `review` checks code; `test` and `eval` check the rules themselves.
-[Write rules](write-rules.md#test-a-rule) covers `test` and `eval`.
+[Write and test rules](../README.md#write-and-test-rules) says when to run `test` and `eval`.
 
 Every command takes `-h` for its help.
 
