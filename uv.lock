@@ -307,6 +307,7 @@ dependencies = [
     { name = "pygit2" },
     { name = "pyyaml" },
     { name = "ripgrep" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -335,6 +336,7 @@ requires-dist = [
     { name = "pygit2", specifier = ">=1.21.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ripgrep", specifier = "~=14.1.0" },
+    { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
 [package.metadata.requires-dev]

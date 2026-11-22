@@ -12,7 +12,7 @@ runs the agent, pass `model=` to `run_sync`.
 
 ## Choose the double by the calls the test makes
 
-- `ScriptedGemini([...])`, the default: a `FunctionModel` that returns or raises each
+- `ScriptedModel([...])`, the default: a `FunctionModel` that returns or raises each
   scripted answer in order, records every request in `requests`, and raises when called
   more times than scripted. Assert `models.answers == []` to prove every answer was used.
 - `TestModel(custom_output_args=...)`: one call with one output.
@@ -20,7 +20,7 @@ runs the agent, pass `model=` to `run_sync`.
   call's output schema or content rather than call order.
 
 ```python
-models = ScriptedGemini([calls(("read_file", {"path": "a.py"})), verdict(VIOLATION)])
+models = ScriptedModel([calls(("read_file", {"path": "a.py"})), verdict(VIOLATION)])
 
 judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -36,12 +36,12 @@ name says it is about the path.
 ## Errors
 
 Have the scripted model raise what the provider would
-(`ScriptedGemini([http_error(400, "Bad request.")])`, then
+(`ScriptedModel([http_error(400, "Bad request.")])`, then
 `pytest.raises(JudgeProcessError)`), not a patched internal method.
 
 ## Instructions
 
 To check instructions the agent assembles at run time, run the agent inside
 `capture_run_messages()` and read the `instructions` of the `ModelRequest` it sent, or
-read `models.info().instructions` from `ScriptedGemini`. A hand-built `RunContext` skips
+read `models.info().instructions` from `ScriptedModel`. A hand-built `RunContext` skips
 the real plumbing (deps type, decorator wiring).
