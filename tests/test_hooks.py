@@ -125,7 +125,11 @@ class TestHookConfig:
         self, repo, uv_only, make_diagnostic, event
     ):
         repo.write("a.py", "print(1)\n")
-        [command] = commands(PROJECT / ".claude" / "settings.json", event)
+        [command] = [
+            command
+            for command in commands(PROJECT / ".claude" / "settings.json", event)
+            if "hooks/stop.py" in command
+        ]
 
         response = run_stop_hook(repo, stop(), command, path=[uv_only, "/usr/bin", "/bin"])
 
