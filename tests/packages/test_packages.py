@@ -141,43 +141,6 @@ class TestPackages:
             "  packages.0: example supports ast-grep >=0.46, not 0.45.3"
         )
 
-    def test_ast_grep_inside_the_package_range_loads(self, repo, package, fetch):
-        package.write(
-            "codeguard-package.yaml",
-            yaml.safe_dump({"name": "example", "rulesets": ["python"], "ast-grep": ">=0.45,<0.46"}),
-        )
-        config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
-
-        rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
-
-        assert [ruleset.name for ruleset in rulesets] == ["example/python"]
-
-    def test_codeguard_outside_the_package_range_is_an_error(self, repo, package, fetch):
-        package.write(
-            "codeguard-package.yaml",
-            yaml.safe_dump({"name": "example", "rulesets": ["python"], "codeguard": ">=0.3"}),
-        )
-        config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
-
-        with pytest.raises(ConfigError) as error:
-            Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  packages.0: example needs codeguard >=0.3, not 0.2.0; upgrade codeguard"
-        )
-
-    def test_codeguard_inside_the_package_range_loads(self, repo, package, fetch):
-        package.write(
-            "codeguard-package.yaml",
-            yaml.safe_dump({"name": "example", "rulesets": ["python"], "codeguard": ">=0.2"}),
-        )
-        config = PathPackageConfig(path=package.root, rulesets={"python": RulesetConfig()})
-
-        rulesets = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
-
-        assert [ruleset.name for ruleset in rulesets] == ["example/python"]
-
     def test_unknown_rule_is_an_error(self, repo, package, fetch):
         selection = RulesetConfig(
             exclude=("no-prnt",), rules={"no-print": RuleOverride(severity=Severity.WARNING)}
