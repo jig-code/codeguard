@@ -95,19 +95,11 @@ re-running them after a merge spends model calls that the pull request already s
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
 tests. `-n 8` only sets how many run at once: any number gives the same result.
 
-The judge row calls Gemini, which the fixture package names, so it needs Gemini's
-credentials ([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In an
-environment whose proxy injects the Vertex AI credentials, run it as
+The judge row calls Gemini, so it needs Gemini's credentials
+([Gemini on Google Cloud](judges.md#gemini-on-google-cloud)). In an environment whose
+proxy injects the Vertex AI credentials, run it as
 `CODEGUARD_JUDGE__GEMINI__PROJECT=<project> CODEGUARD_JUDGE__GEMINI__API_KEY=proxy-injected <command>`,
-where `<project>` is your Google Cloud project. A local `codeguard review` judges with the
-`claude` CLI, and CI's review with Gemini, which `ci.yaml` sets.
-[How codeguard reviews itself](CONTRIBUTING.md#how-codeguard-reviews-itself) says which
-build and judge each review uses.
-
-codeguard keeps no rules of its own in `.codeguard/`, so `codeguard test` and
-`codeguard eval` have nothing to check here. The rules in `evals/judge/` are fixtures for
-codeguard's own tests, and the rules codeguard reviews itself with are tested in their
-package's CI.
+where `<project>` is your Google Cloud project.
 
 ## Changing a rule package
 

@@ -49,36 +49,6 @@ case's triggers.
 The `writing-rules` skill has its own evals in `evals/writing-rules/`;
 [docs/skill-evals.md](skill-evals.md) says how to run and write them.
 
-## How codeguard reviews itself
-
-codeguard reviews its own changes with the rules its
-[`.codeguard/config.yaml`](../.codeguard/config.yaml) opts into: the `general` and
-`python` rulesets of [codeguard-rules](https://github.com/jig-code/codeguard-rules), at
-the commit its `ref` pins. Their pattern rules check code with no model; their judge
-rule, `dry`, calls a judge. Every review uses the rules at that commit, locally and in
-CI, until a pull request moves the pin. `.codeguard/` holds no rules of its own, so
-`codeguard test`, which CI's action runs, has nothing to check here: the packaged rules
-are tested in their package's CI.
-
-Every review here runs this checkout's codeguard, never a release, so the version in
-`pyproject.toml` doesn't say which build ran:
-
-| Where | Runs | Reviews | Judge |
-|---|---|---|---|
-| When an agent or subagent stops | `hooks/stop.py` with `.venv/bin/codeguard`, set in `.claude/settings.json` | Uncommitted and untracked files | The `claude` CLI and its default model |
-| By hand | `uv run codeguard review` | Uncommitted and untracked files; with `--base <branch>`, every change since that branch | The `claude` CLI and its default model |
-| CI's `codeguard-rules` job | The action at the checkout's root (`uses: ./`) | The pull request's changes since its base branch | Gemini, which `ci.yaml` sets |
-
-- The hook passes `--judge-errors-as-warnings` and `--skip-ci-only`, so a judge call
-  that fails, and a `ci_only` rule, are left to CI.
-- A local review reuses a verdict from `~/.cache/codeguard/judgements` until something
-  the judge's answer depends on changes ([The verdict cache](architecture.md#components)).
-  CI starts with an empty cache, so it judges every file afresh.
-- A finding on codeguard's own code is fixed in the code, whatever its severity. `dry`
-  is a `warning`, and the hook shows a warning to you, not to the agent, so read it.
-  When a finding is wrong, fix the rule or its cases in its package, never the code to
-  get past it.
-
 ## Run your clone in a project
 
 Run the CLI from this clone. `--editable` links the tool to the source, so edits
