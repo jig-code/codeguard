@@ -37,7 +37,9 @@ CASES = [
 JUDGED_CASES = [
     case for case in CASES if case.values[1].expected_output.outcome is not Outcome.SKIPPED
 ]
-CASES_WITH_UNCHANGED_FILES = [case for case in CASES if case.values[1].inputs.unchanged]
+CASES_WITH_UNCHANGED_FILES = [
+    pytest.param(case.values[1], id=case.id) for case in CASES if case.values[1].inputs.unchanged
+]
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -82,10 +84,8 @@ class TestJudgePrompt:
             JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
         }
 
-    @pytest.mark.parametrize(("rule", "case"), CASES_WITH_UNCHANGED_FILES)
-    def test_case_with_unchanged_files_loads_from_its_edited_file(
-        self, rule: str, case: RuleEvalCase
-    ):
+    @pytest.mark.parametrize("case", CASES_WITH_UNCHANGED_FILES)
+    def test_case_with_unchanged_files_loads_from_its_edited_file(self, case: RuleEvalCase):
         module = case.inputs.file.removesuffix(".py").replace("/", ".")
 
         with WorkingTree.temporary(case.inputs.before_files(), case.inputs.after_files()) as tree:

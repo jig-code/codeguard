@@ -74,9 +74,15 @@ def transport_error(cause: Exception) -> ModelAPIError:
     return error
 
 
+# An answer that doesn't arrive within any time limit a test sets.
+@dataclass(frozen=True)
+class Stall:
+    seconds: float = 10
+
+
 @dataclass
 class ScriptedGemini:
-    answers: list[ModelResponse | Exception]
+    answers: list[ModelResponse | Exception | Stall]
     requests: list[tuple[list[ModelMessage], AgentInfo]] = field(default_factory=list)
     connected: list[str] = field(default_factory=list)
 
@@ -85,9 +91,12 @@ class ScriptedGemini:
         self.connected.append(model)
         yield FunctionModel(self._answer, profile=ModelProfile(supports_thinking=True))
 
-    def _answer(self, messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    async def _answer(self, messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         self.requests.append((list(messages), info))
         answer = self.answers.pop(0)
+        if isinstance(answer, Stall):
+            await anyio.sleep(answer.seconds)
+            raise AssertionError("The stalled request wasn't cut off.")
         if isinstance(answer, Exception):
             raise answer
         return answer
@@ -395,54 +404,32 @@ class TestApiJudge:
     def test_request_running_past_the_request_limit_is_the_request_limit_error(
         self, tmp_path, make_judge_request
     ):
-        @asynccontextmanager
-        async def slow(model: str) -> AsyncIterator[Model]:
-            async def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-                await anyio.sleep(10)
-                return verdict()
-
-            yield FunctionModel(answer)
+        models = ScriptedGemini([Stall()])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.1s to answer.$"):
-            judge_with(tmp_path, slow, request_time_limit_seconds=0.1).judge(make_judge_request())
+            judge_with(tmp_path, models, request_time_limit_seconds=0.1).judge(make_judge_request())
 
     def test_stalled_attempt_is_sent_again(self, tmp_path, make_judge_request, waits):
-        answers: list[ModelResponse | None] = [None, verdict()]
-
-        @asynccontextmanager
-        async def stalls_once(model: str) -> AsyncIterator[Model]:
-            async def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-                response = answers.pop(0)
-                if response is None:
-                    await anyio.sleep(10)
-                    raise AssertionError("The stalled attempt wasn't cut off.")
-                return response
-
-            yield FunctionModel(answer)
+        models = ScriptedGemini([Stall(), verdict()])
 
         judgement = judge_with(
-            tmp_path, stalls_once, request_time_limit_seconds=0.2, attempt_time_limit_seconds=0.1
+            tmp_path, models, request_time_limit_seconds=0.2, attempt_time_limit_seconds=0.1
         ).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
-        assert answers == []
+        assert models.answers == []
         assert waits == []
 
     def test_request_stalling_on_every_attempt_is_the_request_limit_error(
         self, tmp_path, make_judge_request, waits
     ):
-        @asynccontextmanager
-        async def stalls(model: str) -> AsyncIterator[Model]:
-            async def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-                await anyio.sleep(10)
-                return verdict()
-
-            yield FunctionModel(answer)
+        models = ScriptedGemini([Stall() for _ in range(4)])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.35s to answer.$"):
             judge_with(
-                tmp_path, stalls, request_time_limit_seconds=0.35, attempt_time_limit_seconds=0.1
+                tmp_path, models, request_time_limit_seconds=0.35, attempt_time_limit_seconds=0.1
             ).judge(make_judge_request())
+        assert models.answers == []
 
     def test_timeout_at_the_deadline_is_the_time_limit_error(self, tmp_path, make_judge_request):
         @asynccontextmanager
@@ -480,18 +467,11 @@ class TestApiJudge:
     def test_request_stalled_at_the_deadline_is_the_time_limit_error(
         self, tmp_path, make_judge_request
     ):
-        @asynccontextmanager
-        async def stalls(model: str) -> AsyncIterator[Model]:
-            async def answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-                await anyio.sleep(10)
-                return verdict()
-
-            yield FunctionModel(answer)
-
+        models = ScriptedGemini([Stall()])
         deadline = Deadline(minutes=1, started=time.monotonic() - 59.8)
 
         with pytest.raises(JudgeTimeout, match="^The review reached its 1-minute time limit.$"):
-            judge_with(tmp_path, stalls, deadline=deadline).judge(make_judge_request())
+            judge_with(tmp_path, models, deadline=deadline).judge(make_judge_request())
 
     def test_each_call_holds_a_process_slot(self, tmp_path, make_judge_request):
         processes = RecordingProcesses()
