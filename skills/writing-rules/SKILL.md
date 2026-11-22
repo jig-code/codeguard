@@ -39,9 +39,10 @@ extra clause in the statement, as a separate test. Code can pass that test and s
 break the statement. The statement alone decides each piece of code; the judge reads the
 statement as a reviewer would, and says on what ground the code keeps or breaks it.
 
-- **A statement, never a question.** The judge decides whether code breaks the
-  convention it is given; a question in its place leaves the judge to infer which
-  answer is the violation.
+- **A statement, never a question or a command.** The judge decides whether code breaks
+  the convention it is given. A question in its place leaves the judge to infer which
+  answer is the violation, and a command tells the judge what to do instead of saying
+  what code must never do.
 - **What code must never do.** The statement says what code must never do, so the judge
   knows which code to flag.
 - **Once.** The statement says what it forbids once, since the judge reads a repeat as a
