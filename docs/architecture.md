@@ -115,9 +115,11 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
 - Follow the writing-rules reference's
-  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
-  and [docs/testing.md](testing.md) for a fixture that holds a pre-existing violation to
-  test review scope.
+  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+  codeguard's own judge fixtures test the judge, not their rule, and follow the LLM test
+  guidelines'
+  [Cases](../.claude/skills/test-quality/references/eval-testing-guidelines.md#cases)
+  instead.
 
 ## Invariants
 
