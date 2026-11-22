@@ -22,7 +22,7 @@ runs:
     - run: npm install --global @anthropic-ai/claude-code@2.1.319
       shell: bash
     - run: >-
-        claude plugin eval . --scaffold --allow-tools Write Edit
+        claude plugin eval ./plugin --scaffold --allow-tools Write Edit
         --runs "$RUNS" --threshold 1 --ablation none
         --max-cost-usd "$MAX_COST_USD"
         --model "$AGENT_MODEL" --judge-model "$GRADER_MODEL"

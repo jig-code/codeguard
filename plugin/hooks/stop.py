@@ -6,8 +6,8 @@
 
 Usage: uv run --script stop.py <host>
 
-Runs the codeguard this plugin ships, `bin/codeguard`. `CODEGUARD=<path>` runs another
-build instead, such as a checkout's `.venv/bin/codeguard`.
+Runs `bin/codeguard`, which runs the codeguard release this plugin's version names.
+`CODEGUARD=<path>` runs another build instead, such as a checkout's `.venv/bin/codeguard`.
 
 Blocking diagnostics go to the agent in `reason`; everything else, codeguard's own
 failures included, goes to the user in `systemMessage`. Always exits 0 with one JSON

@@ -13,7 +13,7 @@ pull requests too.
 |---|---|
 | Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals: `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
@@ -32,9 +32,6 @@ Three kinds of eval call a model, and each tests something different:
 - Rule evals, run with `codeguard eval`, test a project's or package's judge rules: that
   each rule's wording gets the right verdicts. They are a codeguard feature, not one of
   codeguard's tests ([The rule eval](rule-formats.md#the-rule-eval)).
-
-The fixture cases use the rule eval format but test the judge, so the writing-rules
-guidance on rule eval cases doesn't apply to them.
 
 Plain `uv run pytest` calls no model and deselects the LLM tests. `-n 4` only sets how
 many LLM tests run at once: any number gives the same result.

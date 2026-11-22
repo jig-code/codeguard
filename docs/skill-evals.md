@@ -1,8 +1,8 @@
 # Testing the writing-rules skill
 
-The writing-rules skill, in `skills/writing-rules/`, is the guidance codeguard's plugin
-gives an agent that writes or changes a codeguard rule. Its evals are in
-`evals/writing-rules/` and run with `claude plugin eval`.
+The writing-rules skill, in `plugin/skills/writing-rules/`, is the guidance codeguard's
+plugin gives an agent that writes or changes a codeguard rule. Its evals are in
+`plugin/evals/writing-rules/` and run with `claude plugin eval`.
 [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
 command, how to write a case and its graders, and how cases are scored. This page says
 only what codeguard adds. [Testing codeguard](testing.md) says when to run them.
@@ -17,7 +17,7 @@ does against what the skill says. A case is one of two kinds:
 | A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/rules/judge/<id>.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
 | A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, say only that the convention isn't codeguard's to check, and offer no other rule | That no rule file was written, that the agent's reply says the convention isn't codeguard's to check, and that the reply offers no other rule |
 
-The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
+The cases are in [`plugin/evals/writing-rules/`](../plugin/evals/writing-rules/).
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
 never check whether a rule the agent writes works, or whether its rule tests or rule
@@ -67,7 +67,7 @@ id or inference profile for the agent and for the graders, run the command with
 `--runs 1`, then again with `--runs 2`:
 
 ```sh
-CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Edit \
+CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval ./plugin --scaffold --allow-tools Write Edit \
   --runs 1 --threshold 1 --ablation none \
   --model <agent model id> --judge-model <grader model id> \
   --trust-plugin --no-publish
@@ -76,8 +76,5 @@ CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Ed
 Without Bedrock, the same command runs on a signed-in `claude` CLI: leave out
 `CLAUDE_CODE_USE_BEDROCK=1` and give `--model` and `--judge-model` the names of the
 models CI's Bedrock profiles serve. `--case <name>` runs only the case a change touches.
-
-Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
-links uv makes there.
 
 CI runs them from `.github/workflows/skill-evals.yaml`.
