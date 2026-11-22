@@ -35,6 +35,7 @@ Control time with an injected clock or start time rather than a patch.
   final newline, or bytes that aren't UTF-8. A block would hide them.
 - A single line of code stays a plain string.
 - Give a test a YAML file either from Python data dumped with `yaml.safe_dump` or as a
-  real `.yaml` file under `tests/data/` that the test reads or copies, never from a hand-built string: both read as the
-  structure they hold, and tooling can check that they are valid YAML. Keep a string only
-  when the test is about the YAML text itself, such as a file that doesn't parse.
+  real `.yaml` file under `tests/data/` that the test reads or copies, never from a
+  hand-built string: both read as the structure they hold, and tooling can check that
+  they are valid YAML. Keep a string only when the test is about the YAML text itself,
+  such as a file that doesn't parse.
