@@ -16,8 +16,7 @@ convention that a model judges each change against.
    rewrite the statement until it meets them all:
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
-   3. Name what code does, never what code leaves out: use no "without" followed by a
-      verb, no "fail to", no "skip", and no "leave" with "undone".
+   3. Name what code does, never what code leaves out.
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
@@ -89,7 +88,7 @@ Every rule states the harm it prevents, in one or two sentences, so it can be re
 when the code or the design around it changes. A rule nobody can trace to a reason can
 only be kept or dropped blind.
 
-- A judge rule: a `## Why` section in its skill (`references/judge-rules.md`).
+- A judge rule: a `## Why` section in its rule file (`references/judge-rules.md`).
 - A pattern rule: `metadata.why` in its rule file.
 - Optionally, where the rule comes from: a `Source:` line in the Why section, or
   `metadata.source`. A link to public documentation, or the bug, PR comment or team
@@ -102,13 +101,15 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
 - Pattern rule: `.codeguard/rules/pattern/<id>.yml`; its tests:
   `.codeguard/rule-tests/<id>-test.yml`, never under the rules directory (every YAML file
   there loads as a rule).
-- Judge rule: the skill `.codeguard/skills/<id>/SKILL.md`, the binding
+- Judge rule: the rule file `.codeguard/rules/judge/<id>.md`, the binding
   `.codeguard/bindings/<id>.yaml` and the rule eval `.codeguard/rule-evals/<id>.yaml`.
   A judge rule isn't written until all three exist; write the binding and the rule eval
-  in the same pass as the skill, never leave them for later.
-  - The binding sets `skill` (the skill's directory), `paths` (globs of the files the
-    rule reviews) and `triggers` (the change kinds or gates that call the judge, never
-    `any`, `code`, `function-body` or `function-signature`).
+  in the same pass as the rule file, never leave them for later.
+  - The rule file is plain Markdown, with no frontmatter: a title, the convention and
+    `## Why` (`references/judge-rules.md`). The rule's id is the file's name without `.md`.
+  - The binding sets `rule` (the rule's id), `paths` (globs of the files the rule
+    reviews) and `triggers` (the change kinds or gates that call the judge, never `any`,
+    `code`, `function-body` or `function-signature`).
   - The rule eval holds `cases`, each with a `name`, `inputs` (`file`, the edited file's
     path; `before`, the file before the edit, left out for a new file; `after`, the
     file after it) and `expected_output` (`outcome`: `invalid`, `valid` or `skipped`).
@@ -118,9 +119,9 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
   each ruleset's directory instead of `.codeguard/`.
 - A judge rule whose convention holds in several languages is one rule: its binding's
   paths name each language, and its eval has cases in each (codeguard's
-  `docs/rule-formats.md`, A rule in several languages). The skill is written in no language's names, syntax or
-  libraries, and gets no supplement per language. Never copy a convention into a rule
-  per language. A pattern rule matches one language.
+  `docs/rule-formats.md`, A rule in several languages). The rule file is written in no
+  language's names, syntax or libraries, and gets no supplement per language. Never copy
+  a convention into a rule per language. A pattern rule matches one language.
 - Before writing a rule, check the rulesets the project opts into in
   `.codeguard/config.yaml`. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.

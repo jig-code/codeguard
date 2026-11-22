@@ -18,6 +18,7 @@ from codeguard.review import (
 )
 from codeguard.rule_validation import (
     BroadTriggersValidation,
+    RuleFormatValidation,
     RuleValidations,
     TriggerCaseValidation,
     WhyValidation,
@@ -103,6 +104,7 @@ class Rules:
                 for loader in loaders
                 for validation in (
                     BroadTriggersValidation(loader),
+                    RuleFormatValidation(loader),
                     TriggerCaseValidation(root, loader, self.ast_grep),
                     WhyValidation(loader, missing_why),
                 )

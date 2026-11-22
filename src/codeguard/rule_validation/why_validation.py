@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
-from codeguard.review import Bindings
+from codeguard.rule_validation.judge_rule_file import JudgeRuleFile
 from codeguard.rule_validation.validation_result import ValidationResult
 
 
@@ -21,9 +21,10 @@ class WhyValidationMode(StrEnum):
 
 @dataclass(frozen=True)
 class WhyValidation:
-    """Report each rule that doesn't say why it exists: a judge rule's `## Why` section,
+    """Report each rule that doesn't say why it exists: a legacy skill's `## Why` section,
     a pattern rule's `metadata.why`. A rule nobody can trace to a reason can't be
-    reviewed when the code or the design around it changes."""
+    reviewed when the code or the design around it changes. A rule file bound with `rule`
+    is held to this by RuleFormatValidation."""
 
     ruleset: RulesetLoader
     mode: WhyValidationMode = WhyValidationMode.WARN
@@ -34,13 +35,12 @@ class WhyValidation:
         except ConfigError:
             # BroadTriggersValidation already reports an invalid ruleset.
             return ValidationResult()
-        judge_rules = (binding.judge_rule for binding in Bindings.from_rulesets([ruleset]))
         return self.mode.result(
             (
                 *(
-                    f"{rule.name}: no ## Why section in its rule file"
-                    for rule in sorted(judge_rules, key=lambda rule: rule.name)
-                    if not rule.says_why
+                    f"{rule_file.rule_id}: no ## Why section in its rule file"
+                    for rule_file in JudgeRuleFile.from_ruleset(ruleset)
+                    if rule_file.is_legacy_skill and not rule_file.outline.says_why
                 ),
                 *(
                     f"{rule.id}: no metadata.why"

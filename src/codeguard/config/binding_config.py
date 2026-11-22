@@ -38,6 +38,10 @@ class BindingConfig(BaseModel):
         return JudgeChoice(provider=self.provider, model=self.model)
 
     @property
+    def is_legacy_skill(self) -> bool:
+        return self.skill is not None
+
+    @property
     def rule_id(self) -> str:
         if self.skill is not None:
             return self.skill.name
