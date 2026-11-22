@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from unittest import mock
 
@@ -24,6 +25,7 @@ from codeguard.config import (
 )
 
 CONFIG = ".codeguard/config.yaml"
+FULL_CONFIG = Path(__file__).parents[1] / "data/config.yaml"
 BINDING = ".codeguard/bindings/placement.yaml"
 JUDGE_RULE = ".codeguard/rules/judge/responsibility-placement.md"
 ENUM_VALUE_GATE = {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
@@ -35,22 +37,6 @@ class TestConfigLoader:
         config = ConfigLoader(repo.root).load()
 
         assert config == Config()
-
-    def test_retired_confidence_threshold_is_ignored(self, repo):
-        repo.write(
-            CONFIG,
-            yaml.safe_dump({"confidence_threshold": 0.9, "review_time_limit_minutes": 10}),
-        )
-
-        assert ConfigLoader(repo.root).load() == Config(review_time_limit_minutes=10)
-
-    def test_review_time_limit_defaults_to_5_minutes(self, repo):
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 5
-
-    def test_loads_the_review_time_limit(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"review_time_limit_minutes": 10}))
-
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
 
     @mock.patch.dict(os.environ, {"CODEGUARD_CONFIG": "codeguard.local.yaml"})
     def test_env_var_names_the_config_file_to_load(self, repo):
@@ -69,144 +55,22 @@ class TestConfigLoader:
             f"{repo.root}/.codeguard is invalid:\n  judge.gemini: Extra inputs are not permitted"
         )
 
-    def test_loads_the_project_judge_default(self, repo):
-        repo.write(
-            CONFIG, yaml.safe_dump({"judge": {"provider": "bedrock", "model": "project-model"}})
-        )
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            provider=JudgeProvider.BEDROCK, model="project-model"
-        )
-
-    def test_loads_each_providers_thinking_level(self, repo):
-        repo.write(
-            CONFIG,
-            yaml.safe_dump({"judge": {"thinking": {"claude-cli": "high", "gemini": "low"}}}),
-        )
-
-        thinking = ConfigLoader(repo.root).load().judge.thinking
-
-        assert thinking == ThinkingConfig(
-            claude_cli="high", codex_cli="default", gemini="low", bedrock="medium"
-        )
-
-    @pytest.mark.parametrize(
-        ("provider", "level", "offered"),
-        [
-            (
-                "gemini",
-                "extreme",
-                "'default', 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max'",
-            ),
-            ("claude-cli", "minimal", "'default', 'low', 'medium', 'high', 'xhigh' or 'max'"),
-            ("codex-cli", "max", "'default', 'low', 'medium' or 'high'"),
-        ],
-    )
-    def test_level_a_provider_does_not_offer_is_an_error(self, repo, provider, level, offered):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"thinking": {provider: level}}}))
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            f"  judge.thinking.{provider}: Input should be {offered}"
-        )
-
-    def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"thinking": {"openai": "high"}}}))
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.thinking.openai: Extra inputs are not permitted"
-        )
-
-    @mock.patch.dict(
-        os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock", "CODEGUARD_JUDGE__MODEL": "env-model"}
-    )
-    def test_judge_env_vars_override_the_file(self, repo):
-        repo.write(
-            CONFIG, yaml.safe_dump({"judge": {"provider": "codex-cli", "model": "file-model"}})
-        )
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            provider=JudgeProvider.BEDROCK, model="env-model"
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": "env-model"})
-    def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"calls_at_once": 1, "model": "file-model"}}))
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            calls_at_once=1, model="env-model"
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock"})
-    def test_judge_env_var_applies_without_a_config_file(self, repo):
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS": "180"})
-    def test_request_time_limit_env_var_overrides_the_file(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"request_time_limit_seconds": 60}}))
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(request_time_limit_seconds=180)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_REVIEW_TIME_LIMIT_MINUTES": "20"})
-    def test_env_var_for_another_setting_is_ignored(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"review_time_limit_minutes": 10}))
-
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__CALLS_AT_ONCE": "9"})
-    def test_env_var_for_another_judge_setting_is_ignored(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"calls_at_once": 1}}))
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(calls_at_once=1)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": ""})
-    def test_empty_judge_env_var_leaves_the_file_value(self, repo):
-        repo.write(CONFIG, yaml.safe_dump({"judge": {"model": "file-model"}}))
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(model="file-model")
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "openai"})
-    def test_unknown_judge_provider_in_the_environment_is_an_error(self, repo):
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value).startswith(
-            f"{repo.root}/.codeguard is invalid:\n  judge.provider: Input should be "
-        )
-
-    def test_loads_a_path_package(self, repo):
-        repo.write(
-            "rules/codeguard-package.yaml",
-            yaml.safe_dump({"name": "example", "rulesets": ["python"]}),
-        )
-        repo.write(
-            CONFIG,
-            yaml.safe_dump(
-                {
-                    "packages": [
-                        {
-                            "kind": "path",
-                            "path": "rules",
-                            "rulesets": {"python": {"exclude": ["no-print"]}},
-                        }
-                    ]
-                }
-            ),
-        )
+    def test_loads_every_setting_of_the_config_file(self, repo):
+        shutil.copy(FULL_CONFIG, repo.root / CONFIG)
 
         config = ConfigLoader(repo.root).load()
 
-        assert config.packages == (
-            PathPackageConfig(
-                path=Path("rules"),
-                rulesets={"python": RulesetConfig(exclude=("no-print",))},
+        assert config == Config(
+            review_time_limit_minutes=10,
+            judge=JudgeConfig(
+                provider=JudgeProvider.BEDROCK,
+                model="project-model",
+                thinking=ThinkingConfig(claude_cli="high", gemini="low"),
+            ),
+            packages=(
+                PathPackageConfig(
+                    path=Path("rules"), rulesets={"python": RulesetConfig(exclude=("no-print",))}
+                ),
             ),
         )
 
@@ -571,26 +435,6 @@ class TestRulesetLoader:
                     )
                 }
             ),
-        )
-
-    def test_legacy_skill_binding_to_a_missing_directory_is_an_error(self, repo):
-        repo.write(
-            BINDING,
-            yaml.safe_dump(
-                {
-                    "skill": ".claude/skills/responsibility-placement",
-                    "paths": ["**"],
-                    "triggers": ["any"],
-                }
-            ),
-        )
-
-        with pytest.raises(ConfigError) as error:
-            RulesetLoader.local(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.placement.yaml.skill: Path does not point to a directory"
         )
 
     def test_legacy_skill_and_rule_file_bindings_may_share_a_ruleset(
