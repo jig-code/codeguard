@@ -75,20 +75,20 @@ cases:
       file: payments/charge.py
       before: |
         def charge(gateway, amount: int) -> None:
-            if amount <= 0:
-                return
             try:
                 gateway.charge(amount)
             except Exception:
                 pass
+            if amount > 1_000:
+                gateway.flag_for_review(amount)
       after: |
         def charge(gateway, amount: int) -> None:
-            if amount < 0:
-                return
             try:
                 gateway.charge(amount)
             except Exception:
                 pass
+            if amount > 10_000:
+                gateway.flag_for_review(amount)
     expected_output:
       outcome: valid
   - name: a re-raising handler added beside a function that discards its exception
