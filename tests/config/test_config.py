@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import pytest
+import yaml
 from packaging.version import Version
 from pydantic import ValidationError
-from rules_package import NO_PRINT_RULE
+from rules_package import NO_PRINT_RULE_FILE
 
 from codeguard.config import (
     BindingConfig,
@@ -19,6 +20,7 @@ from codeguard.config import (
     RuleOverride,
     RulesetConfig,
     Severity,
+    ThinkingConfig,
 )
 
 CPUS = 7
@@ -120,6 +122,21 @@ class TestBindingsConfig:
         assert messages(error) == [
             "Value error, rule placement is bound more than once: a.yaml, b.yaml"
         ]
+
+    def test_legacy_skill_binding_to_a_missing_directory_is_an_error(self, tmp_path):
+        with pytest.raises(ValidationError) as error:
+            BindingsConfig.model_validate(
+                {
+                    "placement.yaml": {
+                        "skill": ".claude/skills/responsibility-placement",
+                        "paths": ["**"],
+                        "triggers": ["any"],
+                    }
+                },
+                context={"working_tree": tmp_path},
+            )
+
+        assert messages(error) == ["Path does not point to a directory"]
 
 
 class TestPackagesConfig:
@@ -508,10 +525,12 @@ class TestRuleset:
         assert judge == override
 
     def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
-        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE)
+        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE_FILE.read_text())
         directory.write(
             "gates/enum-value.yml",
-            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+            yaml.safe_dump(
+                {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+            ),
         )
 
         rules = make_ruleset(root=directory.root).pattern_rules()
@@ -528,7 +547,7 @@ class TestRuleset:
         ]
 
     def test_malformed_pattern_rule_file_is_a_config_error(self, directory, make_ruleset):
-        directory.write("rules/pattern/bad.yml", "bogus: 1\n")
+        directory.write("rules/pattern/bad.yml", yaml.safe_dump({"bogus": 1}))
 
         with pytest.raises(ConfigError) as error:
             make_ruleset(root=directory.root).pattern_rules()
@@ -657,6 +676,96 @@ class TestJudgeChoice:
             "judge.model in .codeguard/config.yaml (or CODEGUARD_JUDGE__MODEL), or "
             "judge.model in its package's codeguard-package.yaml"
         )
+
+
+class TestConfig:
+    def test_review_time_limit_defaults_to_5_minutes(self):
+        assert Config().review_time_limit_minutes == 5
+
+    def test_retired_confidence_threshold_is_ignored(self):
+        config = Config.model_validate(
+            {"confidence_threshold": 0.9, "review_time_limit_minutes": 10}
+        )
+
+        assert config == Config(review_time_limit_minutes=10)
+
+    def test_judge_env_vars_override_the_file_settings(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
+
+        config = Config(judge={"provider": "codex-cli", "model": "file-model"})
+
+        assert config.judge == JudgeConfig(provider=JudgeProvider.BEDROCK, model="env-model")
+
+    def test_judge_env_var_keeps_the_other_file_judge_settings(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "env-model")
+
+        config = Config(judge={"calls_at_once": 1, "model": "file-model"})
+
+        assert config.judge == JudgeConfig(calls_at_once=1, model="env-model")
+
+    def test_judge_env_var_applies_without_file_settings(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "bedrock")
+
+        assert Config().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
+
+    def test_request_time_limit_env_var_overrides_the_file_setting(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS", "180")
+
+        config = Config(judge={"request_time_limit_seconds": 60})
+
+        assert config.judge == JudgeConfig(request_time_limit_seconds=180)
+
+    def test_env_var_for_another_setting_is_ignored(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_REVIEW_TIME_LIMIT_MINUTES", "20")
+
+        assert Config(review_time_limit_minutes=10).review_time_limit_minutes == 10
+
+    def test_env_var_for_another_judge_setting_is_ignored(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__CALLS_AT_ONCE", "9")
+
+        assert Config(judge={"calls_at_once": 1}).judge == JudgeConfig(calls_at_once=1)
+
+    def test_empty_judge_env_var_leaves_the_file_setting(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__MODEL", "")
+
+        assert Config(judge={"model": "file-model"}).judge == JudgeConfig(model="file-model")
+
+    def test_unknown_judge_provider_in_the_environment_is_an_error(self, monkeypatch):
+        monkeypatch.setenv("CODEGUARD_JUDGE__PROVIDER", "openai")
+
+        with pytest.raises(ValidationError) as error:
+            Config()
+
+        assert messages(error) == [
+            "Input should be 'claude-cli', 'gemini', 'bedrock' or 'codex-cli'"
+        ]
+
+
+class TestThinkingConfig:
+    @pytest.mark.parametrize(
+        ("provider", "level", "offered"),
+        [
+            (
+                "gemini",
+                "extreme",
+                "'default', 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max'",
+            ),
+            ("claude-cli", "minimal", "'default', 'low', 'medium', 'high', 'xhigh' or 'max'"),
+            ("codex-cli", "max", "'default', 'low', 'medium' or 'high'"),
+        ],
+    )
+    def test_level_a_provider_does_not_offer_is_an_error(self, provider, level, offered):
+        with pytest.raises(ValidationError) as error:
+            ThinkingConfig.model_validate({provider: level})
+
+        assert messages(error) == [f"Input should be {offered}"]
+
+    def test_level_for_an_unknown_provider_is_an_error(self):
+        with pytest.raises(ValidationError) as error:
+            ThinkingConfig.model_validate({"openai": "high"})
+
+        assert messages(error) == ["Extra inputs are not permitted"]
 
 
 class TestJudgeConfig:

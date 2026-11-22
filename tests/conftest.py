@@ -1,4 +1,5 @@
 import os
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -23,6 +24,8 @@ from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
+
+PROJECT_CODEGUARD = Path(__file__).parent / "data/project-codeguard"
 
 register(MakeLineRange)
 register(MakeDiagnostic)
@@ -108,31 +111,7 @@ def git_repo(tmp_path: Path) -> GitRepo:
 @pytest.fixture
 def repo(tmp_path: Path) -> GitRepo:
     git_repo = GitRepo.init(tmp_path.resolve())
-    git_repo.write(
-        ".codeguard/rules/pattern/no-print.yml",
-        "id: no-print\n"
-        "language: python\n"
-        "severity: error\n"
-        "message: Use logging, not print.\n"
-        "note: |\n"
-        "  print bypasses log levels.\n"
-        "  Call logger.info instead.\n"
-        "metadata:\n"
-        "  why: Print output skips the log levels and handlers production reads.\n"
-        "rule:\n"
-        "  pattern: print($$$ARGS)\n",
-    )
-    git_repo.write(
-        ".codeguard/rules/pattern/no-breakpoint.yml",
-        "id: no-breakpoint\n"
-        "language: python\n"
-        "severity: warning\n"
-        "message: Remove breakpoint().\n"
-        "metadata:\n"
-        "  why: A breakpoint left in the code stops a run that nobody is watching.\n"
-        "rule:\n"
-        "  pattern: breakpoint()\n",
-    )
+    shutil.copytree(PROJECT_CODEGUARD, git_repo.root / ".codeguard")
     git_repo.commit("Add rules")
     return git_repo
 

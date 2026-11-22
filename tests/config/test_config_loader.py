@@ -1,8 +1,10 @@
 import os
+import shutil
 from pathlib import Path
 from unittest import mock
 
 import pytest
+import yaml
 
 from codeguard.config import (
     BindingConfig,
@@ -23,10 +25,11 @@ from codeguard.config import (
 )
 
 CONFIG = ".codeguard/config.yaml"
+FULL_CONFIG = Path(__file__).parents[1] / "data/config.yaml"
 BINDING = ".codeguard/bindings/placement.yaml"
 JUDGE_RULE = ".codeguard/rules/judge/responsibility-placement.md"
-ENUM_VALUE_GATE = "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n"
-NO_PRINT_RULE = "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$)\n"
+ENUM_VALUE_GATE = {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+NO_PRINT_RULE = {"id": "no-print", "language": "python", "rule": {"pattern": "print($$$)"}}
 
 
 class TestConfigLoader:
@@ -35,28 +38,15 @@ class TestConfigLoader:
 
         assert config == Config()
 
-    def test_retired_confidence_threshold_is_ignored(self, repo):
-        repo.write(CONFIG, "confidence_threshold: 0.9\nreview_time_limit_minutes: 10\n")
-
-        assert ConfigLoader(repo.root).load() == Config(review_time_limit_minutes=10)
-
-    def test_review_time_limit_defaults_to_5_minutes(self, repo):
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 5
-
-    def test_loads_the_review_time_limit(self, repo):
-        repo.write(CONFIG, "review_time_limit_minutes: 10\n")
-
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
-
     @mock.patch.dict(os.environ, {"CODEGUARD_CONFIG": "codeguard.local.yaml"})
     def test_env_var_names_the_config_file_to_load(self, repo):
-        repo.write(CONFIG, "review_time_limit_minutes: 10\n")
-        repo.write("codeguard.local.yaml", "review_time_limit_minutes: 20\n")
+        repo.write(CONFIG, yaml.safe_dump({"review_time_limit_minutes": 10}))
+        repo.write("codeguard.local.yaml", yaml.safe_dump({"review_time_limit_minutes": 20}))
 
         assert ConfigLoader(repo.root).load().review_time_limit_minutes == 20
 
     def test_gemini_settings_in_the_config_file_are_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  gemini:\n    project: my-project\n")
+        repo.write(CONFIG, yaml.safe_dump({"judge": {"gemini": {"project": "my-project"}}}))
 
         with pytest.raises(ConfigError) as error:
             ConfigLoader(repo.root).load()
@@ -65,129 +55,22 @@ class TestConfigLoader:
             f"{repo.root}/.codeguard is invalid:\n  judge.gemini: Extra inputs are not permitted"
         )
 
-    def test_loads_the_project_judge_default(self, repo):
-        repo.write(CONFIG, "judge:\n  provider: bedrock\n  model: project-model\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            provider=JudgeProvider.BEDROCK, model="project-model"
-        )
-
-    def test_loads_each_providers_thinking_level(self, repo):
-        repo.write(CONFIG, "judge:\n  thinking:\n    claude-cli: high\n    gemini: low\n")
-
-        thinking = ConfigLoader(repo.root).load().judge.thinking
-
-        assert thinking == ThinkingConfig(
-            claude_cli="high", codex_cli="default", gemini="low", bedrock="medium"
-        )
-
-    @pytest.mark.parametrize(
-        ("provider", "level", "offered"),
-        [
-            (
-                "gemini",
-                "extreme",
-                "'default', 'minimal', 'low', 'medium', 'high', 'xhigh' or 'max'",
-            ),
-            ("claude-cli", "minimal", "'default', 'low', 'medium', 'high', 'xhigh' or 'max'"),
-            ("codex-cli", "max", "'default', 'low', 'medium' or 'high'"),
-        ],
-    )
-    def test_level_a_provider_does_not_offer_is_an_error(self, repo, provider, level, offered):
-        repo.write(CONFIG, f"judge:\n  thinking:\n    {provider}: {level}\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            f"  judge.thinking.{provider}: Input should be {offered}"
-        )
-
-    def test_thinking_level_for_an_unknown_provider_is_an_error(self, repo):
-        repo.write(CONFIG, "judge:\n  thinking:\n    openai: high\n")
-
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  judge.thinking.openai: Extra inputs are not permitted"
-        )
-
-    @mock.patch.dict(
-        os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock", "CODEGUARD_JUDGE__MODEL": "env-model"}
-    )
-    def test_judge_env_vars_override_the_file(self, repo):
-        repo.write(CONFIG, "judge:\n  provider: codex-cli\n  model: file-model\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            provider=JudgeProvider.BEDROCK, model="env-model"
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": "env-model"})
-    def test_judge_env_var_keeps_the_file_other_judge_settings(self, repo):
-        repo.write(CONFIG, "judge:\n  calls_at_once: 1\n  model: file-model\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(
-            calls_at_once=1, model="env-model"
-        )
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "bedrock"})
-    def test_judge_env_var_applies_without_a_config_file(self, repo):
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(provider=JudgeProvider.BEDROCK)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS": "180"})
-    def test_request_time_limit_env_var_overrides_the_file(self, repo):
-        repo.write(CONFIG, "judge:\n  request_time_limit_seconds: 60\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(request_time_limit_seconds=180)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_REVIEW_TIME_LIMIT_MINUTES": "20"})
-    def test_env_var_for_another_setting_is_ignored(self, repo):
-        repo.write(CONFIG, "review_time_limit_minutes: 10\n")
-
-        assert ConfigLoader(repo.root).load().review_time_limit_minutes == 10
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__CALLS_AT_ONCE": "9"})
-    def test_env_var_for_another_judge_setting_is_ignored(self, repo):
-        repo.write(CONFIG, "judge:\n  calls_at_once: 1\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(calls_at_once=1)
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__MODEL": ""})
-    def test_empty_judge_env_var_leaves_the_file_value(self, repo):
-        repo.write(CONFIG, "judge:\n  model: file-model\n")
-
-        assert ConfigLoader(repo.root).load().judge == JudgeConfig(model="file-model")
-
-    @mock.patch.dict(os.environ, {"CODEGUARD_JUDGE__PROVIDER": "openai"})
-    def test_unknown_judge_provider_in_the_environment_is_an_error(self, repo):
-        with pytest.raises(ConfigError) as error:
-            ConfigLoader(repo.root).load()
-
-        assert str(error.value).startswith(
-            f"{repo.root}/.codeguard is invalid:\n  judge.provider: Input should be "
-        )
-
-    def test_loads_a_path_package(self, repo):
-        repo.write("rules/codeguard-package.yaml", "name: example\nrulesets: [python]\n")
-        repo.write(
-            CONFIG,
-            "packages:\n"
-            "  - kind: path\n"
-            "    path: rules\n"
-            "    rulesets:\n"
-            "      python:\n"
-            "        exclude: [no-print]\n",
-        )
+    def test_loads_every_setting_of_the_config_file(self, repo):
+        shutil.copy(FULL_CONFIG, repo.root / CONFIG)
 
         config = ConfigLoader(repo.root).load()
 
-        assert config.packages == (
-            PathPackageConfig(
-                path=Path("rules"),
-                rulesets={"python": RulesetConfig(exclude=("no-print",))},
+        assert config == Config(
+            review_time_limit_minutes=10,
+            judge=JudgeConfig(
+                provider=JudgeProvider.BEDROCK,
+                model="project-model",
+                thinking=ThinkingConfig(claude_cli="high", gemini="low"),
+            ),
+            packages=(
+                PathPackageConfig(
+                    path=Path("rules"), rulesets={"python": RulesetConfig(exclude=("no-print",))}
+                ),
             ),
         )
 
@@ -207,8 +90,14 @@ class TestRulesetLoader:
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/python/placement.yaml",
-            "rule: responsibility-placement\n"
-            "paths: [app/**/*.py]\nseverity: warning\ntriggers: [any]\n",
+            yaml.safe_dump(
+                {
+                    "rule": "responsibility-placement",
+                    "paths": ["app/**/*.py"],
+                    "severity": "warning",
+                    "triggers": ["any"],
+                }
+            ),
         )
 
         ruleset = RulesetLoader.local(repo.root).load()
@@ -232,7 +121,9 @@ class TestRulesetLoader:
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yml",
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
+            yaml.safe_dump(
+                {"rule": "responsibility-placement", "paths": ["**"], "triggers": ["any"]}
+            ),
         )
 
         ruleset = RulesetLoader.local(repo.root).load()
@@ -241,7 +132,9 @@ class TestRulesetLoader:
 
     def test_rule_bound_in_a_yaml_and_a_yml_file_is_an_error(self, repo, make_judge_rule):
         repo.write(JUDGE_RULE, make_judge_rule().text)
-        binding = 'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n'
+        binding = yaml.safe_dump(
+            {"rule": "responsibility-placement", "paths": ["**"], "triggers": ["any"]}
+        )
         repo.write(BINDING, binding)
         repo.write(".codeguard/bindings/placement.yml", binding)
 
@@ -258,7 +151,13 @@ class TestRulesetLoader:
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
             BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [enum-value, fixture]\n',
+            yaml.safe_dump(
+                {
+                    "rule": "responsibility-placement",
+                    "paths": ["**"],
+                    "triggers": ["enum-value", "fixture"],
+                }
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -271,10 +170,12 @@ class TestRulesetLoader:
 
     def test_trigger_names_a_gate_of_the_ruleset(self, repo, make_judge_rule):
         repo.write(JUDGE_RULE, make_judge_rule().text)
-        repo.write(".codeguard/gates/enum-value.yml", ENUM_VALUE_GATE)
+        repo.write(".codeguard/gates/enum-value.yml", yaml.safe_dump(ENUM_VALUE_GATE))
         repo.write(
             BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [enum-value]\n',
+            yaml.safe_dump(
+                {"rule": "responsibility-placement", "paths": ["**"], "triggers": ["enum-value"]}
+            ),
         )
 
         ruleset = RulesetLoader.local(repo.root).load()
@@ -287,11 +188,13 @@ class TestRulesetLoader:
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
             ".codeguard/gates/fixture.yml",
-            "id: fixture\nlanguage: python\nrule:\n  kind: decorator\n",
+            yaml.safe_dump({"id": "fixture", "language": "python", "rule": {"kind": "decorator"}}),
         )
         repo.write(
             BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [fixture]\n',
+            yaml.safe_dump(
+                {"rule": "responsibility-placement", "paths": ["**"], "triggers": ["fixture"]}
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -304,7 +207,9 @@ class TestRulesetLoader:
     def test_gate_with_a_pattern_rule_id_is_an_error(self, repo):
         repo.write(
             ".codeguard/gates/no-print.yml",
-            "id: no-print\nlanguage: python\nrule:\n  pattern: print($$$A)\n",
+            yaml.safe_dump(
+                {"id": "no-print", "language": "python", "rule": {"pattern": "print($$$A)"}}
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -324,7 +229,7 @@ class TestRulesetLoader:
         (tmp_path / "python/rules/judge/placement.md").write_text(make_judge_rule().text)
         (tmp_path / "python/bindings").mkdir()
         (tmp_path / "python/bindings/placement.yaml").write_text(
-            'rule: placement\npaths: ["**"]\ntriggers: [any]\n'
+            yaml.safe_dump({"rule": "placement", "paths": ["**"], "triggers": ["any"]})
         )
 
         ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
@@ -347,7 +252,14 @@ class TestRulesetLoader:
         repo.write(JUDGE_RULE, make_judge_rule().text)
         repo.write(
             BINDING,
-            'rule: responsibility-placement\npath: ["**"]\nseverity: fatal\ntriggers: [any]\n',
+            yaml.safe_dump(
+                {
+                    "rule": "responsibility-placement",
+                    "path": ["**"],
+                    "severity": "fatal",
+                    "triggers": ["any"],
+                }
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -362,10 +274,12 @@ class TestRulesetLoader:
         )
 
     def test_loads_a_pattern_rule_binding(self, repo):
-        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        repo.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
         repo.write(
             ".codeguard/bindings/no-print.yaml",
-            'rule: no-print\npaths: ["**/*.py"]\nexclude_paths: ["tests/**"]\n',
+            yaml.safe_dump(
+                {"rule": "no-print", "paths": ["**/*.py"], "exclude_paths": ["tests/**"]}
+            ),
         )
 
         ruleset = RulesetLoader.local(repo.root).load()
@@ -379,8 +293,10 @@ class TestRulesetLoader:
         )
 
     def test_binding_for_a_missing_rule_names_both_places_it_could_be(self, repo):
-        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
-        repo.write(".codeguard/bindings/no-prnt.yaml", 'rule: no-prnt\npaths: ["**"]\n')
+        repo.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
+        repo.write(
+            ".codeguard/bindings/no-prnt.yaml", yaml.safe_dump({"rule": "no-prnt", "paths": ["**"]})
+        )
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
@@ -394,9 +310,12 @@ class TestRulesetLoader:
     def test_rule_id_of_both_a_judge_rule_and_a_pattern_rule_is_an_error(
         self, repo, make_judge_rule
     ):
-        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        repo.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
         repo.write(".codeguard/rules/judge/no-print.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/no-print.yaml", 'rule: no-print\npaths: ["**"]\n')
+        repo.write(
+            ".codeguard/bindings/no-print.yaml",
+            yaml.safe_dump({"rule": "no-print", "paths": ["**"]}),
+        )
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
@@ -409,8 +328,11 @@ class TestRulesetLoader:
 
     def test_malformed_pattern_rule_file_is_a_config_error(self, repo, make_judge_rule):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/rules/pattern/bad.yaml", "bogus: 1\n")
-        repo.write(".codeguard/bindings/placement.yaml", 'rule: placement\npaths: ["**"]\n')
+        repo.write(".codeguard/rules/pattern/bad.yaml", yaml.safe_dump({"bogus": 1}))
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            yaml.safe_dump({"rule": "placement", "paths": ["**"]}),
+        )
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
@@ -422,7 +344,7 @@ class TestRulesetLoader:
     )
     def test_rule_id_that_is_a_path_is_an_error(self, repo, make_judge_rule, rule):
         repo.write("placement.md", make_judge_rule().text)
-        repo.write(BINDING, f'rule: {rule}\npaths: ["**"]\ntriggers: [any]\n')
+        repo.write(BINDING, yaml.safe_dump({"rule": rule, "paths": ["**"], "triggers": ["any"]}))
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
@@ -435,11 +357,13 @@ class TestRulesetLoader:
     def test_legacy_skill_binding_that_also_names_a_pattern_rule_is_an_error(
         self, repo, make_judge_rule
     ):
-        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
+        repo.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
         repo.write(".codeguard/skills/no-print/SKILL.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/no-print.yaml",
-            'rule: no-print\nskill: .codeguard/skills/no-print\npaths: ["**"]\n',
+            yaml.safe_dump(
+                {"rule": "no-print", "skill": ".codeguard/skills/no-print", "paths": ["**"]}
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -452,9 +376,13 @@ class TestRulesetLoader:
         )
 
     def test_pattern_rule_bound_twice_is_an_error(self, repo):
-        repo.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE)
-        repo.write(".codeguard/bindings/a.yaml", 'rule: no-print\npaths: ["**"]\n')
-        repo.write(".codeguard/bindings/b.yaml", 'rule: no-print\npaths: ["**"]\n')
+        repo.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
+        repo.write(
+            ".codeguard/bindings/a.yaml", yaml.safe_dump({"rule": "no-print", "paths": ["**"]})
+        )
+        repo.write(
+            ".codeguard/bindings/b.yaml", yaml.safe_dump({"rule": "no-print", "paths": ["**"]})
+        )
 
         with pytest.raises(ConfigError) as error:
             RulesetLoader.local(repo.root).load()
@@ -467,7 +395,9 @@ class TestRulesetLoader:
     def test_binding_for_a_missing_judge_rule_is_an_error(self, repo):
         repo.write(
             BINDING,
-            'rule: responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
+            yaml.safe_dump(
+                {"rule": "responsibility-placement", "paths": ["**"], "triggers": ["any"]}
+            ),
         )
 
         with pytest.raises(ConfigError) as error:
@@ -486,7 +416,9 @@ class TestRulesetLoader:
         (tmp_path / "python/skills/placement/SKILL.md").write_text(make_judge_rule().text)
         (tmp_path / "python/bindings").mkdir()
         (tmp_path / "python/bindings/placement.yaml").write_text(
-            'skill: python/skills/placement\npaths: ["**"]\ntriggers: [any]\n'
+            yaml.safe_dump(
+                {"skill": "python/skills/placement", "paths": ["**"], "triggers": ["any"]}
+            )
         )
 
         ruleset = RulesetLoader(repo=tmp_path, root=tmp_path / "python").load()
@@ -505,20 +437,6 @@ class TestRulesetLoader:
             ),
         )
 
-    def test_legacy_skill_binding_to_a_missing_directory_is_an_error(self, repo):
-        repo.write(
-            BINDING,
-            'skill: .claude/skills/responsibility-placement\npaths: ["**"]\ntriggers: [any]\n',
-        )
-
-        with pytest.raises(ConfigError) as error:
-            RulesetLoader.local(repo.root).load()
-
-        assert str(error.value) == (
-            f"{repo.root}/.codeguard is invalid:\n"
-            "  bindings.placement.yaml.skill: Path does not point to a directory"
-        )
-
     def test_legacy_skill_and_rule_file_bindings_may_share_a_ruleset(
         self, directory, make_judge_rule
     ):
@@ -526,10 +444,12 @@ class TestRulesetLoader:
         directory.write("python/rules/judge/responsibility-placement.md", make_judge_rule().text)
         directory.write("python/skills/naming/SKILL.md", f"---\nname: naming\n---\n{naming.text}")
         directory.write(
-            "python/bindings/naming.yaml", 'skill: python/skills/naming\npaths: ["**"]\n'
+            "python/bindings/naming.yaml",
+            yaml.safe_dump({"skill": "python/skills/naming", "paths": ["**"]}),
         )
         directory.write(
-            "python/bindings/placement.yaml", 'rule: responsibility-placement\npaths: ["**"]\n'
+            "python/bindings/placement.yaml",
+            yaml.safe_dump({"rule": "responsibility-placement", "paths": ["**"]}),
         )
 
         ruleset = RulesetLoader(repo=directory.root, root=directory.root / "python").load()

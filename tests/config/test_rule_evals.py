@@ -24,17 +24,22 @@ class TestRuleEvals:
     ):
         (tmp_path / "rule-evals").mkdir()
         (tmp_path / "rule-evals/enum-usage.yaml").write_text(
-            "cases:\n"
-            "  - name: a string\n"
-            "    inputs:\n"
-            "      file: module.py\n"
-            "      after: |\n"
-            "        ship(status='shipped')\n"
-            "    expected_output:\n"
-            "      outcome: invalid\n"
-            "      violations:\n"
-            "        - lines: {start: 1, end: 2}\n"
-            "          message: Pass the member.\n"
+            yaml.safe_dump(
+                {
+                    "cases": [
+                        {
+                            "name": "a string",
+                            "inputs": {"file": "module.py", "after": "ship(status='shipped')\n"},
+                            "expected_output": {
+                                "outcome": "invalid",
+                                "violations": [
+                                    {"lines": {"start": 1, "end": 2}, "message": "Pass the member."}
+                                ],
+                            },
+                        }
+                    ]
+                }
+            )
         )
 
         [(_, rule_eval)] = RuleEvalReader(tmp_path).read()

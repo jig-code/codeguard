@@ -1,3 +1,4 @@
+import yaml
 from general_rule import (
     BINDING,
     BOTH_LANGUAGES,
@@ -31,8 +32,8 @@ class TestGeneralRuleEvals:
 
     def test_each_language_is_reported_on_its_own(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
-        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+        directory.write(BINDING, yaml.safe_dump({"rule": RULE} | BOTH_LANGUAGES))
+        directory.write(EVAL, yaml.safe_dump({"cases": [PYTHON_CASE, TYPESCRIPT_CASE]}))
 
         result = self.run(directory, RecordingJudge())
 
@@ -45,8 +46,8 @@ class TestGeneralRuleEvals:
 class TestGeneralRuleCoverage:
     def test_each_language_the_paths_name_needs_an_invalid_case(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
-        directory.write(EVAL, f"cases:\n{PYTHON_CASE}")
+        directory.write(BINDING, yaml.safe_dump({"rule": RULE} | BOTH_LANGUAGES))
+        directory.write(EVAL, yaml.safe_dump({"cases": [PYTHON_CASE]}))
 
         result = EvalCoverage(RulesetLoader.local(directory.root)).run()
 
@@ -56,8 +57,8 @@ class TestGeneralRuleCoverage:
 
     def test_a_case_in_each_language_passes(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
-        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+        directory.write(BINDING, yaml.safe_dump({"rule": RULE} | BOTH_LANGUAGES))
+        directory.write(EVAL, yaml.safe_dump({"cases": [PYTHON_CASE, TYPESCRIPT_CASE]}))
 
         assert EvalCoverage(RulesetLoader.local(directory.root)).run() == ValidationResult()
 
@@ -65,8 +66,8 @@ class TestGeneralRuleCoverage:
 class TestGeneralRuleTriggers:
     def test_a_case_in_a_language_without_change_kinds_fires_every_trigger(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
-        directory.write(EVAL, f"cases:\n{PYTHON_CASE}{TYPESCRIPT_CASE}")
+        directory.write(BINDING, yaml.safe_dump({"rule": RULE} | BOTH_LANGUAGES))
+        directory.write(EVAL, yaml.safe_dump({"cases": [PYTHON_CASE, TYPESCRIPT_CASE]}))
 
         result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()
 
@@ -74,9 +75,12 @@ class TestGeneralRuleTriggers:
 
     def test_a_skipped_case_in_such_a_language_fails(self, directory):
         directory.write(RULE_FILE, GENERAL_RULE)
-        directory.write(BINDING, f"rule: {RULE}\n{BOTH_LANGUAGES}")
+        directory.write(BINDING, yaml.safe_dump({"rule": RULE} | BOTH_LANGUAGES))
         directory.write(
-            EVAL, "cases:\n" + case("a renamed script", "orders.ts", "let s = 1;", "skipped")
+            EVAL,
+            yaml.safe_dump(
+                {"cases": [case("a renamed script", "orders.ts", "let s = 1;", "skipped")]}
+            ),
         )
 
         result = TriggerCaseValidation(directory.root, RulesetLoader.local(directory.root)).run()

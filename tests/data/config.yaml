@@ -1,0 +1,13 @@
+review_time_limit_minutes: 10
+judge:
+  provider: bedrock
+  model: project-model
+  thinking:
+    claude-cli: high
+    gemini: low
+packages:
+  - kind: path
+    path: rules
+    rulesets:
+      python:
+        exclude: [no-print]
