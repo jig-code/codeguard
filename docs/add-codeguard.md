@@ -27,7 +27,8 @@ In the project's `.claude/settings.json`:
 
 ## Codex
 
-Nothing to commit: each engineer adds codeguard's marketplace and installs the plugin
+Codex has no project file that adds a marketplace, so there's nothing to add to the
+repository: each engineer adds codeguard's marketplace and installs the plugin
 ([Use codeguard](using-codeguard.md#codex)).
 
 ## CI
