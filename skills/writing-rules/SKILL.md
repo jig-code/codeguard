@@ -54,8 +54,8 @@ statement as a reviewer would, and says on what ground the code keeps or breaks 
   forbids itself does. No clause says why the convention exists, or names an outcome
   that follows once that code has run: both belong in the rule's why, and in the
   statement the judge reads either as a second test.
-- **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
-  shape nobody listed is still decided by its statement. Rules that each police one code
+- **Abstract.** A rule states an intent, never a list of code shapes, values, names or the
+  ways code breaks it: a shape nobody listed is still decided by its statement. Rules that each police one code
   shape contradict each other and fail idiomatic code.
 - **One convention.** A rule stating several conventions under one intent is several
   rules. Split it into one rule per convention, or find the one statement they share.
