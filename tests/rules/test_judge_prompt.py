@@ -24,6 +24,11 @@ from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS = 180
+JUDGE_SPANS = (
+    "{provider} judges {rule} on {file}",
+    "claude judges {rule} on {file}",
+    "codex judges {rule} on {file}",
+)
 CASES = [
     pytest.param(rule_eval.name, case, id=f"{rule_eval.name}: {case.name}")
     for _, rule_eval in RuleEvalReader(EVALS / "python").read()
@@ -31,6 +36,9 @@ CASES = [
 ]
 JUDGED_CASES = [
     case for case in CASES if case.values[1].expected_output.outcome is not Outcome.SKIPPED
+]
+CASES_WITH_UNCHANGED_FILES = [
+    pytest.param(case.values[1], id=case.id) for case in CASES if case.values[1].inputs.unchanged
 ]
 
 
@@ -76,13 +84,8 @@ class TestJudgePrompt:
             JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
         }
 
-    def test_public_interface_valid_fixture_loads_from_its_consumer(self):
-        case = next(
-            parameter.values[1]
-            for parameter in CASES
-            if parameter.values[0] == "package-public-interface"
-            and parameter.values[1].expected_output.outcome is Outcome.VALID
-        )
+    @pytest.mark.parametrize("case", CASES_WITH_UNCHANGED_FILES)
+    def test_case_with_unchanged_files_loads_from_its_edited_file(self, case: RuleEvalCase):
         module = case.inputs.file.removesuffix(".py").replace("/", ".")
 
         with WorkingTree.temporary(case.inputs.before_files(), case.inputs.after_files()) as tree:
@@ -115,7 +118,11 @@ class TestJudgePrompt:
             review = Rules(working_tree).review(LineScopes.at(working_tree).changed_lines("HEAD"))
 
         listing = "\n".join(map(str, review.diagnostics))
-        telemetry = finished_span_attributes(capfire, "codex judges {rule} on {file}")
+        telemetry = [
+            attributes
+            for span in JUDGE_SPANS
+            for attributes in finished_span_attributes(capfire, span)
+        ]
         if telemetry:
             listing += f"\nJudge telemetry: {telemetry!r}"
         errors = [

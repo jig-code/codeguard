@@ -6,9 +6,10 @@
 - Failures
 - pydantic-evals datasets
 
-These rules cover codeguard's own LLM tests (`pytest -m llm`). They don't cover
-`JudgeEvalRunner` or `codeguard eval`, which are product features codeguard ships for rule
-packages to evaluate their judge rules.
+These rules cover codeguard's own LLM tests. Their fixture cases test the judge, not
+their rule, so the writing-rules guidance on rule eval cases doesn't apply.
+[docs/testing.md](../../../../docs/testing.md) sets out how the LLM tests, skill evals
+and rule evals differ.
 
 ## How codeguard's LLM tests run
 
@@ -24,7 +25,7 @@ Mark an LLM test `@pytest.mark.llm` on its class. Plain `uv run pytest` deselect
 
 ```bash
 uv run pytest -m llm -n 4
-uv run pytest -m llm -n 4 --llm-runs 10 -k "responsibility-placement: <case>"
+uv run pytest -m llm -n 4 --llm-runs 10 -k "exception-handling: <case>"
 uv run pytest -m llm -n 4 --judge-provider gemini
 ```
 
@@ -34,6 +35,11 @@ says which changes need the LLM tests and how many runs.
 
 ## Cases
 
+- Each case tests one judge behavior, such as reporting a violation that a removed line
+  creates, and no two cases test the same one.
+- A review-scope case may hold an old violation in code the change doesn't touch, which
+  the review must leave unreported. Keep it small and plain, and let it break no other
+  rule.
 - A new scenario is a new case in the fixture rule's rule eval, not a new test method or
   test module. The rules and cases live in `evals/judge/`, not in the test module.
 - A case's expected result lives in the case (`expected_output`).

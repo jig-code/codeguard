@@ -1,3 +1,0 @@
-rule: responsibility-placement
-paths: ["**/*.py"]
-triggers: [attribute-access]

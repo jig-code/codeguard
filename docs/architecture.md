@@ -115,10 +115,10 @@ Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
-- Follow the writing-rules reference's
-  [eval case guidance](../plugin/skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
-  and [docs/testing.md](testing.md) for a fixture that holds a pre-existing violation to
-  test review scope.
+- Cases follow the writing-rules
+  [eval case guidance](../plugin/skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+  codeguard's judge fixtures test the judge instead, and follow the
+  [LLM test guidelines](../.claude/skills/test-quality/references/eval-testing-guidelines.md#cases).
 
 ## Invariants
 

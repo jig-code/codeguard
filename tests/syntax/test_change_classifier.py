@@ -34,6 +34,35 @@ class TestChangeClassifier:
 
         assert classification.touched_kinds("a.py") == {ChangeKind.COMMENT, ChangeKind.ANY}
 
+    def test_import_edit_touches_the_import(self, git_repo, working_tree, line_scopes):
+        git_repo.write("a.py", "from orders import Order\n")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", "from orders.order import Order\n")
+
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
+        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
+
+        assert classification.touched_kinds("a.py") == {
+            ChangeKind.IMPORT,
+            ChangeKind.CODE,
+            ChangeKind.ANY,
+        }
+
+    def test_attribute_edit_touches_the_attribute_access(self, git_repo, working_tree, line_scopes):
+        git_repo.write("a.py", "label = order.name\n")
+        git_repo.commit("Add a")
+        git_repo.write("a.py", "label = order.title\n")
+
+        classifier = ChangeClassifier(SyntaxScanner(AstGrep(), {}), working_tree)
+        classification = classifier.classify(line_scopes.changed_lines("HEAD"))
+
+        assert classification.touched_kinds("a.py") == {
+            ChangeKind.ATTRIBUTE_ACCESS,
+            ChangeKind.MODULE_STATEMENT,
+            ChangeKind.CODE,
+            ChangeKind.ANY,
+        }
+
     def test_body_only_edit_does_not_touch_the_class_header(
         self, git_repo, working_tree, line_scopes
     ):
