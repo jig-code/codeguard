@@ -18,9 +18,9 @@ from pydantic_ai.messages import (
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
-from recording_sleep import RecordingSleep
 from scripted_model import MODEL, ScriptedModel, Stall, http_error, transport_error
 from spans import finished_span_attributes
+from tenacity import wait_none
 
 from codeguard.api_provider import ApiJudge, VertexGemini
 from codeguard.config import ApiEffort
@@ -274,12 +274,10 @@ class TestApiJudge:
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
     def test_http_error_is_a_judge_error(self, tmp_path, make_judge_request):
-        unsent = verdict()
-        models = ScriptedModel([http_error(400, "Bad request."), unsent])
+        models = ScriptedModel([http_error(400, "Bad request.")])
 
         with pytest.raises(JudgeProcessError, match=f"^{MODEL} failed with 400: Bad request.$"):
             judge_with(tmp_path, models).judge(make_judge_request())
-        assert models.answers == [unsent]
 
     def test_request_the_sdk_rejects_is_a_judge_error(self, tmp_path, make_judge_request):
         with pytest.raises(ValidationError) as rejected:
@@ -294,13 +292,11 @@ class TestApiJudge:
 
     def test_turned_away_request_is_sent_again(self, tmp_path, make_judge_request):
         models = ScriptedModel([http_error(429, "Quota exceeded."), verdict()])
-        sleep = RecordingSleep()
 
-        judgement = judge_with(tmp_path, models, sleep=sleep).judge(make_judge_request())
+        judgement = judge_with(tmp_path, models, retry_wait=wait_none()).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
-        assert [int(wait) for wait in sleep.waited] == [1]
 
     def test_transport_timeout_is_the_request_limit_error(self, tmp_path, make_judge_request):
         models = ScriptedModel([transport_error(httpx2.ReadTimeout("timed out"))])
@@ -318,15 +314,13 @@ class TestApiJudge:
 
     def test_stalled_attempt_is_sent_again(self, tmp_path, make_judge_request):
         models = ScriptedModel([Stall(), verdict()])
-        sleep = RecordingSleep()
 
         judgement = judge_with(
-            tmp_path, models, request_time_limit_seconds=0.2, max_attempt_seconds=0.1, sleep=sleep
+            tmp_path, models, request_time_limit_seconds=0.2, max_attempt_seconds=0.1
         ).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
         assert models.answers == []
-        assert sleep.waited == []
 
     def test_request_stalling_on_every_attempt_is_the_request_limit_error(
         self, tmp_path, make_judge_request

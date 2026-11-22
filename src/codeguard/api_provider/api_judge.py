@@ -1,6 +1,6 @@
 import asyncio
 import math
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +28,7 @@ from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
 from pydantic_ai.workspaces import LocalWorkspaceBackend
+from tenacity.wait import wait_base
 
 from codeguard.api_provider.file_system import (
     PATH_WITH_RIPGREP,
@@ -35,7 +36,7 @@ from codeguard.api_provider.file_system import (
     file_tool_calls,
     loaded_files,
 )
-from codeguard.api_provider.retrying_model import RetryingModel, transport_timed_out
+from codeguard.api_provider.retrying_model import BACKOFF, RetryingModel, transport_timed_out
 from codeguard.config import ApiEffort
 from codeguard.review import (
     DEFAULT_THINKING_KEY,
@@ -69,7 +70,7 @@ class ApiJudge:
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
     max_attempt_seconds: float = _MAX_ATTEMPT_SECONDS
-    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
+    retry_wait: wait_base = BACKOFF
 
     @property
     def identity(self) -> str:
@@ -118,7 +119,7 @@ class ApiJudge:
                     prompt,
                     model=FallbackModel(
                         *(
-                            RetryingModel(model, self.deadline, self.sleep)
+                            RetryingModel(model, self.deadline, self.retry_wait)
                             for _ in range(self._attempts_per_request)
                         ),
                         fallback_on=(ModelRequestTimeout,),

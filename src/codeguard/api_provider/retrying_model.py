@@ -1,6 +1,3 @@
-import asyncio
-from collections.abc import Awaitable, Callable
-
 import httpx2
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelResponse
@@ -16,10 +13,12 @@ from tenacity import (
     wait_random,
 )
 from tenacity.stop import stop_base
+from tenacity.wait import wait_base
 
 from codeguard.review import Deadline
 
 _MAX_ATTEMPTS = 5
+BACKOFF = wait_exponential() + wait_random(0, 1)
 _TRANSIENT_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 
@@ -28,11 +27,11 @@ class RetryingModel(WrapperModel):
         self,
         wrapped: Model,
         deadline: Deadline | None,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        wait: wait_base = BACKOFF,
     ) -> None:
         super().__init__(wrapped)
         self.deadline = deadline
-        self.sleep = sleep
+        self.wait = wait
 
     async def request(
         self,
@@ -42,9 +41,8 @@ class RetryingModel(WrapperModel):
     ) -> ModelResponse:
         retrying = AsyncRetrying(
             retry=retry_if_exception(_retryable),
-            wait=wait_exponential() + wait_random(0, 1),
+            wait=self.wait,
             stop=self._stop_condition,
-            sleep=self.sleep,
             reraise=True,
         )
         return await retrying(super().request, messages, model_settings, model_request_parameters)
