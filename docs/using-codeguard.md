@@ -23,7 +23,16 @@ claude plugin install codeguard@codeguard --scope project
 
 ### Codex
 
-Trust codeguard's hooks in `/hooks` ([Codex hooks](https://developers.openai.com/codex/hooks)).
+Add codeguard's marketplace, pinned to its major release, and install the plugin
+([Add a marketplace from the CLI](https://developers.openai.com/plugins/build/plugins.md#add-a-marketplace-from-the-cli)):
+
+```sh
+codex plugin marketplace add jig-code/codeguard --ref v0
+codex plugin add codeguard@codeguard
+```
+
+Then trust codeguard's hooks in `/hooks`: Codex skips a plugin's hooks until you do
+([Codex hooks](https://developers.openai.com/codex/hooks)).
 
 ## When a review blocks
 
