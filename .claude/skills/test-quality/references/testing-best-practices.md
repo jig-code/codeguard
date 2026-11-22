@@ -39,3 +39,5 @@ Control time with an injected clock or start time rather than a patch.
   hand-built string: both read as the structure they hold, and tooling can check that
   they are valid YAML. Keep a string only when the test is about the YAML text itself,
   such as a file that doesn't parse.
+- Write a YAML file only when the unit under test reads one (gate 18). To check how a
+  model validates a setting, pass the model a dict: a file adds nothing the model reads.
