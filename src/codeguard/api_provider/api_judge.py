@@ -122,7 +122,10 @@ class ApiJudge:
                 result = await agent.run(
                     prompt,
                     model=FallbackModel(
-                        *(_Retrying(model, self.deadline) for _ in range(self._attempts)),
+                        *(
+                            _Retrying(model, self.deadline)
+                            for _ in range(self._attempts_per_request)
+                        ),
                         fallback_on=(ModelRequestTimeout,),
                     ),
                     timeout=None if self.deadline is None else self.deadline.remaining_seconds(),
@@ -154,18 +157,18 @@ class ApiJudge:
             ) from error
         return result.output
 
-    # Each request is sent up to this many times, each attempt cut off at an equal share of the
-    # request's time limit, so a request that stalled is sent again within that limit.
     @property
-    def _attempts(self) -> int:
+    def _attempts_per_request(self) -> int:
         return math.ceil(self.request_time_limit_seconds / self.attempt_time_limit_seconds)
+
+    @property
+    def _attempt_time_limit(self) -> float:
+        return self.request_time_limit_seconds / self._attempts_per_request
 
     def _settings(self, _: RunContext[object]) -> ModelSettings:
         if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
             raise self.deadline.reached()
-        settings: ModelSettings = {
-            "request_timeout": self.request_time_limit_seconds / self._attempts
-        }
+        settings: ModelSettings = {"request_timeout": self._attempt_time_limit}
         if self.thinking is not None:
             settings["thinking"] = self.thinking
         return settings
