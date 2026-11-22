@@ -24,7 +24,7 @@ Mark an LLM test `@pytest.mark.llm` on its class. Plain `uv run pytest` deselect
 
 ```bash
 uv run pytest -m llm -n 4
-uv run pytest -m llm -n 4 --llm-runs 10 -k "responsibility-placement: <case>"
+uv run pytest -m llm -n 4 --llm-runs 10 -k "exception-handling: <case>"
 uv run pytest -m llm -n 4 --judge-provider gemini
 ```
 

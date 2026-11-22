@@ -32,6 +32,7 @@ CASES = [
 JUDGED_CASES = [
     case for case in CASES if case.values[1].expected_output.outcome is not Outcome.SKIPPED
 ]
+CASES_WITH_UNCHANGED_FILES = [case for case in CASES if case.values[1].inputs.unchanged]
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -76,13 +77,10 @@ class TestJudgePrompt:
             JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
         }
 
-    def test_public_interface_valid_fixture_loads_from_its_consumer(self):
-        case = next(
-            parameter.values[1]
-            for parameter in CASES
-            if parameter.values[0] == "package-public-interface"
-            and parameter.values[1].expected_output.outcome is Outcome.VALID
-        )
+    @pytest.mark.parametrize(("rule", "case"), CASES_WITH_UNCHANGED_FILES)
+    def test_case_with_unchanged_files_loads_from_its_edited_file(
+        self, rule: str, case: RuleEvalCase
+    ):
         module = case.inputs.file.removesuffix(".py").replace("/", ".")
 
         with WorkingTree.temporary(case.inputs.before_files(), case.inputs.after_files()) as tree:

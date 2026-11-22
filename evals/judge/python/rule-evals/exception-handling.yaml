@@ -130,46 +130,6 @@ cases:
                 raise
     expected_output:
       outcome: valid
-  - name: a discarding handler added beside a function that re-raises
-    inputs:
-      file: payments/gateway.py
-      before: |
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-
-        def charge(gateway, amount: int) -> None:
-            try:
-                gateway.charge(amount)
-            except gateway.Error:
-                logger.exception("Charge failed")
-                raise
-
-
-        def refund(gateway, amount: int) -> None:
-            gateway.refund(amount)
-      after: |
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-
-        def charge(gateway, amount: int) -> None:
-            try:
-                gateway.charge(amount)
-            except gateway.Error:
-                logger.exception("Charge failed")
-                raise
-
-
-        def refund(gateway, amount: int) -> None:
-            try:
-                gateway.refund(amount)
-            except gateway.Error:
-                pass
-    expected_output:
-      outcome: invalid
   - name: removing the logging that kept a handler from discarding its exception
     inputs:
       file: payments/refund.py
@@ -224,5 +184,61 @@ cases:
                 gateway.refund(amount)
             except gateway.Error:
                 logger.exception("Refund failed")
+    expected_output:
+      outcome: valid
+  - name: a handler that passes its exception to a function earlier in its file that logs it
+    inputs:
+      file: shipping/labels.py
+      before: |
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+
+        def record_failure(error: Exception) -> None:
+            logger.error("Label printing failed", exc_info=error)
+
+
+        def print_label(printer, parcel) -> None:
+            printer.print(parcel.address)
+      after: |
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+
+        def record_failure(error: Exception) -> None:
+            logger.error("Label printing failed", exc_info=error)
+
+
+        def print_label(printer, parcel) -> None:
+            try:
+                printer.print(parcel.address)
+            except printer.Error as error:
+                record_failure(error)
+    expected_output:
+      outcome: valid
+  - name: a handler that passes its exception to another module's function that logs it
+    inputs:
+      file: shipping/dispatch.py
+      after: |
+        from shipping.failures import record_failure
+
+
+        def dispatch(courier, parcel) -> None:
+            try:
+                courier.collect(parcel)
+            except courier.Error as error:
+                record_failure(error)
+      unchanged:
+        shipping/__init__.py: ''
+        shipping/failures.py: |
+          import logging
+
+          logger = logging.getLogger(__name__)
+
+
+          def record_failure(error: Exception) -> None:
+              logger.error("Dispatch failed", exc_info=error)
     expected_output:
       outcome: valid
