@@ -69,9 +69,6 @@ Every review here runs this checkout's codeguard, never a release, so the versio
 | By hand | `uv run codeguard review` | Uncommitted and untracked files; with `--base <branch>`, every change since that branch | The `claude` CLI and its default model |
 | CI's `codeguard-rules` job | The action at the checkout's root (`uses: ./`) | The pull request's changes since its base branch | Gemini, which `ci.yaml` sets |
 
-- Commit a change only after a stop has reviewed it. The hook reviews only uncommitted
-  and untracked files, so a change edited and committed in the same turn is never
-  reviewed when the agent stops, and only CI sees it.
 - The hook passes `--judge-errors-as-warnings` and `--skip-ci-only`, so a judge call
   that fails, and a `ci_only` rule, are left to CI.
 - A local review reuses a verdict from `~/.cache/codeguard/judgements` until something
