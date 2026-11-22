@@ -28,7 +28,8 @@ minimal effort.
 Every judge gets the same instructions, prompt and verdict schema. `gemini` and `bedrock`
 ask for the verdict in the output mode pydantic-ai picks for the model, and give each
 request to the model `judge.request_time_limit_seconds`, 120 by default, its retries
-included.
+included. A request still unanswered after 60 seconds has stalled at the provider, so the
+judge sends it again.
 
 What differs is only what a provider requires: how codeguard reaches the model (a CLI it
 runs, or an API it signs in to), the form of the verdict schema a CLI accepts, and how

@@ -48,6 +48,9 @@ from codeguard.review import (
 
 _MAX_REQUESTS = 10
 _MAX_ATTEMPTS = 5
+# Judge requests answer in well under a minute, and a request still unanswered then has
+# stalled on the provider's side: the same request sent again answers in seconds.
+_ATTEMPT_TIME_LIMIT_SECONDS = 60
 _GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
@@ -67,6 +70,7 @@ class ApiJudge:
     request_time_limit_seconds: float
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
+    attempt_time_limit_seconds: float = _ATTEMPT_TIME_LIMIT_SECONDS
 
     @property
     def identity(self) -> str:
@@ -113,7 +117,7 @@ class ApiJudge:
             async with self.models(self.model) as model:
                 result = await agent.run(
                     prompt,
-                    model=_Retrying(model, self.deadline),
+                    model=_Retrying(model, self.deadline, self.attempt_time_limit_seconds),
                     workspace=LocalWorkspaceBackend(self.root, env={"PATH": PATH_WITH_RIPGREP}),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
@@ -159,13 +163,16 @@ class ApiJudge:
         )
 
 
-# Sends a request again when the provider turned it away or the connection broke, while the backoff
-# fits before the deadline. The SDK's own retries miss a connection that broke after the
-# response started.
+# Sends a request again when the provider turned it away, the connection broke or the request
+# stalled, while the backoff fits before the deadline. The SDK's own retries miss a connection
+# that broke after the response started, and never cut off a stalled request.
 class _Retrying(WrapperModel):
-    def __init__(self, wrapped: Model, deadline: Deadline | None) -> None:
+    def __init__(
+        self, wrapped: Model, deadline: Deadline | None, attempt_time_limit_seconds: float
+    ) -> None:
         super().__init__(wrapped)
         self.deadline = deadline
+        self.attempt_time_limit_seconds = attempt_time_limit_seconds
 
     async def request(
         self,
@@ -176,7 +183,7 @@ class _Retrying(WrapperModel):
         attempt = 1
         while True:
             try:
-                return await super().request(messages, model_settings, model_request_parameters)
+                return await self._attempt(messages, model_settings, model_request_parameters)
             except ModelAPIError as error:
                 # Backs off 1s doubling, plus up to 1s of jitter: about 15s over 5 attempts.
                 wait = 2 ** (attempt - 1) + random.random()
@@ -185,11 +192,31 @@ class _Retrying(WrapperModel):
             await asyncio.sleep(wait)
             attempt += 1
 
+    async def _attempt(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None,
+        model_request_parameters: ModelRequestParameters,
+    ) -> ModelResponse:
+        try:
+            async with asyncio.timeout(self.attempt_time_limit_seconds):
+                return await super().request(messages, model_settings, model_request_parameters)
+        except TimeoutError as error:
+            raise _Stalled(self.model_name, self.attempt_time_limit_seconds) from error
+
     def _fits(self, wait: float) -> bool:
         return self.deadline is None or wait < self.deadline.remaining_seconds()
 
 
+# An attempt that got no answer within its time limit. Unlike the request's own time limit,
+# it leaves time to send the request again.
+class _Stalled(ModelRequestTimeout):
+    pass
+
+
 def _retried(error: ModelAPIError) -> bool:
+    if isinstance(error, _Stalled):
+        return True
     if isinstance(error, ModelHTTPError):
         return error.status_code in _RETRIED_STATUSES
     return _transport_error(error) and not _timed_out(error)
