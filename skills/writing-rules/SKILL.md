@@ -14,9 +14,12 @@ convention that a model judges each change against.
 2. **State the convention and why it exists**, as the two sections below say. Then check
    the statement against each bullet under The convention and each check below, and
    rewrite the statement until it meets them all:
-   1. Write every relative pronoun that a phrase needs.
-   2. Wherever a pronoun could mean more than one noun, write the noun instead.
-   3. Name what code does, never what code leaves out.
+   1. Write every relative pronoun that a phrase needs, so the judge never guesses which
+      noun a phrase describes.
+   2. Wherever a pronoun could mean more than one noun, write the noun instead: the
+      judge picks one meaning and decides by it.
+   3. Name what code does, never what code leaves out: the judge says on what ground
+      code breaks the rule, and code that leaves something out has no line to point to.
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
@@ -44,7 +47,8 @@ statement as a reviewer would, and says on what ground the code keeps or breaks 
 - **Once.** The statement says what it forbids once, since the judge reads a repeat as a
   second test.
 - **Nothing about how.** The statement says nothing about how code avoids what that code
-  must never do.
+  must never do: the judge reads such a clause as a second test, which code that avoids
+  it another way fails.
 - **No reason or consequence.** Every clause of the statement describes what the code it
   forbids itself does. No clause says why the convention exists, or names an outcome
   that follows once that code has run: both belong in the rule's why, and in the
@@ -62,8 +66,7 @@ statement as a reviewer would, and says on what ground the code keeps or breaks 
   fail: the code the change adds or edits, and the definitions of the names it uses. A
   judge that has to read the rest of the repository to decide is slower, costs more, and
   wavers. Only a rule that keeps something unique or consistent across the repository
-  (one home for a job, one word for one operation) searches beyond that, and it names
-  the one search it needs.
+  searches beyond that, and it names the one search it needs.
 - **Idiomatic code never breaks it.** Code written the way the language and its
   libraries intend is never a violation. A bad pattern isn't idiomatic just because a
   framework uses it, though: calling the framework's API is fine, while copying its
@@ -149,7 +152,8 @@ codeguard's `docs/rule-formats.md` has the binding and rule eval formats.
 - Use made-up code and names, so a case shows the pattern rather than
   one class in the codebase. A public rule package never holds code copied from a
   private repository.
-- Give idiomatic code a `valid` case beside the `invalid` one.
+- Give idiomatic code a `valid` case beside the `invalid` one, so a rule that flags
+  idiomatic code fails a case.
 - A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
   case, with a comment above each case naming its branch. Give each matched shape a
   `valid` case where the convention allows it, if it has such a position, so a rule that

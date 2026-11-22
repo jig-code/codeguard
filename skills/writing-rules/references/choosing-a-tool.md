@@ -7,12 +7,11 @@ A convention that a linter, a type checker, an import linter, a language server 
 similar exact tool can check, directly, through its configuration or with a custom rule,
 isn't codeguard's, whether or not the project runs that tool or turns that check on. An
 exact tool gives the same answer every run, costs nothing, and already runs in the
-editor. A way past the tool, such as a cast or a comment that silences it, doesn't make
-the convention a judgment when the tool's configuration can forbid it. Write no rule, say
-only that the convention isn't codeguard's to check, and offer no other rule.
+editor. A way past the tool that the tool's configuration can forbid doesn't make the
+convention a judgment. Write no rule, say only that the convention isn't codeguard's to
+check, and offer no other rule.
 
-A codeguard pattern rule is for a code shape in one file that those tools can't express:
-a YAML file and its test cases take the place of a custom rule's class and spec.
+A codeguard pattern rule is for a code shape in one file that those tools can't express.
 
 A judge rule is only for what needs judgment, never for something syntax, types or a
 lookup across the repository decide. A judge sees the changed code, not the whole
