@@ -19,7 +19,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 from recording_sleep import RecordingSleep
-from scripted_gemini import MODEL, ScriptedGemini, Stall, http_error, transport_error
+from scripted_model import MODEL, ScriptedModel, Stall, http_error, transport_error
 from spans import finished_span_attributes
 
 from codeguard.api_provider import ApiJudge, VertexGemini
@@ -122,7 +122,7 @@ def judge_with(
 
 class TestApiJudge:
     def test_verdict_is_the_structured_output(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict(VIOLATION)])
+        models = ScriptedModel([verdict(VIOLATION)])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -131,7 +131,7 @@ class TestApiJudge:
         )
 
     def test_offers_the_file_tools(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -142,7 +142,7 @@ class TestApiJudge:
         ]
 
     def test_sends_the_instructions_and_the_prompt(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
         request = make_judge_request()
 
         judge_with(tmp_path, models).judge(request)
@@ -154,14 +154,14 @@ class TestApiJudge:
         ]
 
     def test_thinks_at_the_level_it_is_given(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
 
         judge_with(tmp_path, models, thinking="xhigh").judge(make_judge_request())
 
         assert models.info().model_request_parameters.thinking == "xhigh"
 
     def test_without_a_level_sends_none(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
 
         judge_with(tmp_path, models, thinking=None).judge(make_judge_request())
 
@@ -172,7 +172,7 @@ class TestApiJudge:
     ):
         (tmp_path / "audit.py").write_text("from logger import info\n")
         (tmp_path / "config.toml").write_text("level = 'info'\n")
-        models = ScriptedGemini(
+        models = ScriptedModel(
             [
                 calls(
                     ("read_file", {"path": "logger.py"}),
@@ -193,7 +193,7 @@ class TestApiJudge:
         (tmp_path / "orders").mkdir()
         for number in range(201):
             (tmp_path / "orders" / f"order_{number:03}.py").write_text("")
-        models = ScriptedGemini([calls(("list_files", {"path": "orders"})), verdict()])
+        models = ScriptedModel([calls(("list_files", {"path": "orders"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -203,7 +203,7 @@ class TestApiJudge:
         self, tmp_path, make_judge_request
     ):
         (tmp_path / "audit.py").write_text("info = 'a\x0corders.py:1:'\n")
-        models = ScriptedGemini([calls(("search_files", {"pattern": "info ="})), verdict()])
+        models = ScriptedModel([calls(("search_files", {"pattern": "info ="})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -214,21 +214,21 @@ class TestApiJudge:
         (tmp_path / ".gitignore").write_text("node_modules/\n")
         (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
         (tmp_path / "node_modules" / "pkg" / "log.py").write_text("def info(message): ...\n")
-        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})), verdict()])
+        models = ScriptedModel([calls(("list_files", {"glob": "*.py"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement.loaded_files == ("a.py", "logger.py")
 
     def test_missing_file_gemini_tried_to_read_is_a_loaded_file(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("read_file", {"path": "orders/__init__.py"})), verdict()])
+        models = ScriptedModel([calls(("read_file", {"path": "orders/__init__.py"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
         assert judgement.loaded_files == ("orders/__init__.py",)
 
     def test_file_outside_the_root_is_not_a_loaded_file(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([calls(("read_file", {"path": "../outside.py"})), verdict()])
+        models = ScriptedModel([calls(("read_file", {"path": "../outside.py"})), verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -236,7 +236,7 @@ class TestApiJudge:
 
     def test_invalid_verdict_is_sent_back_to_correct(self, tmp_path, make_judge_request):
         invalid = calls(("final_result", {"violations": [{"file": "a.py"}]}))
-        models = ScriptedGemini([invalid, verdict()])
+        models = ScriptedModel([invalid, verdict()])
 
         judgement = judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -268,14 +268,14 @@ class TestApiJudge:
     def test_no_verdict_within_the_request_limit_is_a_judge_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
+        models = ScriptedModel([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict, match=f"^{MODEL} returned no verdict in 2 requests.$"):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())
 
     def test_http_error_is_a_judge_error(self, tmp_path, make_judge_request):
         unsent = verdict()
-        models = ScriptedGemini([http_error(400, "Bad request."), unsent])
+        models = ScriptedModel([http_error(400, "Bad request."), unsent])
 
         with pytest.raises(JudgeProcessError, match=f"^{MODEL} failed with 400: Bad request.$"):
             judge_with(tmp_path, models).judge(make_judge_request())
@@ -284,7 +284,7 @@ class TestApiJudge:
     def test_request_the_sdk_rejects_is_a_judge_error(self, tmp_path, make_judge_request):
         with pytest.raises(ValidationError) as rejected:
             GenerateContentConfig.model_validate({"unknown": 1})
-        models = ScriptedGemini([rejected.value])
+        models = ScriptedModel([rejected.value])
 
         with pytest.raises(
             JudgeProcessError,
@@ -293,7 +293,7 @@ class TestApiJudge:
             judge_with(tmp_path, models).judge(make_judge_request())
 
     def test_turned_away_request_is_sent_again(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([http_error(429, "Quota exceeded."), verdict()])
+        models = ScriptedModel([http_error(429, "Quota exceeded."), verdict()])
         sleep = RecordingSleep()
 
         judgement = judge_with(tmp_path, models, sleep=sleep).judge(make_judge_request())
@@ -303,7 +303,7 @@ class TestApiJudge:
         assert [int(wait) for wait in sleep.waited] == [1]
 
     def test_transport_timeout_is_the_request_limit_error(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([transport_error(httpx2.ReadTimeout("timed out"))])
+        models = ScriptedModel([transport_error(httpx2.ReadTimeout("timed out"))])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 120s to answer.$"):
             judge_with(tmp_path, models).judge(make_judge_request())
@@ -311,13 +311,13 @@ class TestApiJudge:
     def test_request_running_past_the_request_limit_is_the_request_limit_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([Stall()])
+        models = ScriptedModel([Stall()])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.1s to answer.$"):
             judge_with(tmp_path, models, request_time_limit_seconds=0.1).judge(make_judge_request())
 
     def test_stalled_attempt_is_sent_again(self, tmp_path, make_judge_request):
-        models = ScriptedGemini([Stall(), verdict()])
+        models = ScriptedModel([Stall(), verdict()])
         sleep = RecordingSleep()
 
         judgement = judge_with(
@@ -331,7 +331,7 @@ class TestApiJudge:
     def test_request_stalling_on_every_attempt_is_the_request_limit_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([Stall(), Stall(), Stall(), Stall()])
+        models = ScriptedModel([Stall(), Stall(), Stall(), Stall()])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.35s to answer.$"):
             judge_with(
@@ -356,7 +356,7 @@ class TestApiJudge:
     def test_call_after_the_deadline_is_a_judge_error_without_calling_gemini(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
         deadline = Deadline(minutes=1, started=time.monotonic() - 60)
 
         with pytest.raises(JudgeTimeout, match="^The review reached its 1-minute time limit.$"):
@@ -366,7 +366,7 @@ class TestApiJudge:
     def test_each_attempt_times_out_at_its_share_of_the_request_limit(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([verdict()])
+        models = ScriptedModel([verdict()])
 
         judge_with(tmp_path, models, request_time_limit_seconds=90).judge(make_judge_request())
 
@@ -375,7 +375,7 @@ class TestApiJudge:
     def test_request_stalled_at_the_deadline_is_the_time_limit_error(
         self, tmp_path, make_judge_request
     ):
-        models = ScriptedGemini([Stall()])
+        models = ScriptedModel([Stall()])
         deadline = Deadline(minutes=1, started=time.monotonic() - 59.8)
 
         with pytest.raises(JudgeTimeout, match="^The review reached its 1-minute time limit.$"):
@@ -385,25 +385,25 @@ class TestApiJudge:
         processes = RecordingProcesses()
 
         ApiJudge(
-            tmp_path, MODEL, ScriptedGemini([verdict()]), processes, "gemini", "medium", 120
+            tmp_path, MODEL, ScriptedModel([verdict()]), processes, "gemini", "medium", 120
         ).judge(make_judge_request())
 
         assert processes.events == ["acquired", "released"]
 
     def test_identity_names_the_provider_model_and_thinking_level(self, tmp_path):
-        assert judge_with(tmp_path, ScriptedGemini([]), thinking="low").identity == (
+        assert judge_with(tmp_path, ScriptedModel([]), thinking="low").identity == (
             f"gemini\0{MODEL}\0thinking=low"
         )
 
     def test_identity_without_a_level_names_the_model_default(self, tmp_path):
-        assert judge_with(tmp_path, ScriptedGemini([]), thinking=None).identity == (
+        assert judge_with(tmp_path, ScriptedModel([]), thinking=None).identity == (
             f"gemini\0{MODEL}\0thinking=default"
         )
 
     def test_call_records_its_usage_across_requests(
         self, tmp_path, make_judge_rule, capfire, make_judge_request
     ):
-        models = ScriptedGemini(
+        models = ScriptedModel(
             [calls(("list_files", {"glob": "*.py"}), input_tokens=10), verdict(input_tokens=20)]
         )
 
@@ -427,7 +427,7 @@ class TestApiJudge:
     def test_call_records_the_tools_gemini_called_with_their_arguments(
         self, tmp_path, capfire, make_judge_request
     ):
-        models = ScriptedGemini(
+        models = ScriptedModel(
             [
                 calls(
                     ("read_file", {"path": "logger.py"}),
@@ -448,7 +448,7 @@ class TestApiJudge:
         )
 
     def test_call_does_not_record_the_verdict_tool(self, tmp_path, capfire, make_judge_request):
-        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})), verdict()])
+        models = ScriptedModel([calls(("list_files", {"glob": "*.py"})), verdict()])
 
         judge_with(tmp_path, models).judge(make_judge_request())
 
@@ -458,7 +458,7 @@ class TestApiJudge:
     def test_call_without_a_verdict_records_the_tools_gemini_called(
         self, tmp_path, capfire, make_judge_request
     ):
-        models = ScriptedGemini([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
+        models = ScriptedModel([calls(("list_files", {"glob": "*.py"})) for _ in range(2)])
 
         with pytest.raises(JudgeNoVerdict):
             judge_with(tmp_path, models, max_requests=2).judge(make_judge_request())

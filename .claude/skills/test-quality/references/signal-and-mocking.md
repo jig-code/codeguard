@@ -36,7 +36,7 @@ SUT provably never reads. When real data makes the test fail, that failure is a
 production bug to fix.
 
 Use the first that works: a real object; a shared fake (`RecordingJudge` in
-`tests/recording_judge.py`, `ScriptedGemini` in `tests/scripted_gemini.py`,
+`tests/recording_judge.py`, `ScriptedModel` in `tests/scripted_model.py`,
 the fake CLIs); an inline protocol stub, for a framework contract test whose fake is the
 domain; `patch()`/`MagicMock` at the process boundary. Search other test modules for an
 equivalent stub before writing one, and share it when one exists.

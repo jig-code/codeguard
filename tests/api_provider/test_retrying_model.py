@@ -7,7 +7,7 @@ from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.models import ModelRequestParameters
 from recording_sleep import RecordingSleep
-from scripted_gemini import ScriptedGemini, http_error, transport_error
+from scripted_model import ScriptedModel, http_error, transport_error
 
 from codeguard.api_provider.retrying_model import RetryingModel
 from codeguard.review import Deadline
@@ -31,7 +31,7 @@ class TestRetryingModel:
     )
     def test_turned_away_or_broken_request_is_sent_again(self, prompt, error):
         answer = ModelResponse(parts=[TextPart("Judged.")])
-        models = ScriptedGemini([error, answer])
+        models = ScriptedModel([error, answer])
         sleep = RecordingSleep()
 
         response = asyncio.run(
@@ -45,7 +45,7 @@ class TestRetryingModel:
     def test_request_is_sent_at_most_five_times(self, prompt):
         errors = [http_error(429, "Quota exceeded.") for _ in range(5)]
         unsent = ModelResponse(parts=[TextPart("Judged.")])
-        models = ScriptedGemini([*errors, unsent])
+        models = ScriptedModel([*errors, unsent])
         sleep = RecordingSleep()
 
         with pytest.raises(ModelHTTPError) as raised:
@@ -60,7 +60,7 @@ class TestRetryingModel:
 
     def test_sends_again_only_while_the_backoff_fits_before_the_deadline(self, prompt):
         errors = [http_error(429, "Quota exceeded.") for _ in range(5)]
-        models = ScriptedGemini(list(errors))
+        models = ScriptedModel(list(errors))
         deadline = Deadline(minutes=1, started=time.monotonic() - 56)
         sleep = RecordingSleep()
 
@@ -76,7 +76,7 @@ class TestRetryingModel:
 
     def test_timed_out_request_is_not_sent_again(self, prompt):
         timeout = transport_error(httpx2.ReadTimeout("timed out"))
-        models = ScriptedGemini([timeout])
+        models = ScriptedModel([timeout])
         sleep = RecordingSleep()
 
         with pytest.raises(ModelAPIError) as raised:

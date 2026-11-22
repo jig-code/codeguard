@@ -27,7 +27,7 @@ class Stall:
 
 
 @dataclass
-class ScriptedGemini:
+class ScriptedModel:
     answers: list[ModelResponse | Exception | Stall]
     requests: list[tuple[list[ModelMessage], AgentInfo]] = field(default_factory=list)
     connected: list[str] = field(default_factory=list)
