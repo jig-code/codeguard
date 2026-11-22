@@ -1,5 +1,4 @@
 import asyncio
-import random
 from collections.abc import Awaitable, Callable
 
 import httpx2
@@ -8,6 +7,15 @@ from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception,
+    stop_after_attempt,
+    stop_before_delay,
+    wait_exponential,
+    wait_random,
+)
+from tenacity.stop import stop_base
 
 from codeguard.review import Deadline
 
@@ -16,9 +24,9 @@ _MAX_ATTEMPTS = 5
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 
-# Sends a request again when the provider turned it away or the connection broke, while the backoff
-# fits before the deadline. The SDK's own retries miss a connection that broke after the
-# response started.
+# Sends a request again when the provider turned it away or the connection broke, while the
+# backoff fits before the deadline. The SDK's retries, and pydantic-ai's transport retries, miss
+# a connection that broke after the response started.
 class RetryingModel(WrapperModel):
     def __init__(
         self,
@@ -36,29 +44,31 @@ class RetryingModel(WrapperModel):
         model_settings: ModelSettings | None,
         model_request_parameters: ModelRequestParameters,
     ) -> ModelResponse:
-        attempt = 1
-        while True:
-            try:
-                return await super().request(messages, model_settings, model_request_parameters)
-            except ModelAPIError as error:
-                backoff_seconds = 2 ** (attempt - 1) + random.random()
-                if (
-                    attempt == _MAX_ATTEMPTS
-                    or not _retryable(error)
-                    or not self._fits(backoff_seconds)
-                ):
-                    raise
-            await self.sleep(backoff_seconds)
-            attempt += 1
+        retrying = AsyncRetrying(
+            retry=retry_if_exception(_retryable),
+            wait=wait_exponential() + wait_random(0, 1),
+            stop=self._stop,
+            sleep=self.sleep,
+            reraise=True,
+        )
+        return await retrying(super().request, messages, model_settings, model_request_parameters)
 
-    def _fits(self, backoff_seconds: float) -> bool:
-        return self.deadline is None or backoff_seconds < self.deadline.remaining_seconds()
+    @property
+    def _stop(self) -> stop_base:
+        attempts = stop_after_attempt(_MAX_ATTEMPTS)
+        if self.deadline is None:
+            return attempts
+        return attempts | stop_before_delay(self.deadline.remaining_seconds())
 
 
-def _retryable(error: ModelAPIError) -> bool:
+def _retryable(error: BaseException) -> bool:
     if isinstance(error, ModelHTTPError):
         return error.status_code in _RETRIED_STATUSES
-    return _transport_error(error) and not transport_timed_out(error)
+    return (
+        isinstance(error, ModelAPIError)
+        and _transport_error(error)
+        and not transport_timed_out(error)
+    )
 
 
 def _transport_error(error: ModelAPIError) -> bool:
