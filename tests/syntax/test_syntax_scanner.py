@@ -1,9 +1,11 @@
+import yaml
+
 from codeguard.ast_grep import AstGrep
 from codeguard.config import GateRule, Ruleset
 from codeguard.syntax import NodeKind, SyntaxNode, SyntaxScanner
 
-ENUM_VALUE_GATE = "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n"
-MOCK_USE_GATE = "id: mock-use\nlanguage: python\nrule:\n  pattern: Mock()\n"
+ENUM_VALUE_GATE = {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+MOCK_USE_GATE = {"id": "mock-use", "language": "python", "rule": {"pattern": "Mock()"}}
 
 
 class TestSyntaxScanner:
@@ -49,8 +51,8 @@ class TestSyntaxScanner:
         package = tmp_path / "python"
         (local / "gates").mkdir(parents=True)
         (package / "gates").mkdir(parents=True)
-        (local / "gates/enum-value.yml").write_text(ENUM_VALUE_GATE)
-        (package / "gates/mock-use.yml").write_text(MOCK_USE_GATE)
+        (local / "gates/enum-value.yml").write_text(yaml.safe_dump(ENUM_VALUE_GATE))
+        (package / "gates/mock-use.yml").write_text(yaml.safe_dump(MOCK_USE_GATE))
 
         scanner = SyntaxScanner.for_rulesets(
             AstGrep(),

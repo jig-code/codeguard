@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import yaml
 from diskcache import Cache
 from factories.changed_lines import MakeChangedLines, MakeNewFileChangedLines
 from factories.classification import MakeFileClassification
@@ -110,28 +111,34 @@ def repo(tmp_path: Path) -> GitRepo:
     git_repo = GitRepo.init(tmp_path.resolve())
     git_repo.write(
         ".codeguard/rules/pattern/no-print.yml",
-        "id: no-print\n"
-        "language: python\n"
-        "severity: error\n"
-        "message: Use logging, not print.\n"
-        "note: |\n"
-        "  print bypasses log levels.\n"
-        "  Call logger.info instead.\n"
-        "metadata:\n"
-        "  why: Print output skips the log levels and handlers production reads.\n"
-        "rule:\n"
-        "  pattern: print($$$ARGS)\n",
+        yaml.safe_dump(
+            {
+                "id": "no-print",
+                "language": "python",
+                "severity": "error",
+                "message": "Use logging, not print.",
+                "note": "print bypasses log levels.\nCall logger.info instead.\n",
+                "metadata": {
+                    "why": "Print output skips the log levels and handlers production reads."
+                },
+                "rule": {"pattern": "print($$$ARGS)"},
+            }
+        ),
     )
     git_repo.write(
         ".codeguard/rules/pattern/no-breakpoint.yml",
-        "id: no-breakpoint\n"
-        "language: python\n"
-        "severity: warning\n"
-        "message: Remove breakpoint().\n"
-        "metadata:\n"
-        "  why: A breakpoint left in the code stops a run that nobody is watching.\n"
-        "rule:\n"
-        "  pattern: breakpoint()\n",
+        yaml.safe_dump(
+            {
+                "id": "no-breakpoint",
+                "language": "python",
+                "severity": "warning",
+                "message": "Remove breakpoint().",
+                "metadata": {
+                    "why": "A breakpoint left in the code stops a run that nobody is watching."
+                },
+                "rule": {"pattern": "breakpoint()"},
+            }
+        ),
     )
     git_repo.commit("Add rules")
     return git_repo

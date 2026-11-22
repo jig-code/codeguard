@@ -1,3 +1,5 @@
+import yaml
+
 from codeguard.ast_grep import AstGrep
 from codeguard.config import ChangeKind, GateRule, Ruleset
 from codeguard.syntax import ChangeClassifier, Classification, SyntaxScanner
@@ -130,7 +132,9 @@ class TestChangeClassifier:
     def test_for_rulesets_touches_a_rulesets_gate(self, git_repo, working_tree, line_scopes):
         git_repo.write(
             "python/gates/enum-value.yml",
-            "id: enum-value\nlanguage: python\nrule:\n  pattern: $X.value\n",
+            yaml.safe_dump(
+                {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+            ),
         )
         git_repo.write("a.py", "label = status.name\n")
         git_repo.commit("Add a")
