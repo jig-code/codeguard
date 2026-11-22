@@ -20,13 +20,11 @@ from tenacity.stop import stop_base
 from codeguard.review import Deadline
 
 _MAX_ATTEMPTS = 5
-# Responses the request can succeed on when sent again.
-_RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+_TRANSIENT_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 
-# Sends a request again when the provider turned it away or the connection broke, while the
-# backoff fits before the deadline. The SDK's retries, and pydantic-ai's transport retries, miss
-# a connection that broke after the response started.
+# Wraps the model, not the transport: a transport retry misses a connection that breaks after
+# the response starts.
 class RetryingModel(WrapperModel):
     def __init__(
         self,
@@ -47,14 +45,14 @@ class RetryingModel(WrapperModel):
         retrying = AsyncRetrying(
             retry=retry_if_exception(_retryable),
             wait=wait_exponential() + wait_random(0, 1),
-            stop=self._stop,
+            stop=self._stop_condition,
             sleep=self.sleep,
             reraise=True,
         )
         return await retrying(super().request, messages, model_settings, model_request_parameters)
 
     @property
-    def _stop(self) -> stop_base:
+    def _stop_condition(self) -> stop_base:
         attempts = stop_after_attempt(_MAX_ATTEMPTS)
         if self.deadline is None:
             return attempts
@@ -63,15 +61,15 @@ class RetryingModel(WrapperModel):
 
 def _retryable(error: BaseException) -> bool:
     if isinstance(error, ModelHTTPError):
-        return error.status_code in _RETRIED_STATUSES
+        return error.status_code in _TRANSIENT_STATUSES
     return (
         isinstance(error, ModelAPIError)
-        and _transport_error(error)
+        and _failed_in_transport(error)
         and not transport_timed_out(error)
     )
 
 
-def _transport_error(error: ModelAPIError) -> bool:
+def _failed_in_transport(error: ModelAPIError) -> bool:
     return isinstance(error.__cause__, httpx2.TransportError)
 
 
