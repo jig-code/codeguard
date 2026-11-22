@@ -54,7 +54,7 @@ _MAX_REQUESTS = 10
 _MAX_ATTEMPTS = 5
 # Judge requests answer in well under a minute. One still unanswered then has stalled at the
 # provider, and the same request sent again answers in seconds.
-_ATTEMPT_TIME_LIMIT_SECONDS = 60
+_MAX_ATTEMPT_SECONDS = 60
 _GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
 _RETRIED_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
@@ -74,7 +74,7 @@ class ApiJudge:
     request_time_limit_seconds: float
     deadline: Deadline | None = None
     max_requests: int = _MAX_REQUESTS
-    attempt_time_limit_seconds: float = _ATTEMPT_TIME_LIMIT_SECONDS
+    max_attempt_seconds: float = _MAX_ATTEMPT_SECONDS
 
     @property
     def identity(self) -> str:
@@ -159,16 +159,14 @@ class ApiJudge:
 
     @property
     def _attempts_per_request(self) -> int:
-        return math.ceil(self.request_time_limit_seconds / self.attempt_time_limit_seconds)
+        return math.ceil(self.request_time_limit_seconds / self.max_attempt_seconds)
 
     @property
-    def _attempt_time_limit(self) -> float:
+    def _attempt_time_limit_seconds(self) -> float:
         return self.request_time_limit_seconds / self._attempts_per_request
 
     def _settings(self, _: RunContext[object]) -> ModelSettings:
-        if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
-            raise self.deadline.reached()
-        settings: ModelSettings = {"request_timeout": self._attempt_time_limit}
+        settings: ModelSettings = {"request_timeout": self._attempt_time_limit_seconds}
         if self.thinking is not None:
             settings["thinking"] = self.thinking
         return settings
@@ -222,9 +220,7 @@ def _transport_error(error: ModelAPIError) -> bool:
 
 
 def _timed_out(error: ModelAPIError) -> bool:
-    return isinstance(error, ModelRequestTimeout) or isinstance(
-        error.__cause__, httpx2.TimeoutException
-    )
+    return isinstance(error.__cause__, httpx2.TimeoutException)
 
 
 def _message(error: ModelHTTPError) -> str:

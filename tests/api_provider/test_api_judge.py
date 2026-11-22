@@ -75,9 +75,8 @@ def transport_error(cause: Exception) -> ModelAPIError:
 
 
 # An answer that doesn't arrive within any time limit a test sets.
-@dataclass(frozen=True)
 class Stall:
-    seconds: float = 10
+    pass
 
 
 @dataclass
@@ -95,7 +94,7 @@ class ScriptedGemini:
         self.requests.append((list(messages), info))
         answer = self.answers.pop(0)
         if isinstance(answer, Stall):
-            await anyio.sleep(answer.seconds)
+            await anyio.sleep(10)
             raise AssertionError("The stalled request wasn't cut off.")
         if isinstance(answer, Exception):
             raise answer
@@ -413,7 +412,7 @@ class TestApiJudge:
         models = ScriptedGemini([Stall(), verdict()])
 
         judgement = judge_with(
-            tmp_path, models, request_time_limit_seconds=0.2, attempt_time_limit_seconds=0.1
+            tmp_path, models, request_time_limit_seconds=0.2, max_attempt_seconds=0.1
         ).judge(make_judge_request())
 
         assert judgement == Judgement(Verdict(reason="Judged.", violations=()))
@@ -423,11 +422,11 @@ class TestApiJudge:
     def test_request_stalling_on_every_attempt_is_the_request_limit_error(
         self, tmp_path, make_judge_request, waits
     ):
-        models = ScriptedGemini([Stall() for _ in range(4)])
+        models = ScriptedGemini([Stall(), Stall(), Stall(), Stall()])
 
         with pytest.raises(JudgeTimeout, match=f"^{MODEL} took over 0.35s to answer.$"):
             judge_with(
-                tmp_path, models, request_time_limit_seconds=0.35, attempt_time_limit_seconds=0.1
+                tmp_path, models, request_time_limit_seconds=0.35, max_attempt_seconds=0.1
             ).judge(make_judge_request())
         assert models.answers == []
 
