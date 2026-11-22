@@ -18,9 +18,25 @@ in CI with the project's Claude token or cloud account ([Choose a judge](docs/ju
 1. Commit the plugin settings and add the CI job, as
    [Add codeguard to a project](docs/add-codeguard.md) shows.
 2. Opt into a rule package's rulesets, or write rules of your own
-   ([Write rules](docs/write-rules.md)).
+   ([Write and test rules](#write-and-test-rules)).
 3. Each engineer installs [uv](https://docs.astral.sh/uv/getting-started/installation/)
    and the plugin ([Use codeguard](docs/using-codeguard.md)).
+
+## Write and test rules
+
+Ask the agent for the rule. The plugin's
+[writing-rules skill](skills/writing-rules/SKILL.md) writes it, in the project's
+`.codeguard/` or a ruleset of a [rule package](docs/rule-packages.md).
+
+Then test it with the CLI ([The CLI on its own](docs/using-codeguard.md#the-cli-on-its-own)),
+in the project's root, or in a package's root for every ruleset:
+
+1. `codeguard test` checks pattern rules and gates against their tests, and judge rules'
+   triggers on their eval cases. It calls no model. A pattern rule needs only this.
+2. For a judge rule, `codeguard eval` reviews each eval case once with the binding's
+   model, to verify the change.
+3. Once it passes, `codeguard eval --repeat 2` reviews each case twice more. A case passes
+   when it gets its expected review on all 3 runs.
 
 ## Documentation
 
@@ -41,8 +57,6 @@ For a project that uses codeguard:
 
 For whoever writes rules or maintains a rule package:
 
-- [Write rules](docs/write-rules.md): when you write or change a rule, with the plugin's
-  writing-rules skill, and test it.
 - [Make a rule package](docs/rule-packages.md): when you start or maintain a package: its
   repo and manifest, CI and releases, and trying a local or private one.
 - [Rule formats](docs/rule-formats.md): when you look up the format of a binding, a gate,
@@ -54,7 +68,7 @@ For whoever works on codeguard:
 - [Contributing](docs/CONTRIBUTING.md): working on codeguard, and releases.
 - [Architecture](docs/architecture.md): why codeguard works as it does, and the
   invariants every change keeps.
-- [Testing](docs/testing.md): which checks a change needs.
+- [Testing](docs/testing.md): which of codeguard's tests a change needs you to run.
 
 ## Help and maintainers
 

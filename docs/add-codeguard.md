@@ -96,7 +96,7 @@ labels from re-running the review and its judge calls.
 
 ## Opt into a rule package
 
-A project's own rules live under `.codeguard/` ([Write rules](write-rules.md)). The two
+A project's own rules live under `.codeguard/` ([Write and test rules](../README.md#write-and-test-rules)). The two
 kinds of rule are in [Rules](architecture.md#rules).
 
 A project can also opt into rulesets from rule packages. List the rulesets to run every

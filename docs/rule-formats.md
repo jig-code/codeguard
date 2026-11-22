@@ -1,8 +1,7 @@
 # Rule formats
 
-The format of each file a rule is made of, in `.codeguard/` or a ruleset's directory
-([Where rules live](write-rules.md#where-rules-live)). [Write rules](write-rules.md) says
-how to write and test them.
+The format of each file a rule is made of, in `.codeguard/` or a ruleset's directory.
+[Write and test rules](../README.md#write-and-test-rules) says how to write and test them.
 
 ## A pattern rule's binding
 
