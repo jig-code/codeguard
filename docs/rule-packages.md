@@ -23,8 +23,8 @@ rulesets and rules by their own names. The `name` shows only in diagnostics, as 
 `codeguard/python/no-del-param`.
 
 Each ruleset directory has the layout of a project's `.codeguard/`
-([Where rules live](write-rules.md#where-rules-live)), and its rules are written and
-tested the same way ([Write rules](write-rules.md)).
+([Layout](../skills/writing-rules/SKILL.md#layout)), and its rules are written and
+tested the same way ([Write and test rules](../README.md#write-and-test-rules)).
 
 ## CI and releases
 
