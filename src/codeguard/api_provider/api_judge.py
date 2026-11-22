@@ -54,15 +54,14 @@ _MAX_REQUESTS = 10
 _MAX_ATTEMPT_SECONDS = 60
 _GEMINI_THINKING_TOKENS = "thoughts_tokens"
 
-# Connects to the provider and gives the model named, for the length of one judgement.
-type ApiModels = Callable[[str], AbstractAsyncContextManager[Model]]
+type ModelConnector = Callable[[str], AbstractAsyncContextManager[Model]]
 
 
 @dataclass(frozen=True)
 class ApiJudge:
     root: Path
     model: str
-    models: ApiModels
+    connector: ModelConnector
     processes: AbstractContextManager[object]
     provider: str
     thinking: ApiEffort | None
@@ -114,7 +113,7 @@ class ApiJudge:
             model_settings=self._settings,
         )
         try:
-            async with self.models(self.model) as model:
+            async with self.connector(self.model) as model:
                 result = await agent.run(
                     prompt,
                     model=FallbackModel(
