@@ -1,4 +1,5 @@
 import asyncio
+import math
 import random
 from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
@@ -15,14 +16,17 @@ from pydantic_ai import (
     capture_run_messages,
 )
 from pydantic_ai.exceptions import (
+    FallbackExceptionGroup,
     ModelAPIError,
     ModelHTTPError,
     ModelRequestTimeout,
+    RunTimedOut,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models import Model, ModelRequestParameters
+from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import RunUsage
@@ -48,8 +52,8 @@ from codeguard.review import (
 
 _MAX_REQUESTS = 10
 _MAX_ATTEMPTS = 5
-# Judge requests answer in well under a minute, and a request still unanswered then has
-# stalled on the provider's side: the same request sent again answers in seconds.
+# Judge requests answer in well under a minute. One still unanswered then has stalled at the
+# provider, and the same request sent again answers in seconds.
 _ATTEMPT_TIME_LIMIT_SECONDS = 60
 _GEMINI_THINKING_TOKENS = "thoughts_tokens"
 # Responses the request can succeed on when sent again.
@@ -117,11 +121,17 @@ class ApiJudge:
             async with self.models(self.model) as model:
                 result = await agent.run(
                     prompt,
-                    model=_Retrying(model, self.deadline, self.attempt_time_limit_seconds),
+                    model=FallbackModel(
+                        *(_Retrying(model, self.deadline) for _ in range(self._attempts)),
+                        fallback_on=(ModelRequestTimeout,),
+                    ),
+                    timeout=None if self.deadline is None else self.deadline.remaining_seconds(),
                     workspace=LocalWorkspaceBackend(self.root, env={"PATH": PATH_WITH_RIPGREP}),
                     usage=usage,
                     usage_limits=UsageLimits(request_limit=self.max_requests),
                 )
+        except (FallbackExceptionGroup, RunTimedOut) as error:
+            raise self._timed_out() from error
         except UsageLimitExceeded as error:
             raise JudgeNoVerdict(
                 f"{self.model} returned no verdict in {self.max_requests} requests."
@@ -144,13 +154,18 @@ class ApiJudge:
             ) from error
         return result.output
 
+    # Each request is sent up to this many times, each attempt cut off at an equal share of the
+    # request's time limit, so a request that stalled is sent again within that limit.
+    @property
+    def _attempts(self) -> int:
+        return math.ceil(self.request_time_limit_seconds / self.attempt_time_limit_seconds)
+
     def _settings(self, _: RunContext[object]) -> ModelSettings:
-        limit = self.request_time_limit_seconds
-        if self.deadline is not None:
-            limit = min(limit, self.deadline.remaining_seconds())
-            if limit <= 0:
-                raise self.deadline.reached()
-        settings: ModelSettings = {"request_timeout": limit}
+        if self.deadline is not None and self.deadline.remaining_seconds() <= 0:
+            raise self.deadline.reached()
+        settings: ModelSettings = {
+            "request_timeout": self.request_time_limit_seconds / self._attempts
+        }
         if self.thinking is not None:
             settings["thinking"] = self.thinking
         return settings
@@ -163,16 +178,13 @@ class ApiJudge:
         )
 
 
-# Sends a request again when the provider turned it away, the connection broke or the request
-# stalled, while the backoff fits before the deadline. The SDK's own retries miss a connection
-# that broke after the response started, and never cut off a stalled request.
+# Sends a request again when the provider turned it away or the connection broke, while the backoff
+# fits before the deadline. The SDK's own retries miss a connection that broke after the
+# response started.
 class _Retrying(WrapperModel):
-    def __init__(
-        self, wrapped: Model, deadline: Deadline | None, attempt_time_limit_seconds: float
-    ) -> None:
+    def __init__(self, wrapped: Model, deadline: Deadline | None) -> None:
         super().__init__(wrapped)
         self.deadline = deadline
-        self.attempt_time_limit_seconds = attempt_time_limit_seconds
 
     async def request(
         self,
@@ -183,7 +195,7 @@ class _Retrying(WrapperModel):
         attempt = 1
         while True:
             try:
-                return await self._attempt(messages, model_settings, model_request_parameters)
+                return await super().request(messages, model_settings, model_request_parameters)
             except ModelAPIError as error:
                 # Backs off 1s doubling, plus up to 1s of jitter: about 15s over 5 attempts.
                 wait = 2 ** (attempt - 1) + random.random()
@@ -192,31 +204,11 @@ class _Retrying(WrapperModel):
             await asyncio.sleep(wait)
             attempt += 1
 
-    async def _attempt(
-        self,
-        messages: list[ModelMessage],
-        model_settings: ModelSettings | None,
-        model_request_parameters: ModelRequestParameters,
-    ) -> ModelResponse:
-        try:
-            async with asyncio.timeout(self.attempt_time_limit_seconds):
-                return await super().request(messages, model_settings, model_request_parameters)
-        except TimeoutError as error:
-            raise _Stalled(self.model_name, self.attempt_time_limit_seconds) from error
-
     def _fits(self, wait: float) -> bool:
         return self.deadline is None or wait < self.deadline.remaining_seconds()
 
 
-# An attempt that got no answer within its time limit. Unlike the request's own time limit,
-# it leaves time to send the request again.
-class _Stalled(ModelRequestTimeout):
-    pass
-
-
 def _retried(error: ModelAPIError) -> bool:
-    if isinstance(error, _Stalled):
-        return True
     if isinstance(error, ModelHTTPError):
         return error.status_code in _RETRIED_STATUSES
     return _transport_error(error) and not _timed_out(error)
