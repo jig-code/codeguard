@@ -93,8 +93,8 @@ rule package needs it (a package's `codeguard` range is checked against the CLI'
 version). Engineers get only released versions; see [Keep the plugin up to
 date](using-codeguard.md#keep-the-plugin-up-to-date).
 
-1. Bump the version to the same `<version>` in all four places, in the PR with the
-   change or in a PR of its own:
+1. Set the release's `<version>` in all four places, in the PR with the change or in a
+   PR of its own:
    - `version` in `pyproject.toml`, which rule packages' `codeguard` ranges are checked
      against;
    - `version` in `plugin/.claude-plugin/plugin.json` and
@@ -103,7 +103,9 @@ date](using-codeguard.md#keep-the-plugin-up-to-date).
      the old version reaches no one;
    - `version` in `plugin/bin/codeguard`, the codeguard release the plugin runs.
 
-   CI fails a PR whose four versions differ.
+   Between releases, `pyproject.toml`'s version may run ahead of the plugin's, which
+   names a release that is already tagged. CI fails a PR whose plugin manifests and
+   `plugin/bin/codeguard` give different versions.
 2. Validate:
    ```sh
    claude plugin validate .
@@ -114,7 +116,7 @@ date](using-codeguard.md#keep-the-plugin-up-to-date).
    git tag v<version> origin/main
    git push origin v<version>
    ```
-   The release workflow checks that the tag matches all four versions, then moves
+   The release workflow checks that all four versions match the tag, then moves
    the major tag (`v0`) to the release. If it fails, fix the versions on `main`, then
    move the tag to the fixed commit and push it again:
    ```sh
