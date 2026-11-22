@@ -38,7 +38,10 @@ provider: gemini                  # default: claude-cli; or codex-cli, gemini, b
 model: gemini-4-argon             # default: the claude CLI's own; every provider but claude-cli needs one
 ```
 
-A judge rule's id is its file's name, without `.md`.
+A judge rule's id is its file's name, without `.md`. `codeguard test` fails a rule file
+that doesn't start with a `# ` title, has no statement under it, has no `## Why` with
+text, or has a heading other than `## Why`. The frontmatter that older packages' skill files hold is not part of this
+format.
 
 `triggers` names the code the rule's violations need. The judge skips a changed file
 whose [changed lines](how-a-review-works.md#what-a-review-reports) fall inside none of it. A binding without `triggers` gets `[any]`, so packages written before

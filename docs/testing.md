@@ -35,7 +35,7 @@ Distinguish CodeGuard's repository tests from its rule-validation features:
 |---|---|---|---|
 | codeguard's tests | The CLI, config, triggers, hooks and judge, with no model | No | A test function |
 | LLM tests | The judge gives each fixture case its expected review from a real model | Yes, and verdicts can vary between runs | A fixture case |
-| Rule tests | Each pattern rule and gate matches the code it should, and each judge rule's triggers fire on the edits they should | No, and the result is the same every run | Code a rule or gate must or must not match, or a rule eval case, checked for its triggers only |
+| Rule tests | Each pattern rule and gate matches the code it should, and each judge rule's file has the format and its triggers fire on the edits they should | No, and the result is the same every run | Code a rule or gate must or must not match, a judge rule file checked for its format, or a rule eval case, checked for its triggers only |
 | Rule evals | Each judge rule's model gives each edit the review it should | Yes, and verdicts can vary between runs | A rule eval case |
 
 Rule tests and rule evals check the rules themselves. `codeguard review` is different: it
@@ -90,7 +90,7 @@ re-running them after a merge spends model calls that the pull request already s
 | Anything | Lint, format, import boundaries, types and codeguard's offline tests | `uv run ruff check`, `uv run ruff format --check`, `uv run lint-imports`, `uv run basedpyright`, `uv run pytest` | Same |
 | Anything | The changed files against the rules this repository opts into in its [`.codeguard/config.yaml`](../.codeguard/config.yaml), judge rules included; an error fails. This dogfoods codeguard: every change to it must pass the rules in its own config. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files, and the Stop hook runs it each time an agent or subagent stops | `codeguard review --base <base branch>` | `codeguard review` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | Each fixture case's review: 1 run to verify the change, then 2 more, 3 of 3 | `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` | Same |
-| The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 2 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md) | Same |
+| The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 2 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` | Same |
 
 The judge's code is under `src/codeguard/`. Plain `uv run pytest` deselects the LLM
 tests. `-n 8` only sets how many run at once: any number gives the same result.

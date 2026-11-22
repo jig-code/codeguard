@@ -23,6 +23,7 @@ from codeguard.review import Bindings, Category, Review
 from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
+SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS = 180
 CASES = [
     pytest.param(rule_eval.name, case, id=f"{rule_eval.name}: {case.name}")
     for _, rule_eval in RuleEvalReader(EVALS / "python").read()
@@ -131,7 +132,8 @@ def _case_tree(evals: Path, rule: str, inputs: FileEdit) -> AbstractContextManag
         {
             "packages": [
                 {"kind": "path", "path": str(evals), "rulesets": {"python": {"include": [rule]}}}
-            ]
+            ],
+            "judge": {"request_time_limit_seconds": SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS},
         }
     )
     return WorkingTree.temporary(

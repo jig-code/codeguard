@@ -63,7 +63,6 @@ jobs:
         env:
           CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
-          CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS: 180
   # Two more runs of each case, for 3 of 3; every run completes.
   llm-tests-reliability:
     needs: llm-tests-validity
@@ -80,4 +79,3 @@ jobs:
         env:
           CODEGUARD_JUDGE__GEMINI__PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE: ${{ steps.auth.outputs.credentials_file_path }}
-          CODEGUARD_JUDGE__REQUEST_TIME_LIMIT_SECONDS: 180

@@ -15,7 +15,7 @@ does against what the skill says. A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check |
 |---|---|---|
-| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/skills/<id>/SKILL.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
+| A rule codeguard should check: a new one, or a fix to an existing one | Write or fix the rule as the skill says | The rule's files: `.codeguard/rules/judge/<id>.md`, `.codeguard/bindings/<id>.yaml` and `.codeguard/rule-evals/<id>.yaml` |
 | A rule another tool should check, such as a type checker or a dead-code tool | Write no rule, say only that the convention isn't codeguard's to check, and offer no other rule | That no rule file was written, that the agent's reply says the convention isn't codeguard's to check, and that the reply offers no other rule |
 
 The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
@@ -62,16 +62,21 @@ name that criterion's concrete failures, a missing or empty output among them.
 
 ## Running them
 
-A case passes when every grader passes in all 3 runs. With Bedrock credentials in the
-environment, and a Bedrock model id or inference profile for the agent and for the
-graders:
+A case passes when every grader passes in all 3 runs: 1 run to verify the change, then,
+once it passes, 2 more. With Bedrock credentials in the environment, and a Bedrock model
+id or inference profile for the agent and for the graders, run the command with
+`--runs 1`, then again with `--runs 2`:
 
 ```sh
 CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval . --scaffold --allow-tools Write Edit \
-  --runs 3 --threshold 1 --ablation none \
+  --runs 1 --threshold 1 --ablation none \
   --model <agent model id> --judge-model <grader model id> \
   --trust-plugin --no-publish
 ```
+
+Without Bedrock, the same command runs on a signed-in `claude` CLI: leave out
+`CLAUDE_CODE_USE_BEDROCK=1` and give `--model` and `--judge-model` the names of the
+models CI's Bedrock profiles serve. `--case <name>` runs only the case a change touches.
 
 Run it from a checkout with no `.venv`: the eval copies the plugin and refuses the hard
 links uv makes there.
