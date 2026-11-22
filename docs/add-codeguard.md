@@ -36,10 +36,16 @@ List the plugin in the project's `.agents/plugins/marketplace.json`:
     {
       "name": "codeguard",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/jig-code/codeguard.git",
+        "path": "./plugin",
         "ref": "v0"
-      }
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
     }
   ]
 }

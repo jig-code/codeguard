@@ -42,7 +42,7 @@ as not checked, at the rule's severity, as a failed judge call is, so an uncheck
 
 When an agent or subagent stops, the hook runs `codeguard review` in its working
 directory: the uncommitted and untracked files, whoever changed them and however. The
-hook runs the codeguard the plugin ships, not one on your PATH. Claude Code and Codex get
+hook runs the codeguard release the plugin names, not one on your PATH. Claude Code and Codex get
 the same behaviour. [Troubleshooting](using-codeguard.md#troubleshooting) covers a hook
 that doesn't run.
 

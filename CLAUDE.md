@@ -28,7 +28,7 @@ Before writing, editing or reviewing any `.py` file, tests included, load the
 ## Rules
 
 Before adding or changing a rule, follow
-[skills/writing-rules/SKILL.md](skills/writing-rules/SKILL.md). Whenever a rule eval, an
+[plugin/skills/writing-rules/SKILL.md](plugin/skills/writing-rules/SKILL.md). Whenever a rule eval, an
 LLM test or a judged review fails, flips between runs or reports a warning, follow the
 Rule failures bullet in [docs/architecture.md](docs/architecture.md#testing-a-rule) and
 [docs/testing.md](docs/testing.md). This covers the LLM

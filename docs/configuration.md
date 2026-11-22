@@ -68,7 +68,7 @@ leak.
 | Variable | Default | What it does |
 |---|---|---|
 | `CODEGUARD_CONFIG` | `.codeguard/config.yaml` | The config file to load, relative to the repository root, such as a gitignored `codeguard.local.yaml` for working on a local package. |
-| `CODEGUARD` | the codeguard the plugin ships | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
+| `CODEGUARD` | the codeguard release the plugin names | The codeguard the hooks run instead, such as a checkout's `.venv/bin/codeguard`. |
 | `CODEGUARD_JUDGE__PROVIDER`, `CODEGUARD_JUDGE__MODEL` | unset | Set `judge.provider` and `judge.model` in place of the config file's, such as for a CI job that judges with Bedrock while developers use the `claude` CLI. An empty variable counts as unset. |
 | `CODEGUARD_JUDGE__GEMINI__PROJECT` | unset; judging with Gemini without it is a config error | The Google Cloud project Gemini runs in; see [Gemini on Google Cloud](judges.md#gemini-on-google-cloud). |
 | `CODEGUARD_JUDGE__GEMINI__LOCATION` | `global` | The Vertex AI location Gemini runs in. |
