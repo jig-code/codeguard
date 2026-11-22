@@ -6,17 +6,10 @@
 - Failures
 - pydantic-evals datasets
 
-codeguard has three kinds of eval, each testing something different. This reference
-covers only the LLM tests.
-
-| | Tests | Cases | Runs with | Guidance |
-|---|---|---|---|---|
-| LLM tests | codeguard's judge: that it reaches the right verdict on a rule and a change | `evals/judge/` | `uv run pytest -m llm` | This reference |
-| Rule evals | A project's or package's judge rules: that each rule's wording gets the right verdicts from the judge | `rule-evals/` beside the rules | `codeguard eval`, a product feature built on pydantic-evals | The writing-rules skill's [judge-rules.md](../../../../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases) |
-| Skill evals | The writing-rules skill: that an agent following it writes good rules | `evals/writing-rules/` | `claude plugin eval` | [docs/skill-evals.md](../../../../docs/skill-evals.md) |
-
-The judge fixtures in `evals/judge/` use the rule eval format, but they are LLM test
-cases: they test the judge, not their rule, so the rule eval guidance doesn't apply.
+These rules cover codeguard's own LLM tests. Their fixture cases test the judge, not
+their rule, so the writing-rules guidance on rule eval cases doesn't apply.
+[docs/testing.md](../../../../docs/testing.md) sets out how the LLM tests, skill evals
+and rule evals differ.
 
 ## How codeguard's LLM tests run
 

@@ -23,6 +23,19 @@ model and turns its reply into a review. Its fixtures, in `evals/judge/`, are a 
 rule package that exists only to test it. A fixture rule is a judge rule there, and a
 fixture case is one of its rule eval cases.
 
+Three kinds of eval call a model, and each tests something different:
+
+- The LLM tests test the judge: that it reaches the right verdict on a rule and a
+  change. Their cases are the fixture cases.
+- The skill evals test the writing-rules skill: that an agent following it writes good
+  rules ([Testing the writing-rules skill](skill-evals.md)).
+- Rule evals, run with `codeguard eval`, test a project's or package's judge rules: that
+  each rule's wording gets the right verdicts. They are a codeguard feature, not one of
+  codeguard's tests ([The rule eval](rule-formats.md#the-rule-eval)).
+
+The fixture cases use the rule eval format but test the judge, so the writing-rules
+guidance on rule eval cases doesn't apply to them.
+
 Plain `uv run pytest` calls no model and deselects the LLM tests. `-n 4` only sets how
 many LLM tests run at once: any number gives the same result.
 
