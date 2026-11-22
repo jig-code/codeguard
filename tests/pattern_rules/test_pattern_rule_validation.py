@@ -19,31 +19,31 @@ class TestPatternRuleValidation:
         assert result == ValidationResult(failed=False)
 
     def test_run_with_passing_cases_passes(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - logging.info(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
 
         result = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == ValidationResult(failed=False)
 
     def test_run_with_failing_case_fails(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["print(1)"]}))
 
         result = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == ValidationResult(failed=True)
 
     def test_run_with_failing_case_in_the_pattern_directory_fails(self, repo):
-        repo.write(LEGACY_NO_PRINT_TEST, "id: no-print\nvalid:\n  - print(1)\n")
+        repo.write(LEGACY_NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["print(1)"]}))
 
         result = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard")).run()
 
         assert result == ValidationResult(failed=True)
 
     def test_update_snapshots_writes_each_directory_its_own_snapshots(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)"]}))
         repo.write(
             ".codeguard/rule-tests/pattern/no-breakpoint-test.yml",
-            "id: no-breakpoint\ninvalid:\n  - breakpoint()\n",
+            yaml.safe_dump({"id": "no-breakpoint", "invalid": ["breakpoint()"]}),
         )
         validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
 
@@ -57,17 +57,19 @@ class TestPatternRuleValidation:
         assert validation.run() == ValidationResult(failed=False)
 
     def test_run_reports_snapshot_entry_for_removed_case(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n")
+        repo.write(
+            NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)", "print(2)"]})
+        )
         validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
         validation.update_snapshots()
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(2)"]}))
 
         result = validation.run()
 
         assert result == ValidationResult(failed=False, problems=(STALE_NO_PRINT_SNAPSHOT,))
 
     def test_run_reports_snapshot_of_removed_test(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)"]}))
         validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
         validation.update_snapshots()
         (repo.root / NO_PRINT_TEST).unlink()
@@ -77,10 +79,12 @@ class TestPatternRuleValidation:
         assert result == ValidationResult(failed=False, problems=(STALE_NO_PRINT_SNAPSHOT,))
 
     def test_update_snapshots_removes_entries_for_removed_cases(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n  - print(2)\n")
+        repo.write(
+            NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)", "print(2)"]})
+        )
         validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
         validation.update_snapshots()
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(2)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(2)"]}))
 
         result = validation.update_snapshots()
 
@@ -89,7 +93,7 @@ class TestPatternRuleValidation:
         assert list(snapshot["snapshots"]) == ["print(2)"]
 
     def test_update_snapshots_removes_snapshot_of_removed_test(self, repo):
-        repo.write(NO_PRINT_TEST, "id: no-print\ninvalid:\n  - print(1)\n")
+        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)"]}))
         validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
         validation.update_snapshots()
         (repo.root / NO_PRINT_TEST).unlink()
