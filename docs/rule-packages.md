@@ -22,9 +22,8 @@ A project's config never names the package: it picks it by git URL and ref, and 
 rulesets and rules by their own names. The `name` shows only in diagnostics, as in
 `codeguard/python/no-del-param`.
 
-Each ruleset directory has the layout of a project's `.codeguard/`
-([Layout](../skills/writing-rules/SKILL.md#layout)), and its rules are written and
-tested the same way ([Write and test rules](../README.md#write-and-test-rules)).
+Each ruleset directory has the layout of a project's `.codeguard/`, and its rules are
+written and tested the same way ([Write and test rules](../README.md#write-and-test-rules)).
 
 ## CI and releases
 
