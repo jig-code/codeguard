@@ -4,7 +4,7 @@ import pytest
 import yaml
 from packaging.version import Version
 from pydantic import ValidationError
-from rules_package import NO_PRINT_RULE
+from rules_package import NO_PRINT_RULE_FILE
 
 from codeguard.config import (
     BindingConfig,
@@ -509,7 +509,7 @@ class TestRuleset:
         assert judge == override
 
     def test_gates_are_not_pattern_rules(self, directory, make_ruleset):
-        directory.write("rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
+        directory.write("rules/pattern/no-print.yml", NO_PRINT_RULE_FILE.read_text())
         directory.write(
             "gates/enum-value.yml",
             yaml.safe_dump(

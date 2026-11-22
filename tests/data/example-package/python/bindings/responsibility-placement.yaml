@@ -1,0 +1,3 @@
+rule: responsibility-placement
+paths: ["**/*.py"]
+triggers: [any]

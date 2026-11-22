@@ -1,0 +1,11 @@
+id: no-print
+language: python
+severity: error
+message: Use logging, not print.
+note: |
+  print bypasses log levels.
+  Call logger.info instead.
+metadata:
+  why: Print output skips the log levels and handlers production reads.
+rule:
+  pattern: print($$$ARGS)

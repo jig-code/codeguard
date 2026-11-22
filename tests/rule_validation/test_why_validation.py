@@ -1,6 +1,6 @@
 import pytest
 import yaml
-from rules_package import NO_PRINT_RULE
+from rules_package import NO_PRINT_RULE_FILE
 
 from codeguard.config import ConfigError, RulesetLoader
 from codeguard.rule_validation import ValidationResult, WhyValidation, WhyValidationMode
@@ -42,7 +42,7 @@ class TestWhyValidation:
         )
 
     def test_pattern_rules_without_a_why_are_reported_by_id(self, directory):
-        directory.write(".codeguard/rules/pattern/no-print.yml", yaml.safe_dump(NO_PRINT_RULE))
+        directory.write(".codeguard/rules/pattern/no-print.yml", NO_PRINT_RULE_FILE.read_text())
         directory.write(
             ".codeguard/rules/pattern/a.yml",
             yaml.safe_dump({"id": "z-rule", "language": "python", "rule": {"pattern": "z()"}}),
