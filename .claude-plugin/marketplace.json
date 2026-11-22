@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "codeguard",
-      "source": "./",
+      "source": "./plugin",
       "description": "Makes coding agents follow your project's coding conventions."
     }
   ]

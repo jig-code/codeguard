@@ -2,8 +2,8 @@ name: writing-rules skill evals
 on:
   pull_request:
     paths:
-      - skills/writing-rules/**
-      - evals/writing-rules/**
+      - plugin/skills/writing-rules/**
+      - plugin/evals/writing-rules/**
       - .github/workflows/skill-evals.yaml
       - .github/actions/skill-evals/**
 concurrency:
