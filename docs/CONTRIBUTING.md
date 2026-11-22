@@ -46,7 +46,7 @@ Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 [Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
-The `writing-rules` skill has its own evals in `evals/writing-rules/`;
+The `writing-rules` skill has its own evals in `plugin/evals/writing-rules/`;
 [docs/skill-evals.md](skill-evals.md) says how to run and write them.
 
 ## Run your clone in a project
@@ -72,8 +72,10 @@ Point a project's hooks at this clone.
     }
   }
   ```
-  Python edits apply on the next hook run. Edits to `hooks.json` or `plugin.json`
-  need `/reload-plugins`.
+  Edits to `plugin/hooks/stop.py` apply on the next hook run. Edits to `hooks.json` or
+  `plugin.json` need `/reload-plugins`. The hook runs the codeguard release the plugin's
+  version names, not this clone's code: to review with this clone, start the agent with
+  `CODEGUARD=/path/to/codeguard/.venv/bin/codeguard`.
 
   This clone's own `.claude/settings.json` runs its hooks with `.venv/bin/codeguard`, the
   build `uv sync` keeps current. `CODEGUARD=<path>` makes the hook run any other build.
@@ -91,15 +93,17 @@ rule package needs it (a package's `codeguard` range is checked against the CLI'
 version). Engineers get only released versions; see [Keep the plugin up to
 date](using-codeguard.md#keep-the-plugin-up-to-date).
 
-1. Bump the version to the same `<version>` in all three files, in the PR with the
+1. Bump the version to the same `<version>` in all four places, in the PR with the
    change or in a PR of its own:
    - `version` in `pyproject.toml`, which rule packages' `codeguard` ranges are checked
      against;
-   - `version` in `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`.
+   - `version` in `plugin/.claude-plugin/plugin.json` and
+     `plugin/.codex-plugin/plugin.json`.
      Claude Code installs a plugin update only when this changes, so a release with
-     the old version reaches no one.
+     the old version reaches no one;
+   - `version` in `plugin/bin/codeguard`, the codeguard release the plugin runs.
 
-   CI fails a PR whose three versions differ.
+   CI fails a PR whose four versions differ.
 2. Validate:
    ```sh
    claude plugin validate .
@@ -110,7 +114,7 @@ date](using-codeguard.md#keep-the-plugin-up-to-date).
    git tag v<version> origin/main
    git push origin v<version>
    ```
-   The release workflow checks that the tag matches all three versions, then moves
+   The release workflow checks that the tag matches all four versions, then moves
    the major tag (`v0`) to the release. If it fails, fix the versions on `main`, then
    move the tag to the fixed commit and push it again:
    ```sh

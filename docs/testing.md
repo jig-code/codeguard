@@ -13,7 +13,7 @@ pull requests too.
 |---|---|
 | Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals: `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
@@ -44,7 +44,7 @@ when it passes all 3 runs. Any change starts again at the first command.
 Re-running until a case passes doesn't meet the bar.
 
 For a fixture case, follow the writing-rules reference's
-[eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+[eval case guidance](../plugin/skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
 A fixture that tests review scope may also hold a pre-existing violation of the rule under
 test, in code the change leaves untouched and doesn't take part in, so the review must
 leave it unreported. Keep that violation small and plain, and let it break no other

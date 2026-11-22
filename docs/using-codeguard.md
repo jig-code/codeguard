@@ -6,11 +6,12 @@ page is what each engineer does.
 
 ## Install the plugin
 
-The plugin ships the codeguard CLI, its review hooks and the writing-rules skill, and
-runs the CLI with [uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is
-all anyone working in the project installs. Carrying the CLI keeps the hook and the CLI it
-runs on the same version. The first review after an install or upgrade takes a little
-longer while uv builds codeguard's environment.
+The plugin holds codeguard's review hooks and the writing-rules skill, and runs the
+codeguard CLI release its version names with
+[uv](https://docs.astral.sh/uv/getting-started/installation/), so uv is all anyone
+working in the project installs. Pinning the release keeps the hook and the CLI it runs
+on the same version. The first review after an install or upgrade takes a little longer
+while uv fetches that release and builds its environment.
 
 ### Claude Code
 
@@ -77,5 +78,5 @@ lists its commands.
   ([Hooks](https://code.claude.com/docs/en/hooks)).
 - **The agent can't fix an error.** It blocks every time the agent stops until the error
   is fixed, so interrupt the agent and fix the rule.
-- **The review crashed, or uv couldn't build codeguard's environment.** You see why, and
+- **The review crashed, or uv couldn't fetch or build codeguard.** You see why, and
   the stop goes through.

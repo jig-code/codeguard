@@ -25,7 +25,7 @@ in CI with the project's Claude token or cloud account ([Choose a judge](docs/ju
 ## Write and test rules
 
 Ask the agent for the rule. The plugin's
-[writing-rules skill](skills/writing-rules/SKILL.md) writes it, in the project's
+[writing-rules skill](plugin/skills/writing-rules/SKILL.md) writes it, in the project's
 `.codeguard/` or a ruleset of a [rule package](docs/rule-packages.md).
 
 Then test it with the CLI ([The CLI on its own](docs/using-codeguard.md#the-cli-on-its-own)),
@@ -61,7 +61,7 @@ For whoever writes rules or maintains a rule package:
   repo and manifest, CI and releases, and trying a local or private one.
 - [Rule formats](docs/rule-formats.md): when you look up the format of a binding, a gate,
   a trigger or a rule eval. The plugin's [writing-rules
-  skill](skills/writing-rules/SKILL.md) says how to write a rule.
+  skill](plugin/skills/writing-rules/SKILL.md) says how to write a rule.
 
 For whoever works on codeguard:
 
