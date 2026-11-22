@@ -13,8 +13,8 @@ and the judge gets its text unparsed. It holds, in this order, and nothing else:
    name, but it never widens the convention: the statement alone decides each case.
 
 Nothing else goes in the rule file, in any section or for any language: each piece of
-code is decided by the statement, or the statement is unclear. Leave out the fix, and anything telling the judge how to answer: the judge's own prompt sets its
-output.
+code is decided by the statement, or the statement is unclear. Leave out the fix, and
+anything telling the judge how to answer: the judge's own prompt sets its output.
 
 ## Gate every form of the violation
 
@@ -44,8 +44,9 @@ sees.
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
 ground on which code breaks the convention and one `valid` case for each distinct
 situation near the boundary in which code keeps it, and a `skipped` case outside the
-gate. A convention broken on one ground has one `invalid` case. No edge cases: a case that a reasonable reviewer could
-argue either way proves nothing about the rule, and a judge that flips on it is right to.
+gate. A convention broken on one ground has one `invalid` case. No edge cases: a case
+that a reasonable reviewer could argue either way proves nothing about the rule, and a
+judge that flips on it is right to.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code is a problem or why it's fine.

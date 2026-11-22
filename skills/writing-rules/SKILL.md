@@ -18,8 +18,8 @@ convention that a model judges each change against.
       noun a phrase describes.
    2. Wherever a pronoun could mean more than one noun, write the noun instead: the
       judge picks one meaning and decides by it.
-   3. Name what code does, never what code leaves out: the judge says on what ground
-      code breaks the rule, and code that leaves something out has no line to point to.
+   3. Name what code does, never what code leaves out: the judge reports only a
+      violation that a changed line is part of, and what code leaves out is on no line.
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
@@ -74,8 +74,8 @@ statement as a reviewer would, and says on what ground the code keeps or breaks 
   is restated so it doesn't; it isn't given an exception for that code.
 - **Decided by its wording, never by examples.** A case that the statement decides
   wrongly, or on the wrong ground, shows the statement is unclear: reword it so the
-  statement decides the case. An example would only make the judge match code to it, and
-  the next case fails the same way.
+  statement decides the case. An example or a carve-out for the case would only make
+  the judge match code to it, and the next case fails the same way.
 - **Never contradicts another rule.** A new rule never flags what another rule in the
   project or package requires.
 - **Never overlaps another rule.** A new rule never flags code that another rule already
