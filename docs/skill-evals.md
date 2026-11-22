@@ -1,8 +1,8 @@
 # Testing the writing-rules skill
 
-The writing-rules skill's evals, in `evals/writing-rules/`, check what
-[the skill covers](CONTRIBUTING.md#the-writing-rules-skill). They run with
-`claude plugin eval`.
+The writing-rules skill, in `skills/writing-rules/`, is the guidance codeguard's plugin
+gives an agent that writes or changes a codeguard rule. Its evals are in
+`evals/writing-rules/` and run with `claude plugin eval`.
 [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
 command, how to write a case and its graders, and how cases are scored. This page says
 only what codeguard adds. [Testing codeguard](testing.md) says when to run them.
@@ -19,16 +19,17 @@ does against what the skill says. A case is one of two kinds:
 
 The cases are in [`evals/writing-rules/`](../evals/writing-rules/).
 
-The evals test only what the skill covers. They never check whether a rule the agent
-writes works, or whether its rule tests or rule evals pass: that is tested wherever the
-rule lives. When the agent declines a rule, they don't check what it says about the
-other tool or whether it sets that tool up. So:
+The evals test only the skill, and the skill itself covers only writing the rule. They
+never check whether a rule the agent writes works, or whether its rule tests or rule
+evals pass: that is tested wherever the rule lives. When the agent declines a rule, they
+don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
 - A case's prompt asks only for a rule, a new one or a fix to an existing one, and names
   the files the agent needs. It never says why the rule is wanted, who or what reads it,
   or how it behaves when it runs, such as a review it gave or a verdict that changed
-  between runs. None of that is the skill's, so none of it is part of a case.
+  between runs. The skill covers only writing the rule, so none of that is part of a
+  case.
 - A grader reads one thing: a file that the agent wrote, whether the agent wrote any
   rule file, whether the agent loaded the writing-rules skill, or, in a case that
   declines a rule, the agent's final reply.
