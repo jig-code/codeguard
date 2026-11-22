@@ -6,9 +6,17 @@
 - Failures
 - pydantic-evals datasets
 
-These rules cover codeguard's own LLM tests (`pytest -m llm`). They don't cover
-`JudgeEvalRunner` or `codeguard eval`, which are product features codeguard ships for rule
-packages to evaluate their judge rules.
+codeguard has three kinds of eval, each testing something different. This reference
+covers only the LLM tests.
+
+| | Tests | Cases | Runs with | Guidance |
+|---|---|---|---|---|
+| LLM tests | codeguard's judge: that it reaches the right verdict on a rule and a change | `evals/judge/` | `uv run pytest -m llm` | This reference |
+| Rule evals | A project's or package's judge rules: that each rule's wording gets the right verdicts from the judge | `rule-evals/` beside the rules | `codeguard eval`, a product feature built on pydantic-evals | The writing-rules skill's [judge-rules.md](../../../../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases) |
+| Skill evals | The writing-rules skill: that an agent following it writes good rules | `evals/writing-rules/` | `claude plugin eval` | [docs/skill-evals.md](../../../../docs/skill-evals.md) |
+
+The judge fixtures in `evals/judge/` use the rule eval format, but they are LLM test
+cases: they test the judge, not their rule, so the rule eval guidance doesn't apply.
 
 ## How codeguard's LLM tests run
 
@@ -35,9 +43,7 @@ says which changes need the LLM tests and how many runs.
 ## Cases
 
 - Each case tests one judge behavior, such as reporting a violation that a removed line
-  creates, and no two cases test the same one. The writing-rules skill's eval case
-  guidance doesn't apply: it is for a rule's own cases, which test that the rule's wording
-  gets the right verdicts. These cases test codeguard's judge.
+  creates, and no two cases test the same one.
 - A review-scope case may hold an old violation in code the change doesn't touch, which
   the review must leave unreported. Keep it small and plain, and let it break no other
   rule.
