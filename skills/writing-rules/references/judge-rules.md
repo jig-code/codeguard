@@ -27,8 +27,7 @@ sees.
 - Gate on where a violation appears in the changed code, not on the rule's topic: what
   the topic names may be defined elsewhere, in code the change doesn't touch.
 - Gate on the narrowest node that holds the violation. A wider gate costs judge calls
-  and tokens;
-  `codeguard review --dry-run` counts the calls.
+  and tokens; `codeguard review --dry-run` counts the calls.
 - A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
   `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
   `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,

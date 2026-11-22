@@ -7,8 +7,8 @@
   `.codeguard/bindings/<id>.yaml` and the rule eval `.codeguard/rule-evals/<id>.yaml`.
   A judge rule isn't written until all three exist; write the binding and the rule eval
   in the same pass as the rule file, never leave them for later.
-  - The rule file is plain Markdown, with no frontmatter: a title, the convention and
-    `## Why`. The rule's id is the file's name without `.md`.
+  - The rule file is plain Markdown, with no frontmatter; `references/judge-rules.md`
+    says what it holds. The rule's id is the file's name without `.md`.
   - The binding sets `rule` (the rule's id), `paths` (globs of the files the rule
     reviews) and `triggers` (the change kinds or gates that call the judge, never `any`,
     `code`, `function-body` or `function-signature`).
