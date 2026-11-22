@@ -88,7 +88,7 @@ re-running them after a merge spends model calls that the pull request already s
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
 | Any file outside `docs/`, `README.md` and `CLAUDE.md` | Lint, format, import boundaries, types and codeguard's offline tests | `uv run ruff check`, `uv run ruff format --check`, `uv run lint-imports`, `uv run basedpyright`, `uv run pytest` | Same |
-| Any file outside `docs/`, `README.md` and `CLAUDE.md` | The changed files against the rules this repository opts into in its [`.codeguard/config.yaml`](../.codeguard/config.yaml), judge rules included; an error fails. This dogfoods codeguard: every change to it must pass the rules in its own config. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files, and the Stop hook runs it each time an agent or subagent stops | `codeguard review --base <base branch>` | `codeguard review` |
+| Any file outside `docs/`, `README.md` and `CLAUDE.md` | The changed files against the rules this repository opts into in its [`.codeguard/config.yaml`](../.codeguard/config.yaml); an error fails | The review action, on the pull request's changes since its base branch | The Stop hook, on uncommitted and untracked files when an agent stops |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | Each fixture case's review: 1 run to verify the change, then 2 more, 3 of 3 | `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` | Same |
 | The writing-rules skill or its evals | Each skill eval case's graders: 1 run to verify the change, then 2 more, every grader passing every run | `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` | Same |
 
@@ -117,7 +117,7 @@ Run both commands at the package root; they cover every ruleset.
 
 | You change | It checks | CI runs | Locally, run |
 |---|---|---|---|
-| The app's code | The changed files against the app's rules; an error fails. In CI, the review action reviews the pull request's changes since its base branch. Locally, `codeguard review` reviews uncommitted and untracked files | `codeguard review --base <base branch>` | `codeguard review` |
+| The app's code | The changed files against the app's rules; an error fails | The review action, on the pull request's changes since its base branch | The Stop hook, on uncommitted and untracked files when an agent stops |
 | A rule the app defines | Each rule's tests and each case's triggers, then the verdicts of each judge rule whose rule or eval cases changed: 1 run to verify the change, then 2 more | `codeguard test`, `codeguard eval --rule <id>`, then `codeguard eval --rule <id> --repeat 2` | Same |
 | The codeguard release the actions are pinned to | Each case's triggers, then every judge rule's verdicts: 1 run to verify the change, then 2 more | `codeguard test`, `codeguard eval`, then `codeguard eval --repeat 2` | Same |
 
