@@ -16,19 +16,14 @@ class TestRuleFormatValidation:
 
         assert result == ValidationResult()
 
-    def test_problems_are_reported_by_rule_id(self, directory):
-        directory.write(".codeguard/rules/judge/zebra.md", "no title\n")
-        directory.write(".codeguard/rules/judge/apple.md", "no title\n")
-        directory.write(".codeguard/bindings/a.yaml", f"rule: zebra\n{BINDING}")
-        directory.write(".codeguard/bindings/b.yaml", f"rule: apple\n{BINDING}")
+    def test_problem_is_reported_with_its_rule_id(self, directory):
+        directory.write(".codeguard/rules/judge/naming.md", "no title\n")
+        directory.write(".codeguard/bindings/naming.yaml", f"rule: naming\n{BINDING}")
 
         result = RuleFormatValidation(RulesetLoader.local(directory.root)).run()
 
         assert result == ValidationResult(
-            problems=(
-                "apple: rule file must start with a `# ` title",
-                "zebra: rule file must start with a `# ` title",
-            )
+            problems=("naming: rule file must start with a `# ` title",)
         )
 
     def test_rule_bound_with_the_legacy_skill_key_is_not_checked(self, directory):

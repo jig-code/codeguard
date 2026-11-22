@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from codeguard.config import ConfigError, RulesetLoader
-from codeguard.review import JudgeRule
+from codeguard.rule_validation.judge_rule_file import JudgeRuleFile
 from codeguard.rule_validation.validation_result import ValidationResult
 
 
@@ -38,9 +38,9 @@ class WhyValidation:
         return self.mode.result(
             (
                 *(
-                    f"{rule.name}: no ## Why section in its rule file"
-                    for rule in JudgeRule.legacy_skills_of(ruleset)
-                    if not rule.says_why
+                    f"{rule_file.rule_id}: no ## Why section in its rule file"
+                    for rule_file in JudgeRuleFile.from_ruleset(ruleset)
+                    if rule_file.is_legacy_skill and not rule_file.outline.says_why
                 ),
                 *(
                     f"{rule.id}: no metadata.why"
