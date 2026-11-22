@@ -1,3 +1,0 @@
-rule: no-swallowed-exceptions
-paths: ["src/**/*.py"]
-triggers: [any]

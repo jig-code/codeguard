@@ -1,6 +1,6 @@
 ---
 type: llm
-focus: { source: file, path: .codeguard/rules/judge/no-swallowed-exceptions.md }
+focus: { source: file, path: .codeguard/rules/judge/no-secrets-in-logs.md }
 weight: 1
 ---
 
