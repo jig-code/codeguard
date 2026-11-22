@@ -74,7 +74,6 @@ def transport_error(cause: Exception) -> ModelAPIError:
     return error
 
 
-# An answer that doesn't arrive within any time limit a test sets.
 class Stall:
     pass
 
