@@ -24,6 +24,11 @@ from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS = 180
+JUDGE_SPANS = (
+    "{provider} judges {rule} on {file}",
+    "claude judges {rule} on {file}",
+    "codex judges {rule} on {file}",
+)
 CASES = [
     pytest.param(rule_eval.name, case, id=f"{rule_eval.name}: {case.name}")
     for _, rule_eval in RuleEvalReader(EVALS / "python").read()
@@ -113,7 +118,11 @@ class TestJudgePrompt:
             review = Rules(working_tree).review(LineScopes.at(working_tree).changed_lines("HEAD"))
 
         listing = "\n".join(map(str, review.diagnostics))
-        telemetry = finished_span_attributes(capfire, "codex judges {rule} on {file}")
+        telemetry = [
+            attributes
+            for span in JUDGE_SPANS
+            for attributes in finished_span_attributes(capfire, span)
+        ]
         if telemetry:
             listing += f"\nJudge telemetry: {telemetry!r}"
         errors = [
