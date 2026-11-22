@@ -4,7 +4,6 @@
 - Cases
 - The bar
 - Failures
-- pydantic-evals datasets
 
 These rules cover codeguard's own LLM tests. Their fixture cases test the judge, not
 their rule, so the writing-rules guidance on rule eval cases doesn't apply.
@@ -69,23 +68,3 @@ emphasis to the input ("this is non-negotiable") to cover an instruction gap.
 Tests send nothing to Logfire (the autouse `no_telemetry` fixture). Read a failure from
 the test report, which lists the review's diagnostics; to check what a run recorded,
 capture its spans with `capfire` and assert on their attributes.
-
-## pydantic-evals datasets
-
-When an LLM test evaluates a pydantic-evals `Dataset`:
-
-- One dataset per behavior of one LLM call, holding every case for it. Its task function
-  calls the LLM the way production does and returns the value the cases compare.
-- Expected results live in `Case.expected_output`, not in evaluator arguments or metadata.
-- Compare with built-in evaluators, `EqualsExpected()` by default, set at dataset level. A
-  case that expects no output uses `Equals(None)`, since `EqualsExpected()` skips cases
-  whose expected output is `None`. Write a custom evaluator only for logic no built-in
-  has, under a name no built-in uses.
-- Project the output in the task function to what the case compares: plain values, sorted
-  when order isn't part of the contract. Don't filter on a field and then compare that
-  field.
-- `LLMJudge` only for text that can't be checked exactly, with one default judge model set
-  by `set_default_judge_model` that differs from the model under test.
-- No `retry_task`; `retry_evaluators` only for evaluators that call a model.
-- Name the experiment (`evaluate_sync(task, name=dataset.name)`) and assert with one
-  report assertion that fails on any failed case, evaluator error or raised task.
