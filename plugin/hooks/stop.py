@@ -43,25 +43,33 @@ def main() -> None:
 
 
 def response(host: str) -> dict[str, str]:
-    codeguard = os.environ.get("CODEGUARD", str(BUNDLED))
     try:
-        review = subprocess.run(
-            [
-                codeguard,
-                "review",
-                "--format",
-                "json",
-                "--judge-errors-as-warnings",
-                "--skip-ci-only",
-                "--host",
-                host,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        review = run_review(host)
     except OSError as error:
         return {"systemMessage": f"{NOT_REVIEWED}\n{error}"}
+    return review_response(review)
+
+
+def run_review(host: str) -> subprocess.CompletedProcess[str]:
+    codeguard = os.environ.get("CODEGUARD", str(BUNDLED))
+    return subprocess.run(
+        [
+            codeguard,
+            "review",
+            "--format",
+            "json",
+            "--judge-errors-as-warnings",
+            "--skip-ci-only",
+            "--host",
+            host,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def review_response(review: subprocess.CompletedProcess[str]) -> dict[str, str]:
     if review.returncode in (0, 1):
         try:
             raw = json.loads(review.stdout)["diagnostics"]
