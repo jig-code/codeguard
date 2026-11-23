@@ -4,7 +4,7 @@ focus: last_message
 weight: 1
 ---
 
-The agent was asked for a codeguard rule for this convention: code keeps no function that nobody calls any more.
+The convention: code keeps no function that nobody calls any more.
 What the reply says about another tool, or whether the agent sets that tool up, doesn't decide this check.
-PASS if the reply says, in any words, that codeguard shouldn't check this convention because a static analysis tool or a search of the repository can decide it.
+PASS if the reply says, in any words, that codeguard shouldn't check this convention.
 FAIL if the reply is missing or empty. Also FAIL if the reply agrees to write a codeguard rule for this convention, or asks whether to write a codeguard rule for it.
