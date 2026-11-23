@@ -25,7 +25,6 @@ from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
-from codeguard.rules import judges
 
 PROJECT_CODEGUARD = Path(__file__).parent / "data/project-codeguard"
 
@@ -106,8 +105,8 @@ def fake_claude_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(judges, "_JUDGEMENT_CACHE_DIR", tmp_path / "judgements")
+def cache_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
 
 
 @pytest.fixture

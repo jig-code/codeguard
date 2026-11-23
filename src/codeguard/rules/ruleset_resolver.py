@@ -8,8 +8,8 @@ from packaging.version import Version
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigError, Ruleset, RulesetLoader
 from codeguard.packages import MANIFEST_FILE, GitFetch, Package, Packages
+from codeguard.rules.cache_directory import cache_directory
 
-_PACKAGE_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "packages"
 _CODEGUARD_VERSION = Version(version("codeguard"))
 
 
@@ -22,7 +22,10 @@ class RulesetResolver:
     @cached_property
     def rulesets(self) -> tuple[Ruleset, ...]:
         packages = Packages(
-            self.root, GitFetch(_PACKAGE_CACHE_DIR), self.ast_grep.version, _CODEGUARD_VERSION
+            self.root,
+            GitFetch(cache_directory("packages")),
+            self.ast_grep.version,
+            _CODEGUARD_VERSION,
         )
         return (RulesetLoader.local(self.root).load(), *packages.rulesets(self.config.packages))
 

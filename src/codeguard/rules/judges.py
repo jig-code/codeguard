@@ -17,15 +17,14 @@ from codeguard.config import (
     sent_effort,
 )
 from codeguard.review import CachedJudge, Deadline, Judge
-
-_JUDGEMENT_CACHE_DIR = Path.home() / ".cache" / "codeguard" / "judgements"
+from codeguard.rules.cache_directory import cache_directory
 
 
 @dataclass(frozen=True)
 class Judges:
     config: JudgeConfig = JudgeConfig()
     gemini: GeminiSettings = field(default_factory=GeminiSettings)
-    store: Cache = field(default_factory=lambda: Cache(_JUDGEMENT_CACHE_DIR))
+    store: Cache = field(default_factory=lambda: Cache(cache_directory("judgements")))
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
 

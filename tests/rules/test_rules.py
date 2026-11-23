@@ -21,7 +21,7 @@ def gemini_placement_binding() -> dict[str, object]:
     }
 
 
-@pytest.mark.usefixtures("judgement_cache")
+@pytest.mark.usefixtures("cache_home")
 class TestRules:
     def test_review_needs_each_binding_s_sign_in_even_when_no_file_matches_it(
         self, repo, make_judge_rule, gemini_placement_binding

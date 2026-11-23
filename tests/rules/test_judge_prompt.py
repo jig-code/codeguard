@@ -68,7 +68,7 @@ def judged_evals(judge_override: JudgeChoice, tmp_path: Path) -> Path:
     return evals
 
 
-@pytest.mark.usefixtures("judgement_cache")
+@pytest.mark.usefixtures("cache_home")
 class TestJudgePrompt:
     @pytest.mark.parametrize("judge_override", [JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)])
     def test_claude_cli_override_judges_with_the_cli_default_model(self, judged_evals: Path):

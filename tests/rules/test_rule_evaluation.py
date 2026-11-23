@@ -31,7 +31,7 @@ def gemini_binding() -> dict[str, object]:
     }
 
 
-@pytest.mark.usefixtures("fake_cli_config", "judgement_cache")
+@pytest.mark.usefixtures("fake_cli_config", "cache_home")
 class TestRuleEvaluation:
     @pytest.mark.usefixtures("fake_claude_on_path")
     def test_each_run_calls_the_model_again(self, git_repo, placement_case, tmp_path):

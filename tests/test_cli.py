@@ -59,7 +59,7 @@ def placement_binding() -> dict[str, object]:
     return {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 
 
-@pytest.mark.usefixtures("judgement_cache")
+@pytest.mark.usefixtures("cache_home")
 class TestReviewCommand:
     def test_error_diagnostic_prints_and_exits_1(self, repo, make_diagnostic, monkeypatch, capfd):
         """Bug: review prints nothing, or exits 0 for a review that blocks."""
@@ -81,10 +81,9 @@ class TestReviewCommand:
         assert capfd.readouterr() == (f"{make_diagnostic(warning=True)}\n", "")
         assert exit_code == 0
 
-    def test_review_waits_for_a_running_review(self, repo, make_diagnostic, tmp_path, monkeypatch):
+    def test_review_waits_for_a_running_review(self, repo, make_diagnostic):
         """Bug: two reviews of one repository run at once. Only two processes show it."""
         repo.write("a.py", "print(1)\n")
-        monkeypatch.setenv("HOME", str(tmp_path))
 
         with exclusive_lock(repo.root / ".git" / "codeguard-review.lock"):
             process = subprocess.Popen(
@@ -180,7 +179,7 @@ class TestReviewCommand:
         assert exit_code == expected_exit_code
 
 
-@pytest.mark.usefixtures("fake_cli_config", "judgement_cache")
+@pytest.mark.usefixtures("fake_cli_config", "cache_home")
 class TestReviewDryRun:
     @pytest.mark.usefixtures("fake_claude_on_path")
     def test_lists_judge_calls_without_calling_claude(
@@ -250,7 +249,7 @@ class TestReviewDryRun:
         assert exit_.value.code == 2
 
 
-@pytest.mark.usefixtures("judgement_cache")
+@pytest.mark.usefixtures("cache_home")
 class TestReviewJsonFormat:
     def test_prints_one_object_with_the_diagnostics(
         self, repo, make_diagnostic, monkeypatch, capfd
@@ -265,7 +264,7 @@ class TestReviewJsonFormat:
         assert exit_code == 1
 
 
-@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "cache_home")
 class TestReviewJudgeErrorsAsWarnings:
     def test_judge_error_is_a_warning_with_the_flag(  # noqa: PLR0913 - pytest fixtures
         self, repo, make_judge_rule, placement_binding, make_diagnostic, monkeypatch, capfd
@@ -290,7 +289,7 @@ class TestReviewJudgeErrorsAsWarnings:
         assert exit_code == 0
 
 
-@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "cache_home")
 class TestReviewJudgeCache:
     def test_cached_verdict_is_reused_until_a_file_the_judge_read_changes(
         self, repo, make_judge_rule, placement_binding, monkeypatch, tmp_path
@@ -320,7 +319,7 @@ class TestReviewJudgeCache:
         assert calls.read_text() == "called\ncalled\n"
 
 
-@pytest.mark.usefixtures("judgement_cache")
+@pytest.mark.usefixtures("cache_home")
 class TestConfigCommand:
     def test_prints_the_configured_setting(self, repo, monkeypatch, capfd):
         """Bug: config prints another setting, or the default over the configured one."""
@@ -357,7 +356,7 @@ def invoice_package(tmp_path_factory: pytest.TempPathFactory) -> GitRepo:
     return package
 
 
-@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "cache_home")
 class TestEvalCommand:
     def test_other_commands_do_not_load_pydantic_evals(self):
         """Bug: importing the CLI loads pydantic-evals. Only a fresh interpreter shows it."""
