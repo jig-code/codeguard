@@ -64,8 +64,10 @@ pattern breaks on wording that does what the skill asks.
 An `llm` grader judges one criterion, in plain words: it says what to check the way a
 reviewer would say it, with no examples and no lists of words to look for. It states
 each check in its own short sentence, with a numbered list where it checks several
-things in order. Its `FAIL if` sentences name that criterion's concrete failures, a
-missing or empty output among them.
+things in order. Its `FAIL if` sentences name that criterion's concrete failures. When
+several graders read the same output, one of them fails it if it is empty; the others
+check only their own criterion. A case passes only when every grader does, and the eval
+fails a grader whose file is missing.
 [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ## Running them
