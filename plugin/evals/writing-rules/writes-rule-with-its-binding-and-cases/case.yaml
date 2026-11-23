@@ -1,7 +1,8 @@
 schema_version: "1.1"
 name: writes-rule-with-its-binding-and-cases
 expected_outcome: |
-  The agent loads the writing-rules skill and writes the rule's binding, .codeguard/bindings/exception-handling.yaml, and its rule eval, .codeguard/rule-evals/exception-handling.yaml.
+  The agent loads the writing-rules skill and writes the rule file, .codeguard/rules/judge/exception-handling.md, its binding, .codeguard/bindings/exception-handling.yaml, and its rule eval, .codeguard/rule-evals/exception-handling.yaml.
+  The rule file has a `## Why`. Its statement is a negative sentence that forbids one thing, says nothing about how to comply, and is in plain, clear language.
   The binding's triggers name none of any, code, function-body or function-signature.
   The rule eval has a valid case and a skipped case, and no case's name states its verdict.
 context:

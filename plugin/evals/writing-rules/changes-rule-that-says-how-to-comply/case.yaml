@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: changes-rule-that-says-how-to-comply
+expected_outcome: |
+  The agent loads the writing-rules skill. The rule file holds a title, one statement and a `## Why`, and no other section. The statement says nothing about how code can comply with it.
+  A developer reading only the statement would say that a call passing a function parameter's default value again breaks it.
+context:
+  scaffold_script: place-files.sh

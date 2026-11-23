@@ -4,7 +4,6 @@ focus: { source: file, path: .codeguard/rule-evals/exception-handling.yaml }
 weight: 1
 ---
 
-This is a codeguard rule eval. Each case has a `name` and, under `expected_output`, an `outcome` that holds the case's verdict.
-This check reads only the `name` lines.
-PASS if each case's name says only what the case's code does or the situation the case tests.
-FAIL if the file is missing or empty. Also FAIL if a case's name holds the case's outcome, or says whether the case's code keeps or breaks the rule.
+This is a codeguard rule eval. Each case has a `name`, and its verdict is the `outcome` under `expected_output`.
+PASS if no case's name states whether the case is valid, invalid or skipped.
+FAIL if a case's name states the case's outcome.

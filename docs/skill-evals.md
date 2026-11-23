@@ -36,10 +36,12 @@ don't check what it says about the other tool or whether it sets that tool up. S
 - A grader checks only what the case's prompt asks for and the skill tells the agent to
   do. A grader on work the prompt doesn't name is a broken case, not a requirement on
   the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
-  A grader checks the instruction or the ask, never the answer that the fixture's domain
-  has, such as which code the rule should flag.
+  A grader checks the instruction or the ask, never a verdict that the prompt and the
+  files it names don't state.
 - A grader is changed only when a run of a case misjudged what the agent wrote. Never
-  write outputs to test a grader.
+  write outputs to test a grader. Before trusting a new or changed `llm` grader, read
+  its verdicts and the run's trace (`--keep-temp`), and check that you agree with each
+  verdict.
 - An `llm` grader states the convention and any limit the docs set on what it checks.
   It never refers to the prompt or the docs.
 - Every case has a grader that passes when the agent loads the writing-rules skill,
@@ -61,14 +63,30 @@ that a reader can check at a glance, and that no grader parses prose with a patt
 such a pattern is too long for a reviewer to tell what the pattern checks, and the
 pattern breaks on wording that does what the skill asks.
 
-An `llm` grader judges one criterion, in plain words: it says what to check the way a
-reviewer would say it, with no examples and no lists of words to look for. It states
-each check in its own short sentence, with a numbered list where it checks several
-things in order. Its `FAIL if` sentences name that criterion's concrete failures. When
-several graders read the same output, one of them fails it if it is empty; the others
-check only their own criterion. A case passes only when every grader does, and the eval
-fails a grader whose file is missing.
-[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
+An `llm` grader judges one criterion: one instruction of the skill, or one part of the
+ask. A second instruction gets its own grader:
+[Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)
+grades each dimension with its own judge.
+[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually)
+asks for a rubric written as concrete PASS and FAIL conditions:
+
+- Its `PASS if` sentence says what a correct output contains, not only what it leaves
+  out.
+- Its `FAIL if` sentences name failures the judge can see in the output itself, never a
+  guess about what a reader would do.
+- Two reviewers who read the output would reach the same verdict. A vague rubric gives
+  a different verdict on outputs that mean the same thing.
+
+A grader, like the skill, is in plain words, saying what to check the way a reviewer
+would say it, with no examples and no lists of words to look for. For Claude 5
+generation models, "giving examples actually constrains them to a certain exploration
+space" ([The new rules of context engineering for Claude 5 generation models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)):
+an example or a word list decides only the outputs it names. That post supersedes older
+Anthropic pages that recommend examples. It states each check in its own short sentence,
+with a numbered list where it checks several things in order. When several graders read
+the same output, one of them fails it if it is empty; the others check only their own
+criterion. A case passes only when every grader does, and the eval fails a grader whose
+file is missing.
 
 ## Running them
 
@@ -88,4 +106,13 @@ Without Bedrock, the same command runs on a signed-in `claude` CLI: leave out
 `CLAUDE_CODE_USE_BEDROCK=1` and give `--model` and `--judge-model` the names of the
 models CI's Bedrock profiles serve. `--case <name>` runs only the case a change touches.
 
-CI runs them from `.github/workflows/skill-evals.yaml`.
+When you add a case, add or remove a grader, or change what the skill tells the agent to
+do, also run the command once with `--ablation with-without --runs 2`. Each grader
+should fail in the runs without the skill: one that passes there doesn't show what the
+skill adds. Give it a fixture that the agent gets wrong without the skill, or remove it.
+A grader on the outcome the case requires stays even if it passes without the skill: it
+catches a change to the skill that breaks the task. Graders on whether the skill loaded
+are left out of the runs without the skill.
+
+CI runs them from `.github/workflows/skill-evals.yaml`, with `--ablation none` only: it
+checks that the skill still passes, not what it adds.

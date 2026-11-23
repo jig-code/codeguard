@@ -1,0 +1,3 @@
+rule: package-public-interface
+paths: ["**/*.py"]
+triggers: [import]

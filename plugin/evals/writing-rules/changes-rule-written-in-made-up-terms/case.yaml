@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: changes-rule-written-in-made-up-terms
+expected_outcome: |
+  The agent loads the writing-rules skill. The rule's statement uses only the terms developers already use, and a developer new to the project understands it on the first read.
+  A developer reading only the statement would say that a package's own tests importing from its modules keep it.
+context:
+  scaffold_script: place-files.sh

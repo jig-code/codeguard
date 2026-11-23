@@ -11,22 +11,15 @@ convention that a model judges each change against.
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
-2. **State the convention and why it exists**, as the two sections below say. Then check
-   the statement against each bullet under The convention and each check below, and
-   rewrite the statement until it meets them all:
-   1. Write out every relative pronoun, so it's clear which noun each phrase describes.
-   2. Use the noun instead of a pronoun that could mean more than one thing.
-   3. Name an action the code takes, never one it skips: a skipped action isn't on any
-      line a change touches.
-
-   Reread the two sections when two rules, or a rule and its cases, disagree about the
-   same code.
+2. **State the convention and why it exists**, as the two sections below say. Then reread
+   the statement against each bullet under The convention, and rewrite it until it meets
+   them all.
 3. **Gate it**: a pattern rule's match (Pattern rules, below), or a judge rule's
-   `triggers` (`references/judge-rules.md`).
+   `triggers`.
 4. **Write the cases** (Cases, below).
 
-For a judge rule, also read `references/judge-rules.md` before writing or changing it.
-Before writing any rule file, read `references/layout.md`.
+Before writing any rule file, read `references/layout.md`; for a judge rule, also read
+`references/judge-rules.md`.
 
 ## The convention
 
@@ -39,23 +32,26 @@ which code can pass while breaking the statement.
   breaks the rule, and a command gives an order instead of describing code.
 - **Write a negative sentence**, so each piece of code either does what it forbids or
   doesn't.
+- **Write it in plain, clear language**, so a developer new to the project understands it
+  on the first read.
 - **Say it once.** Saying the same thing twice adds a second test.
-- **Don't say how to comply.** Code that complies a different way would break that part.
-- **Leave out why the rule exists and what goes wrong when it's broken.** Both go in the
-  rule's why.
+- **Name only what code does that breaks the rule, never an action that keeps it.**
+  Code that keeps the rule with a different action would break the statement. When
+  the convention is given as actions that keep it, forbid what code does when it
+  takes none of them.
+- **Keep the reason out of the statement.** It goes in the rule's why.
 - **Forbid one thing, never a list.** Anything left off a list is left undecided.
-- **Write one rule per convention.** Something the statement doesn't cover gets its own
-  rule; it isn't added to this one.
-- **Use common words.** A made-up term means whatever the reader guesses it means.
-- **Make the rule decidable from the changed code and the code it uses.** Reading the rest
-  of the repository makes each check slower and less reliable.
+  Something the statement doesn't cover gets its own rule.
+- **Use the terms developers already use.** Name each thing by its common software term,
+  never a term you made up: a made-up term means whatever the reader guesses it means.
+- **Name an action the code takes, never one it skips.** A skipped action isn't on any
+  line a change touches, so the rule must be decidable from the changed code and the
+  code it uses.
 - **If the rule keeps something unique or consistent across the repository, name the one
   search it needs.**
 - **Code that uses the language and its libraries as their documentation shows never
-  breaks the rule.** If such code breaks it, reword the statement rather than adding an
-  exception.
-- **Fix a wrong verdict by rewording.** An example or an exception fixes only that one
-  case.
+  breaks the rule.** If it does, or any verdict is wrong, reword the statement: an
+  example or an exception fixes only that one case.
 - **Don't contradict or repeat a configured rule.** Keeping the new rule must never force
   code to break a configured one. If both forbid the same code, keep it in one rule or
   merge the two.
