@@ -2,5 +2,5 @@
 __pycache__/
 .logfire/
 codeguard.local.yaml
-evals/results/
+plugin/evals/results/
 gha-creds-*.json

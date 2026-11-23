@@ -13,7 +13,7 @@ pull requests too.
 |---|---|
 | Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals: `claude plugin eval .` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
@@ -22,6 +22,16 @@ The judge is the code in `src/codeguard/` that sends a judge rule and a change t
 model and turns its reply into a review. Its fixtures, in `evals/judge/`, are a small
 rule package that exists only to test it. A fixture rule is a judge rule there, and a
 fixture case is one of its rule eval cases.
+
+Three kinds of eval call a model, and each tests something different:
+
+- The LLM tests test the judge: that it reaches the right verdict on a rule and a
+  change. Their cases are the fixture cases.
+- The skill evals test the writing-rules skill: that an agent following it writes good
+  rules ([Testing the writing-rules skill](skill-evals.md)).
+- Rule evals, run with `codeguard eval`, test a project's or package's judge rules: that
+  each rule's wording gets the right verdicts. They are a codeguard feature, not one of
+  codeguard's tests ([The rule eval](rule-formats.md#the-rule-eval)).
 
 Plain `uv run pytest` calls no model and deselects the LLM tests. `-n 4` only sets how
 many LLM tests run at once: any number gives the same result.
@@ -42,10 +52,3 @@ nothing changed since, the second command runs each case twice more. A case pass
 when it passes all 3 runs. Any change starts again at the first command.
 
 Re-running until a case passes doesn't meet the bar.
-
-For a fixture case, follow the writing-rules reference's
-[eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
-A fixture that tests review scope may also hold a pre-existing violation of the rule under
-test, in code the change leaves untouched and doesn't take part in, so the review must
-leave it unreported. Keep that violation small and plain, and let it break no other
-rule, so nothing else in the fixture obscures the behavior under test.

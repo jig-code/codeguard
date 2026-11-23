@@ -2,7 +2,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import sysconfig
 from pathlib import Path
 
@@ -14,7 +13,7 @@ from rules_package import write_package
 
 pytestmark = pytest.mark.usefixtures("fake_cli_config")
 
-PROJECT = Path(__file__).resolve().parent.parent
+PLUGIN = Path(__file__).resolve().parent.parent / "plugin"
 SCRIPTS = sysconfig.get_path("scripts")
 PLACEMENT_BINDING = {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 UNDER_TEST = {"CODEGUARD": str(Path(SCRIPTS) / "codeguard")}
@@ -46,28 +45,6 @@ def home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.fixture
-def uv_only(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A PATH directory with uv and nothing else, so codeguard is not on PATH."""
-    path = tmp_path_factory.mktemp("uv-only")
-    (path / "uv").symlink_to(UV)
-    return path
-
-
-@pytest.fixture(scope="session")
-def uv_cache() -> str:
-    """uv's cache, found before a test moves HOME, so the plugin's environment syncs from it."""
-    return subprocess.run(
-        [UV, "cache", "dir"], capture_output=True, text=True, check=True
-    ).stdout.strip()
-
-
-@pytest.fixture
-def bundled(uv_cache: str) -> dict[str, str]:
-    """What the plugin's own codeguard needs to sync its environment in a test."""
-    return {"UV_CACHE_DIR": uv_cache, "UV_PYTHON": sys.executable}
-
-
-@pytest.fixture
 def claude_bin() -> Path:
     return FAKE_CLAUDE.parent
 
@@ -93,7 +70,7 @@ def run_stop_hook(
         env={
             **without_codeguard(),
             **(UNDER_TEST if env is None else env),
-            "CLAUDE_PLUGIN_ROOT": str(PROJECT),
+            "CLAUDE_PLUGIN_ROOT": str(PLUGIN),
             "PATH": os.pathsep.join(str(directory) for directory in directories),
         },
     )
@@ -115,13 +92,13 @@ def stop(stop_hook_active: bool = False) -> dict:
 
 class TestHookConfig:
     def test_claude_code_reviews_when_an_agent_stops(self):
-        assert commands(PROJECT / "hooks" / "hooks.json", "Stop") == [CLAUDE_CODE_COMMAND]
+        assert commands(PLUGIN / "hooks" / "hooks.json", "Stop") == [CLAUDE_CODE_COMMAND]
 
     def test_claude_code_reviews_when_a_subagent_stops(self):
-        assert commands(PROJECT / "hooks" / "hooks.json", "SubagentStop") == [CLAUDE_CODE_COMMAND]
+        assert commands(PLUGIN / "hooks" / "hooks.json", "SubagentStop") == [CLAUDE_CODE_COMMAND]
 
     def test_codex_reviews_when_an_agent_stops(self):
-        assert commands(PROJECT / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
+        assert commands(PLUGIN / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
 
 
 class TestStopHook:
@@ -244,25 +221,6 @@ class TestStopHook:
             "broken.yml\n"
         )
 
-    def test_the_plugin_reviews_with_the_codeguard_it_ships(
-        self, repo, uv_only, bundled, tmp_path, make_diagnostic
-    ):
-        repo.write("a.py", "print(1)\n")
-        data = tmp_path / "plugin-data"
-
-        response = run_stop_hook(
-            repo,
-            stop(),
-            path=[uv_only, "/usr/bin", "/bin"],
-            env={**bundled, "CLAUDE_PLUGIN_DATA": str(data)},
-        )
-
-        assert response == {
-            "decision": "block",
-            "reason": f"{make_diagnostic()}\n{REQUIRED_FIXES}",
-        }
-        assert (data / "venv" / "bin" / "codeguard").exists()
-
     def test_missing_codeguard_goes_to_the_user(self, repo, tmp_path):
         missing = tmp_path / "codeguard"
 
@@ -279,21 +237,3 @@ class TestStopHook:
         codex = run_stop_hook(repo, {"session_id": "s", "turn_id": "t"}, CODEX_COMMAND)
 
         assert claude_code == codex
-
-
-class TestBundledCommand:
-    def test_the_bash_tool_runs_the_codeguard_the_plugin_ships(self, uv_only, bundled, home):
-        result = subprocess.run(
-            [PROJECT / "bin" / "codeguard", "--help"],
-            capture_output=True,
-            text=True,
-            env={
-                **without_codeguard(),
-                **bundled,
-                "PATH": os.pathsep.join([str(uv_only), "/usr/bin", "/bin"]),
-            },
-        )
-
-        assert result.returncode == 0, result.stderr
-        assert result.stdout.startswith("usage: codeguard")
-        assert (home / ".cache" / "codeguard" / "venv" / "bin" / "codeguard").exists()

@@ -47,7 +47,7 @@ Rules live in a project's `.codeguard/` directory or come from rule packages fet
 git and pinned to a tag. Every surface reviews with the same rules.
 
 Use the writing-rules skill's
-[tool-selection guidance](../skills/writing-rules/references/choosing-a-tool.md)
+[tool-selection guidance](../plugin/skills/writing-rules/references/choosing-a-tool.md)
 to decide whether a requirement belongs to an existing checker, a pattern rule or a
 judge rule. Passing one rule does not excuse violations owned by other checks.
 
@@ -102,7 +102,8 @@ while errors remain.
 
 **The CLI** is the core interface: `review` reviews a changeset; `test` runs pattern rule
 and gate tests, with no model; `eval` runs judge rule evals, repeated N times; `config`
-prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
+prints a setting. The plugin runs the CLI release its version names, and the GitHub
+Action runs it in CI.
 
 ### Testing a rule
 
@@ -114,10 +115,10 @@ prints a setting. The plugin ships the CLI, and the GitHub Action runs it in CI.
 - Rule failures: a failing case is fixed in the rule's wording or in the case, never by
   re-running it, never by steering the judge in the prompt, and never by adding the
   case's code to the rule as an example.
-- Follow the writing-rules reference's
-  [eval case guidance](../skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases),
-  and [docs/testing.md](testing.md) for a fixture that holds a pre-existing violation to
-  test review scope.
+- Cases follow the writing-rules
+  [eval case guidance](../plugin/skills/writing-rules/references/judge-rules.md#write-a-few-clear-eval-cases).
+  codeguard's judge fixtures test the judge instead, and follow the
+  [LLM test guidelines](../.claude/skills/test-quality/references/eval-testing-guidelines.md#cases).
 
 ## Invariants
 

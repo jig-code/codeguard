@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs the codeguard release this plugin's version names, so the hooks and the CLI they
+# run are one release. Release bumps this with the manifests' version.
+set -eu
+version=0.11.0
+exec uvx --quiet --from "git+https://github.com/jig-code/codeguard@v$version" codeguard "$@"

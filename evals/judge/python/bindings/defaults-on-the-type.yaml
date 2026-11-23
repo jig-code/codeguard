@@ -1,3 +1,0 @@
-rule: defaults-on-the-type
-paths: ["**/*.py"]
-triggers: [call]

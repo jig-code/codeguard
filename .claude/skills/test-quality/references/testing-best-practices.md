@@ -18,7 +18,7 @@ already takes (see [pydantic-ai-testing-guidelines.md](pydantic-ai-testing-guide
 ## Error paths
 
 Raise the error where production would meet it: from the scripted model
-(`ScriptedGemini([http_error(400, "Bad request.")])`), the fake CLI or a real file on
+(`ScriptedModel([http_error(400, "Bad request.")])`), the fake CLI or a real file on
 disk, not by patching an internal method.
 
 ## Time
