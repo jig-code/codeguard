@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Self
+from typing import Self, cast
 
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import (
@@ -55,16 +55,8 @@ class CommandLine(BaseModel):
         except ValidationError as error:
             raise CommandLineError.of(error) from None
         try:
-            get_subcommand(command_line, cli_exit_on_error=False)
+            command = get_subcommand(command_line, cli_exit_on_error=False)
         except SettingsError as error:
             raise CommandLineError(str(error).removeprefix("Error: ")) from None
-        return next(
-            command
-            for command in (
-                command_line.review,
-                command_line.test,
-                command_line.eval,
-                command_line.config,
-            )
-            if command is not None
-        )
+        # get_subcommand types its result as any model; CommandLine's fields are the commands.
+        return cast(Command, command)
