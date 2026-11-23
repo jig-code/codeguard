@@ -51,6 +51,10 @@ outcome is `writes-rule` (the agent adds a rule), `changes-rule` (it changes an 
 rule) or `declines`. A grader's file is its number, then what
 the agent's output does.
 
+A fixture file that breaks a rule on purpose is named `<name>.invalid.<ext>`, so a
+reviewer can tell it apart from a mistake. The case's `place-files.sh` gives it its real
+name when it copies the fixture, so neither the agent nor the graders see the marker.
+
 [Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
 says when to use each grader type. codeguard adds that a `regex` grader's pattern is one
 that a reader can check at a glance, and that no grader parses prose with a pattern:
