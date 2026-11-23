@@ -17,7 +17,6 @@ from codeguard.review import (
     Deadline,
     JudgeCheck,
     JudgePlan,
-    JudgeRequest,
     PlannedCall,
     Review,
     Reviewer,
@@ -67,24 +66,13 @@ class ProjectReview:
         return Reviewer(steps=(self._pattern_step,)).run(scope)
 
     def plan(self, scope: LineScope) -> JudgePlan:
-        root = self.project.root
         classification = self._classification(scope)
-        return JudgePlan(
-            calls=tuple(
-                PlannedCall(
-                    rule=binding.rule,
-                    file=file,
-                    cached=self.judges(root, binding.model).has(
-                        JudgeRequest.of_change(
-                            binding, self.project.working_tree, file, scope, classification
-                        )
-                    ),
-                    triggered=classification.is_triggered(file, binding.triggers),
-                )
-                for binding in self._bindings
-                for file in binding.files(scope.files)
-            )
-        )
+        calls: list[PlannedCall] = []
+        for binding in self._bindings:
+            judge = self.judges(self.project.root, binding.model)
+            check = JudgeCheck(self.project.working_tree, binding, judge, scope, classification)
+            calls.extend(check.plan(scope.files, judge.has))
+        return JudgePlan(calls=tuple(calls))
 
     @property
     def _bindings(self) -> Bindings:
