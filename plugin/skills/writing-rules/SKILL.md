@@ -51,12 +51,14 @@ which code can pass while breaking the statement.
   of the repository makes each check slower and less reliable.
 - **If the rule keeps something unique or consistent across the repository, name the one
   search it needs.**
-- **Code written the way its language and libraries intend never breaks the rule.** If it
-  does, reword the statement rather than adding an exception.
+- **Code that uses the language and its libraries as their documentation shows never
+  breaks the rule.** If such code breaks it, reword the statement rather than adding an
+  exception.
 - **Fix a wrong verdict by rewording.** An example or an exception fixes only that one
   case.
-- **Don't contradict or repeat another rule.** Never forbid what another rule requires or
-  already forbids.
+- **Don't contradict or repeat a configured rule.** Keeping the new rule must never force
+  code to break a configured one. If both forbid the same code, keep it in one rule or
+  merge the two.
 - **Name a specific class, function or file only when the rule is about that one.**
   Otherwise, describe what the group has in common.
 
@@ -91,8 +93,8 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
 
 - Use made-up code and names, so a case shows the rule rather than one class in the
   codebase. A public rule package never holds code copied from a private repository.
-- Add a `valid` case of code written the way its language and libraries intend, so a
-  rule that this code breaks fails a case.
+- Add a `valid` case of code that uses the language and its libraries as their
+  documentation shows, so a rule that this code breaks fails a case.
 - A pattern rule: one case per branch, with a comment above it naming the branch, so
   deleting a branch fails a case. Where a matched shape is allowed in some position,
   give that position a `valid` case, so a rule that matches too widely fails a case.
@@ -101,8 +103,9 @@ A gate is a judge rule's trigger, not a rule, and needs no why.
 - Name a case by the situation it tests, unique in its file. State its verdict once: in
   a rule eval case's expected outcome, or by the `valid` or `invalid` list a test case
   sits in.
-- Write one case per reason code keeps or breaks the rule. Before writing a case, say in
-  one sentence what its code does; if another case already says that, don't write it.
+- Give each case a situation no other case tests. Cases whose code differs only in names
+  or syntax test the same situation. A `valid` case's situation is how its code keeps
+  the rule, not just that the violation is missing.
 - Give a case one defect at most, the one it tests. Fix any other line a reviewer would
   object to, so nothing else decides the verdict.
 

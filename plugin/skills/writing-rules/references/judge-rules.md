@@ -37,9 +37,9 @@ A violation that no trigger in the binding matches is never reported; codeguard'
 
 ## Write a few clear eval cases
 
-Write one `invalid` case for each different reason code breaks the rule, one `valid` case
-for each different situation close to the line where code keeps it, and one `skipped`
-case outside the gate.
+Write one `invalid` case for each different situation where code breaks the rule, one
+`valid` case for each different situation close to the line where code keeps it, and one
+`skipped` case outside the gate.
 
 - Make every case clear: an `invalid` case breaks the rule beyond argument, and a `valid`
   case plainly keeps it. A case a reasonable reviewer could argue either way proves

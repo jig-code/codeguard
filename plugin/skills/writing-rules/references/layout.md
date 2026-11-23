@@ -19,12 +19,14 @@
   `.codeguard/rule-tests/<id>-test.yml`.
 - In a rule package (a repo with `codeguard-package.yaml`), the same layout sits under
   each ruleset's directory instead of `.codeguard/`.
-- A convention that holds in several languages is one judge rule: its binding's paths
-  name each language, and its eval has cases in each (codeguard's `docs/rule-formats.md`,
-  A rule in several languages). Its rule file uses no language's names, syntax or
-  libraries. A pattern rule matches one language.
-- Before writing a rule, check the rulesets the project opts into in
-  `.codeguard/config.yaml`. To change a packaged rule for this project, override or
+- A codeguard rule whose convention holds in several languages is one rule, never one
+  per language: its binding's paths name each language, and its eval has cases in each
+  (codeguard's `docs/rule-formats.md`, A rule in several languages). Its rule file uses
+  no language's names, syntax or libraries. This is a rule in `rules/judge/`, since a
+  pattern rule matches one language.
+- Before writing a rule, read the configured rules: those in `.codeguard/` and in the
+  rulesets that `.codeguard/config.yaml` opts into, or in a rule package, the package's
+  own rules. To change a packaged rule for this project, override or
   exclude it there; don't copy it into `.codeguard/`.
 
 codeguard's `docs/rule-formats.md` has the binding and rule eval formats.
