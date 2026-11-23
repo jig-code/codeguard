@@ -7,7 +7,7 @@ from rules_package import write_package
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigError, RulesetLoader
-from codeguard.project.ruleset_resolver import RulesetResolver
+from codeguard.project import RulesetResolver
 
 
 class TestOwnRulesets:

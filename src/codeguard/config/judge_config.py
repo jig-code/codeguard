@@ -98,6 +98,10 @@ class JudgeChoice(BaseModel):
     provider: JudgeProvider | None = None
     model: str | None = None
 
+    @classmethod
+    def of_provider(cls, provider: JudgeProvider, model: str | None = None) -> "JudgeChoice":
+        return cls(provider=provider, model=model or provider.default_model)
+
     def over(self, fallback: "JudgeChoice") -> "JudgeChoice":
         return JudgeChoice(
             provider=self.provider or fallback.provider, model=self.model or fallback.model

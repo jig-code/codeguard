@@ -252,3 +252,11 @@ class TestCachedJudges:
 
         assert judge == CachedJudge(wrapped, store, tmp_path)
         assert judges.created == [JudgeCreation(tmp_path, model, deadline)]
+
+    def test_sign_in_check_is_the_wrapped_factory_s(self, store):
+        judges = RecordingJudges(RecordingJudge())
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
+
+        CachedJudges(judges, store).require_sign_in_for([model])
+
+        assert judges.sign_in_checked_for == [model]

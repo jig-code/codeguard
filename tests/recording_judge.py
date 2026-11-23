@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,9 +47,13 @@ class JudgeCreation:
 class RecordingJudges:
     judge: RecordingJudge | FailingJudge | SequencedJudge
     created: list[JudgeCreation] = field(default_factory=list)
+    sign_in_checked_for: list[JudgeModel] = field(default_factory=list)
 
     def __call__(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> RecordingJudge | FailingJudge | SequencedJudge:
         self.created.append(JudgeCreation(root, model, deadline))
         return self.judge
+
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None:
+        self.sign_in_checked_for.extend(models)

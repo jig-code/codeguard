@@ -1,5 +1,5 @@
 import hashlib
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -110,3 +110,6 @@ class CachedJudges:
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> CachedJudge:
         return CachedJudge(self.judges(root, model, deadline), self.store, root)
+
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None:
+        self.judges.require_sign_in_for(models)

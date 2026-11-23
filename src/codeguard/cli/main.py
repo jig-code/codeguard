@@ -8,15 +8,12 @@ from pathlib import Path
 import logfire
 import pydantic_ai
 
-from codeguard.cli.commands import (
-    CommandLine,
-    CommandLineError,
-    ConfigCommand,
-    EvalCommand,
-    ReviewCommand,
-    RuleTestsCommand,
-)
+from codeguard.cli.command_line import CommandLine, CommandLineError
+from codeguard.cli.config_command import ConfigCommand
+from codeguard.cli.eval_command import EvalCommand
 from codeguard.cli.exit_code import ExitCode
+from codeguard.cli.review_command import ReviewCommand
+from codeguard.cli.rule_tests_command import RuleTestsCommand
 from codeguard.config import ConfigLoader
 from codeguard.file_lock import exclusive_lock
 from codeguard.project import (
@@ -45,7 +42,7 @@ def run(arguments: Sequence[str]) -> int:
         if isinstance(command, ConfigCommand):
             return _config(command)
         with logfire.span("codeguard {command}", command=command.name):
-            return _run(command)
+            return _dispatch(command)
     except subprocess.CalledProcessError as error:
         if error.stdout:
             sys.stderr.write(error.stdout)
@@ -71,7 +68,7 @@ def _configure_telemetry() -> None:
     pydantic_ai.BANNER_ENABLED = False
 
 
-def _run(command: ReviewCommand | RuleTestsCommand | EvalCommand) -> int:
+def _dispatch(command: ReviewCommand | RuleTestsCommand | EvalCommand) -> int:
     match command:
         case ReviewCommand():
             return _review(command)

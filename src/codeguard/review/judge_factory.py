@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Protocol
 
@@ -10,3 +11,5 @@ class JudgeFactory(Protocol):
     def __call__(
         self, root: Path, model: JudgeModel, deadline: Deadline | None = None
     ) -> Judge: ...
+
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None: ...

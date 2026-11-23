@@ -5,7 +5,13 @@ from unittest import mock
 import pytest
 from pydantic import SecretStr
 
-from codeguard.config import ConfigError, GeminiSettings, JudgeModel, JudgeProvider
+from codeguard.config import (
+    ConfigError,
+    GeminiSettings,
+    JudgeChoice,
+    JudgeModel,
+    JudgeProvider,
+)
 
 
 class TestGeminiSettings:
@@ -67,3 +73,20 @@ class TestGeminiSettings:
             "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
         )
         assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
+
+
+class TestJudgeChoice:
+    def test_provider_without_a_model_judges_with_its_default_model(self):
+        assert JudgeChoice.of_provider(JudgeProvider.GEMINI) == JudgeChoice(
+            provider=JudgeProvider.GEMINI, model=JudgeProvider.GEMINI.default_model
+        )
+
+    def test_given_model_replaces_the_provider_s_default(self):
+        assert JudgeChoice.of_provider(JudgeProvider.GEMINI, "gemini-judge-test") == JudgeChoice(
+            provider=JudgeProvider.GEMINI, model="gemini-judge-test"
+        )
+
+    def test_claude_cli_without_a_model_leaves_the_model_to_the_cli(self):
+        assert JudgeChoice.of_provider(JudgeProvider.CLAUDE_CLI) == JudgeChoice(
+            provider=JudgeProvider.CLAUDE_CLI
+        )

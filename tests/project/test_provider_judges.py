@@ -1,9 +1,11 @@
+import pytest
 from pydantic import SecretStr
 
 from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import (
+    ConfigError,
     GeminiSettings,
     JudgeConfig,
     JudgeModel,
@@ -13,6 +15,14 @@ from codeguard.project import ProviderJudges
 
 
 class TestProviderJudges:
+    def test_gemini_model_needs_the_gemini_sign_in(self):
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
+
+        with pytest.raises(ConfigError) as error:
+            ProviderJudges(gemini=GeminiSettings()).require_sign_in_for([model])
+
+        assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
+
     def test_every_claude_judge_shares_the_process_limit_and_warmup(self, tmp_path):
         judges = ProviderJudges()
 

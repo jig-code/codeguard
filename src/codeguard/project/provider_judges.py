@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from os import process_cpu_count
 from pathlib import Path
@@ -26,6 +27,9 @@ class ProviderJudges:
                 for provider in JudgeProvider
             },
         )
+
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None:
+        self.gemini.require_sign_in_for(models)
 
     def __call__(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]

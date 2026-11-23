@@ -3,7 +3,7 @@ from typing import Self
 
 from diskcache import Cache
 
-from codeguard.config import GeminiSettings, Ruleset
+from codeguard.config import Ruleset
 from codeguard.pattern_rules import PatternRuleCheck
 from codeguard.project.cache_directory import cache_directory
 from codeguard.project.project import Project
@@ -29,25 +29,22 @@ class ProjectReview:
     project: Project
     rulesets: tuple[Ruleset, ...]
     judges: CachedJudges
-    gemini: GeminiSettings
 
     @classmethod
     def of(cls, project: Project, skip_ci_only: bool = False) -> Self:
-        gemini = GeminiSettings()
         return cls(
             project,
             RulesetResolver.of(project, skip_ci_only).rulesets,
             CachedJudges(
-                ProviderJudges(project.config.judge, gemini), Cache(cache_directory("judgements"))
+                ProviderJudges(project.config.judge), Cache(cache_directory("judgements"))
             ),
-            gemini,
         )
 
     def review(self, scope: LineScope) -> Review:
         deadline = Deadline(self.project.config.review_time_limit_minutes)
         classification = self._classification(scope)
         bindings = self._bindings
-        self.gemini.require_sign_in_for(binding.model for binding in bindings)
+        self.judges.require_sign_in_for(binding.model for binding in bindings)
         root = self.project.root
         judge_checks = tuple(
             JudgeCheck(

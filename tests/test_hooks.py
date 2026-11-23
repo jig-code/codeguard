@@ -27,16 +27,11 @@ def commands(config: Path, event: str) -> list[str]:
     return [hook["command"] for group in hooks[event] for hook in group["hooks"]]
 
 
-@pytest.fixture(autouse=True)
-def home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
-    path = tmp_path_factory.mktemp("home")
-    monkeypatch.setenv("HOME", str(path))
-    return path
-
-
 @pytest.fixture
-def claude_bin() -> Path:
-    return FAKE_CLAUDE.parent
+def temporary_home(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("home")))
 
 
 def run_stop_hook(
@@ -83,7 +78,7 @@ class TestHookConfig:
         assert commands(PLUGIN / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
 
 
-@pytest.mark.usefixtures("fake_cli_config")
+@pytest.mark.usefixtures("fake_cli_config", "temporary_home")
 class TestStopHook:
     def test_ci_only_rule_does_not_run(self, repo):
         write_package(repo, prefix="rules/")
@@ -114,7 +109,7 @@ class TestStopHook:
             "reason": f"{make_diagnostic()}\n{REQUIRED_FIXES}",
         }
 
-    def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, make_judge_rule, claude_bin):
+    def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, make_judge_rule):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
@@ -124,7 +119,7 @@ class TestStopHook:
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
 
-        response = run_stop_hook(repo, stop(), path=path_with(claude_bin))
+        response = run_stop_hook(repo, stop(), path=path_with(FAKE_CLAUDE.parent))
 
         assert list(response) == ["systemMessage"]
         assert response["systemMessage"].startswith(

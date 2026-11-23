@@ -4,9 +4,9 @@ from recording_judge import RecordingJudge, RecordingJudges
 from rules_package import write_package
 
 from codeguard.ast_grep import AstGrep
-from codeguard.config import Config, ConfigError, GeminiSettings, RulesetLoader
+from codeguard.config import Config, ConfigError, RulesetLoader
 from codeguard.judge_evals import EvalSelection, JudgeEvalResult
-from codeguard.project import Project
+from codeguard.project import Project, ProviderJudges
 from codeguard.project.rule_evaluation import RuleEvaluation
 from codeguard.repository import WorkingTree
 from codeguard.rule_validation import ValidationResult
@@ -29,6 +29,15 @@ def python_ruleset(package) -> RulesetLoader:
 
 
 @pytest.fixture
+def placement_case() -> dict[str, object]:
+    return {
+        "name": "an assignment in the invoice",
+        "inputs": {"file": "invoice.py", "after": "x = 1\n"},
+        "expected_output": {"outcome": "invalid"},
+    }
+
+
+@pytest.fixture
 def gemini_binding() -> dict[str, object]:
     return {
         "paths": ["**/*.py"],
@@ -40,24 +49,14 @@ def gemini_binding() -> dict[str, object]:
 
 class TestRuleEvaluation:
     def test_selection_problem_is_reported_without_making_a_judge(
-        self, package, project, python_ruleset
+        self, package, project, python_ruleset, placement_case
     ):
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            yaml.safe_dump(
-                {
-                    "cases": [
-                        {
-                            "name": "an assignment in the invoice",
-                            "inputs": {"file": "invoice.py", "after": "x = 1\n"},
-                            "expected_output": {"outcome": "invalid"},
-                        }
-                    ]
-                }
-            ),
+            yaml.safe_dump({"cases": [placement_case]}),
         )
         judges = RecordingJudges(RecordingJudge())
-        evaluation = RuleEvaluation(project, [python_ruleset], judges, GeminiSettings())
+        evaluation = RuleEvaluation(project, [python_ruleset], judges)
 
         result = evaluation.run(selection=EvalSelection(cases=("refunds",)))
 
@@ -68,8 +67,8 @@ class TestRuleEvaluation:
         )
         assert judges.created == []
 
-    def test_gemini_rule_without_a_gemini_sign_in_is_an_error(
-        self, package, project, python_ruleset, gemini_binding
+    def test_gemini_rule_without_a_gemini_sign_in_is_an_error(  # noqa: PLR0913 - pytest fixtures
+        self, package, project, python_ruleset, gemini_binding, placement_case
     ):
         package.write(
             "python/bindings/responsibility-placement.yaml",
@@ -77,21 +76,9 @@ class TestRuleEvaluation:
         )
         package.write(
             "python/rule-evals/responsibility-placement.yaml",
-            yaml.safe_dump(
-                {
-                    "cases": [
-                        {
-                            "name": "an assignment in the invoice",
-                            "inputs": {"file": "invoice.py", "after": "x = 1\n"},
-                            "expected_output": {"outcome": "invalid"},
-                        }
-                    ]
-                }
-            ),
+            yaml.safe_dump({"cases": [placement_case]}),
         )
-        evaluation = RuleEvaluation(
-            project, [python_ruleset], RecordingJudges(RecordingJudge()), GeminiSettings()
-        )
+        evaluation = RuleEvaluation(project, [python_ruleset], ProviderJudges())
 
         with pytest.raises(ConfigError) as error:
             evaluation.run()
@@ -133,9 +120,7 @@ class TestRuleEvaluation:
                 }
             ),
         )
-        evaluation = RuleEvaluation(
-            project, [python_ruleset], RecordingJudges(RecordingJudge()), GeminiSettings()
-        )
+        evaluation = RuleEvaluation(project, [python_ruleset], ProviderJudges())
 
         result = evaluation.run(
             selection=EvalSelection(rules=frozenset({"responsibility-placement"}))
