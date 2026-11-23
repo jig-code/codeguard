@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -94,3 +96,34 @@ class TestCommandLine:
             CommandLine.parse(arguments)
 
         assert str(error.value) == message
+
+    @pytest.mark.parametrize(
+        ("command", "entry"),
+        [
+            (
+                "review",
+                "  --format {text,json}  Print diagnostics as text lines or as one JSON object.\n"
+                "                        (default: text)\n",
+            ),
+            (
+                "test",
+                "  --missing-why {warn,fail,off}\n"
+                "                        Report each rule that doesn't say why it exists as a\n"
+                "                        warning, as a failure, or not at all. (default: warn)\n",
+            ),
+            (
+                "eval",
+                "  --provider {claude-cli,gemini,bedrock,codex-cli}\n"
+                "                        Judge every selected rule with this provider instead\n"
+                "                        of its binding's. (default: None)\n",
+            ),
+        ],
+        ids=["format", "missing-why", "provider"],
+    )
+    @mock.patch.dict(os.environ, {"COLUMNS": "80"})
+    def test_help_gives_an_enum_flag_s_choices_and_default_by_value(self, command, entry, capsys):
+        with pytest.raises(SystemExit) as exit_:
+            CommandLine.parse([command, "--help"])
+
+        assert exit_.value.code == 0
+        assert entry in capsys.readouterr().out
