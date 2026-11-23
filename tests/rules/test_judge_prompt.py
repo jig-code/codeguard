@@ -20,7 +20,9 @@ from codeguard.config import (
 from codeguard.packages import MANIFEST_FILE, Package
 from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Bindings, Category, Review
-from codeguard.rules import Rules, judges
+from codeguard.rules import Rules
+
+pytestmark = pytest.mark.usefixtures("judgement_cache")
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS = 180
@@ -66,11 +68,6 @@ def judged_evals(judge_override: JudgeChoice, tmp_path: Path) -> Path:
     judge = judge_override.model_dump(mode="json", exclude_none=True)
     manifest.write_text(yaml.safe_dump(yaml.safe_load(manifest.read_text()) | {"judge": judge}))
     return evals
-
-
-@pytest.fixture(autouse=True)
-def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(judges, "_JUDGEMENT_CACHE_DIR", tmp_path / "judgements")
 
 
 class TestJudgePrompt:

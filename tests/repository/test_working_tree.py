@@ -1,3 +1,6 @@
+import subprocess
+
+import pytest
 from git_repo import GitRepo
 
 from codeguard.repository import WorkingTree
@@ -11,6 +14,13 @@ class TestWorkingTree:
         working_tree = WorkingTree.containing(git_repo.root / "pkg")
 
         assert working_tree == WorkingTree.at(git_repo.root)
+
+    def test_containing_a_directory_outside_a_repository_is_git_s_error(self, tmp_path, capfd):
+        with pytest.raises(subprocess.CalledProcessError) as error:
+            WorkingTree.containing(tmp_path)
+
+        assert error.value.returncode == 128
+        assert capfd.readouterr().err.startswith("fatal: not a git repository")
 
     def test_base_contents_are_the_files_that_exist_in_the_base(self, tmp_path):
         git_repo = GitRepo.init(tmp_path.resolve())

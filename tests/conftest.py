@@ -24,6 +24,7 @@ from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
 from codeguard.config import JudgeProvider
+from codeguard.rules import judges
 
 PROJECT_CODEGUARD = Path(__file__).parent / "data/project-codeguard"
 
@@ -96,6 +97,11 @@ def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.Mon
 @pytest.fixture
 def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
+def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(judges, "_JUDGEMENT_CACHE_DIR", tmp_path / "judgements")
 
 
 @pytest.fixture
