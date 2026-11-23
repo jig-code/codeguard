@@ -62,63 +62,54 @@ which code can pass while breaking the statement.
 
 ## Why it exists
 
-Every rule states the harm it prevents, in one or two sentences, so it can be reviewed
-when the code or the design around it changes. A rule nobody can trace to a reason can
-only be kept or dropped blind.
+Every rule says what harm it prevents, in one or two sentences, so anyone can tell
+whether it still matters when the code around it changes. A rule with no reason can only
+be kept or dropped blind.
 
 - A judge rule: a `## Why` section in its rule file (`references/judge-rules.md`).
 - A pattern rule: `metadata.why` in its rule file.
-- Optionally, where the rule comes from: a `Source:` line in the Why section, or
-  `metadata.source`. A link to public documentation, or the bug, PR comment or team
-  decision behind it.
+- Optionally, say where the rule comes from: a `Source:` line in the Why section, or
+  `metadata.source`.
 
 A gate is a judge rule's trigger, not a rule, and needs no why.
 
 ## Pattern rules
 
-- Match the shape only where it breaks the convention, not everywhere it appears.
-  `stopBy: end` on `has` or `inside` searches every descendant or ancestor; in a
-  positive match, use it only when the shape breaks the convention in every position.
-- Put the reason and the fix in the rule's `note`, not in comments in the rule's file.
-  codeguard prints the note under the diagnostic, so it is what the blocked agent reads.
-- Scope a rule with a binding, `bindings/<id>.yaml` with `rule`, `paths` and
-  `exclude_paths`, never with ast-grep's `files` or `ignores`, so a project can change
-  the scope. The exception is a rule whose convention is about which file code belongs
-  in.
-- When syntax decides only some shapes a violation takes, write a pattern rule for those
-  shapes and a judge rule gated on every shape. No judge rule runs on a file with an
-  `error` diagnostic, so the two report the same code only if the pattern rule is a
-  `warning`.
+- Match the shape only where it breaks the rule. `stopBy: end` on `has` or `inside`
+  searches every descendant or ancestor, so in a positive match, use it only when the
+  shape breaks the rule wherever it sits.
+- Put the reason and the fix in the rule's `note`, not in comments: codeguard prints the
+  note under each finding, so it's what the blocked agent reads.
+- Set a rule's scope with a binding (`bindings/<id>.yaml` with `rule`, `paths` and
+  `exclude_paths`), never with ast-grep's `files` or `ignores`, so a project can change
+  it. The exception is a rule about which file code belongs in.
+- When syntax decides only some forms of a violation, write a pattern rule for those and
+  a judge rule for all of them. No judge rule runs on a file with an `error` finding, so
+  make the pattern rule a `warning` if both should report the same code.
 
 ## Cases
 
-- Use made-up code and names, so a case shows the pattern rather than
-  one class in the codebase. A public rule package never holds code copied from a
-  private repository.
-- Give idiomatic code a `valid` case beside the `invalid` one, so a rule that flags
-  idiomatic code fails a case.
-- A pattern rule: one `valid` or `invalid` case per branch, so deleting a branch fails a
-  case, with a comment above each case naming its branch. Give each matched shape a
-  `valid` case where the convention allows it, if it has such a position, so a rule that
-  matches too widely fails a case.
-- A judge rule: a few clear `invalid` and `valid` cases and a `skipped` case outside
+- Use made-up code and names, so a case shows the rule rather than one class in the
+  codebase. A public rule package never holds code copied from a private repository.
+- Add a `valid` case of code written the way its language and libraries intend, so a
+  rule that this code breaks fails a case.
+- A pattern rule: one case per branch, with a comment above it naming the branch, so
+  deleting a branch fails a case. Where a matched shape is allowed in some position,
+  give that position a `valid` case, so a rule that matches too widely fails a case.
+- A judge rule: a few clear `invalid` and `valid` cases, and a `skipped` case outside
   the gate (`references/judge-rules.md`).
-- A case's name gives only the situation it tests, unique per file. The verdict is
-  stated once: in a rule eval case's expected outcome, or by the `valid` or `invalid`
-  list a pattern rule or gate test case sits in.
-- Two cases that break or keep the convention on the same ground are one case, however
-  their syntax or names differ: keep the clearer one. Two `valid` cases differ when
-  their code keeps the convention in different situations, not merely by both lacking
-  the violation. Before writing a case, say in one sentence what its code does or fails
-  to do; if another case already has that sentence, don't write the case.
-- A case holds one defect at most, the one it tests. Read every other line of it as a
-  reviewer would, and rewrite any line that is wrong for another reason, so nothing
-  else in the case can be the ground of a verdict.
+- Name a case by the situation it tests, unique in its file. State its verdict once: in
+  a rule eval case's expected outcome, or by the `valid` or `invalid` list a test case
+  sits in.
+- Write one case per reason code keeps or breaks the rule. Before writing a case, say in
+  one sentence what its code does; if another case already says that, don't write it.
+- Give a case one defect at most, the one it tests. Fix any other line a reviewer would
+  object to, so nothing else decides the verdict.
 
 ## Every rule
 
 - Set `severity: error` on a rule that must block; `warning` only reports.
-- A finding you think is wrong is fixed in the rule or its cases, never by changing the
+- Fix a finding you think is wrong in the rule or its cases, never by changing the
   reviewed code to get past it.
 - Leave the codebase clean for a new rule: fix each existing violation, or put an
   `ast-grep-ignore: <id>` comment on the line above it.

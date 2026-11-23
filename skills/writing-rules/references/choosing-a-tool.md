@@ -1,18 +1,16 @@
 # Choosing a tool
 
-codeguard adds the checks a project's exact tools can't do. Decide by what decides a
-violation, not by the words the convention is asked in.
+codeguard adds the checks a project's static analysis tools can't do. Decide by what
+decides a violation, not by how the convention is worded.
 
-A convention that a linter, a type checker, an import linter, a language server or a
-similar exact tool can check, directly, through its configuration or with a custom rule,
-isn't codeguard's, whether or not the project runs that tool or turns that check on. An
-exact tool gives the same answer every run, costs nothing, and already runs in the
-editor. A way past the tool that the tool's configuration can forbid doesn't make the
-convention a judgment. Write no rule, and say that the convention isn't codeguard's to
-check.
+If a static analysis tool other than codeguard can check the convention, directly,
+through its configuration or with a custom rule, the convention isn't codeguard's,
+whether or not the project runs that tool. Such a tool gives the same answer every run,
+costs nothing and runs in the editor. A tool setting that closes a way around the tool
+counts too. Write no rule, and say that the convention isn't codeguard's to check.
 
-A codeguard pattern rule is for a code shape in one file that those tools can't express.
+A pattern rule is for a shape in one file that those tools can't express.
 
-A judge rule is only for what needs judgment, never for something syntax, types or a
-lookup across the repository decide. A judge sees the changed code, not the whole
-repository, so it can only guess at what a lookup would know.
+A judge rule is only for what needs judgment, never for what syntax, types or a search of
+the repository decide. A judge rule is decided from the changed code, so it can only
+guess what a search would find.
