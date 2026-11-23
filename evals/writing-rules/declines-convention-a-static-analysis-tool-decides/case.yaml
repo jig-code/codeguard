@@ -1,5 +1,5 @@
 schema_version: "1.1"
-name: declines-convention-an-exact-tool-decides
+name: declines-convention-a-static-analysis-tool-decides
 expected_outcome: |
   No rule: the answer says untyped values flowing from a parse isn't codeguard's to check.
 context:
