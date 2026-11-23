@@ -15,5 +15,5 @@ Calls through the `claude` and `codex` CLIs send no content.
 `codeguard eval` records each rule's run as an experiment named `<rule> on <model>`, so
 runs of the same rule compare.
 
-What each span records is in the code: [`cli.py`](../src/codeguard/cli.py) and each
+What each span records is in the code: [`cli/main.py`](../src/codeguard/cli/main.py) and each
 provider's judge under [`src/codeguard/`](../src/codeguard/).

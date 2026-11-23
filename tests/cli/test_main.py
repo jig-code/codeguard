@@ -1,8 +1,8 @@
-"""codeguard's command line: what only the parser and the command functions can get wrong.
+"""How main runs each parsed command: the wiring only a run of codeguard can show.
 
-Each test names the wiring bug it catches; the behaviour behind it is tested in its unit's
-suite. Most run `cli.run` in this process. Only the tests that need a second process start
-one.
+Each test names the wiring bug it catches. Parsing, each command's own choices and the
+project services are tested in their units' suites. Most tests run `run` in this process;
+only the ones that need a second process start one.
 """
 
 import json
@@ -20,13 +20,12 @@ from git_repo import GitRepo
 from rules_package import write_package
 from spans import finished_span_attributes
 
-from codeguard import cli
+from codeguard.cli.main import run
 from codeguard.file_lock import exclusive_lock
 from codeguard.review import Severity
 
 CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
-NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
 TRACEBACK_HEADING = "Traceback (most recent call last):\n"
 PASSING_NO_PRINT_TEST_REPORT = (
     "Running 1 tests\n"
@@ -66,20 +65,10 @@ class TestReviewCommand:
         repo.write("a.py", "print(1)\n")
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["review"])
+        exit_code = run(["review"])
 
         assert capfd.readouterr() == (f"{make_diagnostic()}\n", "")
         assert exit_code == 1
-
-    def test_warning_diagnostic_prints_and_exits_0(self, repo, make_diagnostic, monkeypatch, capfd):
-        """Bug: review exits 1 whatever the review found."""
-        repo.write("a.py", "breakpoint()\n")
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["review"])
-
-        assert capfd.readouterr() == (f"{make_diagnostic(warning=True)}\n", "")
-        assert exit_code == 0
 
     def test_review_waits_for_a_running_review(self, repo, make_diagnostic):
         """Bug: two reviews of one repository run at once. Only two processes show it."""
@@ -96,36 +85,13 @@ class TestReviewCommand:
         assert stdout == f"{make_diagnostic()}\n"
         assert process.returncode == 1
 
-    def test_base_reviews_committed_changes(self, repo, make_diagnostic, monkeypatch, capfd):
-        """Bug: --base doesn't reach the line scope."""
-        repo.git("switch", "--create", "feature")
-        repo.write("a.py", "print(1)\n")
-        repo.commit("Add a")
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["review", "--base", "main"])
-
-        assert capfd.readouterr().out == f"{make_diagnostic()}\n"
-        assert exit_code == 1
-
-    def test_all_reviews_committed_unchanged_files(self, repo, make_diagnostic, monkeypatch, capfd):
-        """Bug: --all doesn't reach the line scope."""
-        repo.write("a.py", "print(1)\n")
-        repo.commit("Add a")
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["review", "--all"])
-
-        assert capfd.readouterr().out == f"{make_diagnostic()}\n"
-        assert exit_code == 1
-
     def test_failed_command_prints_its_output_and_exits_2(self, repo, monkeypatch, capfd):
         """Bug: a command codeguard runs fails without its own error reaching the user."""
         repo.write(".codeguard/rules/pattern/broken.yml", "id: [\n")
         repo.write("a.py", "print(1)\n")
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["review"])
+        exit_code = run(["review"])
 
         out, err = capfd.readouterr()
         ast_grep_error, traceback = err.split(TRACEBACK_HEADING)
@@ -174,53 +140,13 @@ class TestReviewCommand:
         repo.write("a.py", "print(1)\n")
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["review", *arguments])
+        exit_code = run(["review", *arguments])
 
         assert exit_code == expected_exit_code
 
 
-@pytest.mark.usefixtures("fake_cli_config", "cache_home")
+@pytest.mark.usefixtures("cache_home")
 class TestReviewDryRun:
-    @pytest.mark.usefixtures("fake_claude_on_path")
-    def test_lists_judge_calls_without_calling_claude(
-        self, repo, make_judge_rule, placement_binding, monkeypatch, capfd
-    ):
-        """Bug: --dry-run calls the judge, or prints no plan."""
-        repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(placement_binding))
-        repo.write(".codeguard/rules/judge/class-shape.md", make_judge_rule().text)
-        repo.write(
-            ".codeguard/bindings/class-shape.yaml",
-            yaml.safe_dump(
-                {"rule": "class-shape", "paths": ["**/*.py"], "triggers": ["class-header"]}
-            ),
-        )
-        repo.write("a.py", "x = 1\n")
-        repo.write("b.rb", "x = 1\n")
-        configure_fake_cli_response({"exit_code": 1})
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["review", "--dry-run"])
-
-        assert capfd.readouterr().out == (
-            "Judge calls: 1 (0 cached, 1 new), 1 skipped by triggers\n"
-            "\n"
-            "By rule:\n"
-            "     new  cached  skipped  rule\n"
-            "       1       0        0  placement\n"
-            "       0       0        1  class-shape\n"
-            "\n"
-            "By file:\n"
-            "     new  cached  skipped  file\n"
-            "       1       0        1  a.py\n"
-            "\n"
-            "Calls by file:\n"
-            "a.py\n"
-            "  new      placement\n"
-            "  skipped  class-shape\n"
-        )
-        assert exit_code == 0
-
     def test_pattern_rule_error_is_printed_and_exits_1(
         self, repo, make_diagnostic, monkeypatch, capfd
     ):
@@ -228,39 +154,12 @@ class TestReviewDryRun:
         repo.write("a.py", "print(1)\n")
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["review", "--dry-run"])
+        exit_code = run(["review", "--dry-run"])
 
         assert capfd.readouterr() == (
             f"{make_diagnostic()}\nJudge calls: 0 (0 cached, 0 new), 0 skipped by triggers\n",
             "",
         )
-        assert exit_code == 1
-
-    def test_dry_run_has_no_json_format(self, repo, monkeypatch, capfd):
-        """Bug: the parser accepts --dry-run with --format json, which --dry-run ignores."""
-        monkeypatch.chdir(repo.root)
-
-        with pytest.raises(SystemExit) as exit_:
-            cli.run(["review", "--dry-run", "--format", "json"])
-
-        assert capfd.readouterr().err.endswith(
-            "error: argument --format: not allowed with argument --dry-run\n"
-        )
-        assert exit_.value.code == 2
-
-
-@pytest.mark.usefixtures("cache_home")
-class TestReviewJsonFormat:
-    def test_prints_one_object_with_the_diagnostics(
-        self, repo, make_diagnostic, monkeypatch, capfd
-    ):
-        """Bug: --format json doesn't reach the writer."""
-        repo.write("a.py", "print(1)\n")
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["review", "--format", "json"])
-
-        assert json.loads(capfd.readouterr().out) == {"diagnostics": [make_diagnostic().as_json()]}
         assert exit_code == 1
 
 
@@ -277,7 +176,7 @@ class TestReviewJudgeErrorsAsWarnings:
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["review", "--judge-errors-as-warnings"])
+        exit_code = run(["review", "--judge-errors-as-warnings"])
 
         judge_error = make_diagnostic(
             judge_error=True,
@@ -310,13 +209,22 @@ class TestReviewJudgeCache:
             }
         )
         monkeypatch.chdir(repo.root)
-        cli.run(["review"])
-        cli.run(["review"])
+        run(["review"])
+        run(["review"])
         repo.write("orders/pricing.toml", "discount = 10\n")
 
-        cli.run(["review"])
+        run(["review"])
 
         assert calls.read_text() == "called\ncalled\n"
+
+
+class TestCommandLineErrors:
+    def test_invalid_command_line_prints_its_error_and_exits_2(self, capfd):
+        """Bug: an invalid command line runs, or fails without saying why."""
+        exit_code = run(["eval", "--model", "claude-haiku-5-5"])
+
+        assert capfd.readouterr() == ("", "codeguard: error: --model needs --provider\n")
+        assert exit_code == 2
 
 
 @pytest.mark.usefixtures("cache_home")
@@ -326,7 +234,7 @@ class TestConfigCommand:
         repo.write(".codeguard/config.yaml", yaml.safe_dump({"review_time_limit_minutes": 10}))
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["config", "review_time_limit_minutes"])
+        exit_code = run(["config", "review_time_limit_minutes"])
 
         assert capfd.readouterr().out == "10\n"
         assert exit_code == 0
@@ -335,8 +243,8 @@ class TestConfigCommand:
         """Bug: each CI review leaves a separate trace for the config call that sets it up."""
         monkeypatch.chdir(repo.root)
 
-        cli.run(["config", "review_time_limit_minutes"])
-        cli.run(["review", "--dry-run"])
+        run(["config", "review_time_limit_minutes"])
+        run(["review", "--dry-run"])
 
         assert finished_span_attributes(capfire, "codeguard {command}") == [{"command": "review"}]
 
@@ -373,15 +281,14 @@ class TestEvalCommand:
 
         assert result.stdout == "False\n"
 
-    @pytest.mark.parametrize("from_package", [True, False], ids=["in-package", "package-path"])
     def test_invalid_case_judged_valid_is_reported_and_exits_1(
-        self, invoice_package, tmp_path, monkeypatch, capfd, from_package
+        self, invoice_package, tmp_path, monkeypatch, capfd
     ):
         """Bug: eval ignores its package argument, or exits 0 for a failed eval."""
         configure_fake_cli_response({"stdout": claude_stream([])})
-        monkeypatch.chdir(invoice_package.root if from_package else tmp_path)
+        monkeypatch.chdir(tmp_path)
 
-        exit_code = cli.run(["eval"] if from_package else ["eval", str(invoice_package.root)])
+        exit_code = run(["eval", str(invoice_package.root)])
 
         out = capfd.readouterr().out
         assert "Evaluation Summary: responsibility-placement on claude-cli's default model" in out
@@ -423,22 +330,12 @@ class TestEvalCommand:
         configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
         monkeypatch.chdir(invoice_package.root)
 
-        cli.run(["eval", "--rule", "naming", "--case", "order lines"])
+        run(["eval", "--rule", "naming", "--case", "order lines"])
 
         assert calls.read_text() == "called\n"
 
-    @pytest.mark.parametrize(
-        ("options", "model"),
-        [
-            (["--provider", "claude-cli"], None),
-            (["--provider", "claude-cli", "--model", "claude-haiku-5-5"], "claude-haiku-5-5"),
-        ],
-        ids=["default-model", "given-model"],
-    )
-    def test_judges_with_the_given_provider_and_model(
-        self, invoice_package, tmp_path, monkeypatch, options, model
-    ):
-        """Bug: --provider or --model doesn't reach the override, or the default is wrong."""
+    def test_judges_with_the_given_provider_and_model(self, invoice_package, tmp_path, monkeypatch):
+        """Bug: eval judges without the override --provider and --model make."""
         invoice_package.write(
             "python/bindings/responsibility-placement.yaml",
             yaml.safe_dump(
@@ -455,20 +352,21 @@ class TestEvalCommand:
         configure_fake_cli_response({"stdout": claude_stream([]), "record": str(record)})
         monkeypatch.chdir(invoice_package.root)
 
-        cli.run(["eval", *options])
+        run(["eval", "--provider", "claude-cli", "--model", "claude-haiku-5-5"])
 
         arguments = json.loads(record.read_text())["arguments"]
-        assert dict(zip(arguments, arguments[1:], strict=False)).get("--model") == model
+        assert dict(zip(arguments, arguments[1:], strict=False))["--model"] == "claude-haiku-5-5"
 
-    def test_model_without_a_provider_exits_2(self, tmp_path, monkeypatch, capfd):
-        """Bug: --model without --provider is accepted and silently ignored."""
-        monkeypatch.chdir(tmp_path)
+    def test_each_run_calls_the_model_again(self, invoice_package, tmp_path, monkeypatch):
+        """Bug: eval judges through the verdict cache, which reviews use and evals never do."""
+        calls = tmp_path / "calls"
+        configure_fake_cli_response({"stdout": claude_stream([]), "calls": str(calls)})
+        monkeypatch.chdir(invoice_package.root)
+        run(["eval"])
 
-        with pytest.raises(SystemExit) as exit_:
-            cli.run(["eval", "--model", "claude-haiku-5-5"])
+        run(["eval"])
 
-        assert capfd.readouterr().err.endswith("error: --model needs --provider\n")
-        assert exit_.value.code == 2
+        assert calls.read_text() == "called\ncalled\n"
 
     def test_eval_and_review_send_claude_the_same_request(
         self, invoice_package, tmp_path_factory, tmp_path, monkeypatch
@@ -496,11 +394,11 @@ class TestEvalCommand:
         review_record = tmp_path / "review.json"
         configure_fake_cli_response({"stdout": claude_stream([]), "record": str(eval_record)})
         monkeypatch.chdir(invoice_package.root)
-        cli.run(["eval"])
+        run(["eval"])
         configure_fake_cli_response({"stdout": claude_stream([]), "record": str(review_record)})
         monkeypatch.chdir(project.root)
 
-        cli.run(["review"])
+        run(["review"])
 
         eval_request = json.loads(eval_record.read_text())
         review_request = json.loads(review_record.read_text())
@@ -508,23 +406,13 @@ class TestEvalCommand:
         assert eval_request["prompt"] == review_request["prompt"]
 
 
-class TestTestCommand:
-    def test_passing_rule_tests_exit_0(self, repo, monkeypatch, capfd):
-        """Bug: test prints no report, or exits 1 for tests that pass."""
-        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["test"])
-
-        assert capfd.readouterr() == (PASSING_NO_PRINT_TEST_REPORT, "")
-        assert exit_code == 0
-
+class TestRuleTestsCommand:
     def test_failing_rule_tests_exit_1(self, repo, monkeypatch, capfd):
         """Bug: test exits 0 for tests that fail."""
         repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["print(1)"]}))
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["test"])
+        exit_code = run(["test"])
 
         assert capfd.readouterr() == (
             "Running 1 tests\n"
@@ -552,7 +440,7 @@ class TestTestCommand:
         )
         monkeypatch.chdir(package.root)
 
-        exit_code = cli.run(["test"])
+        exit_code = run(["test"])
 
         _, traceback = capfd.readouterr().err.split(TRACEBACK_HEADING)
         assert traceback.splitlines()[-2:] == [
@@ -571,22 +459,12 @@ class TestTestCommand:
         )
         monkeypatch.chdir(package.root)
 
-        exit_code = cli.run(["test"])
+        exit_code = run(["test"])
 
         assert capfd.readouterr().out == PASSING_NO_PRINT_TEST_REPORT + (
             "warning: responsibility-placement: broad triggers any; "
             "a gate on the code its violations need skips more files\n"
         )
-        assert exit_code == 0
-
-    def test_update_all_writes_the_snapshots(self, repo, monkeypatch):
-        """Bug: --update-all doesn't reach the snapshot validations."""
-        repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)"]}))
-        monkeypatch.chdir(repo.root)
-
-        exit_code = cli.run(["test", "--update-all"])
-
-        assert (repo.root / NO_PRINT_SNAPSHOT).is_file()
         assert exit_code == 0
 
     def test_missing_why_fail_fails_the_run(self, repo, monkeypatch, capfd):
@@ -606,7 +484,7 @@ class TestTestCommand:
         repo.write(NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "valid": ["logging.info(1)"]}))
         monkeypatch.chdir(repo.root)
 
-        exit_code = cli.run(["test", "--missing-why", "fail"])
+        exit_code = run(["test", "--missing-why", "fail"])
 
         assert (
             capfd.readouterr().out == PASSING_NO_PRINT_TEST_REPORT + "no-print: no metadata.why\n"

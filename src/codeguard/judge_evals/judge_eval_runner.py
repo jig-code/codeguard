@@ -22,8 +22,7 @@ from codeguard.judge_evals.edit_evaluators import PartialEqualsExpected, Violati
 from codeguard.judge_evals.edit_review_task import EditReviewTask
 from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.judge_evals.judge_eval_result import JudgeEvalResult, RuleEvalReport
-from codeguard.judge_evals.judge_factory import JudgeFactory
-from codeguard.review import Binding, Bindings
+from codeguard.review import Binding, Bindings, JudgeFactory
 from codeguard.rule_validation import ValidationResult
 from codeguard.syntax import SyntaxScanner
 

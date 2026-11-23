@@ -1,3 +1,4 @@
+from dataclasses import replace
 from importlib import metadata
 
 import pytest
@@ -6,7 +7,7 @@ from rules_package import write_package
 
 from codeguard.ast_grep import AstGrep
 from codeguard.config import Config, ConfigError, RulesetLoader
-from codeguard.rules.ruleset_resolver import RulesetResolver
+from codeguard.project.ruleset_resolver import RulesetResolver
 
 
 class TestOwnRulesets:
@@ -38,3 +39,12 @@ class TestOwnRulesets:
             f"{directory.root}/codeguard-package.yaml is invalid:\n"
             f"  example supports ast-grep <0.45, not {metadata.version('ast-grep-cli')}"
         )
+
+
+class TestRulesets:
+    def test_skip_ci_only_reaches_every_ruleset(self, directory):
+        directory.write(".codeguard/config.yaml", yaml.safe_dump({}))
+
+        rulesets = RulesetResolver(directory.root, Config(), AstGrep(), skip_ci_only=True).rulesets
+
+        assert rulesets == (replace(RulesetLoader.local(directory.root).load(), skip_ci_only=True),)

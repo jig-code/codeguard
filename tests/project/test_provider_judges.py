@@ -1,50 +1,37 @@
-import os
-import traceback
-from unittest import mock
-
-import pytest
-from diskcache import Cache
 from pydantic import SecretStr
 
 from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge
 from codeguard.codex_provider import CodexJudge
 from codeguard.config import (
-    ConfigError,
     GeminiSettings,
     JudgeConfig,
     JudgeModel,
     JudgeProvider,
 )
-from codeguard.rules.judges import Judges
+from codeguard.project import ProviderJudges
 
 
-class TestJudges:
-    def test_every_judge_shares_the_store_process_limit_and_warmup(self, tmp_path):
-        judges = Judges(store=Cache(tmp_path))
+class TestProviderJudges:
+    def test_every_claude_judge_shares_the_process_limit_and_warmup(self, tmp_path):
+        judges = ProviderJudges()
 
-        cached = judges.cached(
-            tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="sonnet")
-        )
-        uncached = judges.uncached(
-            tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="opus")
-        )
+        sonnet = judges(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="sonnet"))
+        opus = judges(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI, name="opus"))
 
-        assert isinstance(cached.wrapped, ClaudeJudge)
-        assert isinstance(uncached, ClaudeJudge)
-        assert cached.store is judges.store
-        assert cached.wrapped.processes is uncached.processes
-        assert uncached.processes is judges.processes[JudgeProvider.CLAUDE_CLI]
-        assert cached.wrapped.warmup is uncached.warmup is judges.warmup
+        assert isinstance(sonnet, ClaudeJudge)
+        assert isinstance(opus, ClaudeJudge)
+        assert sonnet.processes is opus.processes is judges.processes[JudgeProvider.CLAUDE_CLI]
+        assert sonnet.warmup is opus.warmup is judges.warmup
 
     def test_gemini_judge_runs_with_the_gemini_settings(self, tmp_path):
         settings = GeminiSettings(
             project="sanctum", location="eu", api_key=SecretStr("proxy-injected")
         )
-        judges = Judges(gemini=settings, store=Cache(tmp_path))
+        judges = ProviderJudges(gemini=settings)
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
-        judge = judges.uncached(tmp_path, model)
+        judge = judges(tmp_path, model)
 
         assert judge == ApiJudge(
             tmp_path,
@@ -56,66 +43,11 @@ class TestJudges:
             judges.config.request_time_limit_seconds,
         )
 
-    @mock.patch.dict(
-        os.environ,
-        {
-            "CODEGUARD_JUDGE__GEMINI__PROJECT": "my-project",
-            "CODEGUARD_JUDGE__GEMINI__LOCATION": "us",
-            "CODEGUARD_JUDGE__GEMINI__API_KEY": "proxy-injected",
-        },
-    )
-    def test_gemini_settings_come_from_the_environment(self, tmp_path):
-        judges = Judges(store=Cache(tmp_path))
-
-        assert judges.gemini == GeminiSettings(
-            project="my-project", location="us", api_key=SecretStr("proxy-injected")
-        )
-
-    def test_gemini_with_a_key_file_and_no_project_is_a_config_error(self, tmp_path):
-        settings = GeminiSettings(credentials_file=tmp_path / "judge.json")
-        judges = Judges(gemini=settings, store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
-
-        with pytest.raises(ConfigError) as error:
-            judges.require_gemini_sign_in([model])
-
-        assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
-
-    def test_gemini_without_a_sign_in_is_a_config_error(self, tmp_path):
-        judges = Judges(gemini=GeminiSettings(project="sanctum"), store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
-
-        with pytest.raises(ConfigError) as error:
-            judges.require_gemini_sign_in([model])
-
-        assert str(error.value) == (
-            "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE"
-        )
-
-    def test_two_gemini_sign_ins_are_a_config_error_that_leaves_out_the_key(self, tmp_path):
-        settings = GeminiSettings(
-            project="sanctum",
-            api_key=SecretStr("secret-key-value"),
-            credentials_file=tmp_path / "judge.json",
-        )
-        judges = Judges(gemini=settings, store=Cache(tmp_path))
-        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
-
-        with pytest.raises(ConfigError) as error:
-            judges.require_gemini_sign_in([model])
-
-        assert str(error.value) == (
-            "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
-            "CODEGUARD_JUDGE__GEMINI__CREDENTIALS_FILE, not both"
-        )
-        assert "secret-key-value" not in "".join(traceback.format_exception(error.value))
-
     def test_bedrock_model_builds_a_judge_cached_apart_from_gemini(self, tmp_path):
-        judges = Judges(store=Cache(tmp_path))
+        judges = ProviderJudges()
         model = JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5")
 
-        judge = judges.uncached(tmp_path, model)
+        judge = judges(tmp_path, model)
 
         assert isinstance(judge, ApiJudge)
         assert judge.identity == ("bedrock\0us.anthropic.claude-haiku-5-5\0thinking=medium")
@@ -123,27 +55,25 @@ class TestJudges:
 
 
 def test_codex_binding_builds_a_separate_subscription_judge(tmp_path):
-    judges = Judges(store=Cache(tmp_path))
+    judges = ProviderJudges()
     model = JudgeModel(provider=JudgeProvider.CODEX_CLI, name="gpt-6-luna")
 
-    judge = judges.uncached(tmp_path, model)
+    judge = judges(tmp_path, model)
 
     assert isinstance(judge, CodexJudge)
     assert judge.model == model.name
     assert judge.processes is judges.processes[JudgeProvider.CODEX_CLI]
     assert (
         judge.identity
-        != judges.uncached(
-            tmp_path, JudgeModel(provider=JudgeProvider.BEDROCK, name=model.name)
-        ).identity
+        != judges(tmp_path, JudgeModel(provider=JudgeProvider.BEDROCK, name=model.name)).identity
     )
 
 
 def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tmp_path):
-    judges = Judges(store=Cache(tmp_path))
+    judges = ProviderJudges()
     model = JudgeModel(provider=JudgeProvider.BEDROCK, name="us.openai.gpt-6-luna")
 
-    judge = judges.uncached(tmp_path, model)
+    judge = judges(tmp_path, model)
 
     assert isinstance(judge, ApiJudge)
     assert judge.identity == "bedrock\0us.openai.gpt-6-luna\0thinking=medium"
@@ -152,9 +82,9 @@ def test_bedrock_accepts_a_gpt_inference_profile_without_changing_the_backend(tm
 class TestJudgeThinking:
     def test_claude_judge_runs_at_the_claude_cli_level(self, tmp_path):
         config = JudgeConfig.model_validate({"thinking": {"claude-cli": "xhigh"}})
-        judges = Judges(config, store=Cache(tmp_path))
+        judges = ProviderJudges(config)
 
-        judge = judges.uncached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
+        judge = judges(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
 
         assert judge == ClaudeJudge(
             tmp_path,
@@ -166,20 +96,18 @@ class TestJudgeThinking:
 
     def test_codex_judge_runs_at_the_codex_cli_level(self, tmp_path):
         config = JudgeConfig.model_validate({"thinking": {"codex-cli": "low"}})
-        judges = Judges(config, store=Cache(tmp_path))
+        judges = ProviderJudges(config)
 
-        judge = judges.uncached(
-            tmp_path, JudgeModel(provider=JudgeProvider.CODEX_CLI, name="gpt-6-luna")
-        )
+        judge = judges(tmp_path, JudgeModel(provider=JudgeProvider.CODEX_CLI, name="gpt-6-luna"))
 
         assert judge == CodexJudge(
             tmp_path, "gpt-6-luna", judges.processes[JudgeProvider.CODEX_CLI], thinking="low"
         )
 
     def test_api_judge_runs_with_the_request_time_limit(self, tmp_path):
-        judges = Judges(JudgeConfig(request_time_limit_seconds=180), store=Cache(tmp_path))
+        judges = ProviderJudges(JudgeConfig(request_time_limit_seconds=180))
 
-        judge = judges.uncached(
+        judge = judges(
             tmp_path,
             JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5"),
         )
@@ -196,9 +124,9 @@ class TestJudgeThinking:
 
     def test_bedrock_judge_runs_at_the_bedrock_level(self, tmp_path):
         config = JudgeConfig.model_validate({"thinking": {"bedrock": "max"}})
-        judges = Judges(config, store=Cache(tmp_path))
+        judges = ProviderJudges(config)
 
-        judge = judges.uncached(
+        judge = judges(
             tmp_path,
             JudgeModel(provider=JudgeProvider.BEDROCK, name="us.anthropic.claude-haiku-5-5"),
         )
@@ -215,9 +143,9 @@ class TestJudgeThinking:
 
     def test_default_gives_a_cli_judge_no_level(self, tmp_path):
         config = JudgeConfig.model_validate({"thinking": {"claude-cli": "default"}})
-        judges = Judges(config, store=Cache(tmp_path))
+        judges = ProviderJudges(config)
 
-        judge = judges.uncached(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
+        judge = judges(tmp_path, JudgeModel(provider=JudgeProvider.CLAUDE_CLI))
 
         assert judge == ClaudeJudge(
             tmp_path, None, judges.processes[JudgeProvider.CLAUDE_CLI], warmup=judges.warmup
@@ -226,9 +154,9 @@ class TestJudgeThinking:
     def test_default_gives_an_api_judge_no_level(self, tmp_path):
         settings = GeminiSettings(project="a-project", api_key=SecretStr("proxy-injected"))
         config = JudgeConfig.model_validate({"thinking": {"gemini": "default"}})
-        judges = Judges(config, settings, store=Cache(tmp_path))
+        judges = ProviderJudges(config, settings)
 
-        judge = judges.uncached(
+        judge = judges(
             tmp_path, JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
         )
 

@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal, cast
@@ -125,7 +126,11 @@ class GeminiSettings(BaseSettings):
     api_key: SecretStr | None = None
     credentials_file: Path | None = None
 
-    def check_sign_in(self) -> None:
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None:
+        if any(model.provider is JudgeProvider.GEMINI for model in models):
+            self._check_sign_in()
+
+    def _check_sign_in(self) -> None:
         if self.project is None:
             raise ConfigError("Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT")
         if self.api_key is None and self.credentials_file is None:

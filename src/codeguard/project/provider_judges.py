@@ -1,30 +1,19 @@
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from os import process_cpu_count
 from pathlib import Path
 from threading import Semaphore
 
-from diskcache import Cache
-
 from codeguard.api_provider import ApiJudge, BedrockClaude, VertexGemini
 from codeguard.claude_provider import ClaudeJudge, PromptCacheWarmup
 from codeguard.codex_provider import CodexJudge
-from codeguard.config import (
-    GeminiSettings,
-    JudgeConfig,
-    JudgeModel,
-    JudgeProvider,
-    sent_effort,
-)
-from codeguard.review import CachedJudge, Deadline, Judge
-from codeguard.rules.cache_directory import cache_directory
+from codeguard.config import GeminiSettings, JudgeConfig, JudgeModel, JudgeProvider, sent_effort
+from codeguard.review import Deadline, Judge
 
 
 @dataclass(frozen=True)
-class Judges:
+class ProviderJudges:
     config: JudgeConfig = JudgeConfig()
     gemini: GeminiSettings = field(default_factory=GeminiSettings)
-    store: Cache = field(default_factory=lambda: Cache(cache_directory("judgements")))
     warmup: PromptCacheWarmup = field(default_factory=PromptCacheWarmup)
     processes: dict[JudgeProvider, Semaphore] = field(init=False)
 
@@ -38,16 +27,7 @@ class Judges:
             },
         )
 
-    def require_gemini_sign_in(self, models: Iterable[JudgeModel]) -> None:
-        if any(model.provider is JudgeProvider.GEMINI for model in models):
-            self.gemini.check_sign_in()
-
-    def cached(
-        self, root: Path, model: JudgeModel, deadline: Deadline | None = None
-    ) -> CachedJudge:
-        return CachedJudge(self.uncached(root, model, deadline), self.store, root)
-
-    def uncached(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
+    def __call__(self, root: Path, model: JudgeModel, deadline: Deadline | None = None) -> Judge:
         processes = self.processes[model.provider]
         thinking = self.config.thinking
         if model.provider is JudgeProvider.CODEX_CLI:

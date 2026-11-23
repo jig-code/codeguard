@@ -6,6 +6,8 @@ from pathlib import Path
 import logfire
 from diskcache import Cache
 
+from codeguard.config import JudgeModel
+from codeguard.review.deadline import Deadline
 from codeguard.review.judge import (
     INSTRUCTIONS,
     VERDICT_SCHEMA,
@@ -14,6 +16,7 @@ from codeguard.review.judge import (
     JudgeRequest,
     Verdict,
 )
+from codeguard.review.judge_factory import JudgeFactory
 
 
 def _digest(content: bytes) -> str:
@@ -96,3 +99,14 @@ class CachedJudge:
             self._digest_of(request.file) or "",
         )
         return _digest("\0".join(parts).encode())
+
+
+@dataclass(frozen=True)
+class CachedJudges:
+    judges: JudgeFactory
+    store: Cache
+
+    def __call__(
+        self, root: Path, model: JudgeModel, deadline: Deadline | None = None
+    ) -> CachedJudge:
+        return CachedJudge(self.judges(root, model, deadline), self.store, root)

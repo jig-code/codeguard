@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from unittest import mock
 
-from codeguard.rules.cache_directory import cache_directory
+from codeguard.project.cache_directory import cache_directory
 
 
 class TestCacheDirectory:
