@@ -1,6 +1,6 @@
-import importlib.util
 import json
 import subprocess
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from types import ModuleType
 
@@ -13,11 +13,10 @@ STOP_SCRIPT = Path(__file__).resolve().parents[3] / "plugin" / "hooks" / "stop.p
 
 @pytest.fixture(scope="module")
 def stop() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("stop", STOP_SCRIPT)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    loader = SourceFileLoader("stop", str(STOP_SCRIPT))
+    module = ModuleType(loader.name)
+    module.__file__ = loader.path
+    loader.exec_module(module)
     return module
 
 
