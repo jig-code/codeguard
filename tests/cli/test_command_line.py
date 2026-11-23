@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -96,32 +98,32 @@ class TestCommandLine:
         assert str(error.value) == message
 
     @pytest.mark.parametrize(
-        ("command", "choices"),
+        ("command", "entry"),
         [
-            ("review", "--format {text,json}  Print diagnostics as text lines or as one JSON "),
-            ("test", "--missing-why {warn,fail,off}\n"),
-            ("eval", "--provider {claude-cli,gemini,bedrock,codex-cli}\n"),
+            (
+                "review",
+                "  --format {text,json}  Print diagnostics as text lines or as one JSON object.\n"
+                "                        (default: text)\n",
+            ),
+            (
+                "test",
+                "  --missing-why {warn,fail,off}\n"
+                "                        Report each rule that doesn't say why it exists as a\n"
+                "                        warning, as a failure, or not at all. (default: warn)\n",
+            ),
+            (
+                "eval",
+                "  --provider {claude-cli,gemini,bedrock,codex-cli}\n"
+                "                        Judge every selected rule with this provider instead\n"
+                "                        of its binding's. (default: None)\n",
+            ),
         ],
+        ids=["format", "missing-why", "provider"],
     )
-    def test_help_lists_enum_choices_by_value(self, command, choices, capsys, monkeypatch):
-        monkeypatch.setenv("COLUMNS", "80")
-
-        with pytest.raises(SystemExit):
+    @mock.patch.dict(os.environ, {"COLUMNS": "80"})
+    def test_help_gives_an_enum_flag_s_choices_and_default_by_value(self, command, entry, capsys):
+        with pytest.raises(SystemExit) as exit_:
             CommandLine.parse([command, "--help"])
 
-        assert choices in capsys.readouterr().out
-
-    @pytest.mark.parametrize(
-        ("command", "default"),
-        [
-            ("review", "object.\n                        (default: text)\n"),
-            ("test", "or not at all. (default: warn)\n"),
-        ],
-    )
-    def test_help_gives_an_enum_default_by_value(self, command, default, capsys, monkeypatch):
-        monkeypatch.setenv("COLUMNS", "80")
-
-        with pytest.raises(SystemExit):
-            CommandLine.parse([command, "--help"])
-
-        assert default in capsys.readouterr().out
+        assert exit_.value.code == 0
+        assert entry in capsys.readouterr().out

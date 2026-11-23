@@ -63,13 +63,10 @@ class _EnumValueHelp(CliSettingsSource["CommandLine"]):
 
 
 class CommandLine(BaseModel):
-    # CliApp.run's own settings, which it gives up when handed a CLI source.
+    # CliApp.run sets these two itself only when it builds the CLI source.
     model_config = SettingsConfigDict(
-        case_sensitive=True,
         cli_hide_none_type=True,
         cli_avoid_json=True,
-        cli_enforce_required=True,
-        cli_implicit_flags=True,
         cli_kebab_case=True,
         cli_prog_name="codeguard",
     )

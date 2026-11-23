@@ -1,14 +1,15 @@
 import pytest
+from packaging.specifiers import SpecifierSet
 
 from codeguard.cli.installed_evals import IncompatibleEvalsError, InstalledEvals
 
 
 class TestInstalledEvals:
-    def test_codeguard_s_own_install_passes(self):
+    def test_loaded_install_passes_the_check(self):
         InstalledEvals.load().check()
 
     def test_installed_version_outside_the_required_range_is_an_error(self):
-        installed = InstalledEvals(("pydantic-evals~=1.2",), "3.0.0")
+        installed = InstalledEvals(SpecifierSet("~=1.2"), "3.0.0")
 
         with pytest.raises(IncompatibleEvalsError) as error:
             installed.check()
@@ -19,7 +20,7 @@ class TestInstalledEvals:
         )
 
     def test_missing_install_is_an_error(self):
-        installed = InstalledEvals(("pydantic-evals~=1.2",), None)
+        installed = InstalledEvals(SpecifierSet("~=1.2"), None)
 
         with pytest.raises(IncompatibleEvalsError) as error:
             installed.check()
@@ -30,7 +31,7 @@ class TestInstalledEvals:
         )
 
     def test_metadata_without_the_requirement_is_an_error(self):
-        installed = InstalledEvals(("pyyaml>=6",), "1.4.0")
+        installed = InstalledEvals(None, "1.4.0")
 
         with pytest.raises(IncompatibleEvalsError) as error:
             installed.check()

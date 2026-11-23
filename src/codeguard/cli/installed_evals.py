@@ -3,6 +3,7 @@ from importlib.metadata import PackageNotFoundError, requires, version
 from typing import Self
 
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 
 _DISTRIBUTION = "codeguard"
 _EVALS = "pydantic-evals"
@@ -14,37 +15,37 @@ class IncompatibleEvalsError(Exception):
 
 @dataclass(frozen=True)
 class InstalledEvals:
-    codeguard_requires: tuple[str, ...]
+    required: SpecifierSet | None
     version: str | None
 
     @classmethod
     def load(cls) -> Self:
+        required = next(
+            (
+                requirement.specifier
+                for requirement in map(Requirement, requires(_DISTRIBUTION) or ())
+                if requirement.name == _EVALS
+            ),
+            None,
+        )
         try:
             installed = version(_EVALS)
         except PackageNotFoundError:
             installed = None
-        return cls(tuple(requires(_DISTRIBUTION) or ()), installed)
+        return cls(required, installed)
 
     def check(self) -> None:
-        requirement = next(
-            (
-                parsed
-                for parsed in map(Requirement, self.codeguard_requires)
-                if parsed.name == _EVALS
-            ),
-            None,
-        )
-        if requirement is None:
+        if self.required is None:
             raise IncompatibleEvalsError(
                 f"codeguard's metadata names no {_EVALS}. Reinstall codeguard."
             )
         if self.version is None:
             raise IncompatibleEvalsError(
-                f"{_EVALS} is not installed; codeguard needs {_EVALS}{requirement.specifier}. "
+                f"{_EVALS} is not installed; codeguard needs {_EVALS}{self.required}. "
                 "Reinstall codeguard."
             )
-        if not requirement.specifier.contains(self.version, prereleases=True):
+        if not self.required.contains(self.version, prereleases=True):
             raise IncompatibleEvalsError(
                 f"{_EVALS} {self.version} is installed; codeguard needs "
-                f"{_EVALS}{requirement.specifier}. Reinstall codeguard."
+                f"{_EVALS}{self.required}. Reinstall codeguard."
             )
