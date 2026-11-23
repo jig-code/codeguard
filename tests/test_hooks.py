@@ -10,11 +10,8 @@ import yaml
 from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
 from rules_package import write_package
 
-pytestmark = pytest.mark.usefixtures("fake_cli_config")
-
 PLUGIN = Path(__file__).resolve().parent.parent / "plugin"
 SCRIPTS = sysconfig.get_path("scripts")
-PLACEMENT_BINDING = {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 UNDER_TEST = {"CODEGUARD": str(Path(SCRIPTS) / "codeguard")}
 UV = Path(shutil.which("uv") or "uv")
 CLAUDE_CODE_COMMAND = 'uv run --quiet --script "${CLAUDE_PLUGIN_ROOT}/hooks/stop.py" claude-code'
@@ -86,6 +83,7 @@ class TestHookConfig:
         assert commands(PLUGIN / "hooks" / "codex.json", "Stop") == [CODEX_COMMAND]
 
 
+@pytest.mark.usefixtures("fake_cli_config")
 class TestStopHook:
     def test_ci_only_rule_does_not_run(self, repo):
         write_package(repo, prefix="rules/")
@@ -118,7 +116,10 @@ class TestStopHook:
 
     def test_judge_error_on_an_error_rule_goes_to_the_user(self, repo, make_judge_rule, claude_bin):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
+        repo.write(
+            ".codeguard/bindings/placement.yaml",
+            yaml.safe_dump({"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}),
+        )
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})

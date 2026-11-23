@@ -9,6 +9,7 @@ import json
 import subprocess
 import sys
 import sysconfig
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -21,13 +22,11 @@ from spans import finished_span_attributes
 
 from codeguard import cli
 from codeguard.file_lock import exclusive_lock
-
-pytestmark = pytest.mark.usefixtures("fake_cli_config", "judgement_cache")
+from codeguard.review import Severity
 
 CODEGUARD = Path(sysconfig.get_path("scripts")) / "codeguard"
 NO_PRINT_TEST = ".codeguard/rule-tests/no-print-test.yml"
 NO_PRINT_SNAPSHOT = ".codeguard/rule-tests/__snapshots__/no-print-snapshot.yml"
-PLACEMENT_BINDING = {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
 TRACEBACK_HEADING = "Traceback (most recent call last):\n"
 PASSING_NO_PRINT_TEST_REPORT = (
     "Running 1 tests\n"
@@ -37,30 +36,30 @@ PASSING_NO_PRINT_TEST_REPORT = (
     "\n"
     "test result: ok. 1 passed; 0 failed;\n"
 )
-INVOICE_BEFORE = (
-    "class Invoice:\n"
-    "    def total(self, order):\n"
-    "        return order.subtotal\n"
-    "\n"
-    "    def label(self):\n"
-    "        return 'invoice'\n"
-)
-INVOICE_AFTER = (
-    "class Invoice:\n"
-    "    def total(self, order):\n"
-    "        return sum(line.price for line in order.lines)\n"
-    "\n"
-    "    def label(self):\n"
-    "        return 'invoice'\n"
-)
-RECORDED_OPTIONS = {
-    "--system-prompt": "system prompt",
-    "--model": "model",
-    "--tools": "tools",
-    "--json-schema": "json schema",
-}
+INVOICE_BEFORE = textwrap.dedent("""\
+    class Invoice:
+        def total(self, order):
+            return order.subtotal
+
+        def label(self):
+            return 'invoice'
+""")
+INVOICE_AFTER = textwrap.dedent("""\
+    class Invoice:
+        def total(self, order):
+            return sum(line.price for line in order.lines)
+
+        def label(self):
+            return 'invoice'
+""")
 
 
+@pytest.fixture
+def placement_binding() -> dict[str, object]:
+    return {"rule": "placement", "paths": ["**/*.py"], "triggers": ["any"]}
+
+
+@pytest.mark.usefixtures("judgement_cache")
 class TestReviewCommand:
     def test_error_diagnostic_prints_and_exits_1(self, repo, make_diagnostic, monkeypatch, capfd):
         """Bug: review prints nothing, or exits 0 for a review that blocks."""
@@ -82,10 +81,10 @@ class TestReviewCommand:
         assert capfd.readouterr() == (f"{make_diagnostic(warning=True)}\n", "")
         assert exit_code == 0
 
-    def test_review_waits_for_a_running_review(self, repo, make_diagnostic):
+    def test_review_waits_for_a_running_review(self, repo, make_diagnostic, tmp_path, monkeypatch):
         """Bug: two reviews of one repository run at once. Only two processes show it."""
         repo.write("a.py", "print(1)\n")
-        diagnostic = make_diagnostic()
+        monkeypatch.setenv("HOME", str(tmp_path))
 
         with exclusive_lock(repo.root / ".git" / "codeguard-review.lock"):
             process = subprocess.Popen(
@@ -95,9 +94,7 @@ class TestReviewCommand:
                 process.wait(timeout=1)
         stdout, _ = process.communicate(timeout=30)
 
-        assert stdout.startswith(
-            f"a.py:1: error no-print: Use logging, not print. [{diagnostic.id}]\n"
-        )
+        assert stdout == f"{make_diagnostic()}\n"
         assert process.returncode == 1
 
     def test_base_reviews_committed_changes(self, repo, make_diagnostic, monkeypatch, capfd):
@@ -183,14 +180,15 @@ class TestReviewCommand:
         assert exit_code == expected_exit_code
 
 
+@pytest.mark.usefixtures("fake_cli_config", "judgement_cache")
 class TestReviewDryRun:
     @pytest.mark.usefixtures("fake_claude_on_path")
     def test_lists_judge_calls_without_calling_claude(
-        self, repo, make_judge_rule, monkeypatch, capfd
+        self, repo, make_judge_rule, placement_binding, monkeypatch, capfd
     ):
         """Bug: --dry-run calls the judge, or prints no plan."""
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(placement_binding))
         repo.write(".codeguard/rules/judge/class-shape.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/class-shape.yaml",
@@ -252,6 +250,7 @@ class TestReviewDryRun:
         assert exit_.value.code == 2
 
 
+@pytest.mark.usefixtures("judgement_cache")
 class TestReviewJsonFormat:
     def test_prints_one_object_with_the_diagnostics(
         self, repo, make_diagnostic, monkeypatch, capfd
@@ -266,14 +265,14 @@ class TestReviewJsonFormat:
         assert exit_code == 1
 
 
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
 class TestReviewJudgeErrorsAsWarnings:
-    @pytest.mark.usefixtures("fake_claude_on_path")
-    def test_judge_error_is_a_warning_with_the_flag(
-        self, repo, make_judge_rule, monkeypatch, capfd
+    def test_judge_error_is_a_warning_with_the_flag(  # noqa: PLR0913 - pytest fixtures
+        self, repo, make_judge_rule, placement_binding, make_diagnostic, monkeypatch, capfd
     ):
         """Bug: --judge-errors-as-warnings doesn't reach the review's result."""
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(placement_binding))
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
         configure_fake_cli_response({"stdout": "rate limited\n", "exit_code": 1})
@@ -281,18 +280,24 @@ class TestReviewJudgeErrorsAsWarnings:
 
         exit_code = cli.run(["review", "--judge-errors-as-warnings"])
 
-        assert capfd.readouterr().out.startswith("a.py: warning placement: The judge call failed")
+        judge_error = make_diagnostic(
+            judge_error=True,
+            rule="placement",
+            severity=Severity.WARNING,
+            note="claude exited with 1.\nstdout:\nrate limited\n\nstderr:\n",
+        )
+        assert capfd.readouterr().out == f"{judge_error}\n"
         assert exit_code == 0
 
 
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
 class TestReviewJudgeCache:
-    @pytest.mark.usefixtures("fake_claude_on_path")
     def test_cached_verdict_is_reused_until_a_file_the_judge_read_changes(
-        self, repo, make_judge_rule, monkeypatch, tmp_path
+        self, repo, make_judge_rule, placement_binding, monkeypatch, tmp_path
     ):
         """Bug: review judges without the cache, or with one that doesn't outlast a run."""
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
-        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(PLACEMENT_BINDING))
+        repo.write(".codeguard/bindings/placement.yaml", yaml.safe_dump(placement_binding))
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
         repo.write("orders/pricing.toml", "discount = 5\n")
@@ -315,6 +320,7 @@ class TestReviewJudgeCache:
         assert calls.read_text() == "called\ncalled\n"
 
 
+@pytest.mark.usefixtures("judgement_cache")
 class TestConfigCommand:
     def test_prints_the_configured_setting(self, repo, monkeypatch, capfd):
         """Bug: config prints another setting, or the default over the configured one."""
@@ -351,17 +357,7 @@ def invoice_package(tmp_path_factory: pytest.TempPathFactory) -> GitRepo:
     return package
 
 
-def recorded_call(record: Path) -> dict[str, str | None]:
-    captured = json.loads((record / "request.json").read_text())
-    arguments = captured["arguments"]
-    values = dict(zip(arguments, arguments[1:], strict=False))
-    return {
-        "prompt": captured["prompt"],
-        **{name: values.get(option) for option, name in RECORDED_OPTIONS.items()},
-    }
-
-
-@pytest.mark.usefixtures("fake_claude_on_path")
+@pytest.mark.usefixtures("fake_cli_config", "fake_claude_on_path", "judgement_cache")
 class TestEvalCommand:
     def test_other_commands_do_not_load_pydantic_evals(self):
         """Bug: importing the CLI loads pydantic-evals. Only a fresh interpreter shows it."""
@@ -414,7 +410,12 @@ class TestEvalCommand:
                             "name": "names the order lines",
                             "inputs": {"file": "invoice.py", "after": INVOICE_AFTER},
                             "expected_output": {"outcome": "valid"},
-                        }
+                        },
+                        {
+                            "name": "names the invoice",
+                            "inputs": {"file": "invoice.py", "after": INVOICE_BEFORE},
+                            "expected_output": {"outcome": "valid"},
+                        },
                     ]
                 }
             ),
@@ -451,13 +452,14 @@ class TestEvalCommand:
                 }
             ),
         )
-        configure_fake_cli_response({"stdout": claude_stream([]), "record_env": "CLAUDE_RECORD"})
-        monkeypatch.setenv("CLAUDE_RECORD", str(tmp_path / "eval"))
+        record = tmp_path / "request.json"
+        configure_fake_cli_response({"stdout": claude_stream([]), "record": str(record)})
         monkeypatch.chdir(invoice_package.root)
 
         cli.run(["eval", *options])
 
-        assert recorded_call(tmp_path / "eval")["model"] == model
+        arguments = json.loads(record.read_text())["arguments"]
+        assert dict(zip(arguments, arguments[1:], strict=False)).get("--model") == model
 
     def test_model_without_a_provider_exits_2(self, tmp_path, monkeypatch, capfd):
         """Bug: --model without --provider is accepted and silently ignored."""
@@ -491,16 +493,20 @@ class TestEvalCommand:
         project.write("invoice.py", INVOICE_BEFORE)
         project.commit("Add the invoice")
         project.write("invoice.py", INVOICE_AFTER)
-        configure_fake_cli_response({"stdout": claude_stream([]), "record_env": "CLAUDE_RECORD"})
-        monkeypatch.setenv("CLAUDE_RECORD", str(tmp_path / "eval"))
+        eval_record = tmp_path / "eval.json"
+        review_record = tmp_path / "review.json"
+        configure_fake_cli_response({"stdout": claude_stream([]), "record": str(eval_record)})
         monkeypatch.chdir(invoice_package.root)
         cli.run(["eval"])
-        monkeypatch.setenv("CLAUDE_RECORD", str(tmp_path / "review"))
+        configure_fake_cli_response({"stdout": claude_stream([]), "record": str(review_record)})
         monkeypatch.chdir(project.root)
 
         cli.run(["review"])
 
-        assert recorded_call(tmp_path / "eval") == recorded_call(tmp_path / "review")
+        eval_request = json.loads(eval_record.read_text())
+        review_request = json.loads(review_record.read_text())
+        assert eval_request["arguments"] == review_request["arguments"]
+        assert eval_request["prompt"] == review_request["prompt"]
 
 
 class TestTestCommand:

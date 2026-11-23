@@ -10,24 +10,26 @@ from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import JudgePlan, PlannedCall
 from codeguard.rules import Rules
 
-pytestmark = pytest.mark.usefixtures("judgement_cache")
 
-GEMINI_PLACEMENT_BINDING = {
-    "rule": "placement",
-    "triggers": ["any"],
-    "provider": "gemini",
-    "model": "gemini-judge-test",
-}
+@pytest.fixture
+def gemini_placement_binding() -> dict[str, object]:
+    return {
+        "rule": "placement",
+        "triggers": ["any"],
+        "provider": "gemini",
+        "model": "gemini-judge-test",
+    }
 
 
+@pytest.mark.usefixtures("judgement_cache")
 class TestRules:
     def test_review_needs_each_binding_s_sign_in_even_when_no_file_matches_it(
-        self, repo, make_judge_rule
+        self, repo, make_judge_rule, gemini_placement_binding
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            yaml.safe_dump({**GEMINI_PLACEMENT_BINDING, "paths": ["**/*.rb"]}),
+            yaml.safe_dump({**gemini_placement_binding, "paths": ["**/*.rb"]}),
         )
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
@@ -39,11 +41,13 @@ class TestRules:
 
         assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
 
-    def test_plan_lists_a_gemini_judge_call_without_a_gemini_sign_in(self, repo, make_judge_rule):
+    def test_plan_lists_a_gemini_judge_call_without_a_gemini_sign_in(
+        self, repo, make_judge_rule, gemini_placement_binding
+    ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)
         repo.write(
             ".codeguard/bindings/placement.yaml",
-            yaml.safe_dump({**GEMINI_PLACEMENT_BINDING, "paths": ["**/*.py"]}),
+            yaml.safe_dump({**gemini_placement_binding, "paths": ["**/*.py"]}),
         )
         repo.commit("Bind the rule")
         repo.write("a.py", "x = 1\n")
