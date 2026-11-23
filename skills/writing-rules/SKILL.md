@@ -14,12 +14,10 @@ convention that a model judges each change against.
 2. **State the convention and why it exists**, as the two sections below say. Then check
    the statement against each bullet under The convention and each check below, and
    rewrite the statement until it meets them all:
-   1. Write every relative pronoun that a phrase needs, so the judge never guesses which
-      noun a phrase describes.
-   2. Wherever a pronoun could mean more than one noun, write the noun instead: the
-      judge picks one meaning and decides by it.
-   3. Name what code does, never what code leaves out: the judge reports only a
-      violation that a changed line is part of, and what code leaves out is on no line.
+   1. Write out every relative pronoun, so it's clear which noun each phrase describes.
+   2. Use the noun instead of a pronoun that could mean more than one thing.
+   3. Name an action the code takes, never one it skips: a skipped action isn't on any
+      line a change touches.
 
    Reread the two sections when two rules, or a rule and its cases, disagree about the
    same code.
@@ -32,60 +30,35 @@ Before writing any rule file, read `references/layout.md`.
 
 ## The convention
 
-A rule is one convention, stated as one declarative sentence at the level of intent and
-in words that don't depend on the language. Each piece of code the rule reads either
-keeps the convention or breaks it: that is the rule's one yes/no test. The rule is that
-statement and why it exists, and nothing else. The judge treats any other text, even an
-extra clause in the statement, as a separate test. Code can pass that test and still
-break the statement. The statement alone decides each piece of code; the judge reads the
-statement as a reviewer would, and says on what ground the code keeps or breaks it.
+A rule is one convention, stated as one sentence in words that don't depend on the
+language. Each piece of code the rule reads either keeps it or breaks it. The rule holds
+that statement and why it exists, and nothing else: any other text is a second test,
+which code can pass while breaking the statement.
 
-- **A statement, never a question or a command.** The judge decides whether code breaks
-  the convention it is given. A question in its place leaves the judge to infer which
-  answer is the violation, and a command tells the judge what to do instead of saying
-  what code must never do.
-- **A negative sentence.** The statement is a negative sentence, so that each piece of
-  code either does what it forbids or doesn't.
-- **Once.** The statement says what it forbids once, since the judge reads a repeat as a
-  second test.
-- **Nothing about how.** The statement says nothing about how code avoids what that code
-  must never do: the judge reads such a clause as a second test, which code that avoids
-  it another way fails.
-- **No reason or consequence.** Every clause of the statement describes what the code it
-  forbids itself does. No clause says why the convention exists, or names an outcome
-  that follows once that code has run: both belong in the rule's why, and in the
-  statement the judge reads either as a second test.
-- **Abstract.** A rule states an intent, never a list of code shapes, values or names: a
-  shape nobody listed is still decided by its statement. Rules that each police one code
-  shape contradict each other and fail idiomatic code.
-- **One convention.** A rule stating several conventions under one intent is several
-  rules. Split it into one rule per convention, or find the one statement they share.
-  A shape the statement doesn't decide is dropped from the rule, or moved to a rule of
-  its own; it is never kept as an extra violation beside the statement.
-- **Common terms.** The statement uses only common terms, never a term the author
-  invents: the judge reads an invented term as loosely as a person does.
-- **Scoped to the change.** A rule and its cases ask for only as much as decides pass or
-  fail: the code the change adds or edits, and the definitions of the names it uses. A
-  judge that has to read the rest of the repository to decide is slower, costs more, and
-  wavers. Only a rule that keeps something unique or consistent across the repository
-  searches beyond that, and it names the one search it needs.
-- **Idiomatic code never breaks it.** Code written the way the language and its
-  libraries intend is never a violation. A bad pattern isn't idiomatic just because a
-  framework uses it, though: calling the framework's API is fine, while copying its
-  shape into the project's own code may not be. A statement that flags idiomatic code
-  is restated so it doesn't; it isn't given an exception for that code.
-- **Decided by its wording, never by examples.** A case that the statement decides
-  wrongly, or on the wrong ground, shows the statement is unclear: reword it so the
-  statement decides the case. An example or a carve-out for the case would only make
-  the judge match code to it, and the next case fails the same way.
-- **Never contradicts another rule.** A new rule never flags what another rule in the
-  project or package requires.
-- **Never overlaps another rule.** A new rule never flags code that another rule already
-  flags. When two rules flag the same code, move that code's shape to one rule, or merge
-  the two rules.
-- **A rule names a specific class, function or file only when its convention is about
-  that one.** A rule meant for many classes or functions matches what they share, never
-  one of them standing in for the rest.
+- **Write a statement, not a question or a command.** A question doesn't say which answer
+  breaks the rule, and a command gives an order instead of describing code.
+- **Write a negative sentence**, so each piece of code either does what it forbids or
+  doesn't.
+- **Say it once.** Saying the same thing twice adds a second test.
+- **Don't say how to comply.** Code that complies a different way would break that part.
+- **Leave out why the rule exists and what goes wrong when it's broken.** Both go in the
+  rule's why.
+- **Forbid one thing, never a list.** Anything left off a list is left undecided.
+- **Write one rule per convention.** Something the statement doesn't cover gets its own
+  rule; it isn't added to this one.
+- **Use common words.** A made-up term means whatever the reader guesses it means.
+- **Make the rule decidable from the changed code and the code it uses.** Reading the rest
+  of the repository makes each check slower and less reliable.
+- **If the rule keeps something unique or consistent across the repository, name the one
+  search it needs.**
+- **Code written the way its language and libraries intend never breaks the rule.** If it
+  does, reword the statement rather than adding an exception.
+- **Fix a wrong verdict by rewording.** An example or an exception fixes only that one
+  case.
+- **Don't contradict or repeat another rule.** Never forbid what another rule requires or
+  already forbids.
+- **Name a specific class, function or file only when the rule is about that one.**
+  Otherwise, describe what the group has in common.
 
 ## Why it exists
 
