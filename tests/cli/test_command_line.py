@@ -94,3 +94,34 @@ class TestCommandLine:
             CommandLine.parse(arguments)
 
         assert str(error.value) == message
+
+    @pytest.mark.parametrize(
+        ("command", "choices"),
+        [
+            ("review", "--format {text,json}  Print diagnostics as text lines or as one JSON "),
+            ("test", "--missing-why {warn,fail,off}\n"),
+            ("eval", "--provider {claude-cli,gemini,bedrock,codex-cli}\n"),
+        ],
+    )
+    def test_help_lists_enum_choices_by_value(self, command, choices, capsys, monkeypatch):
+        monkeypatch.setenv("COLUMNS", "80")
+
+        with pytest.raises(SystemExit):
+            CommandLine.parse([command, "--help"])
+
+        assert choices in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        ("command", "default"),
+        [
+            ("review", "object.\n                        (default: text)\n"),
+            ("test", "or not at all. (default: warn)\n"),
+        ],
+    )
+    def test_help_gives_an_enum_default_by_value(self, command, default, capsys, monkeypatch):
+        monkeypatch.setenv("COLUMNS", "80")
+
+        with pytest.raises(SystemExit):
+            CommandLine.parse([command, "--help"])
+
+        assert default in capsys.readouterr().out

@@ -12,16 +12,12 @@ from codeguard.cli.command_line import CommandLine, CommandLineError
 from codeguard.cli.config_command import ConfigCommand
 from codeguard.cli.eval_command import EvalCommand
 from codeguard.cli.exit_code import ExitCode
+from codeguard.cli.installed_evals import InstalledEvals
 from codeguard.cli.review_command import ReviewCommand
 from codeguard.cli.rule_tests_command import RuleTestsCommand
 from codeguard.config import ConfigLoader
 from codeguard.file_lock import exclusive_lock
-from codeguard.project import (
-    Project,
-    ProjectReview,
-    ProjectValidations,
-    check_installed_evals,
-)
+from codeguard.project import Project, ProjectReview, ProjectValidations
 from codeguard.repository import LineScopes, WorkingTree
 
 _REVIEW_LOCK = "codeguard-review.lock"
@@ -114,7 +110,7 @@ def _test(command: RuleTestsCommand) -> int:
 
 
 def _eval(command: EvalCommand) -> int:
-    check_installed_evals()
+    InstalledEvals.load().check()
     # pydantic-evals takes about 0.4s to import, so only codeguard eval loads it.
     from codeguard.judge_evals import EvalSelection  # noqa: PLC0415
     from codeguard.project.rule_evaluation import RuleEvaluation  # noqa: PLC0415
