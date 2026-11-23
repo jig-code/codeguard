@@ -1,6 +1,6 @@
 # Exception handling
 
-An exception handler never discards the exception it catches.
+An exception handler never discards the exception that it catches.
 
 ## Why
 

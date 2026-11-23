@@ -1,6 +1,6 @@
 # Responsibility placement
 
-A method lives on the type whose data it reads.
+A method is never defined on a type other than the one whose data the method reads.
 
 ## Why
 
