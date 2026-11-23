@@ -46,8 +46,9 @@ belongs to the `pytest-factoryboy` skill. Gates 5, 9, 11, 13, 14, 15 and 16 poin
    memorization.
    [eval-testing-guidelines.md](references/eval-testing-guidelines.md)
 7. **LLM tests follow the eval guidelines.** Each fixture case is reviewed through
-   `Rules.review`, as `codeguard review` does, against the outcome the case expects, with
-   no shared runner and no retries; a judge regression shows only on the production path.
+   `ProjectReview.review`, as `codeguard review` does, against the outcome the case
+   expects, with no shared runner and no retries; a judge regression shows only on the
+   production path.
    [eval-testing-guidelines.md](references/eval-testing-guidelines.md)
 8. **Names match assertions and production vocabulary.** A coined term sends readers
    looking for a concept the code doesn't have.

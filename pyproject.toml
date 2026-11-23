@@ -90,7 +90,7 @@ containers = ["codeguard"]
 exhaustive = true
 layers = [
     "cli",
-    "rules",
+    "project",
     "claude_provider | codex_provider | api_provider | judge_evals",
     "pattern_rules",
     "rule_validation",
@@ -125,7 +125,7 @@ name = "only judge_evals runs pydantic-evals"
 type = "forbidden"
 source_modules = [
     "codeguard.cli",
-    "codeguard.rules",
+    "codeguard.project",
     "codeguard.claude_provider",
     "codeguard.codex_provider",
     "codeguard.api_provider",

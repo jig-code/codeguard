@@ -32,6 +32,10 @@ class WorkingTree:
         return cls.at(Path(Git(path).text("rev-parse", "--show-toplevel").strip()))
 
     @classmethod
+    def at_or_containing(cls, root: Path | None, path: Path) -> Self:
+        return cls.at(root.resolve()) if root else cls.containing(path)
+
+    @classmethod
     @contextmanager
     def temporary(cls, before: Mapping[str, str], after: Mapping[str, str]) -> Iterator[Self]:
         """A repository whose HEAD holds `before` and whose working tree holds `after`, so

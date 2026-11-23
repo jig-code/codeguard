@@ -12,11 +12,11 @@ and rule evals differ.
 
 ## How codeguard's LLM tests run
 
-`tests/rules/test_judge_prompt.py` parametrizes one test over every judged case of the
+`tests/project/test_judge_prompt.py` parametrizes one test over every judged case of the
 fixture rules' rule evals (`evals/judge/python/rule-evals/<rule>.yaml`). For each case it
 writes the case's edits into a `WorkingTree.temporary`, with a `.codeguard/config.yaml` that
 includes only that rule, and reviews them with
-`Rules(working_tree).review(working_tree.changed_lines("HEAD"))`: the path
+`ProjectReview.of(Project.load(working_tree)).review(...)` on the changed lines: the path
 `codeguard review` takes, with the real judge the fixture package names. It asserts the
 review has no judge errors and that its outcome is the case's expected outcome.
 
@@ -43,7 +43,7 @@ says which changes need the LLM tests and how many runs.
   test module. The rules and cases live in `evals/judge/`, not in the test module.
 - A case's expected result lives in the case (`expected_output`).
 - One case per input, judged on its whole review outcome.
-- Review through `Rules.review`, as above. Don't wrap the review in a shared runner class:
+- Review through `ProjectReview.review`, as above. Don't wrap the review in a shared runner class:
   a runner hides run options and tends to retry what raised.
 - Case inputs use different domains, phrasing and values from the examples in
   `src/codeguard/review/judge.md` and the rule's file, `rules/judge/<id>.md` (gate 6). A

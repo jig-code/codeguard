@@ -18,9 +18,9 @@ from codeguard.config import (
     RuleEvalReader,
 )
 from codeguard.packages import MANIFEST_FILE, Package
+from codeguard.project import Project, ProjectReview
 from codeguard.repository import LineScopes, WorkingTree
 from codeguard.review import Bindings, Category, Review
-from codeguard.rules import Rules, judges
 
 EVALS = Path(__file__).parents[2] / "evals" / "judge"
 SLOW_JUDGE_REQUEST_TIME_LIMIT_SECONDS = 180
@@ -68,11 +68,7 @@ def judged_evals(judge_override: JudgeChoice, tmp_path: Path) -> Path:
     return evals
 
 
-@pytest.fixture(autouse=True)
-def judgement_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(judges, "_JUDGEMENT_CACHE_DIR", tmp_path / "judgements")
-
-
+@pytest.mark.usefixtures("cache_home")
 class TestJudgePrompt:
     @pytest.mark.parametrize("judge_override", [JudgeChoice(provider=JudgeProvider.CLAUDE_CLI)])
     def test_claude_cli_override_judges_with_the_cli_default_model(self, judged_evals: Path):
@@ -102,7 +98,9 @@ class TestJudgePrompt:
     @pytest.mark.parametrize(("rule", "case"), CASES)
     def test_triggers_fire_on_each_case_the_judge_sees(self, rule: str, case: RuleEvalCase):
         with _case_tree(EVALS, rule, case.inputs) as working_tree:
-            plan = Rules(working_tree).plan(LineScopes.at(working_tree).changed_lines("HEAD"))
+            plan = ProjectReview.of(Project.load(working_tree)).plan(
+                LineScopes.at(working_tree).changed_lines("HEAD")
+            )
 
         triggered = [call.file for call in plan.calls if call.triggered]
         judged = case.expected_output.outcome is not Outcome.SKIPPED
@@ -115,7 +113,9 @@ class TestJudgePrompt:
         self, rule: str, case: RuleEvalCase, run: int, judged_evals: Path, capfire
     ):
         with _case_tree(judged_evals, rule, case.inputs) as working_tree:
-            review = Rules(working_tree).review(LineScopes.at(working_tree).changed_lines("HEAD"))
+            review = ProjectReview.of(Project.load(working_tree)).review(
+                LineScopes.at(working_tree).changed_lines("HEAD")
+            )
 
         listing = "\n".join(map(str, review.diagnostics))
         telemetry = [

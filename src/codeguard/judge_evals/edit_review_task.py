@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
 from codeguard.config import EditVerdict, FileEdit, JudgedViolation, Outcome
-from codeguard.judge_evals.judge_factory import JudgeFactory
 from codeguard.repository import LineScopes, WorkingTree
-from codeguard.review import Binding, JudgeRequest
+from codeguard.review import Binding, JudgeFactory, JudgeRequest
 from codeguard.syntax import ChangeClassifier, SyntaxScanner
 
 

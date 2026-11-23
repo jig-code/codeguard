@@ -1,3 +1,6 @@
+import subprocess
+
+import pytest
 from git_repo import GitRepo
 
 from codeguard.repository import WorkingTree
@@ -9,6 +12,26 @@ class TestWorkingTree:
         git_repo.write("pkg/module.py", "")
 
         working_tree = WorkingTree.containing(git_repo.root / "pkg")
+
+        assert working_tree == WorkingTree.at(git_repo.root)
+
+    def test_containing_a_directory_outside_a_repository_is_git_s_error(self, tmp_path, capfd):
+        with pytest.raises(subprocess.CalledProcessError) as error:
+            WorkingTree.containing(tmp_path)
+
+        assert error.value.returncode == 128
+        assert capfd.readouterr().err.startswith("fatal: not a git repository")
+
+    def test_at_or_containing_a_given_root_is_at_that_root(self, tmp_path):
+        assert WorkingTree.at_or_containing(tmp_path / "rules", tmp_path) == WorkingTree.at(
+            tmp_path / "rules"
+        )
+
+    def test_at_or_containing_no_root_contains_the_path(self, tmp_path):
+        git_repo = GitRepo.init(tmp_path.resolve())
+        git_repo.write("pkg/module.py", "")
+
+        working_tree = WorkingTree.at_or_containing(None, git_repo.root / "pkg")
 
         assert working_tree == WorkingTree.at(git_repo.root)
 

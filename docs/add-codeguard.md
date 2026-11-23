@@ -111,8 +111,9 @@ To choose a ruleset's rules or change how they run, give it settings instead
 ```
 
 A git package's `ref` is a tag or commit. codeguard fetches each `ref` once into
-`~/.cache/codeguard/packages` and reuses it, so a `ref` must not be a branch. A private
-package needs a token in CI ([A private package](rule-packages.md#a-private-package)).
+`codeguard/packages` under `$XDG_CACHE_HOME`, or `~/.cache` when that's unset, and reuses
+it, so a `ref` must not be a branch. A private package needs a token in CI
+([A private package](rule-packages.md#a-private-package)).
 
 ## Pin codeguard and rule packages
 

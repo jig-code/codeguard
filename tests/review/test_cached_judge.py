@@ -1,10 +1,18 @@
 import json
 
 import pytest
-from recording_judge import RecordingJudge
+from recording_judge import JudgeCreation, RecordingJudge, RecordingJudges
 from spans import finished_span_attributes
 
-from codeguard.review import CachedJudge, Judgement, JudgeRequest, Verdict
+from codeguard.config import JudgeModel, JudgeProvider
+from codeguard.review import (
+    CachedJudge,
+    CachedJudges,
+    Deadline,
+    Judgement,
+    JudgeRequest,
+    Verdict,
+)
 
 ORDER_SERVICE = (
     "from orders.pricing import DISCOUNT\n"
@@ -231,3 +239,24 @@ class TestCachedJudge:
             False,
             ["orders/pricing.py"],
         )
+
+
+class TestCachedJudges:
+    def test_wraps_each_judge_the_factory_makes_in_the_cache(self, tmp_path, store):
+        wrapped = RecordingJudge()
+        judges = RecordingJudges(wrapped)
+        model = JudgeModel(provider=JudgeProvider.CLAUDE_CLI)
+        deadline = Deadline(5)
+
+        judge = CachedJudges(judges, store)(tmp_path, model, deadline)
+
+        assert judge == CachedJudge(wrapped, store, tmp_path)
+        assert judges.created == [JudgeCreation(tmp_path, model, deadline)]
+
+    def test_sign_in_check_is_the_wrapped_factory_s(self, store):
+        judges = RecordingJudges(RecordingJudge())
+        model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
+
+        CachedJudges(judges, store).require_sign_in_for([model])
+
+        assert judges.sign_in_checked_for == [model]

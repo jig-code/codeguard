@@ -14,6 +14,7 @@ from codeguard.review import (
     JudgeNoVerdict,
     JudgeProcessError,
     JudgeTimeout,
+    PlannedCall,
     Severity,
     Verdict,
 )
@@ -297,3 +298,51 @@ class TestJudgeCheck:
         )
 
         assert check.check(["a.py"]) == [make_diagnostic(judged=True, severity=Severity.WARNING)]
+
+
+class TestJudgeCheckPlan:
+    def test_file_outside_the_binding_paths_is_left_out(self, tmp_path, make_binding):
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            make_binding(paths=("app/**",)),
+            RecordingJudge(),
+            AllLines(()),
+            Classification(),
+        )
+
+        assert check.plan(["a.py"], cached=[].__contains__) == ()
+
+    def test_file_whose_changes_miss_the_triggers_is_skipped(
+        self, make_new_file_changed_lines, make_file_classification, tmp_path, make_binding
+    ):
+        binding = make_binding(triggers=frozenset({ChangeKind.CLASS_HEADER}))
+        classification = Classification(
+            {"a.py": make_file_classification(touched_kinds=frozenset({ChangeKind.COMMENT}))}
+        )
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            binding,
+            RecordingJudge(),
+            make_new_file_changed_lines(),
+            classification,
+        )
+
+        plan = check.plan(["a.py"], cached=[].__contains__)
+
+        assert plan == (PlannedCall(rule=binding.rule, file="a.py", cached=False, triggered=False),)
+
+    def test_call_whose_request_the_cache_holds_is_cached(
+        self, make_new_file_changed_lines, tmp_path, make_binding, make_judge_request
+    ):
+        binding = make_binding()
+        check = JudgeCheck(
+            WorkingTree.at(tmp_path),
+            binding,
+            RecordingJudge(),
+            make_new_file_changed_lines(),
+            Classification(),
+        )
+
+        plan = check.plan(["a.py"], cached=[make_judge_request()].__contains__)
+
+        assert plan == (PlannedCall(rule=binding.rule, file="a.py", cached=True, triggered=True),)

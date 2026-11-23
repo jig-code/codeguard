@@ -56,6 +56,26 @@ class TestPatternRuleValidation:
         ).is_file()
         assert validation.run() == ValidationResult(failed=False)
 
+    def test_update_snapshots_covers_the_gate_tests(self, repo):
+        repo.write(
+            ".codeguard/gates/enum-value.yml",
+            yaml.safe_dump(
+                {"id": "enum-value", "language": "python", "rule": {"pattern": "$X.value"}}
+            ),
+        )
+        repo.write(
+            ".codeguard/rule-tests/enum-value-test.yml",
+            yaml.safe_dump(
+                {"id": "enum-value", "valid": ["status.name"], "invalid": ["status.value"]}
+            ),
+        )
+        validation = PatternRuleValidation(Layout(repo.root, repo.root / ".codeguard"))
+
+        result = validation.update_snapshots()
+
+        assert result == ValidationResult(failed=False)
+        assert (repo.root / ".codeguard/rule-tests/__snapshots__/enum-value-snapshot.yml").is_file()
+
     def test_run_reports_snapshot_entry_for_removed_case(self, repo):
         repo.write(
             NO_PRINT_TEST, yaml.safe_dump({"id": "no-print", "invalid": ["print(1)", "print(2)"]})

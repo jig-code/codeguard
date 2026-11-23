@@ -4,11 +4,12 @@ import pytest
 import yaml
 from git_repo import GitRepo
 from packaging.version import Version
-from rules_package import write_package
+from rules_package import NO_PRINT_RULE_FILE, write_package
 
 from codeguard.config import (
     BindingsConfig,
     ConfigError,
+    GitPackageConfig,
     JudgeChoice,
     JudgeProvider,
     PathPackageConfig,
@@ -113,6 +114,20 @@ class TestPackages:
                     {"responsibility-placement.yaml": make_binding_config(paths=("**/*.py",))}
                 ),
             ),
+        )
+
+    def test_git_package_ruleset_holds_the_rules_at_its_ref(self, repo, package, fetch):
+        package.git("tag", "v1.0.0")
+        package.git("rm", "--quiet", "python/rules/pattern/no-print.yml")
+        package.commit("Remove no-print")
+        config = GitPackageConfig(
+            git=package.file_url, ref="v1.0.0", rulesets={"python": RulesetConfig()}
+        )
+
+        (ruleset,) = Packages(repo.root, fetch, AST_GREP, CODEGUARD).rulesets([config])
+
+        assert (ruleset.root / "rules/pattern/no-print.yml").read_text() == (
+            NO_PRINT_RULE_FILE.read_text()
         )
 
     def test_ruleset_the_package_lacks_is_an_error(self, repo, package, fetch):

@@ -4,7 +4,6 @@ from codeguard.judge_evals.eval_coverage import EvalCoverage
 from codeguard.judge_evals.eval_selection import EvalSelection
 from codeguard.judge_evals.judge_eval_result import JudgeEvalResult, RuleEvalReport
 from codeguard.judge_evals.judge_eval_runner import JudgeEvalRunner
-from codeguard.judge_evals.judge_factory import JudgeFactory
 
 __all__ = [
     "EditReviewTask",
@@ -12,7 +11,6 @@ __all__ = [
     "EvalSelection",
     "JudgeEvalResult",
     "JudgeEvalRunner",
-    "JudgeFactory",
     "PartialEqualsExpected",
     "RuleEvalReport",
     "ViolationsOnTriggers",

@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal, cast
@@ -97,6 +98,10 @@ class JudgeChoice(BaseModel):
     provider: JudgeProvider | None = None
     model: str | None = None
 
+    @classmethod
+    def of_provider(cls, provider: JudgeProvider, model: str | None = None) -> "JudgeChoice":
+        return cls(provider=provider, model=model or provider.default_model)
+
     def over(self, fallback: "JudgeChoice") -> "JudgeChoice":
         return JudgeChoice(
             provider=self.provider or fallback.provider, model=self.model or fallback.model
@@ -125,7 +130,11 @@ class GeminiSettings(BaseSettings):
     api_key: SecretStr | None = None
     credentials_file: Path | None = None
 
-    def check_sign_in(self) -> None:
+    def require_sign_in_for(self, models: Iterable[JudgeModel]) -> None:
+        if any(model.provider is JudgeProvider.GEMINI for model in models):
+            self._check_sign_in()
+
+    def _check_sign_in(self) -> None:
         if self.project is None:
             raise ConfigError("Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT")
         if self.api_key is None and self.credentials_file is None:

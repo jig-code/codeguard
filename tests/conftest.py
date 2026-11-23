@@ -20,6 +20,7 @@ from factories.rule_eval import (
     MakeVerdict,
 )
 from factories.ruleset import MakeBindingConfig, MakeRuleset
+from fake_cli import FAKE_CLAUDE
 from git_repo import Directory, GitRepo
 from pytest_factoryboy import register
 
@@ -96,6 +97,16 @@ def this_machines_gemini_sign_in(committed_config: None, monkeypatch: pytest.Mon
 @pytest.fixture
 def fake_cli_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CODEGUARD_TEST_CLI_CONFIG", str(tmp_path / "fake-cli-response.json"))
+
+
+@pytest.fixture
+def fake_claude_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PATH", f"{FAKE_CLAUDE.parent}{os.pathsep}{os.environ['PATH']}")
+
+
+@pytest.fixture
+def cache_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
 
 
 @pytest.fixture

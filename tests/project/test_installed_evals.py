@@ -2,7 +2,7 @@ from importlib.metadata import PackageNotFoundError
 
 import pytest
 
-from codeguard.rules import IncompatibleEvalsError, check_installed_evals, installed_evals
+from codeguard.project import IncompatibleEvalsError, check_installed_evals, installed_evals
 
 
 class TestCheckInstalledEvals:
