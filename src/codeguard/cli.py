@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import traceback
+from collections.abc import Sequence
 from pathlib import Path
 
 import logfire
@@ -33,6 +34,11 @@ _REVIEW_LOCK = "codeguard-review.lock"
 
 
 def main() -> int:
+    _configure_telemetry()
+    return run(sys.argv[1:])
+
+
+def run(arguments: Sequence[str]) -> int:
     parser = argparse.ArgumentParser(prog="codeguard")
     commands = parser.add_subparsers(required=True)
 
@@ -160,10 +166,9 @@ def main() -> int:
     config_command.add_argument("setting", choices=("review_time_limit_minutes",))
     config_command.set_defaults(run=_config)
 
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
     if getattr(args, "model", None) and not args.provider:
         eval_command.error("--model needs --provider")
-    _configure_telemetry()
     try:
         if args.run is _config:
             return args.run(args)

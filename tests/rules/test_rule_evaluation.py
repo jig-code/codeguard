@@ -1,9 +1,7 @@
-import os
-
 import pytest
 import yaml
 from claude_output import claude_stream
-from fake_cli import FAKE_CLAUDE, configure_fake_cli_response
+from fake_cli import configure_fake_cli_response
 from rules_package import write_package
 
 from codeguard.config import ConfigError
@@ -26,11 +24,6 @@ GEMINI_BINDING = {
     "provider": "gemini",
     "model": "gemini-judge-test",
 }
-
-
-@pytest.fixture
-def fake_claude_on_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PATH", f"{FAKE_CLAUDE.parent}{os.pathsep}{os.environ['PATH']}")
 
 
 class TestRuleEvaluation:
