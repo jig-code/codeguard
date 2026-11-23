@@ -77,7 +77,7 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_gemini_sign_in([model])
 
         assert str(error.value) == "Gemini needs a project: set CODEGUARD_JUDGE__GEMINI__PROJECT"
 
@@ -86,7 +86,7 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_gemini_sign_in([model])
 
         assert str(error.value) == (
             "Gemini needs a way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "
@@ -103,7 +103,7 @@ class TestJudges:
         model = JudgeModel(provider=JudgeProvider.GEMINI, name="gemini-judge-test")
 
         with pytest.raises(ConfigError) as error:
-            judges.require_sign_ins([model])
+            judges.require_gemini_sign_in([model])
 
         assert str(error.value) == (
             "Gemini needs one way to sign in: set CODEGUARD_JUDGE__GEMINI__API_KEY or "

@@ -38,7 +38,7 @@ class Judges:
             },
         )
 
-    def require_sign_ins(self, models: Iterable[JudgeModel]) -> None:
+    def require_gemini_sign_in(self, models: Iterable[JudgeModel]) -> None:
         if any(model.provider is JudgeProvider.GEMINI for model in models):
             self.gemini.check_sign_in()
 

@@ -42,7 +42,7 @@ class Rules:
         deadline = Deadline(self.config.review_time_limit_minutes)
         classification = self._classification(scope)
         bindings = Bindings.from_rulesets(self.rulesets, self.config.judge.choice)
-        self.judges.require_sign_ins(binding.model for binding in bindings)
+        self.judges.require_gemini_sign_in(binding.model for binding in bindings)
         reviewer = Reviewer(
             steps=(
                 self._pattern_step,

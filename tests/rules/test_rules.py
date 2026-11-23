@@ -23,7 +23,7 @@ def gemini_placement_binding() -> dict[str, object]:
 
 @pytest.mark.usefixtures("cache_home")
 class TestRules:
-    def test_review_needs_each_binding_s_sign_in_even_when_no_file_matches_it(
+    def test_review_needs_the_gemini_sign_in_even_when_no_file_matches_the_gemini_binding(
         self, repo, make_judge_rule, gemini_placement_binding
     ):
         repo.write(".codeguard/rules/judge/placement.md", make_judge_rule().text)

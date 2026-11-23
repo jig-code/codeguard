@@ -46,7 +46,7 @@ class RuleEvaluation:
             problems = selection.problems(case_names)
             if problems:
                 return JudgeEvalResult(checks=ValidationResult(problems=problems))
-        rules.judges.require_sign_ins(
+        rules.judges.require_gemini_sign_in(
             model for _, runner in runners for model in runner.judge_models()
         )
         return JudgeEvalResult.merge(
