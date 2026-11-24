@@ -13,7 +13,7 @@ pull requests too.
 |---|---|
 | Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Running them](skill-evals.md#running-them), run with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Running them](../.claude/skills/authoring-writing-rules/references/testing.md#running-them), run with `--runs 1`, then with `--runs 2` |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
@@ -28,7 +28,7 @@ Three kinds of eval call a model, and each tests something different:
 - The LLM tests test the judge: that it reaches the right verdict on a rule and a
   change. Their cases are the fixture cases.
 - The skill evals test the writing-rules skill: that an agent following it writes good
-  rules ([Testing the skill](skill-evals.md#testing-the-skill)).
+  rules ([Testing the writing-rules skill](../.claude/skills/authoring-writing-rules/references/testing.md)).
 - Rule evals, run with `codeguard eval`, test a project's or package's judge rules: that
   each rule's wording gets the right verdicts. They are a codeguard feature, not one of
   codeguard's tests ([The rule eval](rule-formats.md#the-rule-eval)).

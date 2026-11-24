@@ -47,7 +47,7 @@ Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 case's triggers.
 
 The `writing-rules` skill has its own evals in `plugin/evals/writing-rules/`;
-[Testing the skill](skill-evals.md#testing-the-skill) says how to run and write them.
+[Testing the writing-rules skill](../.claude/skills/authoring-writing-rules/references/testing.md) says how to run and write them.
 
 ## Run your clone in a project
 
