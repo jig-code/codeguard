@@ -24,14 +24,15 @@ or whether it sets that tool up. So:
 - A case's prompt is something a person might type to ask for a rule, a new one or a fix
   to an existing one, and it names the files the agent needs
   ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
-- A case has graders on its result and a grader on its steps: "Give each case one grader
-  on the result, such as the final message or a produced file, and one on the steps Claude
-  took to produce it, such as `tool_used` or `tool_order`. Together they tell you both
-  whether the answer was right and whether your plugin produced it"
-  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). Its steps
-  grader is the `tool_used: Skill` grader, written as in
+- Every case has graders on its result and a `tool_used: Skill` grader, which checks that
+  the agent loaded the skill: "Give each case one grader on the result, such as the final
+  message or a produced file, and one on the steps Claude took to produce it, such as
+  `tool_used` or `tool_order`. Together they tell you both whether the answer was right
+  and whether your plugin produced it"
+  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). The
+  `tool_used: Skill` grader is written as in
   [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
-  Its result graders check only the instruction the case targets.
+  The result graders check only the instruction the case targets.
 - Each result grader reads one output, and checks one thing about it. The output is a
   file the agent wrote, whether the agent wrote any rule file, or, in a case that declines
   a rule, the agent's final reply.
