@@ -46,8 +46,27 @@ Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 [Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
-The `writing-rules` skill has its own evals in `plugin/evals/writing-rules/`;
-[docs/skill-evals.md](skill-evals.md) says how to run and write them.
+## Change the writing-rules skill
+
+Before changing the `writing-rules` skill, in `plugin/skills/writing-rules/`, or its
+evals, in `plugin/evals/writing-rules/`, load the [authoring-writing-rules skill](../.claude/skills/authoring-writing-rules/SKILL.md).
+It says what the skill must be and how to write its evals.
+[The skill evals](testing.md#the-skill-evals) says how to run them.
+
+The authoring-writing-rules skill and the
+[writing-skills skill](../.claude/skills/writing-skills/SKILL.md) it loads draw on these
+sources. Guidance none of them covers is codeguard's own decision.
+
+- [The new rules of context engineering for Claude 5 generation models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)
+  (Jul 24, 2026): writing only what the agent wouldn't know, brevity, progressive
+  disclosure, and when examples constrain.
+- [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices):
+  plain words, when to give a reason, and examples that steer format.
+- [Extend Claude with skills](https://code.claude.com/docs/en/skills): the `description`,
+  a concise body, and what goes in `SKILL.md` versus a reference file.
+- [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md): eval
+  prompts, result graders and the `tool_used` grader, `regex` versus `llm` graders, and
+  rubrics.
 
 ## Run your clone in a project
 

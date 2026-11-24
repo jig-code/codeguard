@@ -11,9 +11,10 @@ pull requests too.
 
 | You change | Run |
 |---|---|
-| Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
+| Any file outside `docs/`, `.claude/skills/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Testing the writing-rules skill](skill-evals.md), run with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals ([The skill evals](#the-skill-evals)), with `--runs 1`, then with `--runs 2` |
+| A project skill in `.claude/skills/` | A few prompts a person would type for the skill's task, each in a fresh session: the skill loads, and the output follows it |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
@@ -28,7 +29,7 @@ Three kinds of eval call a model, and each tests something different:
 - The LLM tests test the judge: that it reaches the right verdict on a rule and a
   change. Their cases are the fixture cases.
 - The skill evals test the writing-rules skill: that an agent following it writes good
-  rules ([Testing the writing-rules skill](skill-evals.md)).
+  rules ([The skill evals](#the-skill-evals)).
 - Rule evals, run with `codeguard eval`, test a project's or package's judge rules: that
   each rule's wording gets the right verdicts. They are a codeguard feature, not one of
   codeguard's tests ([The rule eval](rule-formats.md#the-rule-eval)).
@@ -52,3 +53,29 @@ nothing changed since, the second command runs each case twice more. A case pass
 when it passes all 3 runs. Any change starts again at the first command.
 
 Re-running until a case passes doesn't meet the bar.
+
+## The skill evals
+
+The skill evals run the writing-rules skill's cases, in `plugin/evals/writing-rules/`:
+
+```sh
+claude plugin eval ./plugin --scaffold --allow-tools Write Edit \
+  --runs 1 --threshold 1 --ablation none \
+  --model <agent model> --judge-model claude-haiku-5-5 \
+  --trust-plugin --no-publish
+```
+
+Then run it again with `--runs 2`. The graders run on Haiku 5.5, for speed and cost.
+`--case <name>` runs only the case a change touches. The command runs on a signed-in
+`claude` CLI. On Bedrock, set `CLAUDE_CODE_USE_BEDROCK=1` and give both models as Bedrock
+model ids or inference profiles; CI takes them from the `SKILL_EVALS_AGENT_BEDROCK_MODEL`
+and `SKILL_EVALS_GRADER_BEDROCK_MODEL` repository variables
+([`skill-evals.yaml`](../.github/workflows/skill-evals.yaml)).
+
+When a change adds a case, adds or removes a grader, or changes what the skill tells the
+agent to do, also run the command once with `--ablation with-without --runs 2`. In the
+runs without the skill, the whole plugin is left out. A case that passes in both arms
+doesn't need the skill: read what the agent wrote without it to see why.
+
+[Writing the skill's evals](../.claude/skills/authoring-writing-rules/references/evals.md)
+says how to write a case and its graders.
