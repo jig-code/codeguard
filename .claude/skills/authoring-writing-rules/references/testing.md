@@ -89,8 +89,8 @@ differently from what the rubric describes"
 ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
 
 When a change adds a case, adds or removes a grader, or changes what the skill tells the
-agent to do, also run the command once with `--ablation with-without --runs 2`. The runs
-without it leave out the whole plugin:
+agent to do, also run the command once with `--ablation with-without --runs 2`. In the
+runs without the skill, the whole plugin is left out:
 
 - "If a case scores 1.0 both with and without the plugin, the plugin isn't what made it
   pass" ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). Read
