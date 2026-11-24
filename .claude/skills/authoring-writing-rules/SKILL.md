@@ -21,8 +21,8 @@ why it matters.
 
 ## Writing the skill
 
-Trace every instruction in the skill to an item below or in the `writing-skills` skill,
-and remove an instruction that traces to none.
+Trace every instruction in the skill to the Goal, to an instruction below, or to the
+`writing-skills` skill, and remove one that traces to none.
 
 - Agree with [codeguard's architecture](../../../docs/architecture.md#rules) and
   [Rule formats](../../../docs/rule-formats.md): never contradict them, and add only what
