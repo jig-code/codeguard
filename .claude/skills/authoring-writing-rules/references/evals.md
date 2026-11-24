@@ -13,8 +13,6 @@ agent writes works, what codeguard would report on any code, or whether its rule
 tests or rule evals pass. When the agent declines a rule, never check what it says about
 the other tool or whether it sets that tool up.
 
-- Write a case the agent can finish with `Write` and `Edit` alone. The evals never give it
-  `Bash`, so it never runs codeguard.
 - Write the prompt as a person would ask for a rule, a new one or a fix to an existing
   one, and name the files the agent needs.
 - Give each case one right answer that two reviewers reading the agent's output agree on.

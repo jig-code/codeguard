@@ -32,7 +32,7 @@ Trace every instruction in the skill to the Goal, to an instruction below, or to
 - Keep everything the agent reads inside the skill. The agent works in another project,
   with the codeguard CLI and the skill, and none of codeguard's docs.
 - Give no lists of words to match: a list decides only the words it names.
-- Say that code keeps or breaks a rule.
+- Use only the words *keeps* and *breaks* for code against a rule.
 - Say what a rule must be, in codeguard's public terms. Leave out how the judge reads a
   rule.
 
