@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 cp -R "$(dirname "$0")/files/." .
+cp -R "$(dirname "$0")/invalid/." .
 # codeguard reviews and tests a git repository's working tree.
 git init --quiet
 git add --all
