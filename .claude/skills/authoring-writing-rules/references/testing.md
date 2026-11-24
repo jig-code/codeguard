@@ -37,8 +37,9 @@ or whether it sets that tool up. So:
 - An `llm` grader's rubric is "written as concrete PASS and FAIL conditions"
   ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)), and holds
   everything the judge needs to decide.
-- Every case has a grader that passes when the agent loads the writing-rules skill,
-  written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
+- Every case has a `tool_used: Skill` grader that passes when the agent loads the
+  writing-rules skill, written as in
+  [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
 Cases are named like unit tests, so the names alone say what each case tests:
 
@@ -95,7 +96,7 @@ without it leave out the whole plugin:
   pass" ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). Read
   what the agent wrote in those runs to see why.
 - A grader's verdicts in the runs without the plugin are never tuned.
-- The skill-loaded grader is left out of those runs: "A check like "the skill was
+- The `tool_used: Skill` grader is left out of those runs: "A check like "the skill was
   invoked" can never pass without the plugin" (the same page).
 
 CI runs them from `.github/workflows/skill-evals.yaml`.
