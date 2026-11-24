@@ -2,6 +2,11 @@ packages:
   - kind: git
     git: https://github.com/jig-code/codeguard-rules.git
     ref: 6ac43576ea7958e657ea368a3de46d279829659f
-    rulesets: [general, python]
+    rulesets:
+      general:
+        rules:
+          dry:
+            severity: error
+      python: {}
 judge:
   calls_at_once: 10
