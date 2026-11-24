@@ -52,8 +52,7 @@ Before changing the `writing-rules` skill, in `plugin/skills/writing-rules/`, or
 evals, in `plugin/evals/writing-rules/`, load the [authoring-writing-rules skill](../.claude/skills/authoring-writing-rules/SKILL.md).
 It says what the skill must be and how to write its evals.
 [The skill evals](testing.md#the-skill-evals) says how to run them, and
-[Where the skills' instructions come from](skill-sources.md) gives the source behind
-each instruction.
+[Where the skills' guidance comes from](skill-sources.md) lists the sources the skills draw on.
 
 ## Run your clone in a project
 

@@ -20,5 +20,3 @@ Below, "the agent" means the agent that will use the skill you are writing.
 - Use one word for each idea throughout the skill.
 - Give a reason only where it helps the agent apply an instruction to a case the
   instruction doesn't name, and only a reason that is true.
-- When you add, change or remove an instruction in a skill that has a section in
-  [docs/skill-sources.md](../../../docs/skill-sources.md), update its entry there.
