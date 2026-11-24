@@ -1,6 +1,6 @@
 ---
 name: authoring-writing-rules
-description: "Says what codeguard's writing-rules skill must be and how to write its evals. Use before writing, editing or reviewing anything under plugin/skills/writing-rules/ or plugin/evals/writing-rules/: the skill, its references, an eval case or a grader. Not for writing a codeguard rule."
+description: "Says what codeguard's writing-rules skill must be and how to write its evals. Use before writing, editing or reviewing anything under plugin/skills/writing-rules/ or plugin/evals/writing-rules/: the skill, its references, an eval case or a grader."
 ---
 
 # Authoring the writing-rules skill
