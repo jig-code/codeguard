@@ -27,6 +27,10 @@ Before writing, editing or reviewing any `.py` file, tests included, load the
 
 ## Rules
 
+Before writing or editing the writing-rules skill or its evals, read
+[docs/skill-evals.md](docs/skill-evals.md); every change traces to an item
+in it.
+
 Before adding or changing a rule, follow
 [plugin/skills/writing-rules/SKILL.md](plugin/skills/writing-rules/SKILL.md). Whenever a rule eval, an
 LLM test or a judged review fails, flips between runs or reports a warning, follow the

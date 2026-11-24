@@ -1,16 +1,70 @@
-# Testing the writing-rules skill
+# The writing-rules skill
 
 The writing-rules skill, in `plugin/skills/writing-rules/`, is the guidance codeguard's
-plugin gives an agent that writes or changes a codeguard rule. Its evals are in
-`plugin/evals/writing-rules/` and run with `claude plugin eval`.
-[Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
-command, how to write a case and its graders, and how cases are scored. This page says
-only what codeguard adds. [Testing codeguard](testing.md) says when to run them.
+plugin gives an agent that writes or changes a codeguard rule. This page is for authoring
+and testing that skill. [Authoring the skill](#authoring-the-skill) says what it must
+achieve and what it must be; [Testing the skill](#testing-the-skill) says how its evals
+check that. Every instruction in the skill, and every grader in its evals, traces to an
+item under Authoring the skill. An instruction or grader that traces to none is removed.
 
-## What the evals check
+## Authoring the skill
+
+### Goal
+
+Someone asks for a convention to be enforced. An agent with the skill either writes a
+codeguard rule that gives the right verdict on any code the convention covers, or
+declines when another tool should check it. A rule "states one requirement on code and
+why it matters" ([codeguard's architecture](architecture.md#rules)).
+
+### What the skill must be
+
+- **Agrees with codeguard's docs.** What a rule is, its two kinds, its files and its why
+  are defined in [codeguard's architecture](architecture.md#rules) and
+  [Rule formats](rule-formats.md). The skill never contradicts them, and adds only what
+  an agent needs beyond them.
+- **Loads when a rule is asked for.** An agent picks the skill by its `description`;
+  when the skill doesn't load, "Claude isn't choosing your skill on natural phrasing.
+  Adjust the skill's `description`" ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
+- **Only what the agent wouldn't know or do unaided.** Let the model "use surrounding
+  context and judgement instead", and avoid "stating 'the obvious' things Claude should
+  know by looking at your file system or your repo" ([The new rules of context
+  engineering for Claude 5 generation models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)).
+- **Everything the agent reads ships with the skill.** The agent works in another
+  project, with the codeguard CLI and this skill, and none of codeguard's docs.
+- **Brief.** "We removed over 80% of Claude Code's system prompt … with no measurable
+  loss on our coding evaluations", and "The same can be applied to your own CLAUDE.md
+  and Skill.md files" ([The new rules of context engineering for Claude 5 generation
+  models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)).
+- **Few rules, loaded when needed.** "Avoid making them overconstrained, except in highly
+  important areas", and "For long skills, try and use progressive disclosure as much as
+  possible" (the same post). `SKILL.md` holds only what every request needs. What only
+  some requests need, such as one kind of rule, goes in a reference file that `SKILL.md`
+  has the agent read only for those requests.
+- **No examples.** "giving examples actually constrains them to a certain exploration
+  space" (the same post).
+- **No lists of words to match.** A list of words decides only the words it names.
+- **Plain words.** A developer new to the project understands each instruction on the
+  first read.
+- **One word for each idea.** Code *keeps* or *breaks* a rule, everywhere in the skill.
+- **Describes rules, not the judge.** The skill uses codeguard's public terms, such as
+  *judge rule*, and says what a rule must be. How the judge reads a rule is codeguard's
+  internals.
+- **What to do, not what not to do.** Each instruction in the skill tells the agent what
+  to do: "Tell Claude what to do instead of what not to do" ([Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)).
+- **A reason where it helps the agent generalize.** "Claude can generalize from the
+  explanation" (the same page). A reason that isn't true is left out.
+
+## Testing the skill
+
+The skill's evals are in `plugin/evals/writing-rules/` and run with `claude plugin eval`.
+[Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
+command, how to write a case and its graders, and how cases are scored. This section
+says only what codeguard adds. [Testing codeguard](testing.md) says when to run them.
+
+### What the evals check
 
 Each case asks an agent with the skill for a codeguard rule, and grades what the agent
-does against what the skill says. A case is one of two kinds:
+does against [Authoring the skill](#authoring-the-skill). A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check |
 |---|---|---|
@@ -59,7 +113,7 @@ with a numbered list where it checks several things in order. Its `FAIL if` sent
 name that criterion's concrete failures, a missing or empty output among them.
 [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
-## Running them
+### Running them
 
 A case passes when every grader passes in all 3 runs: 1 run to verify the change, then,
 once it passes, 2 more. With Bedrock credentials in the environment, and a Bedrock model
