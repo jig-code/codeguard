@@ -46,8 +46,13 @@ Rule failures bullet in [Architecture](architecture.md#testing-a-rule) and
 [Testing](testing.md), and look at the judge prompt as well. The plain suite checks each
 case's triggers.
 
-The `writing-rules` skill has its own evals in `plugin/evals/writing-rules/`;
-[Testing the writing-rules skill](../.claude/skills/authoring-writing-rules/references/testing.md) says how to run and write them.
+## Change the writing-rules skill
+
+Before changing the `writing-rules` skill, in `plugin/skills/writing-rules/`, or its
+evals, in `plugin/evals/writing-rules/`, load the [authoring-writing-rules skill](../.claude/skills/authoring-writing-rules/SKILL.md).
+It says what the skill must be, and its
+[testing reference](../.claude/skills/authoring-writing-rules/references/testing.md) says
+how to write and run the evals.
 
 ## Run your clone in a project
 
