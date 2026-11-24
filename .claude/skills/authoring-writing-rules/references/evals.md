@@ -18,6 +18,9 @@ the other tool or whether it sets that tool up.
 - Give each case one right answer that two reviewers reading the agent's output agree on.
 - Target one instruction per case. An instruction that applies to every rule gets a case
   of its own, not a grader in every case.
+- Put a file the case gives the agent under `invalid/` instead of `files/` when it breaks
+  one of the skill's instructions on purpose, so a reviewer can tell it from a mistake,
+  and have `place-files.sh` copy in both.
 
 ## Graders
 
