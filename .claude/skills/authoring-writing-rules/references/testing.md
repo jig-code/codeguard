@@ -50,9 +50,10 @@ Cases are named like unit tests, so the names alone say what each case tests:
 - A grader's file is its number, then what the agent's output does.
 
 [Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
-says when to use each grader type. A `regex` pattern is short enough to check at a
-glance, and checks structure. What prose says is judged by an `llm` grader, because a
-pattern breaks on wording that does what the skill asks.
+says when to use each grader type. A `regex` grader checks structure, with a pattern short
+enough to check at a glance. A structure that needs a longer pattern is split into several
+`regex` graders, each checking one part of it. What prose says is judged by an `llm`
+grader, because a pattern breaks on wording that does what the skill asks.
 
 "An `llm` grader asks a model for a verdict, so its answer can differ between runs, and it
 differs more the longer the text it has to read"
