@@ -27,10 +27,6 @@ Before writing, editing or reviewing any `.py` file, tests included, load the
 
 ## Rules
 
-Before writing, editing or reviewing the writing-rules skill or its evals, load the
-`authoring-writing-rules` skill
-([.claude/skills/authoring-writing-rules/SKILL.md](.claude/skills/authoring-writing-rules/SKILL.md)).
-
 Before adding or changing a rule, follow
 [plugin/skills/writing-rules/SKILL.md](plugin/skills/writing-rules/SKILL.md). Whenever a rule eval, an
 LLM test or a judged review fails, flips between runs or reports a warning, follow the

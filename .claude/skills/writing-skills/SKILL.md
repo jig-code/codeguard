@@ -1,6 +1,6 @@
 ---
 name: writing-skills
-description: "Says how to write a skill in this repository. Use before writing, editing or reviewing any skill under .claude/skills/ or plugin/skills/: its SKILL.md, its description or its reference files."
+description: "Says how to write a skill in this repository. Use it whenever you change any skill's SKILL.md, description or reference files, under .claude/skills/ or plugin/skills/, even for a small edit. Use it alongside skill-creator; where they differ, follow this skill."
 ---
 
 # Writing a skill
