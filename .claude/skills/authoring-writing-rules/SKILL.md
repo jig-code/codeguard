@@ -12,17 +12,10 @@ skill" means the writing-rules skill.
 First, load the `writing-skills` skill: it says how to write any skill, and this skill
 adds only what is particular to the writing-rules skill.
 
-## Goal
-
-Someone asks for a convention to be enforced. An agent with the skill either writes a
-codeguard rule that gives the right verdict on any code the convention covers, or
-declines when another tool should check it. A rule states one requirement on code and
-why it matters.
-
 ## Writing the skill
 
-Trace every instruction in the skill to the Goal, to an instruction below, or to the
-`writing-skills` skill, and remove one that traces to none.
+Trace every instruction in the skill to an instruction below or to the `writing-skills`
+skill, and remove one that traces to none.
 
 - Agree with [codeguard's architecture](../../../docs/architecture.md#rules) and
   [Rule formats](../../../docs/rule-formats.md): never contradict them, and add only what
