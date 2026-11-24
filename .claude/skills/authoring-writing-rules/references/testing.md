@@ -1,19 +1,22 @@
 # Testing the writing-rules skill
 
-The skill's evals are in `plugin/evals/writing-rules/` and run with `claude plugin eval`.
-[Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md) explains the
-command, how to write a case and its graders, and how cases are scored. This page
-says only what codeguard adds. [Testing codeguard](../../../../docs/testing.md) says when to run them.
+The skill's evals are in
+[`plugin/evals/writing-rules/`](../../../../plugin/evals/writing-rules/) and run with
+`claude plugin eval`. [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)
+explains the command, how to write a case and its graders, and how cases are scored. This
+page says only what codeguard adds. [Testing codeguard](../../../../docs/testing.md) says
+when to run them.
 
 ## What the evals check
 
 Each case asks an agent with the skill for a codeguard rule, and grades what the agent
-does against what the skill tells it to do. The cases are in [`plugin/evals/writing-rules/`](../../../../plugin/evals/writing-rules/).
+does against what the skill tells it to do.
 
 The evals test only the skill, and the skill itself covers only writing the rule. They
 never check whether a rule the agent writes works, what verdict codeguard would give on
-any code, or whether its rule tests or rule evals pass: that is tested wherever the rule lives. When the agent declines a rule, they
-don't check what it says about the other tool or whether it sets that tool up. So:
+any code, or whether its rule tests or rule evals pass: that is tested wherever the rule
+lives. When the agent declines a rule, they don't check what it says about the other tool
+or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
 - Each case has an obvious right answer: two reviewers who read what the agent wrote give
@@ -54,8 +57,10 @@ differs more the longer the text it has to read"
 ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). An `llm`
 grader judges one criterion. Its `FAIL if` sentences name that criterion's concrete
 failures, a missing or empty output among them. An `llm` grader has no examples, and no
-lists of words to match, for the reasons [What the skill must be](../SKILL.md#what-the-skill-must-be)
-gives. [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
+lists of words to match, for the reasons
+[What the skill must be](../SKILL.md#what-the-skill-must-be) gives.
+[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually)
+gives the rubric's form.
 
 ## Running them
 

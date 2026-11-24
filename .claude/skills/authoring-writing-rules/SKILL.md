@@ -7,8 +7,9 @@ description: "Says what codeguard's writing-rules skill must be and how its eval
 
 The writing-rules skill, in `plugin/skills/writing-rules/`, is the guidance codeguard's
 plugin gives an agent that writes or changes a codeguard rule. This skill is for changing
-that skill and its evals. Every instruction in the writing-rules skill traces to an item
-below; an instruction that traces to none is removed.
+that skill and its evals; below, "the skill" means the writing-rules skill. Every
+instruction in the skill traces to an item below; an instruction that traces to none is
+removed.
 
 ## Goal
 
@@ -21,8 +22,8 @@ why it matters" ([codeguard's architecture](../../../docs/architecture.md#rules)
 
 - **Agrees with codeguard's docs.** What a rule is, its two kinds, its files and its why
   are defined in [codeguard's architecture](../../../docs/architecture.md#rules) and
-  [Rule formats](../../../docs/rule-formats.md). The skill never contradicts them, and adds only what
-  an agent needs beyond them.
+  [Rule formats](../../../docs/rule-formats.md). The skill never contradicts them, and
+  adds only what an agent needs beyond them.
 - **Loads when a rule is asked for.** An agent picks the skill by its `description`;
   when the skill doesn't load, "Claude isn't choosing your skill on natural phrasing.
   Adjust the skill's `description`" ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
@@ -31,16 +32,16 @@ why it matters" ([codeguard's architecture](../../../docs/architecture.md#rules)
   know by looking at your file system or your repo" ([The new rules of context
   engineering for Claude 5 generation models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)).
 - **Everything the agent reads ships with the skill.** The agent works in another
-  project, with the codeguard CLI and this skill, and none of codeguard's docs.
+  project, with the codeguard CLI and the skill, and none of codeguard's docs.
 - **Brief.** "We removed over 80% of Claude Code's system prompt … with no measurable
   loss on our coding evaluations", and "The same can be applied to your own CLAUDE.md
   and Skill.md files" ([The new rules of context engineering for Claude 5 generation
   models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)).
 - **Few rules, loaded when needed.** "Avoid making them overconstrained, except in highly
   important areas", and "For long skills, try and use progressive disclosure as much as
-  possible" (the same post). `SKILL.md` holds only what every request needs. What only
-  some requests need, such as one kind of rule, goes in a reference file that `SKILL.md`
-  has the agent read only for those requests.
+  possible" (the same post). The skill's `SKILL.md` holds only what every request needs.
+  What only some requests need, such as one kind of rule, goes in a reference file that
+  `SKILL.md` has the agent read only for those requests.
 - **No examples.** "giving examples actually constrains them to a certain exploration
   space" (the same post).
 - **No lists of words to match.** A list of words decides only the words it names.
