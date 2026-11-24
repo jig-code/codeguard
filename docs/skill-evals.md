@@ -4,8 +4,8 @@ The writing-rules skill, in `plugin/skills/writing-rules/`, is the guidance code
 plugin gives an agent that writes or changes a codeguard rule. This page is for authoring
 and testing that skill. [Authoring the skill](#authoring-the-skill) says what it must
 achieve and what it must be; [Testing the skill](#testing-the-skill) says how its evals
-check that. Every instruction in the skill, and every grader in its evals, traces to an
-item under Authoring the skill. An instruction or grader that traces to none is removed.
+check that. Every instruction in the skill traces to an item under Authoring the skill;
+an instruction that traces to none is removed.
 
 ## Authoring the skill
 
@@ -64,7 +64,7 @@ says only what codeguard adds. [Testing codeguard](testing.md) says when to run 
 ### What the evals check
 
 Each case asks an agent with the skill for a codeguard rule, and grades what the agent
-does against [Authoring the skill](#authoring-the-skill). A case is one of two kinds:
+does against what the skill tells it to do. A case is one of two kinds:
 
 | The agent is asked for | It should | Graders check |
 |---|---|---|
@@ -79,21 +79,17 @@ evals pass: that is tested wherever the rule lives. When the agent declines a ru
 don't check what it says about the other tool or whether it sets that tool up. So:
 
 - A case never runs codeguard. The agent gets `Write` and `Edit`, never `Bash`.
-- A case's prompt asks only for a rule, a new one or a fix to an existing one, and names
-  the files the agent needs. It never says why the rule is wanted, who or what reads it,
-  or how it behaves when it runs, such as a review it gave or a verdict that changed
-  between runs. The skill covers only writing the rule, so none of that is part of a
-  case.
+- A case's prompt is something a person might type to ask for a rule, a new one or a fix
+  to an existing one, and it names the files the agent needs
+  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
 - A grader reads one thing: a file that the agent wrote, whether the agent wrote any
   rule file, whether the agent loaded the writing-rules skill, or, in a case that
   declines a rule, the agent's final reply.
-- A grader checks only what the case's prompt asks for and the skill tells the agent to
-  do. A grader on work the prompt doesn't name is a broken case, not a requirement on
-  the skill ([Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)).
-  A grader checks the instruction or the ask, never the answer that the fixture's domain
-  has, such as which code the rule should flag.
-- An `llm` grader states the convention and any limit the docs set on what it checks.
-  It never refers to the prompt or the docs.
+- Each grader checks that the agent followed one instruction, from the skill or from its
+  case's prompt. A grader that checks no instruction is removed.
+- An `llm` grader's rubric is "written as concrete PASS and FAIL conditions"
+  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)), and holds
+  everything the judge needs to decide.
 - Every case has a grader that passes when the agent loads the writing-rules skill,
   written as the [skill-fired grader](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
@@ -103,19 +99,23 @@ changes an existing rule) or `declines`. A grader's file is its number, then wha
 the agent's output does.
 
 [Choose graders that give a stable signal](https://code.claude.com/docs/en/plugin-evals.md#choose-graders-that-give-a-stable-signal)
-says when to use each grader type. codeguard adds that a `regex` grader's pattern is one
-that a reader can check at a glance, and that no grader parses prose with a pattern:
-such a pattern is too long for a reviewer to tell what the pattern checks, and the
+says when to use each grader type. A `regex` pattern is short enough to check at a
+glance, and checks structure. What prose says is judged by an `llm` grader, because a
 pattern breaks on wording that does what the skill asks.
 
-An `llm` grader judges one criterion. It states each check in its own short sentence,
-with a numbered list where it checks several things in order. Its `FAIL if` sentences
-name that criterion's concrete failures, a missing or empty output among them.
-[Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
+"An `llm` grader asks a model for a verdict, so its answer can differ between runs, and it
+differs more the longer the text it has to read"
+([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). An `llm`
+grader judges one criterion. Its `FAIL if` sentences name that criterion's concrete
+failures, a missing or empty output among them. An `llm` grader has no examples, and no
+lists of words to match, for the reasons [What the skill must be](#what-the-skill-must-be)
+gives. [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ### Running them
 
-A case passes when every grader passes in all 3 runs: 1 run to verify the change, then,
+"One run of a non-deterministic agent tells you little, so each case runs three times by
+default" ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). A
+case passes when every grader passes in all 3 runs: 1 run to verify the change, then,
 once it passes, 2 more. With Bedrock credentials in the environment, and a Bedrock model
 id or inference profile for the agent and for the graders, run the command with
 `--runs 1`, then again with `--runs 2`:
@@ -130,5 +130,15 @@ CLAUDE_CODE_USE_BEDROCK=1 claude plugin eval ./plugin --scaffold --allow-tools W
 Without Bedrock, the same command runs on a signed-in `claude` CLI: leave out
 `CLAUDE_CODE_USE_BEDROCK=1` and give `--model` and `--judge-model` the names of the
 models CI's Bedrock profiles serve. `--case <name>` runs only the case a change touches.
+
+When a change adds a case, adds or removes a grader, or changes what the skill tells the
+agent to do, also run the command once with `--ablation with-without --runs 2`:
+
+- Each grader fails without the skill, which shows the skill is needed.
+- A grader on the outcome the case requires stays even if it passes without the skill.
+- A grader's verdicts in the runs without the skill are never tuned.
+- The skill-loaded grader is left out of those runs: "A check like "the skill was
+  invoked" can never pass without the plugin"
+  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
 
 CI runs them from `.github/workflows/skill-evals.yaml`.
