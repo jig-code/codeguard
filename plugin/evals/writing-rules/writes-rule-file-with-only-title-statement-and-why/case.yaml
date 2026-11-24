@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: writes-rule-file-with-only-title-statement-and-why
+expected_outcome: |
+  A judge rule file that holds, in this order and nothing else: a `#` title, the
+  statement directly under it, and a `## Why` section with text.
+context:
+  scaffold_script: place-files.sh
