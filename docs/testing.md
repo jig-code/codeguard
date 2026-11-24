@@ -11,11 +11,11 @@ pull requests too.
 
 | You change | Run |
 |---|---|
-| Any file outside `docs/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
+| Any file outside `docs/`, `.claude/skills/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
 | The writing-rules skill or its evals | The skill evals: `claude plugin eval ./plugin` with the flags in [Running them](../.claude/skills/authoring-writing-rules/references/testing.md#running-them), run with `--runs 1`, then with `--runs 2` |
 
-A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
+A change to only `docs/`, `.claude/skills/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
 on pull requests; run them first, so a failure shows before CI spends a run on it.
 
 The judge is the code in `src/codeguard/` that sends a judge rule and a change to the

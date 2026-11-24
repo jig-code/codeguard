@@ -54,7 +54,7 @@ differs more the longer the text it has to read"
 ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). An `llm`
 grader judges one criterion. Its `FAIL if` sentences name that criterion's concrete
 failures, a missing or empty output among them. An `llm` grader has no examples, and no
-lists of words to match, for the reasons [What the skill must be](authoring.md#what-the-skill-must-be)
+lists of words to match, for the reasons [What the skill must be](../SKILL.md#what-the-skill-must-be)
 gives. [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually) gives the rubric's form.
 
 ## Running them
