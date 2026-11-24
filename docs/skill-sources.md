@@ -34,8 +34,10 @@ An instruction with no source is codeguard's own decision.
   try and use progressive disclosure as much as possible". The skills page: it "keeps
   `SKILL.md` focused on the essentials while letting Claude access detailed reference
   material only when needed".
-- **Give no examples.** The Claude 5 post: "giving examples actually constrains them to a
-  certain exploration space".
+- **Use an example only to steer format, tone or structure.** Prompting best practices:
+  "Examples are one of the most reliable ways to steer Claude's output format, tone, and
+  structure". The Claude 5 post, in its section on tool usage: "giving examples actually
+  constrains them to a certain exploration space".
 - **Use plain words.** codeguard's decision.
 - **Use one word for each idea.** codeguard's decision.
 - **Give a reason only where it helps the agent generalize.** Prompting best practices:

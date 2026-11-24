@@ -14,7 +14,8 @@ Below, "the agent" means the agent that will use the skill you are writing.
 - Write each instruction as briefly as the agent can still follow it.
 - Put in `SKILL.md` only what every use of the skill needs. Put what only some uses need
   in a reference file, and have `SKILL.md` tell the agent to read it for those uses.
-- Give no examples: an example narrows the agent to what it shows.
+- Use an example only to steer the output's format, tone or structure. Anywhere else,
+  leave it out: an example constrains the agent to a certain exploration space.
 - Use plain words that a developer new to the project understands on the first read.
 - Use one word for each idea throughout the skill.
 - Give a reason only where it helps the agent apply an instruction to a case the
