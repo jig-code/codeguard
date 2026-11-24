@@ -24,22 +24,22 @@ or whether it sets that tool up. So:
 - A case's prompt is something a person might type to ask for a rule, a new one or a fix
   to an existing one, and it names the files the agent needs
   ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)).
-- A grader reads one thing: a file that the agent wrote, whether the agent wrote any
-  rule file, whether the agent loaded the writing-rules skill, or, in a case that
-  declines a rule, the agent's final reply.
-- A case's graders check its result and its steps: "Together they tell you both whether
-  the answer was right and whether your plugin produced it"
-  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). The result
-  graders check only the instruction the case targets: as many as that instruction needs,
-  one check each.
+- A case has graders on its result and a grader on its steps: "Give each case one grader
+  on the result, such as the final message or a produced file, and one on the steps Claude
+  took to produce it, such as `tool_used` or `tool_order`. Together they tell you both
+  whether the answer was right and whether your plugin produced it"
+  ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). Its steps
+  grader is the `tool_used: Skill` grader, written as in
+  [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
+  Its result graders check only the instruction the case targets.
+- Each result grader reads one output, and checks one thing about it. The output is a
+  file the agent wrote, whether the agent wrote any rule file, or, in a case that declines
+  a rule, the agent's final reply.
 - An instruction that applies to every rule gets a case of its own, not a grader in every
   case.
 - An `llm` grader's rubric is "written as concrete PASS and FAIL conditions"
   ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)), and holds
   everything the judge needs to decide.
-- Every case has a `tool_used: Skill` grader that passes when the agent loads the
-  writing-rules skill, written as in
-  [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually).
 
 Cases are named like unit tests, so the names alone say what each case tests:
 
@@ -56,8 +56,8 @@ pattern breaks on wording that does what the skill asks.
 "An `llm` grader asks a model for a verdict, so its answer can differ between runs, and it
 differs more the longer the text it has to read"
 ([Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md)). An `llm`
-grader judges one criterion. Its `FAIL if` sentences name that criterion's concrete
-failures, a missing or empty output among them. An `llm` grader has no examples, and no
+grader's `FAIL if` sentences name its check's concrete failures, a missing or empty
+output among them. An `llm` grader has no examples, and no
 lists of words to match, for the reasons
 [What the skill must be](../SKILL.md#what-the-skill-must-be) gives.
 [Write a case manually](https://code.claude.com/docs/en/plugin-evals.md#write-a-case-manually)
