@@ -27,15 +27,11 @@ language.
 
 ## Write the rule file
 
-The rule file is plain Markdown with no frontmatter. It holds these, in this order:
+The rule file is plain Markdown with no frontmatter. It holds only these, in this order:
 
 1. A `#` title.
 2. The statement, directly under the title, with no heading of its own.
 3. `## Why`: the rule's why. The why mentions only code that the statement decides.
-
-The rule file holds nothing else: no fix, no example, no exception for particular code,
-and no instructions for the judge. The rule file uses no programming language's syntax,
-and names a language, library or API only when the convention is about that one.
 
 ## Write the statement
 
