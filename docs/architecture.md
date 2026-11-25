@@ -48,8 +48,8 @@ git and pinned to a tag. Every surface reviews with the same rules.
 
 Use the writing-rules skill's
 [tool-selection guidance](../plugin/skills/writing-rules/references/choosing-a-tool.md)
-to decide whether a convention belongs to an existing checker, a pattern rule or a
-judge rule. Passing one rule does not excuse violations owned by other checks.
+to decide whether a convention belongs to a static analysis tool other than codeguard, a
+pattern rule or a judge rule. Passing one rule does not excuse violations owned by other checks.
 
 ### Components
 
