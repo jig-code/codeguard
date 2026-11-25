@@ -1,40 +1,32 @@
 # Writing a judge rule
 
-Don't add a case's code to the rule file as an example, and don't add a carve-out for it:
-the judge would then pass the case by matching it, and the next piece of code fails the
-same way. Restate the convention so its statement decides the case.
-
 ## Write the rule file
 
-The rule file, `rules/judge/<id>.md`, is the convention codeguard's judge reviews against,
-and the judge gets its text unparsed. It holds, in this order, and nothing else:
+The rule file, `rules/judge/<id>.md`, is plain Markdown with no frontmatter, and
+codeguard's judge gets its text unparsed. It holds, in this order, and nothing else:
 
-1. A title.
+1. A `#` title.
 2. The convention: one declarative sentence, stated as the writing-rules skill's The
    convention section says. It goes directly under the title, with no heading of its own.
-3. `## Why`: the harm the rule prevents, in a sentence or two. It is part of the judge's
-   prompt, so it helps the judge apply the convention to code the statement doesn't
-   name, but it never widens the convention: the statement alone decides each case.
+3. `## Why`: the harm the rule prevents, in a sentence or two. The why never names code
+   the statement doesn't decide.
 
-Nothing else goes in the rule file, in any section or for any language: each piece of
-code is decided by the statement, or the statement is unclear. A rule in several
-languages is one rule file, in no language's names, syntax or libraries. Leave out the
-fix, and anything telling the judge how to answer: the judge's own prompt sets its
-output.
+Nothing else goes in the rule file, in any section or for any language: no fix, no
+example, no exception for a case, and nothing about how to answer. A rule in several
+languages is one rule file, in no language's names, syntax or libraries.
 
-## Gate every form of the violation
+## Gate every form of the code that breaks the rule
 
-A violation outside the binding's `triggers` is never reported; codeguard's
-`docs/rule-formats.md` (A judge rule's binding) says how triggers select what the judge
-sees.
+The judge sees a changed file only when a changed line falls inside a node that one of
+the binding's `triggers` matches, so code that breaks the rule outside them is never
+reported.
 
-- List the syntactic forms the violation takes, and give each one an `invalid` gate
-  test, so a gate that stops matching a form fails `codeguard test`.
-- Gate on where a violation appears, not on the rule's topic: a rule about passing enum
-  members needs a gate on literals, because the enum is defined elsewhere.
-- Gate on the narrowest node that holds the violation, such as the `except` clause
-  rather than the whole `try`. A wider gate costs judge calls and tokens;
-  `codeguard review --dry-run` counts the calls.
+- List the syntactic forms that code breaking the rule takes, and give each one an
+  `invalid` gate test, so a gate that stops matching a form fails `codeguard test`.
+- Gate on where code that breaks the rule appears, not on the rule's topic, which may be
+  defined in another file.
+- Gate on the narrowest node that holds the code that breaks the rule. A wider gate costs
+  judge calls and tokens; `codeguard review --dry-run` counts the calls.
 - A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
   `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
   `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
@@ -48,28 +40,17 @@ sees.
 ## Write a few clear eval cases
 
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
-ground on which code breaks the convention and one `valid` case for each distinct
-situation near the boundary in which code keeps it, and a `skipped` case outside the
-gate. A convention broken on one ground has one `invalid` case. Each case tests one
-thing that none of the others does: a different thing the code does or fails to do, not
+ground on which code breaks the convention, one `valid` case for each distinct situation
+near the boundary in which code keeps it, and a `skipped` case outside the gate. Each
+case tests one thing that none of the others does: a different thing the code does, not
 another syntax for the same thing. No edge cases: a case that a reasonable reviewer could
-argue either way proves nothing about the rule, and a judge that flips on it is right to.
+argue either way proves nothing about the rule.
 
 - An `invalid` case breaks the convention beyond argument, and a `valid` case obviously
-  keeps it. A reader of the case alone sees why the code is a problem or why it's fine.
-  Each case is named as the writing-rules skill says.
-- Two cases that break or keep the convention on the same ground are one case, however
-  their syntax, names or annotations differ: keep the clearer one. Two `valid` cases
-  differ when their code keeps the convention in different situations, not merely by
-  both lacking the violation. Before writing a case, say in one sentence what its code
-  does or fails to do; a sentence another case already has means the case isn't written.
-- A case tests one thing. Every line of it but the one under test is plainly correct
-  code: a second bug anywhere in the case, whatever the rule says about it, lets the
-  judge flag the case for the wrong reason. Read each line as a reviewer would before
-  keeping the case.
+  keeps it. A reader of the case alone sees why the code breaks or keeps it.
 - A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. A new case comes only from a real miss: a review
-that wrongly blocked or wrongly passed code. Write it as the smallest clear case of that
-miss; never add the code to the rule file.
+that wrongly blocked code or wrongly let it through. Write it as the smallest clear case
+of that miss, and never add its code to the rule file.
