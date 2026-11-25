@@ -13,10 +13,9 @@
 - Match a shape only where it breaks the rule, not everywhere the shape appears.
   `stopBy: end` on `has` or `inside` searches every descendant or ancestor: outside a
   `not`, use it only when the shape breaks the rule in every position.
-- Put the rule's why in `metadata.why`, and in its `note` with the fix. If you give
-  where the rule comes from, put it in `metadata.source`. Put none of these in comments.
-  codeguard prints the note under each report, so the note is what whoever fixes the
-  code reads.
+- Put the rule's why in `metadata.why`, and in its `note` with the fix. Put neither the
+  why nor the fix in comments. codeguard prints the note under each report, so the note is
+  what whoever fixes the code reads.
 - Set `severity` in the rule file.
 - Scope the rule with its binding's `paths` and `exclude_paths`, never with ast-grep's
   `files` or `ignores`, so that a project can change the scope. The exception is a rule

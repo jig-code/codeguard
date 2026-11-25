@@ -22,8 +22,7 @@
   thing. For a convention about many, describe what they have in common.
 - Give every rule a why: the harm the rule prevents, in one or two sentences, so that
   whoever later changes the project's code or design can tell whether the rule still
-  holds. You can also give where the rule comes from: a link to public documentation, or
-  the bug, PR comment or team decision behind it.
+  holds.
 - Set `severity: error` on a rule when codeguard must block the coding agent and fail
   CI on code that breaks it. With `severity: warning`, codeguard only reports that code
   to the user.

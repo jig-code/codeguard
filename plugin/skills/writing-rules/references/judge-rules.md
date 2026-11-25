@@ -31,8 +31,7 @@ The rule file is plain Markdown with no frontmatter. It holds these, in this ord
 
 1. A `#` title.
 2. The statement, directly under the title, with no heading of its own.
-3. `## Why`: the rule's why. The why mentions only code that the statement decides. To
-   give where the rule comes from, end the section with a `Source:` line.
+3. `## Why`: the rule's why. The why mentions only code that the statement decides.
 
 The rule file holds nothing else: no fix, no example, no exception for particular code,
 and no instructions for the judge. The rule file uses no programming language's syntax,
