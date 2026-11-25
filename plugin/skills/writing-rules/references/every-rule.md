@@ -33,9 +33,8 @@
 
 A case is a pattern rule's test case or a judge rule's eval case.
 
-- Use made-up code and names, so that a case shows the convention rather than one class
-  in the codebase. A public rule package never holds code copied from a private
-  repository.
+- Use made-up code and names, so that a case shows the convention rather than one thing
+  in the project.
 - Give idiomatic code a `valid` case.
 - Give each eval case a `name` that says only the situation that it tests, unique
   within its file. State the expected outcome once: in an eval case's
