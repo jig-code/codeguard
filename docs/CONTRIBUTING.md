@@ -65,8 +65,8 @@ sources. Guidance none of them covers is codeguard's own decision.
 - [Extend Claude with skills](https://code.claude.com/docs/en/skills): the `description`,
   a concise body, and what goes in `SKILL.md` versus a reference file.
 - [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md): eval
-  prompts, result graders and the `tool_used` grader, `regex` versus `llm` graders, and
-  rubrics.
+  prompts, graders on the result and on the steps (`tool_used`), `regex` versus `llm`
+  graders, and rubrics.
 
 ## Run your clone in a project
 

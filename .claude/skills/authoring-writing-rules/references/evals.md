@@ -16,19 +16,20 @@ the other tool or whether it sets that tool up.
 - Write the prompt as a person would ask for a rule, a new one or a fix to an existing
   one, and name the files the agent needs.
 - Give each case one right answer that two reviewers reading the agent's output agree on.
-- Target one instruction per case.
+- Build each case to provoke one instruction, the case's target.
 - Put a file the case gives the agent under `invalid/` instead of `files/` when it breaks
   one of the skill's instructions on purpose, so a reviewer can tell it from a mistake,
   and have `place-files.sh` copy in both.
 
 ## Graders
 
-- Give every case result graders, and a `tool_used: Skill` grader that passes when the
-  agent loads the writing-rules skill.
-- Make the result graders check only the instruction the case targets.
-- Make each result grader read one output and check one thing about it. The output is a
-  file the agent wrote, whether the agent wrote any rule file, or, in a case that
-  declines a rule, the agent's final reply.
+- Give every case graders on its output for its target, and a `tool_used: Skill` grader
+  that passes when the agent loads the writing-rules skill.
+- Grade a rule's statement with the same graders in every case where the agent writes a
+  rule, so each instruction about the statement is checked against several requests.
+- Make each grader on the output read one output and check one thing about it. The
+  output is a file the agent wrote, whether the agent wrote any rule file, or, in a case
+  that declines a rule, the agent's final reply.
 - Check structure with a `regex` grader, whose pattern is short enough to verify at a
   glance. Split a structure that needs a longer pattern into several `regex` graders, each
   checking one part of it.

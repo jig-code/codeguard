@@ -30,9 +30,9 @@ skill, and remove one that traces to none.
   rule.
 - Say that a rule uses plain, clear words that a developer new to the project the rule
   is for understands on the first read.
-- Remove an instruction whose case passes in both arms of a with-without run, once what
-  the agent wrote without the skill shows it follows that instruction unaided. Remove its
-  case with it.
+- Remove an instruction once every grader that checks it passes without the skill, and
+  what the agent wrote without the skill shows it follows the instruction unaided.
+  Remove those graders with it, and any case that targets it.
 
 ## Writing its evals
 
