@@ -74,8 +74,10 @@ and `SKILL_EVALS_GRADER_BEDROCK_MODEL` repository variables
 
 When a change adds a case, adds or removes a grader, or changes what the skill tells the
 agent to do, also run the command once with `--ablation with-without --runs 2`. In the
-runs without the skill, the whole plugin is left out. A case that passes in both arms
-doesn't need the skill: read what the agent wrote without it to see why.
+runs without the skill, the whole plugin is left out. When the agent there writes no new
+rule file, a grader that reads that file fails and a grader that checks no rule file was
+written passes; neither result is a finding. A case that passes in both arms doesn't need
+the skill: read what the agent wrote without it to see why.
 
 [Writing the skill's evals](../.claude/skills/authoring-writing-rules/references/evals.md)
 says how to write a case and its graders.
