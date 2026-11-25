@@ -25,12 +25,10 @@
   whoever later changes the project's code or design can tell whether the rule still
   holds. You can also give where the rule comes from: a link to public documentation, or
   the bug, PR comment or team decision behind it.
-- Set `severity: error` on a rule whose reports must stop a coding agent and fail CI.
-  A rule with `severity: warning` only reports.
+- Set `severity: error` on a rule when codeguard must block the coding agent and fail
+  CI on code that breaks it. With `severity: warning`, codeguard only reports that code.
 - To change a rule from a ruleset for this project, override or exclude it in
   `.codeguard/config.yaml`. Never copy it into `.codeguard/`.
-- When you think a rule reports code wrongly, fix the rule or its cases. Never change the
-  reviewed code, or override or exclude the rule, to stop the report.
 
 ## Cases
 

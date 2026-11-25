@@ -111,9 +111,6 @@ A rule eval has a few cases for each language:
 
 An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
 it. A `skipped` case is a case whose change keeps the rule and matches no trigger. A
-reader of the case alone sees why its code breaks or keeps the rule. Write no case that
-a reasonable reviewer could argue either way: it shows nothing about the rule.
-
-Write the first cases from the statement. Keep a case only while it is clear. Once the
-rule has its first cases, add a case only for a real miss: a review that wrongly blocked
-code or wrongly let it through. Write the smallest clear case of that miss.
+reader of the case alone sees why its code breaks or keeps the rule. Give each case only
+the code that a reader needs to see why. Write no case that a reasonable reviewer could
+argue either way: it shows nothing about the rule.
