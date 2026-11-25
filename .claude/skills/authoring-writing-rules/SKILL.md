@@ -30,9 +30,10 @@ skill, and remove one that traces to none.
   rule.
 - Say that a rule uses plain, clear words that a developer new to the project the rule
   is for understands on the first read.
-- Remove an instruction once every grader that checks it passes without the skill, and
-  what the agent wrote without the skill shows it follows the instruction unaided.
-  Remove those graders with it, and any case that targets it.
+- Remove an instruction when the runs without the skill show that the agent follows the
+  instruction. They show it when every grader that checks the instruction passes and the
+  agent's output follows the instruction. Remove those graders, and any case that tests
+  the instruction.
 
 ## Writing its evals
 
