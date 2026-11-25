@@ -84,11 +84,18 @@ reported.
   `control-flow`, `return-yield`, `collection-literal`, `string-literal`,
   `number-literal`, `attribute-access`, `subscript`, `conditional-expression`,
   `membership-test`, `assert`, `raise`, `definition-added-or-removed`, `code` and `any`.
-- When no change kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
-  that matches the node. Name the gate in `triggers`. Write the gate, and its tests in
-  `rule-tests/<id>-test.yml`, as `references/pattern-rules.md` says for a pattern rule.
-  A gate's `invalid` cases are code the gate matches: give it one for each shape it
-  matches, so that a gate that stops matching a shape fails `codeguard test`.
+- When no change kind fits the node, write a gate with its own id, `<gate-id>`, and name
+  that id in the binding's `triggers`.
+- Write the gate in `gates/<gate-id>.yml` with only these keys:
+  ```yaml
+  id: <gate-id>
+  language: python
+  rule:
+    <an ast-grep rule that matches the node>
+  ```
+- Write the gate's tests in `rule-tests/<gate-id>-test.yml`: a case for each branch, as
+  `references/pattern-rules.md` says, and, for each shape the gate matches, an `invalid`
+  case whose code the gate matches.
 - Only Python has change kinds and gates. In a file in another language every trigger
   matches, so that language has no `skipped` case.
 
