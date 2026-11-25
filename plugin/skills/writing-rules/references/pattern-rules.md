@@ -2,8 +2,7 @@
 
 ## Write the files
 
-- The rule, `rules/pattern/<id>.yml`. A pattern rule matches one language: write one for
-  each language the convention holds in.
+- The rule, `rules/pattern/<id>.yml`. A pattern rule matches one language.
 - The binding, `bindings/<id>.yaml`. It sets `rule` (the rule's id), `paths` (globs of
   the files the rule reviews) and optionally `exclude_paths`.
 - The tests, `rule-tests/<id>-test.yml`. Never put them under `rules/`: every YAML file
@@ -27,9 +26,9 @@
 
 - Give each branch of the rule, each sub-rule under `any`, `all` or `not`, one `valid`
   or `invalid` case, so that deleting a branch fails a case. Put a comment above each
-  case naming its branch.
+  case that names its branch and the situation it tests.
 - For each shape the rule matches, add a `valid` case in which that shape keeps the
   rule, so that a rule that matches too widely fails a case.
-- A new rule reports nothing on the code already in the project. Fix each piece of that
-  code that breaks the rule, or put an `ast-grep-ignore: <id>` comment on the line above
-  it.
+- Make sure a new rule reports nothing on the code already in the project. Fix each
+  piece of that code that breaks the rule, or put an `ast-grep-ignore: <id>` comment on
+  the line above it.

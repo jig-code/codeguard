@@ -6,7 +6,7 @@ description: Writes and changes codeguard rules, with their bindings, tests and 
 # Writing codeguard rules
 
 A pattern rule is an ast-grep rule that matches code by its syntax. A judge rule states a
-convention in prose, and a model judges each change against it.
+convention in prose, and a model, the judge, decides whether each change keeps it.
 
 ## Workflow
 
@@ -14,20 +14,21 @@ convention in prose, and a model judges each change against it.
    check, write no rule, say so, and stop.
 2. Read `references/every-rule.md`. Then, for a judge rule, read
    `references/judge-rules.md`; for a pattern rule, read `references/pattern-rules.md`.
-3. Write the rule and its other files as those references say.
 
 ## Choosing a tool
 
-An exact tool is any linter, type checker or similar tool for the project's language. It
+Three tools can check a convention: an exact tool, a pattern rule and a judge rule. An
+exact tool is any linter, type checker or similar tool for the project's language, and
 gives the same answer on every run. Choose the tool by what decides whether code keeps or
 breaks the rule, not by the words of the request.
 
 - When an exact tool can check the convention, directly or through its configuration,
   the convention isn't codeguard's to check. This holds whether or not the project runs
-  that tool or turns that check on. It also holds when code can turn the check off, if
-  the tool's configuration can forbid that.
+  that tool or turns that check on. It also holds when code can turn the check off, as
+  long as the tool's configuration can forbid turning it off.
 - Write a pattern rule when the convention is about a code shape within one file, and an
-  exact tool could check that shape only through a custom rule.
+  exact tool could check that shape only through a custom rule. A rule you would write
+  yourself in the tool's configuration counts as a custom rule.
 - Write a judge rule for a convention that needs judgment. Never write one for a
   convention that syntax or types decide. When syntax decides only some of the code that
   would break the rule, the convention needs judgment.

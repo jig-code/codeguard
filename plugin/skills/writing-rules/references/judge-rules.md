@@ -2,7 +2,8 @@
 
 ## Write all three files
 
-A judge rule is three files. Write all three in the same pass.
+A judge rule is one file, with a binding and a rule eval beside it. Write all three
+files in the same pass.
 
 - The rule file, `rules/judge/<id>.md`. The rule's id is the file's name without `.md`.
 - The binding, `bindings/<id>.yaml`. It sets:
@@ -32,8 +33,8 @@ The rule file is plain Markdown with no frontmatter. It holds these, in this ord
    give where the rule comes from, end the section with a `Source:` line.
 
 The rule file holds nothing else: no fix, no example, no exception for particular code,
-and no instructions for the judge. It uses no programming language's names, syntax or
-libraries.
+and no instructions for the judge. The rule file uses no programming language's syntax,
+and names a language, library or API only when the convention is about that one.
 
 ## Write the statement
 
@@ -48,7 +49,8 @@ until it meets them all:
 - The statement says nothing about how code avoids what it forbids.
 - The statement says nothing about why the convention exists or what happens when code
   breaks the rule. Those go in `## Why`.
-- The statement names an intent, never a list of code shapes, values or names. A list
+- The statement names what the forbidden code has in common, never a list of code
+  shapes, values or names. A list
   decides only what it names.
 - The statement can be decided from the code a change adds or edits, read with the
   function, class and module around that code and the definitions of the names that
@@ -74,20 +76,20 @@ reported.
 - Trigger on the narrowest node that holds the code that breaks the rule. A wider
   trigger costs judge calls. `any`, `code`, `function-body` and `function-signature` call
   the judge on almost every change, and `codeguard test` warns on them.
-- A trigger is a built-in change kind or a gate. The built-in kinds are `comment`,
+- A trigger is a change kind or a gate. The change kinds are `comment`,
   `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
   `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
   `annotation`, `call`, `control-flow`, `return-yield`, `collection-literal`,
   `string-literal`, `number-literal`, `attribute-access`, `subscript`,
   `conditional-expression`, `membership-test`, `assert`, `raise`,
   `definition-added-or-removed`, `code` and `any`.
-- When no kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml` that
-  matches the node. Name the gate in `triggers`. Write the gate, and its tests in
+- When no change kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
+  that matches the node. Name the gate in `triggers`. Write the gate, and its tests in
   `rule-tests/<id>-test.yml`, as `references/pattern-rules.md` says for a pattern rule.
   A gate's `invalid` cases are code the gate matches: give it one for each shape it
   matches, so that a gate that stops matching a shape fails `codeguard test`.
 - Only Python has change kinds and gates. In a file in another language every trigger
-  fires, so that language has no `skipped` case.
+  matches, so that language has no `skipped` case.
 
 ## Write a few clear eval cases
 
@@ -96,7 +98,7 @@ A rule eval has a few cases for each language:
 - an `invalid` case for each different way that code breaks the rule;
 - a `valid` case for each different situation, close to code that breaks the rule, in
   which code still clearly keeps it;
-- a `skipped` case whose change no trigger matches.
+- in Python, a `skipped` case whose change no trigger matches.
 
 An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
 it. A reader of the case alone sees why its code breaks or keeps the rule. Write no case
