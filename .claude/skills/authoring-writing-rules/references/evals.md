@@ -31,10 +31,10 @@ the other tool or whether it sets that tool up.
 - Give each case a `tool_used: Skill` grader that passes when the agent loads the
   writing-rules skill.
 - Check what the skill tells the agent to do. To decide whether to add an instruction,
-  first write a grader for it alone, and run the case with and without the skill. If
-  the grader fails without the skill, add the instruction and keep the grader. If the
-  grader passes without the skill and the agent's output follows the instruction, remove
-  the grader and leave the instruction out.
+  first write a grader for it alone, and run the case with `--ablation with-without`. If
+  the grader fails in the runs without the skill, add the instruction and keep the
+  grader. If the grader passes in those runs and the agent's output follows the
+  instruction, remove the grader and leave the instruction out.
 - The agent can follow an instruction about the statement for one prompt and break it
   for another. Test each of these instructions in every case where the agent writes or
   changes a rule, with the same graders in each.
