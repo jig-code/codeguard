@@ -47,7 +47,7 @@ Rules live in a project's `.codeguard/` directory or come from rule packages fet
 git and pinned to a tag. Every surface reviews with the same rules.
 
 Use the writing-rules skill's
-[tool-selection guidance](../plugin/skills/writing-rules/references/choosing-a-tool.md)
+[tool-selection guidance](../plugin/skills/writing-rules/SKILL.md#choosing-a-tool)
 to decide whether a convention belongs to an existing checker, a pattern rule or a
 judge rule. Passing one rule does not excuse violations owned by other checks.
 
