@@ -44,8 +44,8 @@ The statement is one declarative sentence. Code keeps the rule or breaks it, and
 statement alone decides which. Check the statement against each of these, and rewrite it
 until it meets them all:
 
-- The statement states one convention, and has no clause for code that the convention
-  doesn't decide. Give that code a rule of its own, or leave it out.
+- The statement states one convention.
+- The statement has no clause for code that the convention doesn't decide.
 - The statement says what code must never do.
 - The statement says what it forbids only once.
 - The statement says nothing about how code avoids what it forbids.
