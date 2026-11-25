@@ -11,7 +11,7 @@ convention in prose, and a model, the judge, decides whether each change keeps i
 ## Workflow
 
 1. Choose the tool, as Choosing a tool says. When the convention isn't codeguard's to
-   check, say so and stop. Don't write a rule or offer one.
+   check, say so and stop. Don't write or offer a rule for that convention.
 2. Read `references/every-rule.md`. Then, for a judge rule, read
    `references/judge-rules.md`; for a pattern rule, read `references/pattern-rules.md`.
 
