@@ -29,6 +29,3 @@
   case that names its branch and the situation it tests.
 - For each shape the rule matches, add a `valid` case in which that shape keeps the
   rule, so that a rule that matches too widely fails a case.
-- Make sure a new rule reports nothing on the code already in the project. Fix each
-  piece of that code that breaks the rule, or put an `ast-grep-ignore: <id>` comment on
-  the line above it.
