@@ -1,6 +1,6 @@
 ---
 name: writing-rules
-description: Writes codeguard rules: decides whether a convention is codeguard's to check, states it as a pattern rule or a judge rule, and writes its triggers and cases. Use when someone asks for a codeguard rule, or for codeguard to check a convention, and when adding or changing a codeguard rule, its tests, or its snapshots — any file under .codeguard/ or in a codeguard rule package. Use even if you already know ast-grep; codeguard adds its own layout, scoping and tests.
+description: Writes and changes codeguard rules, with their tests and snapshots: any file under .codeguard/ or in a codeguard rule package. Use whenever someone asks for a codeguard rule or asks codeguard to check a convention, even if you already know ast-grep.
 ---
 
 # Writing codeguard rules
@@ -9,25 +9,20 @@ A pattern rule is an ast-grep rule that matches code by its syntax. A judge rule
 convention in prose, and a model judges each change against it.
 
 Write every part of a rule in plain, clear words that a developer new to the project
-understands on the first read, and never in a term you invent.
+understands on the first read.
 
 ## Workflow
 
 1. **Pick the tool.** Read `references/choosing-a-tool.md` before writing any rule.
-2. **State the convention and why it exists**, as the two sections below say. Then check
-   the statement against each bullet under The convention and each check below, and
-   rewrite the statement until it meets them all:
-   1. Write every relative pronoun that a phrase needs.
-   2. Wherever a pronoun could mean more than one noun, write the noun instead.
+2. **State the convention and why it exists.** Follow The convention and Why it exists,
+   below. Then check the statement against each bullet under The convention and these
+   two checks. Rewrite the statement until it meets them all:
+   - Never drop a relative pronoun that a phrase needs.
+   - Wherever a pronoun could mean more than one noun, write the noun instead.
 3. **Write the rule and its cases.** Before writing any rule file, read
    `references/layout.md`. For a pattern rule or a gate, read
-   `references/pattern-rules.md`; for a judge rule, read `references/judge-rules.md`.
+   `references/pattern-rules.md`. For a judge rule, read `references/judge-rules.md`.
    Then follow Cases, below.
-4. **Test it.** Run `codeguard test`; add `--update-all` only when the snapshots should
-   change. For a judge rule, then run `codeguard eval`, and once it passes,
-   `codeguard eval --repeat 2`.
-   A case passes only when it gets its expected outcome on every run. Fix a case that
-   fails in the rule's wording or in the case, never by running it again.
 
 ## The convention
 
