@@ -112,5 +112,5 @@ A rule eval has a few cases for each language:
 An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
 it. A `skipped` case is a case whose change keeps the rule and matches no trigger. A
 reader of the case alone sees why its code breaks or keeps the rule. Give each case only
-the code that a reader needs to see why. Write no case that a reasonable reviewer could
-argue either way: it shows nothing about the rule.
+the code that shows whether it breaks or keeps the rule. Write no case that a reasonable
+reviewer could argue either way: it shows nothing about the rule.
