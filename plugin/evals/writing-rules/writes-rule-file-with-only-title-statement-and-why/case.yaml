@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: writes-rule-file-with-only-title-statement-and-why
 expected_outcome: |
-  The agent loads the writing-rules skill. A judge rule file that holds, in this order and nothing else: a `#` title, the
-  statement directly under it, and a `## Why` section with text.
-  The statement is one declarative sentence, not a question or a command. The statement uses only common terms. The statement states what code must never do, once.
+  The agent loads the writing-rules skill. The judge rule file holds, in this order, and no other heading: a `#` title,
+  the statement directly under it, and a `## Why` section with text.
+  The statement is one declarative sentence, not a question or a command, and states one convention. The statement uses only plain, clear words. The statement states what code must never do, once, and names what that code has in common rather than a list.
   The statement says nothing about how code avoids what the statement forbids, and the statement gives no why.
   The statement writes every relative pronoun that a phrase needs, and no pronoun in the statement could mean more than one noun.
 context:
