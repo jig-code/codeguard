@@ -75,8 +75,9 @@ reported.
 - Trigger on the code that breaks the rule, which can be in a different file from what
   the rule is about.
 - Trigger on the narrowest node that holds the code that breaks the rule. A wider
-  trigger costs judge calls. `any`, `code`, `function-body` and `function-signature` call
-  the judge on almost every change, and `codeguard test` warns on them.
+  trigger costs judge calls. `any` calls the judge on every change, and `code`,
+  `function-body` and `function-signature` on almost every change. `codeguard test` warns
+  on all four.
 - A trigger is a change kind or a gate. A change kind is a kind of code that codeguard
   finds in a changed file. The change kinds are `comment`, `docstring`, `import`,
   `function-signature`, `function-body`, `test-function`, `fixture`, `helper-function`,
@@ -104,13 +105,14 @@ reported.
 A rule eval has a few cases for each language:
 
 - an `invalid` case for each different way that code breaks the rule;
-- a `valid` case for each different situation, close to code that breaks the rule, in
-  which code still clearly keeps it;
-- in Python, a `skipped` case whose change no trigger matches.
+- a `valid` case for each different situation in which code still clearly keeps the
+  rule;
+- a `skipped` case.
 
 An `invalid` case breaks the rule beyond argument, and a `valid` case obviously keeps
-it. A reader of the case alone sees why its code breaks or keeps the rule. Write no case
-that a reasonable reviewer could argue either way: it shows nothing about the rule.
+it. A `skipped` case is a case whose change keeps the rule and matches no trigger. A
+reader of the case alone sees why its code breaks or keeps the rule. Write no case that
+a reasonable reviewer could argue either way: it shows nothing about the rule.
 
 Write the first cases from the statement. Keep a case only while it is clear. Once the
 rule has its first cases, add a case only for a real miss: a review that wrongly blocked
