@@ -20,7 +20,7 @@ Rule and gate ids are unique within a ruleset.
 
 A judge rule is one plain Markdown file, `rules/judge/<id>.md` in its ruleset (in a
 project, `.codeguard/rules/judge/<id>.md`): a title, one sentence stating the
-requirement, and a `## Why` section saying why it matters. The judge gets its text
+convention, and a `## Why` section saying why it matters. The judge gets its text
 unparsed. Its binding names it with `rule: <id>`, and says where and when it runs:
 
 ```yaml

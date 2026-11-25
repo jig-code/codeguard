@@ -16,8 +16,7 @@ the other tool or whether it sets that tool up.
 - Write the prompt as a person would ask for a rule, a new one or a fix to an existing
   one, and name the files the agent needs.
 - Give each case one right answer that two reviewers reading the agent's output agree on.
-- Target one instruction per case. An instruction that applies to every rule gets a case
-  of its own, not a grader in every case.
+- Target one instruction per case.
 - Put a file the case gives the agent under `invalid/` instead of `files/` when it breaks
   one of the skill's instructions on purpose, so a reviewer can tell it from a mistake,
   and have `place-files.sh` copy in both.

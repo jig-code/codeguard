@@ -79,5 +79,5 @@ rule file, a grader that reads that file fails and a grader that checks no rule 
 written passes; neither result is a finding. A case that passes in both arms doesn't need
 the skill: read what the agent wrote without it to see why.
 
-[Writing the skill's evals](../.claude/skills/authoring-writing-rules/references/evals.md)
+The [authoring-writing-rules skill](../.claude/skills/authoring-writing-rules/SKILL.md)
 says how to write a case and its graders.

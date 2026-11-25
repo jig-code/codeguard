@@ -32,14 +32,14 @@ rules.
 
 ### Rules
 
-A rule states one requirement on code and why it matters. Each requirement is checked
+A rule states one convention for code and why it matters. Each convention is checked
 by exactly one rule, of one of two kinds:
 
-- A pattern rule is an ast-grep rule, for a requirement that can be checked mechanically.
-  Only code checks it, never a model. Its note explains why the requirement exists and
+- A pattern rule is an ast-grep rule, for a convention that can be checked mechanically.
+  Only code checks it, never a model. Its note explains why the convention exists and
   how to fix a violation.
-- A judge rule is one plain Markdown file, `rules/judge/<id>.md`, for a requirement that
-  needs judgment: a title, one sentence stating the requirement, and a `## Why` section
+- A judge rule is one plain Markdown file, `rules/judge/<id>.md`, for a convention that
+  needs judgment: a title, one sentence stating the convention, and a `## Why` section
   saying why it matters. Every binding names it with `rule: <id>`. The judge grades
   against the file's text, which it gets unparsed. There is no separate rubric.
 
@@ -48,7 +48,7 @@ git and pinned to a tag. Every surface reviews with the same rules.
 
 Use the writing-rules skill's
 [tool-selection guidance](../plugin/skills/writing-rules/references/choosing-a-tool.md)
-to decide whether a requirement belongs to an existing checker, a pattern rule or a
+to decide whether a convention belongs to an existing checker, a pattern rule or a
 judge rule. Passing one rule does not excuse violations owned by other checks.
 
 ### Components
@@ -127,7 +127,7 @@ the code refer to.
 
 **Single source**
 
-1. Each requirement is written in exactly one place: a pattern rule when it can be
+1. Each convention is written in exactly one place: a pattern rule when it can be
    checked mechanically, otherwise a judge rule's file. Never both, never copied. A
    pattern rule is checked only by code, never by an LLM.
 2. Everything the judge enforces for a rule is in its rule file, `rules/judge/<id>.md`,
