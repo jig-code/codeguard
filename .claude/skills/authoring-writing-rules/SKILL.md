@@ -19,8 +19,9 @@ adds only what is particular to the writing-rules skill.
   [Rule formats](../../../docs/rule-formats.md).
 - Write the skill's `description` so the skill loads whenever someone asks for a
   codeguard rule to be written or changed.
-- Keep everything the agent reads inside the skill. The agent works in another project,
-  with the codeguard CLI and the skill, and none of codeguard's docs.
+- Point the agent only to the skill's own files and the files of the project it works in.
+  The agent has the codeguard CLI, the skill and that project, and can open none of
+  codeguard's docs or code.
 - Give no lists of words to match: a list decides only the words it names.
 - Use only the words *keeps* and *breaks* for code against a rule.
 - Say what a rule must be, in codeguard's public terms. Leave out how the judge reads a
