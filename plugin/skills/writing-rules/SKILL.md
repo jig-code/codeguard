@@ -20,10 +20,12 @@ understands on the first read, and never in a term you invent.
    1. Write every relative pronoun that a phrase needs.
    2. Wherever a pronoun could mean more than one noun, write the noun instead.
 3. **Write the rule and its cases.** Before writing any rule file, read
-   `references/layout.md`. For a pattern rule, read `references/pattern-rules.md`; for a
-   judge rule, read `references/judge-rules.md`. Then follow Cases, below.
-4. **Test it.** Run `codeguard test`, with `--update-all` to regenerate snapshots. For a
-   judge rule, then run `codeguard eval`, and once it passes, `codeguard eval --repeat 2`.
+   `references/layout.md`. For a pattern rule or a gate, read
+   `references/pattern-rules.md`; for a judge rule, read `references/judge-rules.md`.
+   Then follow Cases, below.
+4. **Test it.** Run `codeguard test`; add `--update-all` only when the snapshots should
+   change. For a judge rule, then run `codeguard eval`, and once it passes,
+   `codeguard eval --repeat 2`.
    A case passes only when it gets its expected outcome on every run. Fix a case that
    fails in the rule's wording or in the case, never by running it again.
 
@@ -33,10 +35,9 @@ A rule states one convention, in one declarative sentence, at the level of inten
 words that don't depend on the language. Each piece of code keeps the rule or breaks it,
 and the statement alone decides which.
 
-- **What code must never do.** The statement says what code must never do.
-- **Once.** The statement says what it forbids once.
-- **Nothing about how.** The statement says nothing about how code avoids what it
-  forbids.
+- The statement says what code must never do.
+- The statement says what it forbids only one time.
+- The statement says nothing about how code avoids what it forbids.
 - **No reason or consequence.** Every clause of the statement describes what the code it
   forbids does. Why the convention exists, and what follows once that code has run,
   belong in the rule's why.
@@ -46,18 +47,19 @@ and the statement alone decides which.
   each. Code that the statement doesn't decide goes to a rule of its own or is dropped,
   never kept as an extra clause beside the statement.
 - **Scoped to the change.** The statement is decided by the code a change adds or edits,
-  the function, class and module around that code, and the definitions of the names it
-  uses. Only a convention about something unique or consistent across the repository
-  is decided by code outside them.
+  the function, class and module around that code, and the definitions of the names
+  that code uses. Only a convention about something unique or consistent across the
+  repository is decided by code beyond the change and its surroundings.
 - **Idiomatic code keeps it.** Code written the way the language and its libraries
-  intend never breaks the rule. Calling a framework's API is idiomatic; copying the
-  framework's shape into the project's own code may not be. A statement that idiomatic
-  code breaks is restated, not given an exception.
+  intend never breaks the rule. A shape a framework uses isn't idiomatic in the project's
+  own code for that reason alone. A statement that idiomatic code breaks is restated,
+  not given an exception.
 - **Decided by its wording, never by examples.** A case that the statement decides
   wrongly, or on the wrong ground, shows the statement is unclear: reword the statement
   until it decides the case.
-- **Never contradicts another rule.** Code that another rule in the project or package
-  requires never breaks a new rule.
+- **Never contradicts another rule.** Code that another rule requires never breaks a new
+  rule. The other rules are the project's own and those in the rulesets it opts into in
+  `.codeguard/config.yaml`.
 - **Never overlaps another rule.** Code that breaks another rule never also breaks a new
   rule. When code breaks both, move that code's shape to one rule, or merge the two
   rules.
@@ -70,9 +72,10 @@ and the statement alone decides which.
 Every rule has a why: the harm the rule prevents, in one or two sentences, so that
 whoever changes the code or the design around it can tell whether the rule still holds.
 A judge rule's why is its rule file's `## Why` section; a pattern rule's is
-`metadata.why`. The why can end with a `Source:` line, or a pattern rule's
-`metadata.source`: a link to public documentation, or the bug, PR comment or team
-decision behind the rule.
+`metadata.why`, and its note repeats it. Optionally, give where the rule comes from: a
+link to public documentation, or the bug, PR comment or team decision behind it. It goes
+on a `Source:` line at the end of a judge rule's Why, or in a pattern rule's
+`metadata.source`.
 
 ## Cases
 

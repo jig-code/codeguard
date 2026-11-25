@@ -12,8 +12,8 @@ codeguard's judge gets its text unparsed. It holds, in this order, and nothing e
    the statement doesn't decide.
 
 Nothing else goes in the rule file, in any section or for any language: no fix, no
-example, no exception for a case, and nothing about how to answer. A rule in several
-languages is one rule file, in no language's names, syntax or libraries.
+example, no exception for a case, and nothing about how to answer. The rule file uses no
+language's names, syntax or libraries.
 
 ## Trigger on every shape of the code that breaks the rule
 
@@ -22,8 +22,8 @@ the binding's `triggers` matches, so code that breaks the rule outside them is n
 reported.
 
 - List the shapes that code breaking the rule takes, and make sure a trigger matches
-  each one. Give a gate an `invalid` test case, which is code the gate matches, for each
-  shape it matches, so a gate that stops matching a shape fails `codeguard test`.
+  each one. Give a gate an `invalid` test case for each shape it matches, so a gate that
+  stops matching a shape fails `codeguard test`.
 - Trigger on the code that breaks the rule, which can be in a different file from what
   the rule is about.
 - Trigger on the narrowest node that holds the code that breaks the rule. A wider trigger
@@ -35,8 +35,7 @@ reported.
   `string-literal`, `number-literal`, `attribute-access`, `subscript`,
   `conditional-expression`, `membership-test`, `assert`, `raise`,
   `definition-added-or-removed`, `code` and `any`. When no kind fits the node, write a
-  gate: an ast-grep rule in `gates/<id>.yml` that matches the node, named in `triggers`
-  and tested like a pattern rule.
+  gate, which is an ast-grep rule that matches the node, and name it in `triggers`.
 - Only Python has change kinds and gates. In a file in another language every trigger
   fires, so that language has no `skipped` case.
 
@@ -45,13 +44,11 @@ reported.
 A rule eval has a few cases per rule and language: one `invalid` case for each distinct
 ground on which code breaks the rule, one `valid` case for each distinct situation close
 to code that breaks the rule in which code still clearly keeps it, and a `skipped` case
-that no trigger matches. Each case tests one thing that none of the others does: a
-different thing the code does, not another syntax for the same thing. No edge cases: a
-case that a reasonable reviewer could argue either way proves nothing about the rule.
+that no trigger matches. No edge cases: a case that a reasonable reviewer could argue
+either way proves nothing about the rule.
 
 - An `invalid` case breaks the rule beyond argument, and a `valid` case obviously
   keeps it. A reader of the case alone sees why the code breaks or keeps it.
-- A rule in several languages has cases in each, each case's `file` in its language.
 
 A case is kept only while it is clear, tests something no other case does, and comes
 from the statement or from a real miss. Once the rule has its first cases, a new case
