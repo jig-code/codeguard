@@ -65,7 +65,7 @@ sources. Guidance none of them covers is codeguard's own decision.
   - when examples constrain;
   - constraining a skill only in highly important areas.
 - [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices):
-  - plain words;
+  - plain, clear language;
   - when to give a reason;
   - examples that steer format;
   - telling the agent what to do rather than what not to do.

@@ -19,7 +19,8 @@ Below, "the agent" means the agent that will use the skill you are writing.
   in a reference file, and have `SKILL.md` tell the agent to read it for those uses.
 - Use an example only to steer the output's format, tone or structure. Anywhere else,
   leave it out: an example constrains the agent to a certain exploration space.
-- Use plain words that a developer new to the project understands on the first read.
+- Use plain, clear language that a developer new to the project understands on the first
+  read.
 - Use one word for each idea throughout the skill and its evals.
 - Give a reason only where it helps the agent apply an instruction to a case the
   instruction doesn't name, and only a reason that is true.
