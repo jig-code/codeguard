@@ -18,9 +18,8 @@
 - Make sure that idiomatic code, written the way the language and its libraries intend,
   keeps the rule. Code isn't idiomatic in the project just because a framework's own
   code does the same.
-- Name a specific class, function or file only when the convention is about that one.
-  For a convention about many, describe what they share. Never name one of them to stand
-  for the rest.
+- Name a particular thing in the project only when the convention is about that one
+  thing. For a convention about many, describe what they have in common.
 - Give every rule a why: the harm the rule prevents, in one or two sentences, so that
   whoever later changes the project's code or design can tell whether the rule still
   holds. You can also give where the rule comes from: a link to public documentation, or
