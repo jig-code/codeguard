@@ -9,8 +9,10 @@
   in the same pass as the rule file, never leave them for later.
   - The rule's id is the rule file's name without `.md`.
   - The binding sets `rule` (the rule's id), `paths` (globs of the files the rule
-    reviews) and `triggers` (the change kinds or gates that call the judge, never `any`,
-    `code`, `function-body` or `function-signature`).
+    reviews), `triggers` (the change kinds or gates that call the judge) and optionally
+    `severity` (default `error`). `codeguard test` warns on the triggers `any`, `code`,
+    `function-body` and `function-signature`, which call the judge on almost every
+    change.
   - The rule eval holds `cases`, each with a `name`, `inputs` and `expected_output`.
     `inputs` holds `file`, the edited file's path; `before`, the file before the edit,
     left out for a new file; `after`, the file after it; and optionally `unchanged`, a
