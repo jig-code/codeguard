@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: declines-unused-functions
 expected_outcome: |
-  The agent loads the writing-rules skill. No rule: the answer says finding functions nobody calls isn't codeguard's to check.
+  The agent loads the writing-rules skill. No rule: the answer says finding functions nobody calls isn't codeguard's to check, and neither agrees to write a rule for it nor asks whether to write one.
 context:
   scaffold_script: place-files.sh
