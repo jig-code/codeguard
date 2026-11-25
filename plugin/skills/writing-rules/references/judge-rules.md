@@ -13,10 +13,12 @@ files in the same pass.
   - optionally `exclude_paths`, and `severity`, which defaults to `error`.
 - The rule eval, `rule-evals/<id>.yaml`. It holds `cases`, each with:
   - `name`;
-  - `inputs`, which holds `file`, the changed file's path; `before`, the file before the
-    change, left out for a new file; `after`, the file after the change; and optionally
-    `unchanged`, a map from the path of each other file the change needs to that file's
-    text;
+  - `inputs`, which holds:
+    - `file`: the changed file's path;
+    - `before`: the file before the change, left out for a new file;
+    - `after`: the file after the change;
+    - optionally `unchanged`: a map from the path of each other file that the change
+      needs to that file's text;
   - `expected_output`, which holds `outcome`: `invalid`, `valid` or `skipped`.
 
 A convention that holds in several languages is one rule. Its binding's `paths` name
@@ -50,9 +52,8 @@ until it meets them all:
 - The statement says nothing about why the convention exists or what happens when code
   breaks the rule. Those go in `## Why`.
 - The statement names what the forbidden code has in common, never a list of code
-  shapes, values or names. A list
-  decides only what it names.
-- The statement can be decided from the code a change adds or edits, read with the
+  shapes, values or names. A list decides only what it names.
+- The statement can be decided from the code that a change adds or edits, read with the
   function, class and module around that code and the definitions of the names that
   code uses. Only a convention that something stays unique or consistent across the
   repository needs code beyond that.
@@ -76,13 +77,13 @@ reported.
 - Trigger on the narrowest node that holds the code that breaks the rule. A wider
   trigger costs judge calls. `any`, `code`, `function-body` and `function-signature` call
   the judge on almost every change, and `codeguard test` warns on them.
-- A trigger is a change kind or a gate. The change kinds are `comment`,
-  `docstring`, `import`, `function-signature`, `function-body`, `test-function`,
-  `fixture`, `helper-function`, `class-header`, `class-attribute`, `module-statement`,
-  `annotation`, `call`, `control-flow`, `return-yield`, `collection-literal`,
-  `string-literal`, `number-literal`, `attribute-access`, `subscript`,
-  `conditional-expression`, `membership-test`, `assert`, `raise`,
-  `definition-added-or-removed`, `code` and `any`.
+- A trigger is a change kind or a gate. A change kind is a kind of code that codeguard
+  finds in a changed file. The change kinds are `comment`, `docstring`, `import`,
+  `function-signature`, `function-body`, `test-function`, `fixture`, `helper-function`,
+  `class-header`, `class-attribute`, `module-statement`, `annotation`, `call`,
+  `control-flow`, `return-yield`, `collection-literal`, `string-literal`,
+  `number-literal`, `attribute-access`, `subscript`, `conditional-expression`,
+  `membership-test`, `assert`, `raise`, `definition-added-or-removed`, `code` and `any`.
 - When no change kind fits the node, write a gate: an ast-grep rule in `gates/<id>.yml`
   that matches the node. Name the gate in `triggers`. Write the gate, and its tests in
   `rule-tests/<id>-test.yml`, as `references/pattern-rules.md` says for a pattern rule.

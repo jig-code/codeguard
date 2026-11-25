@@ -6,8 +6,9 @@
   understands on the first read.
 - Put a rule's files in the project's `.codeguard/` directory. A rule package is a
   repository with `codeguard-package.yaml`, and groups its rules in rulesets, one
-  directory each. In a rule package, put the files in the ruleset's directory. The
-  references give each file's path inside `.codeguard/` or the ruleset's directory.
+  directory each. In a rule package, put the files in the ruleset's directory. 
+  `judge-rules.md` and `pattern-rules.md` give each file's path inside `.codeguard/` or
+  the ruleset's directory.
 - Write one rule for each convention in the request.
 - Before writing a rule, read the project's own rules and the rulesets that
   `.codeguard/config.yaml` opts into.
@@ -39,14 +40,14 @@ A case is a pattern rule's test case or a judge rule's eval case.
   in the codebase. A public rule package never holds code copied from a private
   repository.
 - Give idiomatic code a `valid` case.
-- Give each eval case a `name` that says only the situation it tests, unique within its
-  file. State the expected outcome once: in an eval case's `expected_output`, or by the
-  `valid` or `invalid` list that a test case is in.
+- Give each eval case a `name` that says only the situation that it tests, unique
+  within its file. State the expected outcome once: in an eval case's
+  `expected_output`, or by the `valid` or `invalid` list that a test case is in.
 - Before writing a case, say in one sentence what its code does. If another case already
   has that sentence, don't write the case. Two cases whose code breaks or keeps the rule
   in the same way are one case, however their syntax or names differ: keep the clearer
   one. Two `valid` cases differ only when their code keeps the rule in different
   situations.
-- Make each case break the rule in one way at most: the way it tests. Read every other
-  line of the case as a reviewer would, and rewrite any line that is wrong for another
-  reason.
+- Make each case break the rule in one way at most: the way that it tests. Read every
+  other line of the case as a reviewer would, and rewrite any line that is wrong for
+  another reason.

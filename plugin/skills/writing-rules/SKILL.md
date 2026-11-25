@@ -22,13 +22,14 @@ exact tool is any linter, type checker or similar tool for the project's languag
 gives the same answer on every run. Choose the tool by what decides whether code keeps or
 breaks the rule, not by the words of the request.
 
-- When an exact tool can check the convention, directly or through its configuration,
-  the convention isn't codeguard's to check. This holds whether or not the project runs
-  that tool or turns that check on. It also holds when code can turn the check off, as
-  long as the tool's configuration can forbid turning it off.
+- When an exact tool can check the convention, directly or by turning on a check that
+  the exact tool ships with, the convention isn't codeguard's to check. This holds
+  whether or not the project runs that exact tool or turns that check on. It also holds
+  when code can turn the check off, as long as the exact tool's configuration can forbid
+  turning it off.
 - Write a pattern rule when the convention is about a code shape within one file, and an
-  exact tool could check that shape only through a custom rule. A rule you would write
-  yourself in the tool's configuration counts as a custom rule.
+  exact tool could check that shape only through a custom rule. A rule that you would
+  write yourself in the exact tool's configuration counts as a custom rule.
 - Write a judge rule for a convention that needs judgment. Never write one for a
   convention that syntax or types decide. When syntax decides only some of the code that
   would break the rule, the convention needs judgment.
