@@ -39,11 +39,8 @@ A case is a pattern rule's test case or a judge rule's eval case.
 - Give each eval case a `name` that says only the situation that it tests, unique
   within its file. State the expected outcome once: in an eval case's
   `expected_output`, or by the `valid` or `invalid` list that a test case is in.
-- Before writing a case, say in one sentence what its code does. If another case already
-  has that sentence, don't write the case. Two cases whose code breaks or keeps the rule
-  in the same way are one case, however their syntax or names differ: keep the clearer
-  one. Two `valid` cases differ only when their code keeps the rule in different
-  situations.
+- When two cases break or keep the rule in the same way, keep only the clearer one, even
+  if their code looks different.
 - Make each case break the rule in one way at most: the way that it tests. Read every
   other line of the case as a reviewer would, and rewrite any line that is wrong for
   another reason.
