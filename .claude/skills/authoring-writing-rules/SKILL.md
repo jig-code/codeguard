@@ -14,9 +14,6 @@ adds only what is particular to the writing-rules skill.
 
 ## Writing the skill
 
-Trace every instruction in the skill to an instruction below or to the `writing-skills`
-skill, and remove one that traces to none.
-
 - Agree with [codeguard's architecture](../../../docs/architecture.md#rules) and
   [Rule formats](../../../docs/rule-formats.md): never contradict them, and add only what
   an agent needs beyond them.
