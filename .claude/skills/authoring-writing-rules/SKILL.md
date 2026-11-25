@@ -28,6 +28,11 @@ skill, and remove one that traces to none.
 - Use only the words *keeps* and *breaks* for code against a rule.
 - Say what a rule must be, in codeguard's public terms. Leave out how the judge reads a
   rule.
+- Say that a rule uses plain, clear words that a developer new to the project the rule
+  is for understands on the first read.
+- Remove an instruction whose case passes in both arms of a with-without run, once what
+  the agent wrote without the skill shows it follows that instruction unaided. Remove its
+  case with it.
 
 ## Writing its evals
 
