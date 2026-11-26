@@ -51,8 +51,8 @@ until it meets them all:
   breaks the rule. Those go in `## Why`.
 - The statement names what all the code that breaks the rule has in common, never
   particular things that code does or uses. A particular thing is something that only
-  some of the code that breaks the rule does or uses. Naming them decides only what they
-  name.
+  some of the code that breaks the rule does or uses. Naming one, even as an example,
+  narrows the rule to what it names.
 - The statement can be decided from the code that a change adds or edits, read with the
   function, class and module around that code and the definitions of the names that
   code uses. Only a convention that something stays unique or consistent across the
