@@ -43,9 +43,9 @@ until it meets them all:
 - The statement has no clause for code that the convention doesn't decide.
 - The statement says what code must never do.
 - The statement says what it forbids only once.
-- No code that the statement lets keep the rule does the harm that `## Why` names. To let
-  other code keep the rule, describe more precisely what the code that breaks the rule has
-  in common.
+- A limit is a part of the statement that leaves some code out of what it forbids.
+  Every limit in the statement leaves out only harmless code, by the harm that `## Why`
+  names.
 - The statement says nothing about how code avoids what it forbids.
 - The statement says nothing about why the convention exists or what happens when code
   breaks the rule. Those go in `## Why`.
