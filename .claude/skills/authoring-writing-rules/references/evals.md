@@ -6,6 +6,10 @@ The evals are the cases in `plugin/evals/writing-rules/`, which run with
 them. Each case asks an agent with the skill for a codeguard rule, and grades what the
 agent does against what the skill tells it to do.
 
+Write cases and graders as
+[Test plugins with evals](https://code.claude.com/docs/en/plugin-evals) says; this
+guidance only narrows or extends it.
+
 ## Cases
 
 Test only the skill, which covers only writing the rule. Never check whether a rule the
@@ -49,6 +53,8 @@ the other tool or whether it sets that tool up.
 - Write an `llm` grader's rubric as concrete `PASS if` and `FAIL if` conditions that hold
   everything the grader needs to decide. Make a `FAIL if` cover a missing or empty output,
   and leave the output's formatting out of the verdict.
+- Write an `llm` grader's rubric about its output alone: the grader sees only that output
+  and the rubric, never the case's prompt, files or `expected_outcome`.
 - Give a grader no examples and no lists of words to match: an example narrows the grader
   to what it shows, and a list decides only the words it names.
 - Before a new or changed `llm` grader counts, read its verdicts and the output it read
