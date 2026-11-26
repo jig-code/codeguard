@@ -43,8 +43,8 @@ until it meets them all:
 - The statement has no clause for code that the convention doesn't decide.
 - The statement says what code must never do.
 - The statement says what it forbids only once.
-- The statement exempts none of the code that it forbids. To let code keep the rule,
-  narrow what the statement forbids.
+- All code that does the harm that `## Why` names breaks the statement. To let other code
+  keep the rule, describe more precisely what the code that breaks the rule has in common.
 - The statement says nothing about how code avoids what it forbids.
 - The statement says nothing about why the convention exists or what happens when code
   breaks the rule. Those go in `## Why`.
@@ -58,8 +58,10 @@ until it meets them all:
 - Where a pronoun could mean more than one noun, the statement writes the noun.
 
 When idiomatic code breaks the statement, or the statement decides a case wrongly or for
-the wrong reason, reword the statement. Never add an example or the case's code to the
-rule file.
+the wrong reason, reword what the statement says the code that breaks the rule has in
+common until it decides that case rightly. Never add a clause that lets the case's code
+keep the rule, or an example or the case's code to the rule file: either fits the rule
+to that one case, and the rule still decides other code like it wrongly.
 
 ## Trigger on every shape of the code that breaks the rule
 
