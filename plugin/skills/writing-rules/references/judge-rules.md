@@ -53,10 +53,6 @@ until it meets them all:
   particular things that code does or uses. A particular thing is something that only
   some of the code that breaks the rule does or uses. Naming one, even as an example,
   narrows the rule to what it names.
-- The statement can be decided from the code that a change adds or edits, read with the
-  function, class and module around that code and the definitions of the names that
-  code uses. Only a convention that something stays unique or consistent across the
-  repository needs code beyond that.
 - The statement writes every relative pronoun that a phrase needs.
 - Where a pronoun could mean more than one noun, the statement writes the noun.
 
