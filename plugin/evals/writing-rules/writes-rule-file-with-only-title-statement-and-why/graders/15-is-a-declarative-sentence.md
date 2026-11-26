@@ -1,6 +1,6 @@
 ---
 type: llm
-focus: { source: file, path: .codeguard/rules/judge/no-secrets-in-logs.md }
+focus: { source: file, path: .codeguard/rules/judge/clear-log-messages.md }
 weight: 1
 ---
 
