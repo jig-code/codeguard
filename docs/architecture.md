@@ -33,7 +33,7 @@ rules.
 ### Rules
 
 A rule states one convention for code and why it matters. Each convention is checked
-by exactly one rule, of one of two kinds:
+by one kind of rule, never both:
 
 - A pattern rule is an ast-grep rule, for a convention that can be checked mechanically.
   Only code checks it, never a model. Its note explains why the convention exists and
@@ -127,9 +127,11 @@ the code refer to.
 
 **Single source**
 
-1. Each convention is written in exactly one place: a pattern rule when it can be
-   checked mechanically, otherwise a judge rule's file. Never both, never copied. A
-   pattern rule is checked only by code, never by an LLM.
+1. Each convention is checked by one kind of rule, never both: a pattern rule when it can
+   be checked mechanically, otherwise a judge rule. A judge rule is one file, whatever
+   languages the code it reviews is in. A pattern rule matches one language, so a
+   convention gets one pattern rule for each language of the code the convention covers,
+   and no other copy. A pattern rule is checked only by code, never by an LLM.
 2. Everything the judge enforces for a rule is in its rule file, `rules/judge/<id>.md`,
    and the judge gets that file's text unparsed. There is no separate review rubric.
 3. Each file-to-rule mapping is defined in exactly one place: the bindings.
