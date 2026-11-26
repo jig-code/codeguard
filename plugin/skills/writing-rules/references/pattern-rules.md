@@ -2,7 +2,9 @@
 
 ## Write the files
 
-- The rule, `rules/pattern/<id>.yml`. A pattern rule matches one language.
+- The rule, `rules/pattern/<id>.yml`. A pattern rule matches one language: when the code
+  that the convention covers is in several languages, write one pattern rule for each of
+  those languages, each with its own id and binding.
 - The binding, `bindings/<id>.yaml`. It sets `rule` (the rule's id), `paths` (globs of
   the files the rule reviews) and optionally `exclude_paths`.
 - The tests, `rule-tests/<id>-test.yml`. Never put them under `rules/`: every YAML file

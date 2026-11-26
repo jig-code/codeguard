@@ -9,7 +9,8 @@
   directory each. In a rule package, put the files in the ruleset's directory. 
   `judge-rules.md` and `pattern-rules.md` give each file's path inside `.codeguard/` or
   the ruleset's directory.
-- Write one rule for each convention in the request.
+- Write one rule for each convention in the request. A convention checked by pattern
+  rules gets one pattern rule for each language of the code that the convention covers.
 - Before writing a rule, read the project's own rules and the rulesets that
   `.codeguard/config.yaml` opts into.
 - Make sure that code that another rule requires keeps the new rule.
