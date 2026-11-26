@@ -43,8 +43,9 @@ until it meets them all:
 - The statement has no clause for code that the convention doesn't decide.
 - The statement says what code must never do.
 - The statement says what it forbids only once.
-- All code that does the harm that `## Why` names breaks the statement. To let other code
-  keep the rule, describe more precisely what the code that breaks the rule has in common.
+- No code that the statement lets keep the rule does the harm that `## Why` names. To let
+  other code keep the rule, describe more precisely what the code that breaks the rule has
+  in common.
 - The statement says nothing about how code avoids what it forbids.
 - The statement says nothing about why the convention exists or what happens when code
   breaks the rule. Those go in `## Why`.
