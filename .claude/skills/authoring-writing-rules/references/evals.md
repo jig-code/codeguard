@@ -38,6 +38,8 @@ the other tool or whether it sets that tool up.
 - The agent can follow an instruction about the statement for one prompt and break it
   for another. Test each of these instructions in every case where the agent writes or
   changes a rule, with the same graders in each.
+- Give every grader that checks the same instruction the same text in each case, apart
+  from the file it reads.
 - Check structure with a `regex` grader, whose pattern is short enough to verify at a
   glance. Split a structure that needs a longer pattern into several `regex` graders, each
   checking one part of it.
