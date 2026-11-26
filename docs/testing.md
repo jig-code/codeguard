@@ -72,6 +72,18 @@ model ids or inference profiles; CI takes them from the `SKILL_EVALS_AGENT_BEDRO
 and `SKILL_EVALS_GRADER_BEDROCK_MODEL` repository variables
 ([`skill-evals.yaml`](../.github/workflows/skill-evals.yaml)).
 
+While you change the skill or its evals, add `--keep-temp` and `--json <path>` to each run:
+
+- `--json <path>` writes each run's scores, each grader's votes as `judgeVotes`, and the
+  text each grader read as `evidence` to that file.
+- `--keep-temp` keeps each run's directory. The JSON gives its trace as `tracePath`. The
+  trace shows each file the agent read and each tool it called.
+- When a run with the skill fails or a grader's votes split, read that run's trace and
+  that grader's `evidence` before you decide on a fix. The grader's reasons for a vote
+  aren't kept, so decide from the `evidence` whether the skill or the grader is unclear.
+- Once every case passes, delete the kept directories. Each run's directory is the folder
+  above `out/` in its `tracePath`, and takes about 200 MB.
+
 When a change adds a case, adds or removes a grader, or changes what the skill tells the
 agent to do, also run the command once with `--ablation with-without --runs 2`. In the
 runs without the skill, the whole plugin is left out. When the agent there writes no new
