@@ -12,8 +12,8 @@ convention in prose, and a model, the judge, decides whether each change keeps i
 
 1. For a new rule, or a change to what an existing rule's convention is, choose the tool
    as `references/choosing-a-tool.md` says.
-2. When the choice is a static analysis tool other than codeguard, decide to write no
-   rule, and leave nothing about a rule for the user to decide. Tell the user, in a
-   sentence of its own, that the convention isn't codeguard's to check.
+2. When the choice is a static analysis tool other than codeguard, the convention isn't
+   codeguard's to check. Tell the user so in a sentence of its own, and do nothing more
+   for codeguard.
 3. For a judge rule, read `references/every-rule.md` and `references/judge-rules.md`. For
    a pattern rule, read `references/every-rule.md` and `references/pattern-rules.md`.
