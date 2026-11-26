@@ -1,6 +1,6 @@
 ---
 type: regex
-target: { source: file, path: .codeguard/rules/judge/clear-log-messages.md }
+target: { source: file, path: .codeguard/rules/judge/no-secrets-in-logs.md }
 pattern: '^#+ '
 flags: m
 match: "count:2"
