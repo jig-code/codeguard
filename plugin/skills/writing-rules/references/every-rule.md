@@ -16,9 +16,8 @@
 - Make sure that code that another rule requires keeps the new rule.
 - Make sure that code that breaks another rule keeps the new rule. When code would break
   both rules, narrow one of them until that code keeps it, or merge the two rules.
-- Make sure that idiomatic code, written the way the language and its libraries intend,
-  keeps the rule. Code isn't idiomatic in the project just because a framework's own
-  code does the same.
+- Make sure that idiomatic code, which uses the language and its libraries the way they
+  intend, keeps the rule.
 - Name a particular thing in the project only when the convention is about that one
   thing. For a convention about many, describe what they have in common.
 - Give every rule a why: the harm the rule prevents, in one or two sentences, so that
