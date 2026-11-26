@@ -58,15 +58,26 @@ The authoring-writing-rules skill and the
 sources. Guidance none of them covers is codeguard's own decision.
 
 - [The new rules of context engineering for Claude 5 generation models](https://claude.dev/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models/)
-  (Jul 24, 2026): writing only what the agent wouldn't know, brevity, progressive
-  disclosure, and when examples constrain.
+  (Jul 24, 2026):
+  - writing only what the agent wouldn't know;
+  - brevity;
+  - progressive disclosure;
+  - when examples constrain;
+  - constraining a skill only in highly important areas.
 - [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices):
-  plain words, when to give a reason, and examples that steer format.
-- [Extend Claude with skills](https://code.claude.com/docs/en/skills): the `description`,
-  a concise body, and what goes in `SKILL.md` versus a reference file.
-- [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md): eval
-  prompts, result graders and the `tool_used` grader, `regex` versus `llm` graders, and
-  rubrics.
+  - plain, clear language;
+  - when to give a reason;
+  - examples that steer format;
+  - telling the agent what to do rather than what not to do.
+- [Extend Claude with skills](https://code.claude.com/docs/en/skills):
+  - the `description`;
+  - a concise body;
+  - what goes in `SKILL.md` versus a reference file.
+- [Test plugins with evals](https://code.claude.com/docs/en/plugin-evals.md):
+  - eval prompts;
+  - graders on the result and on the steps (`tool_used`);
+  - `regex` versus `llm` graders;
+  - rubrics.
 
 ## Run your clone in a project
 

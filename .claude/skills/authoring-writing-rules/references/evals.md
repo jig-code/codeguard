@@ -6,6 +6,10 @@ The evals are the cases in `plugin/evals/writing-rules/`, which run with
 them. Each case asks an agent with the skill for a codeguard rule, and grades what the
 agent does against what the skill tells it to do.
 
+Write cases and graders as
+[Test plugins with evals](https://code.claude.com/docs/en/plugin-evals) says; this
+guidance only narrows or extends it.
+
 ## Cases
 
 Test only the skill, which covers only writing the rule. Never check whether a rule the
@@ -16,19 +20,30 @@ the other tool or whether it sets that tool up.
 - Write the prompt as a person would ask for a rule, a new one or a fix to an existing
   one, and name the files the agent needs.
 - Give each case one right answer that two reviewers reading the agent's output agree on.
-- Target one instruction per case.
+- Write each case to test one instruction in the skill. Give the case a prompt that an
+  agent who ignores that instruction would get wrong.
 - Put a file the case gives the agent under `invalid/` instead of `files/` when it breaks
   one of the skill's instructions on purpose, so a reviewer can tell it from a mistake,
   and have `place-files.sh` copy in both.
 
 ## Graders
 
-- Give every case result graders, and a `tool_used: Skill` grader that passes when the
-  agent loads the writing-rules skill.
-- Make the result graders check only the instruction the case targets.
-- Make each result grader read one output and check one thing about it. The output is a
-  file the agent wrote, whether the agent wrote any rule file, or, in a case that
-  declines a rule, the agent's final reply.
+- Make each grader check one thing in one output. An output is one of these:
+  - a file the agent wrote;
+  - whether the agent wrote a rule file at all;
+  - the agent's final reply, in a case that declines a rule.
+- Give each case a `tool_used: Skill` grader that passes when the agent loads the
+  writing-rules skill.
+- Check what the skill tells the agent to do. To decide whether to add an instruction,
+  first write a grader for it alone, and run the case with `--ablation with-without`. If
+  the grader fails in the runs without the skill, add the instruction and keep the
+  grader. If the grader passes in those runs and the agent's output follows the
+  instruction, remove the grader and leave the instruction out.
+- The agent can follow an instruction about the statement for one prompt and break it
+  for another. Test each of these instructions in every case where the agent writes or
+  changes a rule, with the same graders in each.
+- Give every grader that checks the same instruction the same text in each case, apart
+  from the file it reads.
 - Check structure with a `regex` grader, whose pattern is short enough to verify at a
   glance. Split a structure that needs a longer pattern into several `regex` graders, each
   checking one part of it.
@@ -38,11 +53,14 @@ the other tool or whether it sets that tool up.
 - Write an `llm` grader's rubric as concrete `PASS if` and `FAIL if` conditions that hold
   everything the grader needs to decide. Make a `FAIL if` cover a missing or empty output,
   and leave the output's formatting out of the verdict.
+- Write an `llm` grader's rubric about its output alone: the grader sees only that output
+  and the rubric, never the case's prompt, files or `expected_outcome`.
 - Give a grader no examples and no lists of words to match: an example narrows the grader
   to what it shows, and a list decides only the words it names.
 - Before a new or changed `llm` grader counts, read its verdicts and the output it read
   on a few runs. A small grader model can mark a correct answer wrong.
-- Never change a grader because of its verdicts in runs without the plugin.
+- Never change a grader because of its verdicts in runs without the skill, except to
+  remove one as the bullet on deciding whether to add an instruction says.
 
 ## Names
 
