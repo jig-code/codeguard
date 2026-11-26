@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: declines-missing-return-annotations
 expected_outcome: |
-  The agent loads the writing-rules skill. No rule: the reply says the convention the user asked a codeguard rule for isn't codeguard's to check, and neither offers to write a rule nor asks whether to write one.
+  The agent loads the writing-rules skill. No rule: the reply says the convention isn't codeguard's to check, and neither offers to write a rule nor asks whether to write one.
 context:
   scaffold_script: place-files.sh
