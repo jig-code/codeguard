@@ -13,7 +13,7 @@ pull requests too.
 |---|---|
 | Any file outside `docs/`, `.claude/skills/`, `README.md` and `CLAUDE.md` | `uv run pytest` |
 | The judge: its review, provider, rules or syntax code, or the dependencies. Or a fixture rule or its fixture cases | The LLM tests: `uv run pytest -m llm -n 4 --llm-runs 1 -x`, then `uv run pytest -m llm -n 4 --llm-runs 2` |
-| The writing-rules skill or its evals | The skill evals ([The skill evals](#the-skill-evals)), with `--runs 1`, then with `--runs 2` |
+| The writing-rules skill or its evals | The skill evals ([The skill evals](#the-skill-evals)): first with `--ablation with-without --runs 2` when that section asks for it, then with `--runs 1`, then with `--runs 2` |
 | A project skill in `.claude/skills/` | A few prompts a person would type for the skill's task, each in a fresh session: the skill loads, and the output follows it |
 
 A change to only `docs/`, `README.md` or `CLAUDE.md` needs no test. CI runs these tests
@@ -85,12 +85,12 @@ While you change the skill or its evals, add `--keep-temp` and `--json <path>` t
   above `out/` in its `tracePath`, and takes about 200 MB.
 
 When a change adds a case, adds or removes a grader, or changes what the skill tells the
-agent to do, also run the command once with `--ablation with-without --runs 2`. In the
-runs without the skill, the whole plugin is left out. When the agent there writes no new
-rule file, a grader that reads that file fails and a grader that checks no rule file was
-written passes; neither result is a finding. A grader that passes in both arms may check
-something the agent does without the skill: read what the agent wrote without it to see
-why.
+agent to do, first run the command once with `--ablation with-without --runs 2`, before
+the runs with `--runs 1` and `--runs 2`. In the runs without the skill, the whole plugin
+is left out. When the agent there writes no new rule file, a grader that reads that file
+fails and a grader that checks no rule file was written passes; neither result is a
+finding. A grader that passes in both arms may check something the agent does without the
+skill: read what the agent wrote without it to see why.
 
 The [authoring-writing-rules skill](../.claude/skills/authoring-writing-rules/SKILL.md)
 says how to write a case and its graders.
